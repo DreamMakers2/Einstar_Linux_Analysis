@@ -11,6 +11,7 @@
 | [firmware/compare_V1.0_to_V2.10.md](firmware/compare_V1.0_to_V2.10.md) | generated comparison report |
 | [protocol/einstar_usb_protocol.md](protocol/einstar_usb_protocol.md) | consolidated USB/command/stream/update specification |
 | [protocol/libeinstar_protocol_spec.md](protocol/libeinstar_protocol_spec.md) | byte-level spec recovered from the Linux driver, with code references |
+| [protocol/usb3_capability.md](protocol/usb3_capability.md) | SuperSpeed feasibility: firmware support, live link state, cable/connector evidence, performance benefit |
 | [protocol/libeinstar_gap_analysis.md](protocol/libeinstar_gap_analysis.md) | 21 ranked gaps in the existing Linux driver |
 | [protocol/libeinstar_code_map.md](protocol/libeinstar_code_map.md) | file/function map and build record |
 | [calibration/ccf_format.md](calibration/ccf_format.md) | CCF layout, the IR key proof, geometry, device-blob map |

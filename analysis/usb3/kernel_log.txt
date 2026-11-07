@@ -1,0 +1,63 @@
+nov 07 01:14:30 cachyos kernel: usb 1-5: new high-speed USB device number 15 using xhci_hcd
+nov 07 01:14:30 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 01:14:30 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 01:14:30 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 01:14:30 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 01:14:30 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 01:14:30 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 01:17:54 cachyos kernel: usb 1-5: USB disconnect, device number 15
+nov 07 01:36:29 cachyos kernel: usb 1-5: new high-speed USB device number 16 using xhci_hcd
+nov 07 01:36:29 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 01:36:29 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 01:36:29 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 01:36:29 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 01:36:29 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 01:36:29 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 01:37:45 cachyos kernel: usb 1-5: USB disconnect, device number 16
+nov 07 01:42:25 cachyos kernel: usb 1-5: new high-speed USB device number 17 using xhci_hcd
+nov 07 01:42:25 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 01:42:25 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 01:42:25 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 01:42:25 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 01:42:25 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 01:42:25 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 01:43:41 cachyos kernel: usb 1-5: USB disconnect, device number 17
+nov 07 01:44:52 cachyos kernel: usb 1-5: new high-speed USB device number 18 using xhci_hcd
+nov 07 01:44:52 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 01:44:52 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 01:44:52 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 01:44:52 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 01:44:52 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 01:44:52 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 01:50:22 cachyos kernel: usb 1-5: USB disconnect, device number 18
+nov 07 01:56:00 cachyos kernel: usb 1-5: new high-speed USB device number 19 using xhci_hcd
+nov 07 01:56:00 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 01:56:00 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 01:56:00 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 01:56:00 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 01:56:00 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 01:56:00 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 02:00:25 cachyos kernel: usb 1-5: USB disconnect, device number 19
+nov 07 02:00:33 cachyos kernel: usb 1-5: new high-speed USB device number 20 using xhci_hcd
+nov 07 02:00:33 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 02:00:33 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 02:00:33 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 02:00:33 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 02:00:33 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 02:00:33 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 02:13:34 cachyos kernel: usb 1-5: USB disconnect, device number 20
+nov 07 02:26:51 cachyos kernel: usb 1-5: new high-speed USB device number 21 using xhci_hcd
+nov 07 02:26:51 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 02:26:51 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 02:26:51 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 02:26:51 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 02:26:51 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 02:26:51 cachyos kernel: usb 1-5: Manufacturer: Shining3d
+nov 07 02:51:49 cachyos kernel: usb 1-5: USB disconnect, device number 21
+nov 07 04:38:04 cachyos kernel: usb 1-5: new high-speed USB device number 22 using xhci_hcd
+nov 07 04:38:04 cachyos kernel: usb 1-5: New USB device found, idVendor=3267, idProduct=0003, bcdDevice= 0.00
+nov 07 04:38:04 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x1 has an invalid bInterval 0, changing to 7
+nov 07 04:38:04 cachyos kernel: usb 1-5: config 1 interface 0 altsetting 0 endpoint 0x81 has an invalid bInterval 0, changing to 7
+nov 07 04:38:04 cachyos kernel: usb 1-5: New USB device strings: Mfr=1, Product=2, SerialNumber=0
+nov 07 04:38:04 cachyos kernel: usb 1-5: Product: SHINING-CAM
+nov 07 04:38:04 cachyos kernel: usb 1-5: Manufacturer: Shining3d

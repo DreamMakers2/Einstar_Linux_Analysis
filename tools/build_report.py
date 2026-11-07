@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 from collections import Counter
 
-BASE = "<repo>/analysis/gnu"
-OUT = "<repo>/docs/windows/module_map.md"
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+BASE = str(ROOT / "analysis" / "gnu")
+OUT = str(ROOT / "docs" / "windows" / "module_map.md")
 
 inv = json.load(open(os.path.join(BASE, "pe_inventory.json")))
 mods = inv["modules"]

@@ -42,7 +42,7 @@ question.
 | **No hardware session** | Every timing/throughput claim is simulated; flash map, drop behaviour and thermal limits are unconfirmed | Connect the scanner; run `driver/` probe + `ReadData` dumps |
 | **Calibration key bounded, not proved** | Rotation and distortion are proved; `fx/fy/cx/cy` remain ±1 px (0.26 mm at 300 mm), and the baseline spread contributes ~2.9 mm | Hardware calibration check on a known artefact |
 | **Depth pipeline is offline-only** | Rectification/triangulation are validated on real captures for consistency, but no dense stereo → cloud product exists yet | Phase 3 of [docs/roadmap.md](docs/roadmap.md) |
-| **USB 2.0 vs 3.0 unresolved** | At 68 ms with three full frames the device needs ~58 MB/s; USB 2.0 HS carries ~40 MB/s, so either the link is SuperSpeed or the frame set is reduced | Measure negotiated speed and frames per trigger group at bring-up |
+| **USB 3.0 blocked by hardware** | The scanner negotiates **HS 480 Mbps** although the firmware enables SuperSpeed; at 68 ms with three full frames it needs ~58 MB/s vs ~40 MB/s available, explaining the 115 logged frame timeouts. The blocker is the proprietary connector/PCB, not software | Connector/cable continuity check, internal photos for the FX3 marking and SS routing, or vendor confirmation |
 | **Vendor algorithms not executable** | Pipeline map is static evidence; parameter values (SGM windows, voxel size) are named but not extracted | Dynamic tracing on a Windows VM, or black-box comparison on hardware |
 | **FPGA CRC / frame map** | Only matters for re-generating or patching a bitstream | Not needed for scanning; documented as open |
 
@@ -71,6 +71,7 @@ Ranked by expected effect on geometric accuracy, with the evidence behind each:
 | Lever | Measured/estimated effect | Status |
 |---|---|---|
 | Async transfers, depth 8–16 | **3.2–3.7×** saturated throughput, but only when the link is the limit; at the vendor cadence the frame rate is unchanged | implemented |
+| USB 3.0 link | would remove the HS bandwidth wall (~1.45× at the vendor cadence), but the device-side path does not train SS | **blocked by hardware** |
 | Zero-copy frame path | **~1.6×** less host CPU at depth 8 (measured wall clock, simulation device) | implemented |
 | Bounded queues + explicit backpressure | prevents unbounded latency; makes drop policy a decision, not an accident | implemented |
 | Separate recording thread | recording cannot stall acquisition | implemented |

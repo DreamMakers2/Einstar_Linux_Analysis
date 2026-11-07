@@ -50,11 +50,12 @@ USB 2.0 HS practical (40 MB/s)  -> 30.5 fps aggregate, 10.2 fps/camera
 USB 3.0 SS (350 MB/s, if usable) -> cadence-limited 44.1 fps aggregate, 14.7 fps/camera
 ```
 
-**A USB 2.0 High Speed link cannot carry three full 1280×1024 frames every 68 ms.** Either the
-scanner enumerates at SuperSpeed during normal operation, or it transmits a reduced frame set
-(fewer cameras per trigger, smaller ROI/binning, or dropped frames). This is a hardware question
-that must be settled at bring-up by reading the negotiated speed and counting frames per trigger
-group; it changes the achievable rate by ~3×.
+**A USB 2.0 High Speed link cannot carry three full 1280×1024 frames every 68 ms.** The question
+was settled when the scanner was connected (2026-11-07): it negotiates **High Speed 480 Mbps**
+(`bcdUSB 2.00`, no BOS), so the USB 2.0 branch is the operative one and the device must be
+dropping or throttling frames. The firmware does enable SuperSpeed, but the physical path does
+not train it; see [../protocol/usb3_capability.md](../protocol/usb3_capability.md). The HS ceiling
+is ~1.45× short of the 68 ms cadence, which matches the 115 frame timeouts in the vendor log.
 
 ## 3. Sync vs async, copy vs zero-copy (same simulated device)
 

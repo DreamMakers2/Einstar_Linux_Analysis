@@ -1,0 +1,16 @@
+# sysfs 7.3.1-1-cachyos
+idVendor=3267
+idProduct=0003
+bcdDevice=0000
+speed=480
+version= 2.00
+busnum=1
+devnum=22
+product=SHINING-CAM
+manufacturer=Shining3d
+rx_lanes=1
+tx_lanes=1
+
+peer(usb1-port5)=/sys/devices/pci0000:00/0000:00:14.0/usb2/2-0:1.0/usb2-port5
+peer(usb2-port5)=/sys/devices/pci0000:00/0000:00:14.0/usb1/1-0:1.0/usb1-port5
+usb2-port5 state=configured

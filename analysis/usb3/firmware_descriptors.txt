@@ -1,0 +1,24 @@
+# Einstar FX3 V2.10 EN — USB descriptor tables (parsed from the boot image)
+# Image offset -> runtime address mapping verified against the descriptor
+# pointers installed by FUN_40004BEC (image 0xDF18 = runtime 0x4000E9DC).
+#
+# runtime     image    descriptor
+0x4000E9DC  0xDF18   device descriptor, bcdUSB=0x0200, EF/02/01, mps0=64, VID:PID=3267:0003
+0x4000E9F0  0xDF2C   device descriptor, bcdUSB=0x0300, EF/02/01, mps0=9 (512), same IDs
+0x4000EA04  0xDF40   device qualifier, bcdUSB=0x0200, mps0=64, 1 config
+0x4000EA10  0xDF4C   other-speed configuration, wTotalLength=9, 0 interfaces
+0x4000EA1C  0xDF58   HS configuration, wTotalLength=0x49, 5 endpoints, 512-byte packets
+0x4000EA68  0xDFA4   BOS, wTotalLength=0x16, 2 capabilities:
+                      07 10 02 02 00 00 00   USB 2.0 extension
+                      0A 10 03 00 0E 00 03 00 00 00   SuperSpeed, wSpeedsSupported=0x000E
+0x4000EA80  0xDFBC   SS configuration, wTotalLength=0x67, 5 endpoints, 1024-byte packets,
+                      SS endpoint companion on every endpoint; EP 0x83 bMaxBurst=15
+0x4000EAE8  0xE024   string 0 (LANGID 0x0409)
+0x4000EAEC  0xE02C?  string 1 "Shining3d"
+0x4000EB00  0xE04C?  string 2 "SHINING-CAM"
+#
+# Connect calls (all sites enumerated from the decompiled image):
+#   FUN_40019130(1,1)  connect with SuperSpeed enabled  (0x40003E44, 0x400051C8, 0x40003E88)
+#   FUN_40019130(0,1)  stay disconnected, SS enabled    (0x40004BEC)
+#   FUN_40019130(0,0)  disconnect                        (0x40003E88, 0x40005424)
+#   no (1,0) call exists: the firmware never connects with SS disabled.

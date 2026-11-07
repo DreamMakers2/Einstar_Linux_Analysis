@@ -1,0 +1,113 @@
+# Captured 2026-11-07T03:46:45Z
+
+Bus 001 Device 022: ID 3267:0003 Shining3d SHINING-CAM
+
+/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/16p, 480M
+    |__ Port 001: Dev 002, If 0, Class=Hub, Driver=hub/4p, 480M
+        |__ Port 002: Dev 004, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 002: Dev 004, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 002: Dev 004, If 2, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 004: Dev 014, If 0, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 004: Dev 014, If 1, Class=Human Interface Device, Driver=usbhid, 12M
+        |__ Port 004: Dev 014, If 2, Class=Chip/SmartCard, Driver=[none], 12M
+
+
+Bus 001 Device 022: ID 3267:0003 Shining3d SHINING-CAM
+Negotiated speed: High Speed (480Mbps)
+Device Descriptor:
+  bLength                18
+  bDescriptorType         1
+  bcdUSB               2.00
+  bDeviceClass          239 Miscellaneous Device
+  bDeviceSubClass         2 [unknown]
+  bDeviceProtocol         1 Interface Association
+  bMaxPacketSize0        64
+  idVendor           0x3267 Shining3d
+  idProduct          0x0003 SHINING-CAM
+  bcdDevice            0.00
+  iManufacturer           1 Shining3d
+  iProduct                2 SHINING-CAM
+  iSerial                 0 
+  bNumConfigurations      1
+  Configuration Descriptor:
+    bLength                 9
+    bDescriptorType         2
+    wTotalLength       0x0049
+    bNumInterfaces          1
+    bConfigurationValue     1
+    iConfiguration          0 
+    bmAttributes         0x80
+      (Bus Powered)
+    MaxPower              100mA
+    Interface Descriptor:
+      bLength                 9
+      bDescriptorType         4
+      bInterfaceNumber        0
+      bAlternateSetting       0
+      bNumEndpoints           5
+      bInterfaceClass       239 Miscellaneous Device
+      bInterfaceSubClass      2 [unknown]
+      bInterfaceProtocol      1 Interface Association
+      iInterface              0 
+      ** UNRECOGNIZED:  14 24 01 00 00 01 00 00 00 01 00 04 05 06 07 08 09 0a 0b 08
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x01  EP 1 OUT
+        bmAttributes            3
+          Transfer Type            Interrupt
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0200  1x 512 bytes
+        bInterval               0
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x81  EP 1 IN
+        bmAttributes            3
+          Transfer Type            Interrupt
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0200  1x 512 bytes
+        bInterval               0
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x02  EP 2 OUT
+        bmAttributes            2
+          Transfer Type            Bulk
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0200  1x 512 bytes
+        bInterval               0
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x82  EP 2 IN
+        bmAttributes            2
+          Transfer Type            Bulk
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0200  1x 512 bytes
+        bInterval               0
+      Endpoint Descriptor:
+        bLength                 7
+        bDescriptorType         5
+        bEndpointAddress     0x83  EP 3 IN
+        bmAttributes            2
+          Transfer Type            Bulk
+          Synch Type               None
+          Usage Type               Data
+        wMaxPacketSize     0x0200  1x 512 bytes
+        bInterval               0
+Device Qualifier (for other device speed):
+  bLength                10
+  bDescriptorType         6
+  bcdUSB               2.00
+  bDeviceClass          239 Miscellaneous Device
+  bDeviceSubClass         2 [unknown]
+  bDeviceProtocol         1 Interface Association
+  bMaxPacketSize0        64
+  bNumConfigurations      1
+Device Status:     0x0000
+  (Bus Powered)

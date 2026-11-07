@@ -13,7 +13,7 @@ Status: 2026-11-07. The scanner is **not attached**. This document separates fou
 
 | Capability | Implemented | Offline-validated | Hardware-validated | Notes |
 |---|---|---|---|---|
-| USB enumeration, descriptor parse, `bInterval=0` detection | yes | yes | no | kernel repairs the interval to 7; no patch needed |
+| USB enumeration, descriptor parse, `bInterval=0` detection | yes | yes | **yes** — connected 2026-11-07, HS 480 Mbps | kernel repairs the interval to 7; no patch needed; the device is USB 2.0 on the wire (`protocol/usb3_capability.md`) |
 | Async bulk-IN transfers, queue depth, cancellation | yes | yes (simulator + ASan/TSan) | no | libusb path compile/link-verified only |
 | Packet framing (`[len][32B header][payload]`) | yes | **yes** — hand-written golden vectors | no | semantics: one-hot camera bits 3..5, last flag byte 8 |
 | Three-camera reassembly | yes | yes (synthetic + loss/reorder/fuzz) | no | one in-flight frame per camera by construction |
@@ -56,7 +56,7 @@ Each gate is a concrete check with a pass condition. All must pass on the physic
 | G2 | Identity | `Serial` (sys 0x04) and `FirmwareVersion` (0x05) match the vendor string format; sensor count = 3; resolution 1280×1024 per camera |
 | G3 | Command channel | set/get exposure and gain round-trip within 1 LSB; trigger period read-back equals 68 000 µs after set; page 0 read equals the factory calibration blob byte-for-byte |
 | G4 | Framing | a 60 s capture yields zero parse errors, three camera streams, monotonic per-camera frame ids, no size mismatches |
-| G5 | Cadence | measured frames per trigger group and per-camera rate; the USB 2.0 vs 3.0 question from the benchmark report is answered with measurements |
+| G5 | Cadence | measured frames per trigger group and per-camera rate. The link question is now partly answered: the device negotiates HS 480 Mbps, so the 68 ms/3-frame cadence exceeds the link (~1.45×) and the device must be dropping or throttling frames |
 | G6 | Recovery | induced `clear_halt`/cable event: stream resumes < 100 ms, no corrupted or short frames delivered, loss events counted |
 | G7 | Recording | record 60 s, replay offline, byte-exact digest, then decode both paths and compare frames |
 | G8 | Calibration | rectified IR pair shows vertical disparity residual < 0.5 px (median) on real captures; depth of a flat target within the vendor's own spread |
