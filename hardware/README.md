@@ -3,14 +3,20 @@
 Static, read-only investigation of the original SHINING 3D Einstar (`EinScan10_01`, USB `3267:0003`)
 mainboard: **can this board carry a USB 3.0 SuperSpeed link?**
 
-**Answer: no.** The board is a USB-2.0-only design around a SuperSpeed-capable CYUSB3014-BZX, built to
-Infineon's own USB-2.0-only checklist, with a 7-pin external connector that has one spare conductor
-where four are needed. SuperSpeed here requires a board re-spin, not a modification.
+**Answer: not as originally concluded.** The board is **not** a USB-2.0-only design. The FX3's lower
+edge carries **four conductors in two coupled pairs** that map in order to **A6, A5, A4 and A3**; the
+TX pair passes a **two-pad footprint across the pair** (not in series); and all four route toward the
+component-side 40-pin connector. No on-board series AC coupling is proved. An operator continuity
+report adds **six connector-side points in three pairs**, corroborating the connector destination. The stock **7-pin external cable** still cannot carry SuperSpeed (one spare conductor
+against four), so a **passive adapter remains NO-GO**. A **custom daughterboard** on the 40-pin
+connector is **CONDITIONAL GO** — practical without BGA rework if two safe continuity measurements
+identify the connector pins and a 200 Ω `R_USB3` reference is found.
 
 Full reasoning: [`../docs/hardware/usb3_mainboard_feasibility.md`](../docs/hardware/usb3_mainboard_feasibility.md).
-**Amended by** [`../docs/hardware/usb3_feasibility_addendum_1.md`](../docs/hardware/usb3_feasibility_addendum_1.md):
-a re-examination at native resolution found a genuine 45° coupled pair escaping the package edge plus
-six through-routes; the verdict stands but the reasoning changed.
+**Amended by** [`../docs/hardware/usb3_feasibility_addendum_1.md`](../docs/hardware/usb3_feasibility_addendum_1.md)
+(a first pair found in the same strip) and **superseded by**
+[`../docs/hardware/usb3_feasibility_addendum_2.md`](../docs/hardware/usb3_feasibility_addendum_2.md)
+(four conductors, two pairs, a two-pad footprint across TX, conditional GO).
 
 ---
 
@@ -29,6 +35,7 @@ six through-routes; the verdict stands but the reasoning changed.
 | `annotated/B1_escape_pair_measured.png` | the 45° coupled pair below the FX3, fitted and extrapolated to the package edge |
 | `annotated/B2_routing_channel.png` | the six through-routes in the strip below the FX3 |
 | `analysis/fx3_ballout.md` · `.json` | all 121 balls with citations; machine-readable |
+| `analysis/reopen/` | 2026-11-08 reopen: net maps (`figs/N1`, `N3`), scripts, and the independent agent reports |
 | `analysis/fx3_ss_layout_requirements.md` | BOM, impedance/skew rules, BGA escape, SI of a wire tap |
 | `analysis/product_teardown_corroboration.md` | public teardown/connector/vendor-software evidence |
 | `analysis/fx3_docs/` | vendor PDFs used (local only, not redistributed) |
@@ -41,12 +48,18 @@ six through-routes; the verdict stands but the reasoning changed.
   and **A5/A6 (SSTX+/−)** — all on the outermost row, 2.6–5.0 mm from one edge.
 * Orientation is proved three ways: the A1 laser dot, two silkscreen direction arrows that both start at
   that corner, and the upside-down chip marking. In the photos A1 is the **bottom-right** corner.
-* A SuperSpeed channel on this board would need: four traces from A3–A6, a 0.1 µF series pair on SSTX,
-  a ≤ 0.5 pF ESD array, a 200 Ω ±1 % reference on **B3**, and a 90 Ω ±7 % channel to a 4-conductor
-  connector. **None of the first four is present**, and the 7-pin connector cannot supply the last.
-* `DP`/`DN`/`CLK`/`PCLK` are the only labelled test points; there are no SuperSpeed pads anywhere.
-* The four capacitors next to J4 are a **shunt** decoupling bank, not AC coupling — verified by zooming
-  (`crops/P2_acbank_zoom.png`).
+* **Four conductors**, not two, cross the lower package edge. Their Hough lines extrapolate to
+  **A6/A5** and **A4/A3** with the symmetric inward convergence of a differential-pair fan-out
+  (`analysis/reopen/figs/N1_edge_netmap.png`). The earlier "no bundle of four" was wrong.
+* The **TX pair** passes a two-pad footprint at image (376–470, 988–1084); both traces are continuous
+  on both sides, so it is **across** the pair, not in series — an unpopulated footprint or a
+  differential shunt, not the AC-coupling pair. **No on-board series AC coupling is proved**; the
+  daughterboard must carry it.
+* All four route left and up into the via field beside the **component-side 40-pin connector**. The
+  final pin connection is on inner layers and is **not** optically proved.
+* The four capacitors next to the solder-side connector are a **shunt** decoupling bank, not AC
+  coupling — verified by zooming (`crops/P2_acbank_zoom.png`). They are not the parts in question.
+* `DP`/`DN`/`CLK`/`PCLK` are the only labelled test points; no SS test pad was found.
 * Firmware is not the blocker: the FX3 image already advertises SuperSpeed and calls
   `CyU3PConnectState(1,1)` at every connect site.
 

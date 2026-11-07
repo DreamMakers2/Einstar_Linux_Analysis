@@ -2,7 +2,8 @@
 
 **Subject** — the photographed mainboard of the original Einstar: Cypress/Infineon **CYUSB3014-BZX**
 (EZ-USB FX3), **Pango Logos PGL25G** FPGA, Micron **D9PTK** DDR3L, Winbond **W25Q64JVSIQ** SPI flash,
-one 40-pin board-to-board connector (**J4**), two buck converters.
+two 40-pin connectors (a component-side board-to-board and a solder-side FPC labelled **J4**), two
+buck converters.
 **Question** — does this mainboard contain a usable SuperSpeed path that could be brought out to a new
 USB 3.0 connection, bypassing the existing 7-pin external connector?
 **Method** — official Infineon documentation (primary sources), quantitative photographic analysis of
@@ -12,8 +13,16 @@ both board sides, and the firmware/protocol evidence already established in this
 > **Addendum 1 (2026-11-07) — read with this report.**
 > A re-examination of the FX3's lower edge at native resolution found copper the original analysis
 > missed: a genuine 45° coupled pair escaping the package edge, plus six long through-routes in the
-> same channel. The verdict below still stands, but §3.6 and §5 are amended. See
-> [`usb3_feasibility_addendum_1.md`](usb3_feasibility_addendum_1.md).
+> same channel. See [`usb3_feasibility_addendum_1.md`](usb3_feasibility_addendum_1.md).
+>
+> **Addendum 2 (2026-11-08) — supersedes Addendum 1 §A1.5–A1.8 and corrects §3.6 and §4 below.**
+> A full-row re-measurement finds **four** conductors in **two** coupled pairs, mapping in order to
+> **A6, A5, A4, A3**; the pair Addendum 1 found was the RX pair only. The TX pair passes a
+> **two-pad footprint across the pair** (not in series: both traces are continuous), and all four
+> route toward the component-side 40-pin connector. No on-board series AC coupling is proved.
+> The **NO-GO for a passive external adapter stands**; the **NO-GO for a custom daughterboard is
+> withdrawn** and replaced by a conditional GO whose gates are safe unpowered continuity tests.
+> See [`usb3_feasibility_addendum_2.md`](usb3_feasibility_addendum_2.md). Read it before §3.6 and §4.
 
 ---
 
@@ -21,20 +30,24 @@ both board sides, and the firmware/protocol evidence already established in this
 
 > ### **NO-GO** for adding USB 3.0 to this mainboard by tapping pads, populating missing parts, or swapping the cable.
 >
-> ### **GO** only as a board re-spin (new PCB reusing the FX3 + existing firmware), or — with low probability — as a new plug-in daughterboard *if* an X-ray/TDR measurement first proves that the SuperSpeed pairs are routed to J4.
+> ### **NO-GO** for a board re-spin as the *only* clean path — **withdrawn by Addendum 2**.
+>
+> ### **CONDITIONAL GO** for a new plug-in daughterboard on the component-side 40-pin connector, which the Addendum 2 re-measurement indicates is fed by two coupled SuperSpeed pairs from A3–A6. The gates are safe unpowered continuity tests (Addendum 2 §A2.7), not an X-ray.
 
-Confidence in the NO-GO for a passive modification: **high (~90 %)**.
-The residual 10 % is not "it might work anyway" — it is the possibility that the SS pairs are routed to
-J4 for a planned USB 3.0 variant. Even in that case the stock daughterboard and 7-pin cable cannot carry
-them (one spare conductor, four needed), so a new daughterboard **and** a new cable would still be
-required, and the mainboard would not be modified at all.
+Confidence in the NO-GO for a **passive external adapter**: **high (~90 %)** — the 7-pin cable's
+conductor count is unchanged.
+Confidence in the **conditional GO** for a daughterboard: **materially higher than the 15–20 % of
+Addendum 1, but not quantified** until M1/M2 identify the connector pins and M3 finds the 200 Ω B3
+reference. If either fails, the conditional GO fails and the NO-GO becomes final for this board.
 
-**The single most important sentence in this report:** the FX3's four SuperSpeed balls sit on the
-*outermost* row of the package, 1.0 mm inside a 10 × 10 mm BGA body, and the USB-2.0-only design
-practice that Infineon itself documents (AN70707 App. C) is to leave those four balls **and** the
-USB 3.0 reference ball B3 **open**. Everything visible on this board — no AC-coupling pair, no
-SuperSpeed ESD array, no SS test pads, no 4-conductor path to any connector — is consistent with
-exactly that design practice, and nothing is consistent with a routed SuperSpeed channel.
+**The single most important sentence in this report (rewritten by Addendum 2):** the FX3's four
+SuperSpeed balls sit on the *outermost* row of the package, 1.0 mm inside a 10 × 10 mm BGA body, and
+the board's top copper carries **four conductors in two coupled pairs** that extrapolate to **A6,
+A5, A4 and A3**, pass a **two-pad footprint across the TX pair** (not in series), and route toward
+the component-side 40-pin connector. That is a routed SuperSpeed channel, not the Appendix C "leave
+open" pattern. The original version of this paragraph — "everything visible is consistent with a
+USB-2.0-only design, and nothing is consistent with a routed SuperSpeed channel" — was **wrong**,
+because the TX pair (x ≈ 1331 / 1347 at the package edge) was missed by the earlier analysis.
 
 ---
 
@@ -204,6 +217,13 @@ Around row A itself — the bottom edge, where A3–A6 would emerge — the visi
 ground pour, two silkscreen lines, and at most two thin traces that belong to other nets. **There is no
 bundle of four.**
 
+> **Correction (Addendum 2, 2026-11-08).** This paragraph is **wrong**. A full-row Hough scan of the
+> same photograph finds **four** conductors in the 1.6 mm strip below row A, in two coupled pairs
+> (16 px within a pair, 43.5 px between pairs). Extrapolated to row A they land on **A6, A5, A4 and
+> A3**, with the symmetric inward convergence of a differential-pair fan-out. The pair described in
+> Addendum 1 (crossings 1396.0 / 1411.4) is the **RX** pair; the **TX** pair at 1330.9 / 1347.4 was
+> missed. See [`usb3_feasibility_addendum_2.md`](usb3_feasibility_addendum_2.md) §A2.2.
+
 ---
 
 ## 4. Requirement-by-requirement correlation
@@ -212,58 +232,67 @@ Every row is a requirement from Infineon's own documents, checked against the ph
 
 | # | Requirement (source) | What the board shows | Verdict |
 |---|---|---|---|
-| 1 | Four SS conductors from A3–A6 (datasheet Fig. 6) | no 4-trace escape on row A; no SS vias or pads elsewhere | **not met** (subject to inner-layer caveat) |
-| 2 | 0.1 µF ±? series caps on SSTX, at the receptacle, with GND cut-out (AN70707 §12.1) | no series caps anywhere in the USB path | **not met** |
-| 3 | ≤ 0.5 pF ESD on the four lines (AN70707 §10) | no ESD array | **not met** |
-| 4 | 200 Ω ±1 % on B3 — SS PHY bias (datasheet Table 7, AN70707 Fig. 14) | not identifiable; permitted to be absent (App. C) | **unknown → assume absent** |
-| 5 | U3TXVDDQ / U3RXVDDQ at 1.2 V with ferrite (AN70707 App. C) | power clusters exist; can neither confirm nor deny the ferrite/ball connection | **probably met** |
-| 6 | 90 Ω ±7 % differential, solid reference, zero vias, < 76 mm (AN70707 §12.1) | no channel exists to evaluate | **not met** |
+| 1 | Four SS conductors from A3–A6 (datasheet Fig. 6) | **four-trace escape found** in Addendum 2: two coupled pairs, A6/A5 and A4/A3, routed left to the component-side connector via field | **met on the top copper; connector pins unconfirmed** (see Addendum 2 §A2.5, §A2.7) |
+| 2 | 0.1 µF ±? series caps on SSTX, at the receptacle, with GND cut-out (AN70707 §12.1) | **no series caps on this board**; the TX pair is DC-continuous through a two-pad footprint (Addendum 2 §A2.3.2) | **not met on the mainboard** — the daughterboard may carry them (ECN-permitted, SI-marginal) |
+| 3 | ≤ 0.5 pF ESD on the four lines (AN70707 §10) | no ESD array on this board | **not met on the mainboard** — may be on the daughterboard |
+| 4 | 200 Ω ±1 % on B3 — SS PHY bias (datasheet Table 7, AN70707 Fig. 14) | not identifiable; permitted to be absent (App. C) | **unknown → assume absent until M3** |
+| 5 | U3TXVDDQ / U3RXVDDQ at 1.2 V with ferrite (AN70707 App. C) | power clusters exist; the rails must be present for the FX3 to run | **probably met** |
+| 6 | 90 Ω ±7 % differential, solid reference, zero vias, < 76 mm (AN70707 §12.1) | four coupled traces exist from A3–A6 to the connector-side via field; stack-up/impedance unknown; at least one via at the connector | **unverified** — the channel exists, its SI is not measured |
 | 7 | Connector and cable carrying 4 SS conductors + shield | 7-pin connector: 12 V, GND, 4 × USB 2.0, **1 unconnected** (user-measured pinout) | **impossible** (1 spare, 4 needed) |
 | 8 | Host side SS-capable | Intel xHCI 20 Gb/s, SS peer port exists | **met** |
 | 9 | Firmware enables SS | `CyU3PConnectState(1,1)` at every connect site; SS descriptors + BOS present | **met** |
 
-Nine requirements. The board meets two — and both are on the *host/firmware* side, not the board.
+Nine requirements. The board meets **three** — four SS conductors routed (row 1), firmware (row 9) and
+a SS-capable host (row 8). It leaves **two** to the daughterboard (AC caps, ESD). The 7-pin cable
+still fails row 7, and rows 4 and 6 are unmeasured. The earlier "meets two, both off-board" was based
+on the undercounted trace evidence.
 
 ---
 
 ## 5. Why the geometry is decisive (and where it is not)
 
-### 5.1 The favourable reading
+### 5.1 The favourable reading — now confirmed
 
 All four SS balls are in **row A**, the outermost row. A designer routing them would normally take them
 straight out on the top layer — no via, no HDI, no microvia. At 0.8 mm pitch one 0.1/0.1 mm trace fits
-between pads, and a 0.45/0.25 mm dog-bone via fits diagonally. So if the pairs were routed on the
-surface, **they would be visible as four traces crossing the package edge between 2.6 and 5.0 mm from
-the right edge**. They are not.
+between pads, and a 0.45/0.25 mm dog-bone via fits diagonally. The Addendum 2 re-measurement finds
+exactly that: **four traces crossing the package edge between 2.6 and 5.0 mm from the right edge**, in
+two coupled pairs, with the two pair centres shifted by the *same* ~0.8 mm from their ball-pair
+centres. The earlier version of this section said they were not visible; that was the undercount
+corrected in Addendum 2.
 
-### 5.2 The unfavourable reading — and why it does not rescue the design
+### 5.2 The unfavourable reading — what is still missing
 
-Even if the designer instead dropped each ball into a dog-bone via inside the 1 mm band under the
-package, the signals would have to *go somewhere*. Any destination that makes them usable requires at
-least one of:
+The four traces are necessary but not sufficient. Following them away from the package:
 
-* **AC-coupling pads** — none exist anywhere on either photographed side;
-* **ESD array pads** — none exist;
-* **test points** — the board has them for USB 2.0 and the pixel clock only;
-* **connector pins** — J4 is the only connector, and the external 7-pin connector cannot carry four
-  more conductors.
+* they pass a **two-pad footprint across the TX pair** — not in series, so **no on-board AC coupling**;
+* no **ESD array** is fitted on either photographed side;
+* no **SS test points** are labelled;
+* they route into the via field beside the **component-side 40-pin connector**, but the final pin
+  connection is on inner layers and is not visible.
 
-A routed-but-unterminated SuperSpeed pair would be a stub with no AC coupling and no receptacle — it
-would not train, and it would not be a "usable SuperSpeed circuit" under any reading of the question.
+A routed-but-unterminated pair would be a stub. The question is whether the connector terminates it
+usefully — exactly what M1/M2 measure. The absence of on-board caps/ESD is **not** fatal: the
+daughterboard can carry them, and the USB 3.1 ECN permits coupling "within the media or within the
+receiving component". It does mean the daughterboard is not a passive break-out; it is part of the
+SS front end.
 
-### 5.3 The B3 problem — the argument that closes the case
+### 5.3 The B3 problem — the remaining gate
 
-Suppose, against the photographic evidence, that the four SS pairs *are* routed somewhere useful. The
-link still cannot train, because the SS PHY needs its **200 Ω ±1 % calibration resistor on ball B3**,
-and Infineon explicitly permits that resistor to be omitted on a USB-2.0-only design (AN70707 App. C).
-B3 is in **row B** — the second row, not the perimeter — so it is strictly harder to reach than A3–A6.
+The photographic evidence now shows the four SS conductors routed, so the question is no longer
+"are A3–A6 connected?" but "is the SS PHY calibrated?". The SS PHY needs its **200 Ω ±1 %
+calibration resistor on ball B3**. Infineon permits that resistor to be omitted **only** in a
+USB-2.0-only design (AN70707 App. C); a board that routes the SS pairs and omits B3 has a design
+error or an uncalibrated PHY, and the link cannot train. B3 is in **row B** — the second row, under
+1.8 mm of package — so it is not reachable for rework without BGA work; only the 200 Ω resistor
+itself, wherever it is placed, is accessible.
 
-Therefore **any** electrical modification that hopes to achieve a 5 Gb/s link must, at minimum:
+Therefore a daughterboard solution must, at minimum:
 
-1. reach A3–A6 (perimeter row, under a 1 mm package overhang), **and**
-2. reach B3 (second row, under 1.8 mm of package), **and**
-3. add two 0.1 µF caps in series with SSTX, **and**
-4. add a ≤ 0.5 pF ESD array, **and**
+1. use the four SS traces already routed to the component-side connector (no BGA access needed), **and**
+2. rely on B3 being fitted (measured at its resistor, M3), **and**
+3. add two 0.1 µF caps in series with SSTX **on the daughterboard**, **and**
+4. add a ≤ 0.5 pF ESD array **on the daughterboard**, **and**
 5. create a 90 Ω ±7 % channel with a solid reference plane, no vias, < 76 mm, **and**
 6. terminate it in a connector and cable that carry four SS conductors and a shield.
 
@@ -429,9 +458,10 @@ Interpretation:
 
 * **200 Ω found** → the mainboard has SS *infrastructure*. The remaining question is only whether the
   pairs reach J4; go to M4.
-* **200 Ω not found** → the mainboard is a textbook AN70707 App. C USB-2.0-only design. **Option D
-  (BGA rework) becomes mandatory for any modification, and option E is dead.** The report's NO-GO
-  stands with no further measurement possible on this board.
+* **200 Ω not found** → the SS PHY has no calibration reference. The board still has four routed SS
+  conductors, so it is **not** a textbook App. C USB-2.0-only design — but the link cannot train.
+  **The conditional GO fails and option E is dead.** Only a board re-spin (or BGA rework to fit
+  R_USB3, which is impractical) remains.
 * Beware false positives: 200 Ω parts also appear in LED bias and termination networks. Require the
   part to be adjacent to the FX3 and to have one pad on ground.
 
@@ -462,14 +492,16 @@ Nothing in this plan requires soldering.
 | The controller is a CYUSB3014-BZX(I) | **Proved** | package marking |
 | The package is a 121-ball 0.8 mm BGA and its orientation is known | **Proved** | laser dot + silkscreen arrows + marking |
 | The four SS balls are A3–A6 on row A, 2.6–5.0 mm from the right edge | **Proved** | datasheet + measured package geometry |
-| No 0.1 µF series AC-coupling pair exists in the USB path | **Proved (optical)** | every 2-pad part inspected |
-| No SuperSpeed ESD array is fitted | **High confidence (optical)** | no 4-channel package found |
-| No SuperSpeed test pads or labels exist | **Proved** | only DP/DN/CLK/PCLK are labelled |
+| **Four conductors in two coupled pairs leave the FX3 lower edge and map to A3–A6** | **High confidence (optical)** | Addendum 2: Hough + Radon + re-encode stability; ball assignment ±8 px |
+| **No on-board series AC-coupling pair is fitted** | **Observed (optical)** | the TX pair is DC-continuous through a two-pad footprint; the daughterboard may carry the caps (permitted by the ECN) |
+| No SuperSpeed ESD array is fitted on **this board** | **High confidence (optical)** | no 4-channel package found; it may be on the daughterboard |
+| No SuperSpeed test pads or labels exist | **High confidence** | only DP/DN/CLK/PCLK are labelled; the two-pad footprint is unlabelled |
 | The 7-pin connector cannot carry SS | **Proved (arithmetic)** | 1 spare conductor, 4 required |
-| The board is a USB-2.0-only design in practice | **High confidence** | all of the above + vendor manual + 480 Mb/s enumeration |
-| The SS balls are unconnected | **Not proved** — inner layers/vias invisible | needs X-ray or de-soldering |
-| R_USB3 (200 Ω) is absent | **Not proved** | needs M3 |
-| J4 carries or does not carry SS | **Not proved** | needs M4 |
+| The board is USB-2.0-only **in practice** | **Proved (measured)** | 480 Mb/s enumeration; the fitted daughterboard/cable does not carry SS |
+| **The SS balls are unconnected** | **Disproved (optical)** | four traces escape row A; Addendum 2 |
+| **The SS pairs reach the component-side 40-pin connector** | **Probable, not proved** | the four traces route into the connector-side via field; the inner-layer final connection is invisible |
+| R_USB3 (200 Ω) is fitted | **Not proved either way** | needs M3 |
+| The component-side connector carries SS to the host | **Not proved** | needs M1/M2 continuity |
 | A flying-lead modification would fail | **Predicted (high confidence)** | quantified SI budget |
 | Firmware would negotiate SS unchanged | **Proved (earlier work)** | `CyU3PConnectState(1,1)` at every site |
 

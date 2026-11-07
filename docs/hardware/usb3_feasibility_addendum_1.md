@@ -1,5 +1,11 @@
 # Addendum 1 — The FX3 lower edge, re-measured
 
+> **SUPERSEDED IN PART by [Addendum 2](usb3_feasibility_addendum_2.md) (2026-11-08).**
+> A full-row re-measurement finds **four** conductors in **two** coupled pairs, not one pair. The
+> "no bundle of four" row below is wrong; §A1.5–A1.8 and the verdict are corrected in Addendum 2.
+> This file is retained as the historical record of what the first pass measured and why it stopped
+> where it did.
+
 **Amends §3.6 and §5 of `usb3_mainboard_feasibility.md`. Does not replace its verdict.**
 Read-only photographic re-analysis, 2026-11-07. No hardware touched, no power applied.
 
@@ -27,7 +33,7 @@ and chasing it produced two results that matter:
 
 | Original claim | Status now |
 |---|---|
-| "no bundle of four traces" | **still true** — there is no four-trace bundle |
+| "no bundle of four traces" | **superseded** — Addendum 2 finds four conductors in two pairs |
 | "at most two thin traces that belong to other nets" | **wrong** — a coupled pair plus several through-routes |
 | "SS pins probably left open (App. C)" | **no longer supported**, but not replaced by its opposite either |
 | ball positions ±1 px | **wrong** — they were 15 px off; see A1.4 |
