@@ -1,0 +1,3293 @@
+{
+ "usb_hid": {
+  "modules": [
+   "7z.exe",
+   "D3Dcompiler_47.dll",
+   "PnPutil.exe",
+   "Qt5Core.dll",
+   "Resource/driver/FX3/WdfCoinstaller01011.dll",
+   "Resource/driver/UEC/SHCtl.exe",
+   "Resource/driver/UEC/WdfCoinstaller01011.dll",
+   "Resource/driver/UEC/xdevcon.exe",
+   "Resource/runtime/vcredist_x64.exe",
+   "SiUSBXp.dll",
+   "Sn3DPassportController.dll",
+   "Sn3DSecurity.dll",
+   "Sn3DTexCameraHelper.dll",
+   "UsbTreeModel.dll",
+   "boost_filesystem-vc141-mt-x64-1_72.dll",
+   "hasp_windows_x64_105562.dll",
+   "libSn3DNavigation.dll",
+   "libpq.dll",
+   "passport/hub/passportHub.exe",
+   "passport/openweburl/D3Dcompiler_47.dll",
+   "passport/openweburl/Qt5Core.dll",
+   "passport/openweburl/Qt5SerialPort.dll",
+   "passport/openweburl/Qt5WebEngineCore.dll",
+   "sn3DHIDCommunication.dll",
+   "sn3DLock.dll",
+   "sn3DTurnTable.dll",
+   "syncservice/CommunicateLayer.dll",
+   "syncservice/Qt5Core.dll",
+   "syncservice/UsbTreeModel.dll",
+   "syncservice/device/dlp3100projector.2.0.0.dll",
+   "syncservice/device/einscan3.2.0.0.dll",
+   "syncservice/device/freescante25.2.0.2.dll",
+   "syncservice/device/ty1080projector.2.0.0.dll",
+   "syncservice/device/tylaser.2.0.0.dll",
+   "syncservice/logic/3DDigitalSyncInterface.2.0.0.dll",
+   "syncservice/sn3DCommunicateLayerM.dll",
+   "syncservice/sn3DHIDCommunication.dll",
+   "syncservice/sn3DHIDCommunicationM.dll",
+   "syncservice/sn3DHIDCommunicationNew.dll"
+  ],
+  "evidence": {
+   "7z.exe": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "D3Dcompiler_47.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "PnPutil.exe": [
+    "api-ms-win-devices-config-l1-1-1.dll: CM_Get_Child, CM_Get_Class_PropertyW, CM_Get_DevNode_PropertyW, CM_Get_Device_IDW, CM_Get_Device_ID_ListW, CM_Get_Device_ID_List_SizeW",
+    "CFGMGR32.dll: CM_Enumerate_Classes, CM_Reenumerate_DevNode",
+    "api-ms-win-core-io-l1-1-0.dll: DeviceIoControl"
+   ],
+   "Qt5Core.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "Resource/driver/FX3/WdfCoinstaller01011.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Set_DevNode_Problem_Ex, SetupDiGetActualSectionToInstallW, SetupDiGetDeviceInstallParamsW, SetupDiGetDriverInfoDetailW, SetupDiGetSelectedDriverW, SetupDiSetDeviceInstallParamsW"
+   ],
+   "Resource/driver/UEC/SHCtl.exe": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW",
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "Resource/driver/UEC/WdfCoinstaller01011.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Set_DevNode_Problem_Ex, SetupDiGetActualSectionToInstallW, SetupDiGetDeviceInstallParamsW, SetupDiGetDriverInfoDetailW, SetupDiGetSelectedDriverW, SetupDiSetDeviceInstallParamsW"
+   ],
+   "Resource/driver/UEC/xdevcon.exe": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Connect_MachineW, CM_Disconnect_Machine, CM_Free_Log_Conf_Handle, CM_Free_Res_Des_Handle, CM_Get_DevNode_Status_Ex, CM_Get_Device_ID_ExW"
+   ],
+   "Resource/runtime/vcredist_x64.exe": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "SiUSBXp.dll": [
+    "imports SETUPAPI.dll",
+    "KERNEL32.dll: DeviceIoControl",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsA, SetupDiGetDeviceInterfaceDetailA, SetupDiGetDeviceRegistryPropertyA",
+    "USB/HID implementation module"
+   ],
+   "Sn3DPassportController.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Get_Device_IDW, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW, SetupDiGetDeviceRegistryPropertyA"
+   ],
+   "Sn3DSecurity.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "Sn3DTexCameraHelper.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW"
+   ],
+   "UsbTreeModel.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Get_Child, CM_Get_DevNode_Registry_PropertyW, CM_Get_Device_IDW, CM_Get_Parent, CM_Get_Sibling, CM_Locate_DevNodeW",
+    "KERNEL32.dll: DeviceIoControl",
+    "USB/HID implementation module"
+   ],
+   "boost_filesystem-vc141-mt-x64-1_72.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "hasp_windows_x64_105562.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "libSn3DNavigation.dll": [
+    "imports UsbTreeModel.dll"
+   ],
+   "libpq.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "passport/hub/passportHub.exe": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "passport/openweburl/D3Dcompiler_47.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "passport/openweburl/Qt5Core.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "passport/openweburl/Qt5SerialPort.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Get_DevNode_Status, CM_Get_Device_IDW, CM_Get_Parent, SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW",
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "passport/openweburl/Qt5WebEngineCore.dll": [
+    "imports HID.DLL",
+    "KERNEL32.dll: DeviceIoControl",
+    "HID.DLL: HidD_FreePreparsedData, HidD_GetAttributes, HidD_GetPreparsedData, HidD_GetProductString, HidD_GetSerialNumberString, HidP_GetButtonCaps"
+   ],
+   "sn3DHIDCommunication.dll": [
+    "imports HID.DLL",
+    "imports SETUPAPI.dll",
+    "HID.DLL: HidD_FlushQueue, HidD_GetHidGuid, HidD_GetInputReport, HidD_GetPreparsedData, HidD_GetSerialNumberString, HidD_SetOutputReport",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW",
+    "USB/HID implementation module"
+   ],
+   "sn3DLock.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "sn3DTurnTable.dll": [
+    "imports sn3DHIDCommunication.dll",
+    "imports SiUSBXp.dll (8 ordinals)"
+   ],
+   "syncservice/CommunicateLayer.dll": [
+    "imports SETUPAPI.dll",
+    "KERNEL32.dll: DeviceIoControl",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW"
+   ],
+   "syncservice/Qt5Core.dll": [
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "syncservice/UsbTreeModel.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: CM_Get_Child, CM_Get_DevNode_Registry_PropertyW, CM_Get_Device_IDW, CM_Get_Parent, CM_Get_Sibling, CM_Locate_DevNodeW",
+    "KERNEL32.dll: DeviceIoControl",
+    "USB/HID implementation module"
+   ],
+   "syncservice/device/dlp3100projector.2.0.0.dll": [
+    "imports sn3DHIDCommunication.dll"
+   ],
+   "syncservice/device/einscan3.2.0.0.dll": [
+    "imports sn3DHIDCommunication.dll"
+   ],
+   "syncservice/device/freescante25.2.0.2.dll": [
+    "imports sn3DHIDCommunication.dll"
+   ],
+   "syncservice/device/ty1080projector.2.0.0.dll": [
+    "imports sn3DHIDCommunication.dll"
+   ],
+   "syncservice/device/tylaser.2.0.0.dll": [
+    "imports sn3DHIDCommunication.dll"
+   ],
+   "syncservice/logic/3DDigitalSyncInterface.2.0.0.dll": [
+    "imports UsbTreeModel.dll"
+   ],
+   "syncservice/sn3DCommunicateLayerM.dll": [
+    "imports SETUPAPI.dll",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW",
+    "KERNEL32.dll: DeviceIoControl"
+   ],
+   "syncservice/sn3DHIDCommunication.dll": [
+    "imports HID.DLL",
+    "imports SETUPAPI.dll",
+    "HID.DLL: HidD_FlushQueue, HidD_GetHidGuid, HidD_GetInputReport, HidD_GetPreparsedData, HidD_GetSerialNumberString, HidD_SetOutputReport",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW",
+    "USB/HID implementation module"
+   ],
+   "syncservice/sn3DHIDCommunicationM.dll": [
+    "imports HID.DLL",
+    "imports SETUPAPI.dll",
+    "HID.DLL: HidD_FlushQueue, HidD_GetHidGuid, HidD_GetInputReport, HidD_GetPreparsedData, HidD_GetSerialNumberString, HidD_SetFeature",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW"
+   ],
+   "syncservice/sn3DHIDCommunicationNew.dll": [
+    "imports SETUPAPI.dll",
+    "imports HID.DLL",
+    "SETUPAPI.dll: SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInterfaces, SetupDiGetClassDevsW, SetupDiGetDeviceInterfaceDetailW",
+    "HID.DLL: HidD_FlushQueue, HidD_GetHidGuid, HidD_GetInputReport, HidD_GetPreparsedData, HidD_GetSerialNumberString, HidD_SetOutputReport"
+   ]
+  }
+ },
+ "crypto": {
+  "modules": [
+   "D3Dcompiler_47.dll",
+   "LIBEAY32.dll",
+   "Qt5Network.dll",
+   "Release/libcurl.dll",
+   "Resource/driver/UEC/PsExec64.exe",
+   "Resource/runtime/vcamp120.dll",
+   "Resource/runtime/vcredist2013EN_x64.exe",
+   "Resource/runtime/vcredist2015.exe",
+   "Resource/runtime/vcredist_x64.exe",
+   "Resource/runtime/vcredist_x64_VS2017.exe",
+   "SSLEAY32.dll",
+   "Sn3DCrypto.dll",
+   "Sn3DDentalAI.dll",
+   "Sn3DDentalOralCls.dll",
+   "Sn3DHeadSeg.dll",
+   "Sn3DInfraredCariesDet.dll",
+   "Sn3DLandmarksDetForCli.dll",
+   "Sn3DPassportController.dll",
+   "Sn3DSecurity.dll",
+   "SnCommon.dll",
+   "boost_filesystem-vc141-mt-x64-1_72.dll",
+   "common.dll",
+   "cryptopp.dll",
+   "hasp_windows_x64_105562.dll",
+   "haspvlib_105562.dll",
+   "libcrypto-1_1-x64.dll",
+   "libcrypto-1_1.dll",
+   "libcurl.dll",
+   "libpq.dll",
+   "libssl-1_1-x64.dll",
+   "libssl-1_1.dll",
+   "opengl32sw.dll",
+   "passport/hub/passportHub.exe",
+   "passport/hub/plugin.dll",
+   "passport/openweburl/D3Dcompiler_47.dll",
+   "passport/openweburl/Qt5Network.dll",
+   "passport/openweburl/Qt5WebEngineCore.dll",
+   "passport/openweburl/opengl32sw.dll",
+   "plugin.dll",
+   "qttunnel.3.0.9.dll",
+   "scanhub.exe",
+   "sn3DLock.dll",
+   "sqldrivers/sqlitecipher.dll",
+   "sqlitecipher.dll",
+   "syncservice/Qt5Network.dll",
+   "syncservice/SnCommon.dll",
+   "syncservice/cryptopp.dll",
+   "syncservice/device/freetrak.2.1.0.dll",
+   "syncservice/opengl32sw.dll",
+   "syncservice/qttunnel.3.0.9.dll",
+   "syncservice/tunnel_encrypt.dll",
+   "syncservice/tunnel_encryptd.dll",
+   "tunnel_encrypt.dll",
+   "tunnel_encryptd.dll",
+   "vcamp120.dll"
+  ],
+  "evidence": {
+   "D3Dcompiler_47.dll": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDestroyHash, CryptGetHashParam, CryptHashData"
+   ],
+   "LIBEAY32.dll": [
+    "crypto/security/licensing module",
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDecrypt, CryptDestroyHash, CryptDestroyKey",
+    "CRYPT32.dll: CertCloseStore, CertDuplicateCertificateContext, CertEnumCertificatesInStore, CertFindCertificateInStore, CertFreeCertificateContext"
+   ],
+   "Qt5Network.dll": [
+    "CRYPT32.dll: CertAddCertificateContextToStore, CertCloseStore, CertCreateCertificateContext, CertFindCertificateInStore, CertFreeCertificateChain",
+    "imports libcrypto-1_1-x64.dll (164)",
+    "libcrypto-1_1-x64.dll: CRYPTO_free, CRYPTO_get_ex_new_index, CRYPTO_malloc"
+   ],
+   "Release/libcurl.dll": [
+    "ADVAPI32.dll: CryptAcquireContextA, CryptCreateHash, CryptDestroyHash, CryptDestroyKey, CryptEncrypt"
+   ],
+   "Resource/driver/UEC/PsExec64.exe": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDecrypt, CryptDeriveKey, CryptDestroyKey"
+   ],
+   "Resource/runtime/vcamp120.dll": [
+    "crypto/security/licensing module"
+   ],
+   "Resource/runtime/vcredist2013EN_x64.exe": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDestroyHash, CryptGetHashParam, CryptHashData",
+    "CRYPT32.dll: CertGetCertificateContextProperty, CryptHashPublicKeyInfo",
+    "WINTRUST.dll: CryptCATAdminCalcHashFromFileHandle"
+   ],
+   "Resource/runtime/vcredist2015.exe": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDestroyHash, CryptGetHashParam, CryptHashData",
+    "CRYPT32.dll: CertGetCertificateContextProperty, CryptHashPublicKeyInfo",
+    "WINTRUST.dll: CryptCATAdminCalcHashFromFileHandle"
+   ],
+   "Resource/runtime/vcredist_x64.exe": [
+    "ADVAPI32.dll: CryptAcquireContextA, CryptGenRandom, CryptReleaseContext"
+   ],
+   "Resource/runtime/vcredist_x64_VS2017.exe": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDestroyHash, CryptGetHashParam, CryptHashData"
+   ],
+   "SSLEAY32.dll": [
+    "crypto/security/licensing module",
+    "imports LIBEAY32.dll (372)"
+   ],
+   "Sn3DCrypto.dll": [
+    "crypto/security/licensing module",
+    "imports cryptopp.dll (174)"
+   ],
+   "Sn3DDentalAI.dll": [
+    "imports cryptopp.dll (159)"
+   ],
+   "Sn3DDentalOralCls.dll": [
+    "imports cryptopp.dll (159)"
+   ],
+   "Sn3DHeadSeg.dll": [
+    "imports cryptopp.dll (159)"
+   ],
+   "Sn3DInfraredCariesDet.dll": [
+    "imports cryptopp.dll (159)"
+   ],
+   "Sn3DLandmarksDetForCli.dll": [
+    "imports cryptopp.dll (159)"
+   ],
+   "Sn3DPassportController.dll": [
+    "crypto/security/licensing module"
+   ],
+   "Sn3DSecurity.dll": [
+    "crypto/security/licensing module"
+   ],
+   "SnCommon.dll": [
+    "imports cryptopp.dll (187)"
+   ],
+   "boost_filesystem-vc141-mt-x64-1_72.dll": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptGenRandom, CryptReleaseContext"
+   ],
+   "common.dll": [
+    "imports sn3DLock.dll (2)",
+    "bcrypt.dll: BCryptGenRandom"
+   ],
+   "cryptopp.dll": [
+    "crypto/security/licensing module",
+    "ADVAPI32.dll: CryptAcquireContextA, CryptGenRandom, CryptReleaseContext"
+   ],
+   "hasp_windows_x64_105562.dll": [
+    "crypto/security/licensing module"
+   ],
+   "haspvlib_105562.dll": [
+    "crypto/security/licensing module"
+   ],
+   "libcrypto-1_1-x64.dll": [
+    "crypto/security/licensing module",
+    "bcrypt.dll: BCryptGenRandom"
+   ],
+   "libcrypto-1_1.dll": [
+    "crypto/security/licensing module",
+    "bcrypt.dll: BCryptGenRandom"
+   ],
+   "libcurl.dll": [
+    "ADVAPI32.dll: CryptAcquireContextA, CryptCreateHash, CryptDestroyHash, CryptDestroyKey, CryptEncrypt"
+   ],
+   "libpq.dll": [
+    "imports SSLEAY32.dll (30)",
+    "imports LIBEAY32.dll (28)"
+   ],
+   "libssl-1_1-x64.dll": [
+    "crypto/security/licensing module",
+    "imports libcrypto-1_1-x64.dll (434)",
+    "libcrypto-1_1-x64.dll: CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_run_once, CRYPTO_THREAD_unlock"
+   ],
+   "libssl-1_1.dll": [
+    "crypto/security/licensing module",
+    "libcrypto-1_1.dll: CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_run_once, CRYPTO_THREAD_unlock"
+   ],
+   "opengl32sw.dll": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptGenRandom, CryptReleaseContext"
+   ],
+   "passport/hub/passportHub.exe": [
+    "ADVAPI32.dll: CryptAcquireContextA, CryptGenRandom, CryptReleaseContext"
+   ],
+   "passport/hub/plugin.dll": [
+    "imports tunnel_encrypt.dll (7)"
+   ],
+   "passport/openweburl/D3Dcompiler_47.dll": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptCreateHash, CryptDestroyHash, CryptGetHashParam, CryptHashData"
+   ],
+   "passport/openweburl/Qt5Network.dll": [
+    "CRYPT32.dll: CertCreateCertificateContext, CertFreeCertificateChain, CertFreeCertificateContext, CertGetCertificateChain"
+   ],
+   "passport/openweburl/Qt5WebEngineCore.dll": [
+    "ADVAPI32.dll: CryptCreateHash, CryptDestroyHash, CryptGetHashParam, CryptReleaseContext, CryptSetHashParam",
+    "CRYPT32.dll: CertAddCertificateContextToStore, CertAddEncodedCertificateToStore, CertCloseStore, CertCompareCertificateName, CertCreateCertificateChainEngine",
+    "ncrypt.dll: NCryptFreeObject, NCryptSignHash"
+   ],
+   "passport/openweburl/opengl32sw.dll": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptGenRandom, CryptReleaseContext"
+   ],
+   "plugin.dll": [
+    "imports tunnel_encrypt.dll (7)"
+   ],
+   "qttunnel.3.0.9.dll": [
+    "imports tunnel_encrypt.dll (7)"
+   ],
+   "scanhub.exe": [
+    "ADVAPI32.dll: CryptAcquireContextA, CryptGenRandom, CryptReleaseContext"
+   ],
+   "sn3DLock.dll": [
+    "crypto/security/licensing module",
+    "imports hasp_windows_x64_105562.dll (10)"
+   ],
+   "sqldrivers/sqlitecipher.dll": [
+    "crypto/security/licensing module"
+   ],
+   "sqlitecipher.dll": [
+    "crypto/security/licensing module"
+   ],
+   "syncservice/Qt5Network.dll": [
+    "CRYPT32.dll: CertCreateCertificateContext, CertFreeCertificateChain, CertFreeCertificateContext, CertGetCertificateChain"
+   ],
+   "syncservice/SnCommon.dll": [
+    "imports cryptopp.dll (187)"
+   ],
+   "syncservice/cryptopp.dll": [
+    "crypto/security/licensing module",
+    "ADVAPI32.dll: CryptAcquireContextA, CryptGenRandom, CryptReleaseContext"
+   ],
+   "syncservice/device/freetrak.2.1.0.dll": [
+    "imports libcrypto-1_1-x64.dll (8)"
+   ],
+   "syncservice/opengl32sw.dll": [
+    "ADVAPI32.dll: CryptAcquireContextW, CryptGenRandom, CryptReleaseContext"
+   ],
+   "syncservice/qttunnel.3.0.9.dll": [
+    "imports tunnel_encrypt.dll (7)"
+   ],
+   "syncservice/tunnel_encrypt.dll": [
+    "crypto/security/licensing module"
+   ],
+   "syncservice/tunnel_encryptd.dll": [
+    "crypto/security/licensing module"
+   ],
+   "tunnel_encrypt.dll": [
+    "crypto/security/licensing module"
+   ],
+   "tunnel_encryptd.dll": [
+    "crypto/security/licensing module"
+   ],
+   "vcamp120.dll": [
+    "crypto/security/licensing module"
+   ]
+  }
+ },
+ "gpu_compute": {
+  "modules": [
+   "CommonFunc.dll",
+   "Qt5Gui.dll",
+   "Release/osg158-osg.dll",
+   "Release/osg158-osgDB.dll",
+   "Release/osg158-osgFX.dll",
+   "Release/osg158-osgGA.dll",
+   "Release/osg158-osgManipulator.dll",
+   "Release/osg158-osgParticle.dll",
+   "Release/osg158-osgShadow.dll",
+   "Release/osg158-osgText.dll",
+   "Release/osg158-osgUtil.dll",
+   "Release/osg158-osgViewer.dll",
+   "Release/osgPlugins-3.6.3/osgdb_logo.dll",
+   "Release/ot21-OpenThreads.dll",
+   "Resource/runtime/vcamp120.dll",
+   "Sn3DAVXImp.dll",
+   "Sn3DCalibrationJR.dll",
+   "Sn3DCloudProcessGPU.dll",
+   "Sn3DColorCorrect.dll",
+   "Sn3DCork.dll",
+   "Sn3DDental.dll",
+   "Sn3DDentalAI.dll",
+   "Sn3DDigital.dll",
+   "Sn3DFaceScan.dll",
+   "Sn3DFaceUnity.dll",
+   "Sn3DGeometricTrackFusion.dll",
+   "Sn3DGratingRecons.dll",
+   "Sn3DInfraredCariesDet.dll",
+   "Sn3DLandmarksDetForCli.dll",
+   "Sn3DLineCode.dll",
+   "Sn3DMagic.dll",
+   "Sn3DPhaseBuild.dll",
+   "Sn3DRealtimeScan.dll",
+   "Sn3DRegistration.dll",
+   "Sn3DSparseSolver.dll",
+   "Sn3DSpeckle.dll",
+   "Sn3DSpeckleFusion.dll",
+   "Sn3DTextureBasedTrack.dll",
+   "Sn3DTextureSFM.dll",
+   "Sn3DTextureSlam.dll",
+   "SnDXGICapturePlugin.dll",
+   "algorithm1.dll",
+   "algorithm2.dll",
+   "algorithmHlj.dll",
+   "algorithmLy.dll",
+   "algorithmLzy.dll",
+   "algorithmZbt.dll",
+   "common.dll",
+   "cudart64_102.dll",
+   "cusolver64_10.dll",
+   "glew32.dll",
+   "information_api.dll",
+   "libEGL.dll",
+   "libGLESV2.dll",
+   "libSn3DNavigation.dll",
+   "librenderkit.dll",
+   "librenderkit.plugin.cuda.dll",
+   "mkl_core.dll",
+   "mkl_def.dll",
+   "mkl_rt.dll",
+   "mkl_sequential.dll",
+   "mkl_tbb_thread.dll",
+   "nppc64_10.dll",
+   "nppig64_10.dll",
+   "opencv_core348.dll",
+   "opencv_cudawarping348.dll",
+   "opencv_videoio348.dll",
+   "opengl32sw.dll",
+   "osg158-osg.dll",
+   "osg158-osgDB.dll",
+   "osg158-osgFX.dll",
+   "osg158-osgGA.dll",
+   "osg158-osgManipulator.dll",
+   "osg158-osgParticle.dll",
+   "osg158-osgShadow.dll",
+   "osg158-osgText.dll",
+   "osg158-osgUtil.dll",
+   "osg158-osgViewer.dll",
+   "osgPlugins-3.6.3/osgdb_logo.dll",
+   "ot21-OpenThreads.dll",
+   "passport/openweburl/Qt5WebEngineCore.dll",
+   "passport/openweburl/libEGL.dll",
+   "passport/openweburl/libGLESV2.dll",
+   "passport/openweburl/opengl32sw.dll",
+   "platforms/qdirect2d.dll",
+   "platforms/qdirect2dd.dll",
+   "plugins/mediaservice/wmfengine.dll",
+   "print3DCommon.dll",
+   "print3DSlicing.dll",
+   "syncservice/SnDXGICapturePlugin.dll",
+   "syncservice/cudart64_102.dll",
+   "syncservice/device/Einscan3H2.2.0.0.dll",
+   "syncservice/libEGL.dll",
+   "syncservice/libGLESV2.dll",
+   "syncservice/opengl32sw.dll",
+   "vcamp120.dll"
+  ],
+  "evidence": {
+   "CommonFunc.dll": [
+    "imports mkl_sequential.dll",
+    "imports tbb.dll"
+   ],
+   "Qt5Gui.dll": [
+    "imports d3d11.dll",
+    "imports dxgi.dll"
+   ],
+   "Release/osg158-osg.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgDB.dll": [
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgFX.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgGA.dll": [
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgManipulator.dll": [
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgParticle.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgShadow.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgText.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgUtil.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osg158-osgViewer.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "Release/osgPlugins-3.6.3/osgdb_logo.dll": [
+    "imports OPENGL32.dll"
+   ],
+   "Release/ot21-OpenThreads.dll": [
+    "graphics/compute runtime module"
+   ],
+   "Resource/runtime/vcamp120.dll": [
+    "imports dxgi.dll",
+    "imports d3d11.dll"
+   ],
+   "Sn3DAVXImp.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DCalibrationJR.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DCloudProcessGPU.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DColorCorrect.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DCork.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DDental.dll": [
+    "imports tbb.dll",
+    "imports OPENGL32.dll"
+   ],
+   "Sn3DDentalAI.dll": [
+    "imports tbb.dll",
+    "imports OPENGL32.dll"
+   ],
+   "Sn3DDigital.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DFaceScan.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DFaceUnity.dll": [
+    "imports OPENGL32.dll"
+   ],
+   "Sn3DGeometricTrackFusion.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DGratingRecons.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DInfraredCariesDet.dll": [
+    "imports OPENGL32.dll",
+    "imports tbb.dll"
+   ],
+   "Sn3DLandmarksDetForCli.dll": [
+    "imports OPENGL32.dll"
+   ],
+   "Sn3DLineCode.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DMagic.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DPhaseBuild.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DRealtimeScan.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DRegistration.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DSparseSolver.dll": [
+    "imports mkl_rt.dll"
+   ],
+   "Sn3DSpeckle.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DSpeckleFusion.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DTextureBasedTrack.dll": [
+    "imports tbb.dll"
+   ],
+   "Sn3DTextureSFM.dll": [
+    "imports OPENGL32.dll",
+    "imports tbb.dll"
+   ],
+   "Sn3DTextureSlam.dll": [
+    "imports tbb.dll"
+   ],
+   "SnDXGICapturePlugin.dll": [
+    "imports d3d11.dll"
+   ],
+   "algorithm1.dll": [
+    "imports tbb.dll"
+   ],
+   "algorithm2.dll": [
+    "imports tbb.dll"
+   ],
+   "algorithmHlj.dll": [
+    "imports tbb.dll"
+   ],
+   "algorithmLy.dll": [
+    "imports tbb.dll"
+   ],
+   "algorithmLzy.dll": [
+    "imports tbb.dll"
+   ],
+   "algorithmZbt.dll": [
+    "imports tbb.dll"
+   ],
+   "common.dll": [
+    "imports tbb.dll"
+   ],
+   "cudart64_102.dll": [
+    "graphics/compute runtime module"
+   ],
+   "cusolver64_10.dll": [
+    "graphics/compute runtime module"
+   ],
+   "glew32.dll": [
+    "imports OPENGL32.dll"
+   ],
+   "information_api.dll": [
+    "imports dxgi.dll"
+   ],
+   "libEGL.dll": [
+    "imports libGLESv2.dll"
+   ],
+   "libGLESV2.dll": [
+    "imports d3d9.dll"
+   ],
+   "libSn3DNavigation.dll": [
+    "imports dxgi.dll"
+   ],
+   "librenderkit.dll": [
+    "imports OPENGL32.dll"
+   ],
+   "librenderkit.plugin.cuda.dll": [
+    "CUDA render-kit plugin"
+   ],
+   "mkl_core.dll": [
+    "graphics/compute runtime module"
+   ],
+   "mkl_def.dll": [
+    "imports mkl_core.dll",
+    "graphics/compute runtime module"
+   ],
+   "mkl_rt.dll": [
+    "graphics/compute runtime module"
+   ],
+   "mkl_sequential.dll": [
+    "imports mkl_core.dll",
+    "graphics/compute runtime module"
+   ],
+   "mkl_tbb_thread.dll": [
+    "imports mkl_core.dll",
+    "graphics/compute runtime module"
+   ],
+   "nppc64_10.dll": [
+    "graphics/compute runtime module"
+   ],
+   "nppig64_10.dll": [
+    "imports nppc64_10.dll",
+    "graphics/compute runtime module"
+   ],
+   "opencv_core348.dll": [
+    "imports cudart64_102.dll"
+   ],
+   "opencv_cudawarping348.dll": [
+    "imports cudart64_102.dll",
+    "imports nppc64_10.dll",
+    "imports nppig64_10.dll"
+   ],
+   "opencv_videoio348.dll": [
+    "imports d3d11.dll"
+   ],
+   "opengl32sw.dll": [
+    "graphics/compute runtime module"
+   ],
+   "osg158-osg.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgDB.dll": [
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgFX.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgGA.dll": [
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgManipulator.dll": [
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgParticle.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgShadow.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgText.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgUtil.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osg158-osgViewer.dll": [
+    "imports OPENGL32.dll",
+    "graphics/compute runtime module"
+   ],
+   "osgPlugins-3.6.3/osgdb_logo.dll": [
+    "imports OPENGL32.dll"
+   ],
+   "ot21-OpenThreads.dll": [
+    "graphics/compute runtime module"
+   ],
+   "passport/openweburl/Qt5WebEngineCore.dll": [
+    "imports dxgi.dll",
+    "imports d3d11.dll",
+    "imports d3d9.dll"
+   ],
+   "passport/openweburl/libEGL.dll": [
+    "imports libGLESv2.dll"
+   ],
+   "passport/openweburl/libGLESV2.dll": [
+    "imports d3d9.dll"
+   ],
+   "passport/openweburl/opengl32sw.dll": [
+    "graphics/compute runtime module"
+   ],
+   "platforms/qdirect2d.dll": [
+    "imports d3d11.dll"
+   ],
+   "platforms/qdirect2dd.dll": [
+    "imports d3d11.dll"
+   ],
+   "plugins/mediaservice/wmfengine.dll": [
+    "imports d3d9.dll"
+   ],
+   "print3DCommon.dll": [
+    "imports tbb.dll"
+   ],
+   "print3DSlicing.dll": [
+    "imports tbb.dll"
+   ],
+   "syncservice/SnDXGICapturePlugin.dll": [
+    "imports d3d11.dll"
+   ],
+   "syncservice/cudart64_102.dll": [
+    "graphics/compute runtime module"
+   ],
+   "syncservice/device/Einscan3H2.2.0.0.dll": [
+    "imports cudart64_102.dll"
+   ],
+   "syncservice/libEGL.dll": [
+    "imports libGLESv2.dll"
+   ],
+   "syncservice/libGLESV2.dll": [
+    "imports d3d9.dll"
+   ],
+   "syncservice/opengl32sw.dll": [
+    "graphics/compute runtime module"
+   ],
+   "vcamp120.dll": [
+    "imports dxgi.dll",
+    "imports d3d11.dll"
+   ]
+  }
+ },
+ "vision_recon": {
+  "modules": [
+   "CommonFunc.dll",
+   "FrameDataObj.dll",
+   "GenerateDataProcess.dll",
+   "Measurement.dll",
+   "OpenMeshCore.dll",
+   "OpenMeshTools.dll",
+   "OpenOrCreateController.dll",
+   "PostProcess.dll",
+   "RebuildProcess.dll",
+   "ScanAlignFusionProcess.dll",
+   "ScanEditProcess.dll",
+   "Sn3D/Digit/Global/Sn3DDigitGlobal.dll",
+   "Sn3D/Digit/Ui/Sn3DDigitUi.dll",
+   "Sn3D/UI/Sn3DFileDialog/Sn3DFileDialog.dll",
+   "Sn3DAIOutUnity.dll",
+   "Sn3DAVXImp.dll",
+   "Sn3DAlgorithmWrapper.dll",
+   "Sn3DAutoExposureHelper.dll",
+   "Sn3DBox.dll",
+   "Sn3DCalibBigCirExtract.dll",
+   "Sn3DCalibCaptureImageProcess.dll",
+   "Sn3DCalibDevFile.dll",
+   "Sn3DCalibrateAlgorithmHelper.dll",
+   "Sn3DCalibrateAlgorithmWrapper.dll",
+   "Sn3DCalibrateData.dll",
+   "Sn3DCalibrateImageInfo.dll",
+   "Sn3DCalibrateLoader.dll",
+   "Sn3DCalibrationJR.dll",
+   "Sn3DCameraCalibHelper.dll",
+   "Sn3DCloudDisk.dll",
+   "Sn3DCloudProcessGPU.dll",
+   "Sn3DCodeProject.dll",
+   "Sn3DColorCorrect.dll",
+   "Sn3DConfig.dll",
+   "Sn3DCork.dll",
+   "Sn3DCrypto.dll",
+   "Sn3DDental.dll",
+   "Sn3DDentalAI.dll",
+   "Sn3DDentalBoxDet.dll",
+   "Sn3DDentalMeshParameterize.dll",
+   "Sn3DDentalOralCls.dll",
+   "Sn3DDeveloperControlPlugin.dll",
+   "Sn3DDeviceEinStar.dll",
+   "Sn3DDigitGlobal.dll",
+   "Sn3DDigital.dll",
+   "Sn3DEACalibrateController.dll",
+   "Sn3DEinStarController.dll",
+   "Sn3DErrorCode.dll",
+   "Sn3DFaceScan.dll",
+   "Sn3DFaceUnity.dll",
+   "Sn3DFile.dll",
+   "Sn3DFrameDataController.dll",
+   "Sn3DFrameDataQueue.dll",
+   "Sn3DFrameDeletor.dll",
+   "Sn3DGeometricTrackFusion.dll",
+   "Sn3DGratingRecons.dll",
+   "Sn3DHeadSeg.dll",
+   "Sn3DImageQueue.dll",
+   "Sn3DInfraredCariesDet.dll",
+   "Sn3DLandmarksDetForCli.dll",
+   "Sn3DLineCode.dll",
+   "Sn3DLog.dll",
+   "Sn3DMagic.dll",
+   "Sn3DManualAlign.dll",
+   "Sn3DMultiProjects.dll",
+   "Sn3DPassportController.dll",
+   "Sn3DPhaseBuild.dll",
+   "Sn3DProcessPlugin.dll",
+   "Sn3DProgressHelper.dll",
+   "Sn3DProjDefaultPath.dll",
+   "Sn3DQuickCloudHelper.dll",
+   "Sn3DRealtimeScan.dll",
+   "Sn3DRegistration.dll",
+   "Sn3DRestoreData.dll",
+   "Sn3DScanController.dll",
+   "Sn3DScanSlam.dll",
+   "Sn3DSecurity.dll",
+   "Sn3DSoftwareUpdate.dll",
+   "Sn3DSoftwareUpgradeController.dll",
+   "Sn3DSparseSolver.dll",
+   "Sn3DSpeckle.dll",
+   "Sn3DSpeckleFusion.dll",
+   "Sn3DStatusCache.dll",
+   "Sn3DTexCameraHelper.dll",
+   "Sn3DTexture.dll",
+   "Sn3DTextureBasedTrack.dll",
+   "Sn3DTextureMapper.dll",
+   "Sn3DTextureSFM.dll",
+   "Sn3DTextureSlam.dll",
+   "Sn3DTextureUtil.dll",
+   "Sn3DTurntableController.dll",
+   "Sn3DUserPassport.dll",
+   "Sn3DprocessManager.exe",
+   "Ty3dTrackCalibrationSolution.dll",
+   "algorithm1.dll",
+   "algorithm2.dll",
+   "algorithmHlj.dll",
+   "algorithmLy.dll",
+   "algorithmLzy.dll",
+   "algorithmZbt.dll",
+   "ceres.dll",
+   "common.dll",
+   "commonGpu.dll",
+   "lib3MF.dll",
+   "libblas.dll",
+   "libgfortran-3.dll",
+   "liblapack.dll",
+   "libquadmath-0.dll",
+   "mpir.dll",
+   "opencv_calib3d348.dll",
+   "opencv_core348.dll",
+   "opencv_cudawarping348.dll",
+   "opencv_features2d348.dll",
+   "opencv_flann348.dll",
+   "opencv_highgui348.dll",
+   "opencv_imgcodecs348.dll",
+   "opencv_imgproc348.dll",
+   "opencv_videoio348.dll",
+   "passport/SnCommunity/sn3DCommunity.exe",
+   "print3DCommon.dll",
+   "print3DSlicing.dll",
+   "sn3DCommunity.exe",
+   "sn3DHIDCommunication.dll",
+   "sn3DLock.dll",
+   "sn3DTurnTable.dll",
+   "sn3d.digit.scenecontrol.dll",
+   "sn3d_user_account.dll",
+   "syncservice/device/Einscan3H2.2.0.0.dll",
+   "syncservice/opencv_core3411.dll",
+   "syncservice/opencv_imgcodecs3411.dll",
+   "syncservice/opencv_imgproc3411.dll",
+   "syncservice/sn3DCommunicateLayerM.dll",
+   "syncservice/sn3DHIDCommunication.dll",
+   "syncservice/sn3DHIDCommunicationM.dll",
+   "syncservice/sn3DHIDCommunicationNew.dll",
+   "tbb.dll"
+  ],
+  "evidence": {
+   "CommonFunc.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "FrameDataObj.dll": [
+    "imports opencv_core348.dll"
+   ],
+   "GenerateDataProcess.dll": [
+    "imports opencv_core348.dll"
+   ],
+   "Measurement.dll": [
+    "imports OpenMeshCore.dll"
+   ],
+   "OpenMeshCore.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "OpenMeshTools.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "OpenOrCreateController.dll": [
+    "imports opencv_core348.dll"
+   ],
+   "PostProcess.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_core348.dll",
+    "imports opencv_imgproc348.dll"
+   ],
+   "RebuildProcess.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgcodecs348.dll"
+   ],
+   "ScanAlignFusionProcess.dll": [
+    "imports opencv_core348.dll"
+   ],
+   "ScanEditProcess.dll": [
+    "imports opencv_core348.dll"
+   ],
+   "Sn3D/Digit/Global/Sn3DDigitGlobal.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3D/Digit/Ui/Sn3DDigitUi.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3D/UI/Sn3DFileDialog/Sn3DFileDialog.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DAIOutUnity.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DAVXImp.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DAlgorithmWrapper.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgproc348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DAutoExposureHelper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DBox.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibBigCirExtract.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgproc348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibCaptureImageProcess.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibDevFile.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibrateAlgorithmHelper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibrateAlgorithmWrapper.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibrateData.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibrateImageInfo.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibrateLoader.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCalibrationJR.dll": [
+    "imports ceres.dll",
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCameraCalibHelper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCloudDisk.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCloudProcessGPU.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCodeProject.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DColorCorrect.dll": [
+    "imports opencv_highgui348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DConfig.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCork.dll": [
+    "imports OpenMeshCore.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DCrypto.dll": [
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDental.dll": [
+    "imports ceres.dll",
+    "imports OpenMeshCore.dll",
+    "imports opencv_highgui348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDentalAI.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDentalBoxDet.dll": [
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDentalMeshParameterize.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDentalOralCls.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDeveloperControlPlugin.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDeviceEinStar.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgproc348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDigitGlobal.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DDigital.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DEACalibrateController.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DEinStarController.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DErrorCode.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DFaceScan.dll": [
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DFaceUnity.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DFile.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DFrameDataController.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DFrameDataQueue.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DFrameDeletor.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DGeometricTrackFusion.dll": [
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DGratingRecons.dll": [
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DHeadSeg.dll": [
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DImageQueue.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DInfraredCariesDet.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DLandmarksDetForCli.dll": [
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DLineCode.dll": [
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DLog.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DMagic.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DManualAlign.dll": [
+    "imports OpenMeshCore.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DMultiProjects.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DPassportController.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DPhaseBuild.dll": [
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DProcessPlugin.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DProgressHelper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DProjDefaultPath.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DQuickCloudHelper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DRealtimeScan.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DRegistration.dll": [
+    "imports ceres.dll",
+    "imports OpenMeshCore.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DRestoreData.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DScanController.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DScanSlam.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DSecurity.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DSoftwareUpdate.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DSoftwareUpgradeController.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DSparseSolver.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DSpeckle.dll": [
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DSpeckleFusion.dll": [
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DStatusCache.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTexCameraHelper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTexture.dll": [
+    "imports opencv_core348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTextureBasedTrack.dll": [
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTextureMapper.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTextureSFM.dll": [
+    "imports ceres.dll",
+    "imports opencv_calib3d348.dll",
+    "imports opencv_features2d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTextureSlam.dll": [
+    "imports opencv_features2d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTextureUtil.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DTurntableController.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DUserPassport.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Sn3DprocessManager.exe": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "Ty3dTrackCalibrationSolution.dll": [
+    "imports ceres.dll"
+   ],
+   "algorithm1.dll": [
+    "imports ceres.dll",
+    "imports OpenMeshCore.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "algorithm2.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "algorithmHlj.dll": [
+    "imports opencv_highgui348.dll",
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "algorithmLy.dll": [
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "algorithmLzy.dll": [
+    "imports opencv_highgui348.dll",
+    "imports opencv_calib3d348.dll",
+    "imports opencv_features2d348.dll",
+    "imports opencv_flann348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "algorithmZbt.dll": [
+    "imports ceres.dll",
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll",
+    "Shining3D algorithm/scanning module"
+   ],
+   "ceres.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "common.dll": [
+    "imports OpenMeshCore.dll",
+    "imports lib3MF.dll",
+    "imports opencv_calib3d348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "commonGpu.dll": [
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "lib3MF.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "libblas.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "libgfortran-3.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "liblapack.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "libquadmath-0.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "mpir.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "opencv_calib3d348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_features2d348.dll",
+    "imports opencv_flann348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_core348.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "opencv_cudawarping348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_features2d348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_flann348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_flann348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_highgui348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_videoio348.dll",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_imgcodecs348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_imgproc348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_core348.dll"
+   ],
+   "opencv_videoio348.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_imgcodecs348.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "passport/SnCommunity/sn3DCommunity.exe": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "print3DCommon.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_imgproc348.dll",
+    "imports opencv_core348.dll"
+   ],
+   "print3DSlicing.dll": [
+    "imports OpenMeshCore.dll",
+    "imports opencv_core348.dll"
+   ],
+   "sn3DCommunity.exe": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "sn3DHIDCommunication.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "sn3DLock.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "sn3DTurnTable.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "sn3d.digit.scenecontrol.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "sn3d_user_account.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "syncservice/device/Einscan3H2.2.0.0.dll": [
+    "imports opencv_core3411.dll",
+    "imports opencv_imgcodecs3411.dll"
+   ],
+   "syncservice/opencv_core3411.dll": [
+    "third-party vision/geometry/numeric library"
+   ],
+   "syncservice/opencv_imgcodecs3411.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_imgproc3411.dll",
+    "imports opencv_core3411.dll"
+   ],
+   "syncservice/opencv_imgproc3411.dll": [
+    "third-party vision/geometry/numeric library",
+    "imports opencv_core3411.dll"
+   ],
+   "syncservice/sn3DCommunicateLayerM.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "syncservice/sn3DHIDCommunication.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "syncservice/sn3DHIDCommunicationM.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "syncservice/sn3DHIDCommunicationNew.dll": [
+    "Shining3D algorithm/scanning module"
+   ],
+   "tbb.dll": [
+    "third-party vision/geometry/numeric library"
+   ]
+  }
+ },
+ "qt": {
+  "modules": [
+   "AppCommon_E7.dll",
+   "AppUi.dll",
+   "ApplicationTools.dll",
+   "BasiceComponents.dll",
+   "BizUiCommon.dll",
+   "CalibrationPage_EA.dll",
+   "ClientImpLayer.dll",
+   "CommonCfg.dll",
+   "CompositeComponents.dll",
+   "Deserialize.dll",
+   "EXStar.exe",
+   "FirmwareupdateUI.exe",
+   "FrameDataObj.dll",
+   "GenerateDataProcess.dll",
+   "GlobalRegistrationProcess.dll",
+   "Measurement.dll",
+   "MeasurementUI.dll",
+   "ModeChoosePage.dll",
+   "OpenOrCreateController.dll",
+   "PostProcess.dll",
+   "PostProcessUI.dll",
+   "PrestartCheck.dll",
+   "PreviewTool.exe",
+   "Qt/labs/animation/labsanimationplugin.dll",
+   "Qt/labs/animation/labsanimationplugind.dll",
+   "Qt/labs/calendar/qtlabscalendarplugin.dll",
+   "Qt/labs/calendar/qtlabscalendarplugind.dll",
+   "Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.dll",
+   "Qt/labs/folderlistmodel/qmlfolderlistmodelplugind.dll",
+   "Qt/labs/location/locationlabsplugin.dll",
+   "Qt/labs/location/locationlabsplugind.dll",
+   "Qt/labs/lottieqt/lottieqtplugin.dll",
+   "Qt/labs/lottieqt/lottieqtplugind.dll",
+   "Qt/labs/platform/qtlabsplatformplugin.dll",
+   "Qt/labs/platform/qtlabsplatformplugind.dll",
+   "Qt/labs/qmlmodels/labsmodelsplugin.dll",
+   "Qt/labs/qmlmodels/labsmodelsplugind.dll",
+   "Qt/labs/settings/qmlsettingsplugin.dll",
+   "Qt/labs/settings/qmlsettingsplugind.dll",
+   "Qt/labs/sharedimage/sharedimageplugin.dll",
+   "Qt/labs/sharedimage/sharedimageplugind.dll",
+   "Qt/labs/wavefrontmesh/qmlwavefrontmeshplugin.dll",
+   "Qt/labs/wavefrontmesh/qmlwavefrontmeshplugind.dll",
+   "Qt5Concurrent.dll",
+   "Qt5Core.dll",
+   "Qt5Gui.dll",
+   "Qt5Multimedia.dll",
+   "Qt5MultimediaQuick.dll",
+   "Qt5Network.dll",
+   "Qt5Qml.dll",
+   "Qt5QmlModels.dll",
+   "Qt5QmlWorkerScript.dll",
+   "Qt5Quick.dll",
+   "Qt5QuickControls2.dll",
+   "Qt5QuickShapes.dll",
+   "Qt5QuickTemplates2.dll",
+   "Qt5RemoteObjects.dll",
+   "Qt5Sql.dll",
+   "Qt5Svg.dll",
+   "Qt5Widgets.dll",
+   "Qt5Xml.dll",
+   "QtGraphicalEffects/private/qtgraphicaleffectsprivate.dll",
+   "QtGraphicalEffects/private/qtgraphicaleffectsprivated.dll",
+   "QtGraphicalEffects/qtgraphicaleffectsplugin.dll",
+   "QtGraphicalEffects/qtgraphicaleffectsplugind.dll",
+   "QtMultimedia/declarative_multimedia.dll",
+   "QtQml/Models.2/modelsplugin.dll",
+   "QtQml/Models.2/modelsplugind.dll",
+   "QtQml/RemoteObjects/qtqmlremoteobjects.dll",
+   "QtQml/RemoteObjects/qtqmlremoteobjectsd.dll",
+   "QtQml/StateMachine/qtqmlstatemachine.dll",
+   "QtQml/StateMachine/qtqmlstatemachined.dll",
+   "QtQml/WorkerScript.2/workerscriptplugin.dll",
+   "QtQml/WorkerScript.2/workerscriptplugind.dll",
+   "QtQml/qmlplugin.dll",
+   "QtQml/qmlplugind.dll",
+   "QtQuick.2/qtquick2plugin.dll",
+   "QtQuick.2/qtquick2plugind.dll",
+   "QtQuick/Controls.2/Fusion/qtquickcontrols2fusionstyleplugin.dll",
+   "QtQuick/Controls.2/Fusion/qtquickcontrols2fusionstyleplugind.dll",
+   "QtQuick/Controls.2/Imagine/qtquickcontrols2imaginestyleplugin.dll",
+   "QtQuick/Controls.2/Imagine/qtquickcontrols2imaginestyleplugind.dll",
+   "QtQuick/Controls.2/Material/qqc2materialstyleplugin.dll",
+   "QtQuick/Controls.2/Material/qqc2materialstyleplugind.dll",
+   "QtQuick/Controls.2/Universal/qtquickcontrols2universalstyleplugin.dll",
+   "QtQuick/Controls.2/Universal/qtquickcontrols2universalstyleplugind.dll",
+   "QtQuick/Controls.2/qtquickcontrols2plugin.dll",
+   "QtQuick/Controls.2/qtquickcontrols2plugind.dll",
+   "QtQuick/Controls/Styles/Flat/qtquickextrasflatplugin.dll",
+   "QtQuick/Controls/Styles/Flat/qtquickextrasflatplugind.dll",
+   "QtQuick/Controls/qtquickcontrolsplugin.dll",
+   "QtQuick/Controls/qtquickcontrolsplugind.dll",
+   "QtQuick/Dialogs/Private/dialogsprivateplugin.dll",
+   "QtQuick/Dialogs/Private/dialogsprivateplugind.dll",
+   "QtQuick/Dialogs/dialogplugin.dll",
+   "QtQuick/Dialogs/dialogplugind.dll",
+   "QtQuick/Extras/qtquickextrasplugin.dll",
+   "QtQuick/Extras/qtquickextrasplugind.dll",
+   "QtQuick/Layouts/qquicklayoutsplugin.dll",
+   "QtQuick/Layouts/qquicklayoutsplugind.dll",
+   "QtQuick/LocalStorage/qmllocalstorageplugin.dll",
+   "QtQuick/LocalStorage/qmllocalstorageplugind.dll",
+   "QtQuick/Particles.2/particlesplugin.dll",
+   "QtQuick/Particles.2/particlesplugind.dll",
+   "QtQuick/Pdf/pdfplugin.dll",
+   "QtQuick/Pdf/pdfplugind.dll",
+   "QtQuick/PrivateWidgets/widgetsplugin.dll",
+   "QtQuick/PrivateWidgets/widgetsplugind.dll",
+   "QtQuick/Scene2D/qtquickscene2dplugin.dll",
+   "QtQuick/Scene2D/qtquickscene2dplugind.dll",
+   "QtQuick/Scene3D/qtquickscene3dplugin.dll",
+   "QtQuick/Scene3D/qtquickscene3dplugind.dll",
+   "QtQuick/Shapes/qmlshapesplugin.dll",
+   "QtQuick/Shapes/qmlshapesplugind.dll",
+   "QtQuick/Templates.2/qtquicktemplates2plugin.dll",
+   "QtQuick/Templates.2/qtquicktemplates2plugind.dll",
+   "QtQuick/Timeline/qtquicktimelineplugin.dll",
+   "QtQuick/Timeline/qtquicktimelineplugind.dll",
+   "QtQuick/VirtualKeyboard/Settings/qtquickvirtualkeyboardsettingsplugin.dll",
+   "QtQuick/VirtualKeyboard/Settings/qtquickvirtualkeyboardsettingsplugind.dll",
+   "QtQuick/VirtualKeyboard/Styles/qtquickvirtualkeyboardstylesplugin.dll",
+   "QtQuick/VirtualKeyboard/Styles/qtquickvirtualkeyboardstylesplugind.dll",
+   "QtQuick/VirtualKeyboard/qtquickvirtualkeyboardplugin.dll",
+   "QtQuick/VirtualKeyboard/qtquickvirtualkeyboardplugind.dll",
+   "QtQuick/Window.2/windowplugin.dll",
+   "QtQuick/Window.2/windowplugind.dll",
+   "QtQuick/XmlListModel/qmlxmllistmodelplugin.dll",
+   "QtQuick/XmlListModel/qmlxmllistmodelplugind.dll",
+   "QuickCloudCfg/plugins/autoUpgrade.dll",
+   "QuickCloudCfg/plugins/qcServer.dll",
+   "QuickCloudCfg/plugins/startDownload.dll",
+   "QuickCloudCfg/plugins/startUpload.dll",
+   "RebuildProcess.dll",
+   "ScanAlignFusionProcess.dll",
+   "ScanEditProcess.dll",
+   "ScanPage_E7.dll",
+   "SendDataToClientController.dll",
+   "Serialize.dll",
+   "Sn3D/Digit/Global/Sn3DDigitGlobal.dll",
+   "Sn3D/Digit/SceneMgr/pluginsn3d.digit.scenemgr.dll",
+   "Sn3D/Digit/Ui/Sn3DDigitUi.dll",
+   "Sn3D/Navigation/pluginSn3DNavigation.dll",
+   "Sn3D/RenderKit/Extensions/Digit/pluginrenderkit.extensions.digit.dll",
+   "Sn3D/RenderKit/pluginrenderkit.dll",
+   "Sn3D/UI/Sn3DFileDialog/Sn3DFileDialog.dll",
+   "Sn3DAlgorithmWrapper.dll",
+   "Sn3DAutoExposureHelper.dll",
+   "Sn3DBox.dll",
+   "Sn3DCalibCaptureImageProcess.dll",
+   "Sn3DCalibDevFile.dll",
+   "Sn3DCalibrateAlgorithmHelper.dll",
+   "Sn3DCalibrateAlgorithmWrapper.dll",
+   "Sn3DCalibrateData.dll",
+   "Sn3DCalibrateImageInfo.dll",
+   "Sn3DCalibrateLoader.dll",
+   "Sn3DCameraCalibHelper.dll",
+   "Sn3DCloudDisk.dll",
+   "Sn3DCodeProject.dll",
+   "Sn3DConfig.dll",
+   "Sn3DDeveloperControlPlugin.dll",
+   "Sn3DDeviceEinStar.dll",
+   "Sn3DDigitGlobal.dll",
+   "Sn3DEACalibrateController.dll",
+   "Sn3DEinStarController.dll",
+   "Sn3DErrorCode.dll",
+   "Sn3DFile.dll",
+   "Sn3DFrameDataController.dll",
+   "Sn3DFrameDataQueue.dll",
+   "Sn3DFrameDeletor.dll",
+   "Sn3DImageQueue.dll",
+   "Sn3DLog.dll",
+   "Sn3DManualAlign.dll",
+   "Sn3DMultiProjects.dll",
+   "Sn3DPassportController.dll",
+   "Sn3DProcessPlugin.dll",
+   "Sn3DProgressHelper.dll",
+   "Sn3DProjDefaultPath.dll",
+   "Sn3DQuickCloudHelper.dll",
+   "Sn3DRestoreData.dll",
+   "Sn3DScanController.dll",
+   "Sn3DSecurity.dll",
+   "Sn3DSoftwareUpdate.dll",
+   "Sn3DSoftwareUpgradeController.dll",
+   "Sn3DTexCameraHelper.dll",
+   "Sn3DTexture.dll",
+   "Sn3DTextureMapper.dll",
+   "Sn3DTurntableController.dll",
+   "Sn3DUserPassport.dll",
+   "Sn3DprocessManager.exe",
+   "SnCommon.dll",
+   "SnDXGICapturePlugin.dll",
+   "SnScreenRecorder.dll",
+   "SnSharedBlock.dll",
+   "SoundPlayerProcessor.dll",
+   "TestOpenglHelper.exe",
+   "bearer/qgenericbearer.dll",
+   "bearer/qgenericbearerd.dll",
+   "einscan_net_svr.exe",
+   "iconengines/qsvgicon.dll",
+   "iconengines/qsvgicond.dll",
+   "imageformats/qgif.dll",
+   "imageformats/qgifd.dll",
+   "imageformats/qicns.dll",
+   "imageformats/qicnsd.dll",
+   "imageformats/qico.dll",
+   "imageformats/qicod.dll",
+   "imageformats/qjpeg.dll",
+   "imageformats/qjpegd.dll",
+   "imageformats/qpdf.dll",
+   "imageformats/qpdfd.dll",
+   "imageformats/qsvg.dll",
+   "imageformats/qsvgd.dll",
+   "imageformats/qtga.dll",
+   "imageformats/qtgad.dll",
+   "imageformats/qtiff.dll",
+   "imageformats/qtiffd.dll",
+   "imageformats/qwbmp.dll",
+   "imageformats/qwbmpd.dll",
+   "imageformats/qwebp.dll",
+   "imageformats/qwebpd.dll",
+   "informationCollect.exe",
+   "informationFileCollect.dll",
+   "information_api.dll",
+   "libSn3DNavigation.dll",
+   "libpassport.dll",
+   "libquickcloud-1.4.23.dll",
+   "librenderkit.dll",
+   "librenderkit.extensions.digit.dll",
+   "libsn3d.digit.scenemgr.dll",
+   "logiclayer.dll",
+   "networktunnel.dll",
+   "networktunneld.dll",
+   "passport/hub/plugin.dll",
+   "passport/hub/plugind.dll",
+   "passport/openweburl/Qt5Core.dll",
+   "passport/openweburl/Qt5Gui.dll",
+   "passport/openweburl/Qt5Network.dll",
+   "passport/openweburl/Qt5Positioning.dll",
+   "passport/openweburl/Qt5PrintSupport.dll",
+   "passport/openweburl/Qt5Qml.dll",
+   "passport/openweburl/Qt5Quick.dll",
+   "passport/openweburl/Qt5QuickWidgets.dll",
+   "passport/openweburl/Qt5SerialPort.dll",
+   "passport/openweburl/Qt5Svg.dll",
+   "passport/openweburl/Qt5WebChannel.dll",
+   "passport/openweburl/Qt5WebEngineCore.dll",
+   "passport/openweburl/Qt5WebEngineWidgets.dll",
+   "passport/openweburl/Qt5Widgets.dll",
+   "passport/openweburl/QtWebEngineProcess.exe",
+   "passport/openweburl/bearer/qgenericbearer.dll",
+   "passport/openweburl/iconengines/qsvgicon.dll",
+   "passport/openweburl/imageformats/qgif.dll",
+   "passport/openweburl/imageformats/qicns.dll",
+   "passport/openweburl/imageformats/qico.dll",
+   "passport/openweburl/imageformats/qjpeg.dll",
+   "passport/openweburl/imageformats/qsvg.dll",
+   "passport/openweburl/imageformats/qtga.dll",
+   "passport/openweburl/imageformats/qtiff.dll",
+   "passport/openweburl/imageformats/qwbmp.dll",
+   "passport/openweburl/imageformats/qwebp.dll",
+   "passport/openweburl/killer.exe",
+   "passport/openweburl/openweburl.exe",
+   "passport/openweburl/platforms/qwindows.dll",
+   "passport/openweburl/position/qtposition_positionpoll.dll",
+   "passport/openweburl/position/qtposition_serialnmea.dll",
+   "passport/openweburl/position/qtposition_winrt.dll",
+   "passport/openweburl/printsupport/windowsprintersupport.dll",
+   "passport/openweburl/styles/qwindowsvistastyle.dll",
+   "platforms/qdirect2d.dll",
+   "platforms/qdirect2dd.dll",
+   "platforms/qminimal.dll",
+   "platforms/qminimald.dll",
+   "platforms/qoffscreen.dll",
+   "platforms/qoffscreend.dll",
+   "platforms/qwebgl.dll",
+   "platforms/qwebgld.dll",
+   "platforms/qwindows.dll",
+   "platforms/qwindowsd.dll",
+   "plugin.dll",
+   "plugins/mediaservice/dsengine.dll",
+   "plugins/mediaservice/qtmedia_audioengine.dll",
+   "plugins/mediaservice/wmfengine.dll",
+   "qttunnel.3.0.9.dll",
+   "qttunnel.3.0.9d.dll",
+   "scanservice.exe",
+   "sketchfab_api.dll",
+   "sn3d.digit.scenecontrol.dll",
+   "sn3d_user_account.dll",
+   "softwareUpgrade.exe",
+   "sqldrivers/qsqlite.dll",
+   "sqldrivers/qsqlited.dll",
+   "sqldrivers/qsqlodbc.dll",
+   "sqldrivers/qsqlodbcd.dll",
+   "sqldrivers/sqlitecipher.dll",
+   "sqlitecipher.dll",
+   "syncservice/DeviceHelper.exe",
+   "syncservice/Qt5Core.dll",
+   "syncservice/Qt5Gui.dll",
+   "syncservice/Qt5Network.dll",
+   "syncservice/Qt5Svg.dll",
+   "syncservice/Qt5Widgets.dll",
+   "syncservice/SnCommon.dll",
+   "syncservice/SnDXGICapturePlugin.dll",
+   "syncservice/SnScreenRecorder.dll",
+   "syncservice/SnSharedBlock.dll",
+   "syncservice/SnSyncCore.dll",
+   "syncservice/SnSyncService.exe",
+   "syncservice/SnSyncTool.dll",
+   "syncservice/bearer/qgenericbearer.dll",
+   "syncservice/device/Einscan3H2.2.0.0.dll",
+   "syncservice/device/MECScan.2.0.0.dll",
+   "syncservice/device/SHNDetect.2.0.0.dll",
+   "syncservice/device/dhgxicamera.2.0.6.dll",
+   "syncservice/device/dlp3100projector.2.0.0.dll",
+   "syncservice/device/einscan10.2.0.0.dll",
+   "syncservice/device/einscan3.2.0.0.dll",
+   "syncservice/device/einscan7.2.0.3.dll",
+   "syncservice/device/einscan7wl.2.0.0.dll",
+   "syncservice/device/freescan.2.1.0.dll",
+   "syncservice/device/freescante25.2.0.2.dll",
+   "syncservice/device/freetrak.2.1.0.dll",
+   "syncservice/device/fs3scan.2.0.0.dll",
+   "syncservice/device/fsprobe.2.0.2.dll",
+   "syncservice/device/hkcamera.2.0.0.dll",
+   "syncservice/device/jaicamera.2.0.0.dll",
+   "syncservice/device/sesp.2.0.0.dll",
+   "syncservice/device/shncamera.2.0.0.dll",
+   "syncservice/device/sp3scan.2.0.0.dll",
+   "syncservice/device/spncamera.2.0.0.dll",
+   "syncservice/device/spncamera.2.2.9.dll",
+   "syncservice/device/ty1080projector.2.0.0.dll",
+   "syncservice/device/ty1080projector_wl.2.0.0.dll",
+   "syncservice/device/tylaser.2.0.0.dll",
+   "syncservice/device/uescan.2.0.0.dll",
+   "syncservice/device/uescanwl.2.0.0.dll",
+   "syncservice/iconengines/qsvgicon.dll",
+   "syncservice/imageformats/qgif.dll",
+   "syncservice/imageformats/qicns.dll",
+   "syncservice/imageformats/qico.dll",
+   "syncservice/imageformats/qjpeg.dll",
+   "syncservice/imageformats/qsvg.dll",
+   "syncservice/imageformats/qtga.dll",
+   "syncservice/imageformats/qtiff.dll",
+   "syncservice/imageformats/qwbmp.dll",
+   "syncservice/imageformats/qwebp.dll",
+   "syncservice/logic/3DDigitalSyncInterface.2.0.0.dll",
+   "syncservice/networktunnel.dll",
+   "syncservice/networktunneld.dll",
+   "syncservice/platforms/qwindows.dll",
+   "syncservice/qttunnel.3.0.9.dll",
+   "syncservice/qttunnel.3.0.9d.dll",
+   "syncservice/sn3DCommunicateLayerM.dll",
+   "syncservice/sn3DHIDCommunicationM.dll",
+   "syncservice/styles/qwindowsvistastyle.dll",
+   "syncservice/tunnel_encrypt.dll",
+   "syncservice/tunnel_encryptd.dll",
+   "tunnel_encrypt.dll",
+   "tunnel_encryptd.dll",
+   "zipHelper.dll"
+  ],
+  "evidence": {
+   "AppCommon_E7.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "AppUi.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "ApplicationTools.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "BasiceComponents.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "BizUiCommon.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "CalibrationPage_EA.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "ClientImpLayer.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "CommonCfg.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "CompositeComponents.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Deserialize.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "EXStar.exe": [
+    "imports Qt5Widgets.dll"
+   ],
+   "FirmwareupdateUI.exe": [
+    "imports Qt5Gui.dll"
+   ],
+   "FrameDataObj.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "GenerateDataProcess.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "GlobalRegistrationProcess.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Measurement.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "MeasurementUI.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "ModeChoosePage.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "OpenOrCreateController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "PostProcess.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "PostProcessUI.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "PrestartCheck.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "PreviewTool.exe": [
+    "imports Qt5Quick.dll"
+   ],
+   "Qt/labs/animation/labsanimationplugin.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Qt/labs/animation/labsanimationplugind.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "Qt/labs/calendar/qtlabscalendarplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Qt/labs/calendar/qtlabscalendarplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "Qt/labs/folderlistmodel/qmlfolderlistmodelplugin.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Qt/labs/folderlistmodel/qmlfolderlistmodelplugind.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "Qt/labs/location/locationlabsplugin.dll": [
+    "imports Qt5Location.dll"
+   ],
+   "Qt/labs/location/locationlabsplugind.dll": [
+    "imports Qt5Locationd.dll"
+   ],
+   "Qt/labs/lottieqt/lottieqtplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Qt/labs/lottieqt/lottieqtplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "Qt/labs/platform/qtlabsplatformplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Qt/labs/platform/qtlabsplatformplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "Qt/labs/qmlmodels/labsmodelsplugin.dll": [
+    "imports Qt5QmlModels.dll"
+   ],
+   "Qt/labs/qmlmodels/labsmodelsplugind.dll": [
+    "imports Qt5QmlModelsd.dll"
+   ],
+   "Qt/labs/settings/qmlsettingsplugin.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Qt/labs/settings/qmlsettingsplugind.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "Qt/labs/sharedimage/sharedimageplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Qt/labs/sharedimage/sharedimageplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "Qt/labs/wavefrontmesh/qmlwavefrontmeshplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Qt/labs/wavefrontmesh/qmlwavefrontmeshplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "Qt5Concurrent.dll": [
+    "Qt module"
+   ],
+   "Qt5Core.dll": [
+    "Qt module"
+   ],
+   "Qt5Gui.dll": [
+    "Qt module"
+   ],
+   "Qt5Multimedia.dll": [
+    "Qt module"
+   ],
+   "Qt5MultimediaQuick.dll": [
+    "Qt module"
+   ],
+   "Qt5Network.dll": [
+    "Qt module"
+   ],
+   "Qt5Qml.dll": [
+    "Qt module"
+   ],
+   "Qt5QmlModels.dll": [
+    "Qt module"
+   ],
+   "Qt5QmlWorkerScript.dll": [
+    "Qt module"
+   ],
+   "Qt5Quick.dll": [
+    "Qt module"
+   ],
+   "Qt5QuickControls2.dll": [
+    "Qt module"
+   ],
+   "Qt5QuickShapes.dll": [
+    "Qt module"
+   ],
+   "Qt5QuickTemplates2.dll": [
+    "Qt module"
+   ],
+   "Qt5RemoteObjects.dll": [
+    "Qt module"
+   ],
+   "Qt5Sql.dll": [
+    "Qt module"
+   ],
+   "Qt5Svg.dll": [
+    "Qt module"
+   ],
+   "Qt5Widgets.dll": [
+    "Qt module"
+   ],
+   "Qt5Xml.dll": [
+    "Qt module"
+   ],
+   "QtGraphicalEffects/private/qtgraphicaleffectsprivate.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtGraphicalEffects/private/qtgraphicaleffectsprivated.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtGraphicalEffects/qtgraphicaleffectsplugin.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "QtGraphicalEffects/qtgraphicaleffectsplugind.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "QtMultimedia/declarative_multimedia.dll": [
+    "imports Qt5MultimediaQuick.dll"
+   ],
+   "QtQml/Models.2/modelsplugin.dll": [
+    "imports Qt5QmlModels.dll"
+   ],
+   "QtQml/Models.2/modelsplugind.dll": [
+    "imports Qt5QmlModelsd.dll"
+   ],
+   "QtQml/RemoteObjects/qtqmlremoteobjects.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "QtQml/RemoteObjects/qtqmlremoteobjectsd.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "QtQml/StateMachine/qtqmlstatemachine.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "QtQml/StateMachine/qtqmlstatemachined.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "QtQml/WorkerScript.2/workerscriptplugin.dll": [
+    "imports Qt5QmlWorkerScript.dll"
+   ],
+   "QtQml/WorkerScript.2/workerscriptplugind.dll": [
+    "imports Qt5QmlWorkerScriptd.dll"
+   ],
+   "QtQml/qmlplugin.dll": [
+    "imports Qt5QmlModels.dll"
+   ],
+   "QtQml/qmlplugind.dll": [
+    "imports Qt5QmlModelsd.dll"
+   ],
+   "QtQuick.2/qtquick2plugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick.2/qtquick2plugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls.2/Fusion/qtquickcontrols2fusionstyleplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls.2/Fusion/qtquickcontrols2fusionstyleplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls.2/Imagine/qtquickcontrols2imaginestyleplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls.2/Imagine/qtquickcontrols2imaginestyleplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls.2/Material/qqc2materialstyleplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls.2/Material/qqc2materialstyleplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls.2/Universal/qtquickcontrols2universalstyleplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls.2/Universal/qtquickcontrols2universalstyleplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls.2/qtquickcontrols2plugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls.2/qtquickcontrols2plugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls/Styles/Flat/qtquickextrasflatplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls/Styles/Flat/qtquickextrasflatplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Controls/qtquickcontrolsplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Controls/qtquickcontrolsplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Dialogs/Private/dialogsprivateplugin.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "QtQuick/Dialogs/Private/dialogsprivateplugind.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "QtQuick/Dialogs/dialogplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Dialogs/dialogplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Extras/qtquickextrasplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Extras/qtquickextrasplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Layouts/qquicklayoutsplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Layouts/qquicklayoutsplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/LocalStorage/qmllocalstorageplugin.dll": [
+    "imports Qt5Sql.dll"
+   ],
+   "QtQuick/LocalStorage/qmllocalstorageplugind.dll": [
+    "imports Qt5Sqld.dll"
+   ],
+   "QtQuick/Particles.2/particlesplugin.dll": [
+    "imports Qt5QuickParticles.dll"
+   ],
+   "QtQuick/Particles.2/particlesplugind.dll": [
+    "imports Qt5QuickParticlesd.dll"
+   ],
+   "QtQuick/Pdf/pdfplugin.dll": [
+    "imports Qt5Pdf.dll"
+   ],
+   "QtQuick/Pdf/pdfplugind.dll": [
+    "imports Qt5Pdfd.dll"
+   ],
+   "QtQuick/PrivateWidgets/widgetsplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/PrivateWidgets/widgetsplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Scene2D/qtquickscene2dplugin.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "QtQuick/Scene2D/qtquickscene2dplugind.dll": [
+    "imports Qt5Qmld.dll"
+   ],
+   "QtQuick/Scene3D/qtquickscene3dplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Scene3D/qtquickscene3dplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Shapes/qmlshapesplugin.dll": [
+    "imports Qt5QuickShapes.dll"
+   ],
+   "QtQuick/Shapes/qmlshapesplugind.dll": [
+    "imports Qt5QuickShapesd.dll"
+   ],
+   "QtQuick/Templates.2/qtquicktemplates2plugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Templates.2/qtquicktemplates2plugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/Timeline/qtquicktimelineplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Timeline/qtquicktimelineplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/VirtualKeyboard/Settings/qtquickvirtualkeyboardsettingsplugin.dll": [
+    "imports Qt5VirtualKeyboard.dll"
+   ],
+   "QtQuick/VirtualKeyboard/Settings/qtquickvirtualkeyboardsettingsplugind.dll": [
+    "imports Qt5VirtualKeyboardd.dll"
+   ],
+   "QtQuick/VirtualKeyboard/Styles/qtquickvirtualkeyboardstylesplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/VirtualKeyboard/Styles/qtquickvirtualkeyboardstylesplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/VirtualKeyboard/qtquickvirtualkeyboardplugin.dll": [
+    "imports Qt5VirtualKeyboard.dll"
+   ],
+   "QtQuick/VirtualKeyboard/qtquickvirtualkeyboardplugind.dll": [
+    "imports Qt5VirtualKeyboardd.dll"
+   ],
+   "QtQuick/Window.2/windowplugin.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "QtQuick/Window.2/windowplugind.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "QtQuick/XmlListModel/qmlxmllistmodelplugin.dll": [
+    "imports Qt5XmlPatterns.dll"
+   ],
+   "QtQuick/XmlListModel/qmlxmllistmodelplugind.dll": [
+    "imports Qt5XmlPatternsd.dll"
+   ],
+   "QuickCloudCfg/plugins/autoUpgrade.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "QuickCloudCfg/plugins/qcServer.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "QuickCloudCfg/plugins/startDownload.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "QuickCloudCfg/plugins/startUpload.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "RebuildProcess.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "ScanAlignFusionProcess.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "ScanEditProcess.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "ScanPage_E7.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "SendDataToClientController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Serialize.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3D/Digit/Global/Sn3DDigitGlobal.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3D/Digit/SceneMgr/pluginsn3d.digit.scenemgr.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3D/Digit/Ui/Sn3DDigitUi.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Sn3D/Navigation/pluginSn3DNavigation.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3D/RenderKit/Extensions/Digit/pluginrenderkit.extensions.digit.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Sn3D/RenderKit/pluginrenderkit.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Sn3D/UI/Sn3DFileDialog/Sn3DFileDialog.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Sn3DAlgorithmWrapper.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "Sn3DAutoExposureHelper.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DBox.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3DCalibCaptureImageProcess.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DCalibDevFile.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DCalibrateAlgorithmHelper.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DCalibrateAlgorithmWrapper.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DCalibrateData.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DCalibrateImageInfo.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DCalibrateLoader.dll": [
+    "imports Qt5Xml.dll"
+   ],
+   "Sn3DCameraCalibHelper.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "Sn3DCloudDisk.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3DCodeProject.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DConfig.dll": [
+    "imports Qt5Sql.dll"
+   ],
+   "Sn3DDeveloperControlPlugin.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DDeviceEinStar.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "Sn3DDigitGlobal.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3DEACalibrateController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DEinStarController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DErrorCode.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DFile.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "Sn3DFrameDataController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DFrameDataQueue.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DFrameDeletor.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DImageQueue.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DLog.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DManualAlign.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DMultiProjects.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DPassportController.dll": [
+    "imports Qt5Widgets.dll"
+   ],
+   "Sn3DProcessPlugin.dll": [
+    "imports Qt5Xml.dll"
+   ],
+   "Sn3DProgressHelper.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DProjDefaultPath.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3DQuickCloudHelper.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "Sn3DRestoreData.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DScanController.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "Sn3DSecurity.dll": [
+    "imports Qt5Xml.dll"
+   ],
+   "Sn3DSoftwareUpdate.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "Sn3DSoftwareUpgradeController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DTexCameraHelper.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DTexture.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "Sn3DTextureMapper.dll": [
+    "imports Qt5Qml.dll"
+   ],
+   "Sn3DTurntableController.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "Sn3DUserPassport.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "Sn3DprocessManager.exe": [
+    "imports Qt5Multimedia.dll"
+   ],
+   "SnCommon.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "SnDXGICapturePlugin.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "SnScreenRecorder.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "SnSharedBlock.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "SoundPlayerProcessor.dll": [
+    "imports Qt5Multimedia.dll"
+   ],
+   "TestOpenglHelper.exe": [
+    "imports Qt5Quick.dll"
+   ],
+   "bearer/qgenericbearer.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "bearer/qgenericbearerd.dll": [
+    "imports Qt5Networkd.dll"
+   ],
+   "einscan_net_svr.exe": [
+    "imports Qt5Core.dll"
+   ],
+   "iconengines/qsvgicon.dll": [
+    "imports Qt5Svg.dll"
+   ],
+   "iconengines/qsvgicond.dll": [
+    "imports Qt5Svgd.dll"
+   ],
+   "imageformats/qgif.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qgifd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qicns.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qicnsd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qico.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qicod.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qjpeg.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qjpegd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qpdf.dll": [
+    "imports Qt5Pdf.dll"
+   ],
+   "imageformats/qpdfd.dll": [
+    "imports Qt5Pdfd.dll"
+   ],
+   "imageformats/qsvg.dll": [
+    "imports Qt5Svg.dll"
+   ],
+   "imageformats/qsvgd.dll": [
+    "imports Qt5Svgd.dll"
+   ],
+   "imageformats/qtga.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qtgad.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qtiff.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qtiffd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qwbmp.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qwbmpd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "imageformats/qwebp.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "imageformats/qwebpd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "informationCollect.exe": [
+    "imports Qt5Core.dll"
+   ],
+   "informationFileCollect.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "information_api.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "libSn3DNavigation.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "libpassport.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "libquickcloud-1.4.23.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "librenderkit.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "librenderkit.extensions.digit.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "libsn3d.digit.scenemgr.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "logiclayer.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "networktunnel.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "networktunneld.dll": [
+    "imports Qt5Networkd.dll"
+   ],
+   "passport/hub/plugin.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "passport/hub/plugind.dll": [
+    "imports Qt5Cored.dll"
+   ],
+   "passport/openweburl/Qt5Core.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Gui.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Network.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Positioning.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5PrintSupport.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Qml.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Quick.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5QuickWidgets.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5SerialPort.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Svg.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5WebChannel.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5WebEngineCore.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5WebEngineWidgets.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/Qt5Widgets.dll": [
+    "Qt module"
+   ],
+   "passport/openweburl/QtWebEngineProcess.exe": [
+    "imports Qt5Core.dll"
+   ],
+   "passport/openweburl/bearer/qgenericbearer.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "passport/openweburl/iconengines/qsvgicon.dll": [
+    "imports Qt5Svg.dll"
+   ],
+   "passport/openweburl/imageformats/qgif.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qicns.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qico.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qjpeg.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qsvg.dll": [
+    "imports Qt5Svg.dll"
+   ],
+   "passport/openweburl/imageformats/qtga.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qtiff.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qwbmp.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/imageformats/qwebp.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/killer.exe": [
+    "imports Qt5Widgets.dll"
+   ],
+   "passport/openweburl/openweburl.exe": [
+    "imports Qt5WebEngineWidgets.dll"
+   ],
+   "passport/openweburl/platforms/qwindows.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "passport/openweburl/position/qtposition_positionpoll.dll": [
+    "imports Qt5Positioning.dll"
+   ],
+   "passport/openweburl/position/qtposition_serialnmea.dll": [
+    "imports Qt5Positioning.dll"
+   ],
+   "passport/openweburl/position/qtposition_winrt.dll": [
+    "imports Qt5Positioning.dll"
+   ],
+   "passport/openweburl/printsupport/windowsprintersupport.dll": [
+    "imports Qt5PrintSupport.dll"
+   ],
+   "passport/openweburl/styles/qwindowsvistastyle.dll": [
+    "imports Qt5Widgets.dll"
+   ],
+   "platforms/qdirect2d.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "platforms/qdirect2dd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "platforms/qminimal.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "platforms/qminimald.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "platforms/qoffscreen.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "platforms/qoffscreend.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "platforms/qwebgl.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "platforms/qwebgld.dll": [
+    "imports Qt5Quickd.dll"
+   ],
+   "platforms/qwindows.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "platforms/qwindowsd.dll": [
+    "imports Qt5Guid.dll"
+   ],
+   "plugin.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "plugins/mediaservice/dsengine.dll": [
+    "imports Qt5Multimedia.dll"
+   ],
+   "plugins/mediaservice/qtmedia_audioengine.dll": [
+    "imports Qt5Multimedia.dll"
+   ],
+   "plugins/mediaservice/wmfengine.dll": [
+    "imports Qt5Multimedia.dll"
+   ],
+   "qttunnel.3.0.9.dll": [
+    "Qt module"
+   ],
+   "qttunnel.3.0.9d.dll": [
+    "Qt module"
+   ],
+   "scanservice.exe": [
+    "imports Qt5Gui.dll"
+   ],
+   "sketchfab_api.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "sn3d.digit.scenecontrol.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "sn3d_user_account.dll": [
+    "imports Qt5Quick.dll"
+   ],
+   "softwareUpgrade.exe": [
+    "imports Qt5Core.dll"
+   ],
+   "sqldrivers/qsqlite.dll": [
+    "imports Qt5Sql.dll"
+   ],
+   "sqldrivers/qsqlited.dll": [
+    "imports Qt5Sqld.dll"
+   ],
+   "sqldrivers/qsqlodbc.dll": [
+    "imports Qt5Sql.dll"
+   ],
+   "sqldrivers/qsqlodbcd.dll": [
+    "imports Qt5Sqld.dll"
+   ],
+   "sqldrivers/sqlitecipher.dll": [
+    "imports Qt5Sql.dll"
+   ],
+   "sqlitecipher.dll": [
+    "imports Qt5Sql.dll"
+   ],
+   "syncservice/DeviceHelper.exe": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/Qt5Core.dll": [
+    "Qt module"
+   ],
+   "syncservice/Qt5Gui.dll": [
+    "Qt module"
+   ],
+   "syncservice/Qt5Network.dll": [
+    "Qt module"
+   ],
+   "syncservice/Qt5Svg.dll": [
+    "Qt module"
+   ],
+   "syncservice/Qt5Widgets.dll": [
+    "Qt module"
+   ],
+   "syncservice/SnCommon.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/SnDXGICapturePlugin.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/SnScreenRecorder.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/SnSharedBlock.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/SnSyncCore.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/SnSyncService.exe": [
+    "imports qttunnel.3.0.9.dll"
+   ],
+   "syncservice/SnSyncTool.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/bearer/qgenericbearer.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/device/Einscan3H2.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/MECScan.2.0.0.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/device/SHNDetect.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/dhgxicamera.2.0.6.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/dlp3100projector.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/einscan10.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/einscan3.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/einscan7.2.0.3.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/einscan7wl.2.0.0.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/device/freescan.2.1.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/freescante25.2.0.2.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/freetrak.2.1.0.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/device/fs3scan.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/fsprobe.2.0.2.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/device/hkcamera.2.0.0.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/device/jaicamera.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/sesp.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/shncamera.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/sp3scan.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/spncamera.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/spncamera.2.2.9.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/ty1080projector.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/ty1080projector_wl.2.0.0.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/device/tylaser.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/uescan.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/device/uescanwl.2.0.0.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/iconengines/qsvgicon.dll": [
+    "imports Qt5Svg.dll"
+   ],
+   "syncservice/imageformats/qgif.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qicns.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qico.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qjpeg.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qsvg.dll": [
+    "imports Qt5Svg.dll"
+   ],
+   "syncservice/imageformats/qtga.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qtiff.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qwbmp.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/imageformats/qwebp.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/logic/3DDigitalSyncInterface.2.0.0.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/networktunnel.dll": [
+    "imports Qt5Network.dll"
+   ],
+   "syncservice/networktunneld.dll": [
+    "imports Qt5Networkd.dll"
+   ],
+   "syncservice/platforms/qwindows.dll": [
+    "imports Qt5Gui.dll"
+   ],
+   "syncservice/qttunnel.3.0.9.dll": [
+    "Qt module"
+   ],
+   "syncservice/qttunnel.3.0.9d.dll": [
+    "Qt module"
+   ],
+   "syncservice/sn3DCommunicateLayerM.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/sn3DHIDCommunicationM.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/styles/qwindowsvistastyle.dll": [
+    "imports Qt5Widgets.dll"
+   ],
+   "syncservice/tunnel_encrypt.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "syncservice/tunnel_encryptd.dll": [
+    "imports Qt5Cored.dll"
+   ],
+   "tunnel_encrypt.dll": [
+    "imports Qt5Core.dll"
+   ],
+   "tunnel_encryptd.dll": [
+    "imports Qt5Cored.dll"
+   ],
+   "zipHelper.dll": [
+    "imports Qt5Core.dll"
+   ]
+  }
+ },
+ "calibration": {
+  "modules": [
+   "CalibrationPage_EA.dll",
+   "Sn3DAutoExposureHelper.dll",
+   "Sn3DCalibBigCirExtract.dll",
+   "Sn3DCalibCaptureImageProcess.dll",
+   "Sn3DCalibDevFile.dll",
+   "Sn3DCalibrateAlgorithmHelper.dll",
+   "Sn3DCalibrateAlgorithmWrapper.dll",
+   "Sn3DCalibrateData.dll",
+   "Sn3DCalibrateImageInfo.dll",
+   "Sn3DCalibrateLoader.dll",
+   "Sn3DCalibrationJR.dll",
+   "Sn3DCameraCalibHelper.dll",
+   "Sn3DEACalibrateController.dll",
+   "Sn3DTexCameraHelper.dll",
+   "Sn3DTurntableController.dll",
+   "Sn3DDental.dll",
+   "Sn3DDeviceEinStar.dll",
+   "Sn3DDigital.dll",
+   "Sn3DMagic.dll",
+   "Sn3DScanController.dll"
+  ],
+  "evidence": {
+   "CalibrationPage_EA.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DAutoExposureHelper.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCalibBigCirExtract.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCalibCaptureImageProcess.dll": [
+    "calibration API/data module",
+    "imports Sn3DCalibrateLoader.dll"
+   ],
+   "Sn3DCalibDevFile.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCalibrateAlgorithmHelper.dll": [
+    "calibration API/data module",
+    "imports Sn3DCalibrationJR.dll"
+   ],
+   "Sn3DCalibrateAlgorithmWrapper.dll": [
+    "calibration API/data module",
+    "imports Sn3DCalibBigCirExtract.dll"
+   ],
+   "Sn3DCalibrateData.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCalibrateImageInfo.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCalibrateLoader.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCalibrationJR.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DCameraCalibHelper.dll": [
+    "calibration API/data module",
+    "imports Sn3DCalibrationJR.dll"
+   ],
+   "Sn3DEACalibrateController.dll": [
+    "calibration API/data module",
+    "imports Sn3DCalibCaptureImageProcess.dll"
+   ],
+   "Sn3DTexCameraHelper.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DTurntableController.dll": [
+    "calibration API/data module"
+   ],
+   "Sn3DDental.dll": [
+    "imports Sn3DCalibrationJR.dll"
+   ],
+   "Sn3DDeviceEinStar.dll": [
+    "imports Sn3DCalibDevFile.dll"
+   ],
+   "Sn3DDigital.dll": [
+    "imports Sn3DCalibrationJR.dll"
+   ],
+   "Sn3DMagic.dll": [
+    "imports Sn3DCalibrationJR.dll"
+   ],
+   "Sn3DScanController.dll": [
+    "imports Sn3DCalibDevFile.dll"
+   ]
+  }
+ },
+ "firmware_update": {
+  "modules": [
+   "FirmwareupdateUI.exe",
+   "Sn3DSoftwareUpdate.dll",
+   "softwareUpgrade.exe"
+  ],
+  "evidence": {
+   "FirmwareupdateUI.exe": [
+    "firmware/software update module"
+   ],
+   "Sn3DSoftwareUpdate.dll": [
+    "firmware/software update module"
+   ],
+   "softwareUpgrade.exe": [
+    "firmware/software update module"
+   ]
+  }
+ },
+ "executable": {
+  "modules": [
+   "7z.exe",
+   "EXStar.exe",
+   "FirmwareupdateUI.exe",
+   "LaunchTool.exe",
+   "MarkdownConverter/MarkdownConverter.exe",
+   "PnPutil.exe",
+   "PreviewTool.exe",
+   "Resource/driver/UEC/PsExec64.exe",
+   "Resource/driver/UEC/SHCtl.exe",
+   "Resource/driver/UEC/xdevcon.exe",
+   "Resource/runtime/vcredist2013EN_x64.exe",
+   "Resource/runtime/vcredist2015.exe",
+   "Resource/runtime/vcredist_x64.exe",
+   "Resource/runtime/vcredist_x64_VS2017.exe",
+   "S3D_Teamviewer.exe",
+   "Sn3DprocessManager.exe",
+   "TestOpenglHelper.exe",
+   "einscan_net_svr.exe",
+   "informationCollect.exe",
+   "nvidia-smi.exe",
+   "passport/SnCommunity/sn3DCommunity.exe",
+   "passport/hub/passportHub.exe",
+   "passport/openweburl/QtWebEngineProcess.exe",
+   "passport/openweburl/killer.exe",
+   "passport/openweburl/openweburl.exe",
+   "polyWorkModeler.exe",
+   "pskill.exe",
+   "scanhub.exe",
+   "scanservice.exe",
+   "sn3DCommunity.exe",
+   "softwareUpgrade.exe",
+   "solid_edge/api.exe",
+   "syncservice/DeviceHelper.exe",
+   "syncservice/SnSyncService.exe",
+   "uninst.exe",
+   "vs_mesh_loader.exe"
+  ],
+  "evidence": {
+   "7z.exe": [
+    "PE executable"
+   ],
+   "EXStar.exe": [
+    "PE executable"
+   ],
+   "FirmwareupdateUI.exe": [
+    "PE executable"
+   ],
+   "LaunchTool.exe": [
+    "PE executable"
+   ],
+   "MarkdownConverter/MarkdownConverter.exe": [
+    "PE executable"
+   ],
+   "PnPutil.exe": [
+    "PE executable"
+   ],
+   "PreviewTool.exe": [
+    "PE executable"
+   ],
+   "Resource/driver/UEC/PsExec64.exe": [
+    "PE executable"
+   ],
+   "Resource/driver/UEC/SHCtl.exe": [
+    "PE executable"
+   ],
+   "Resource/driver/UEC/xdevcon.exe": [
+    "PE executable"
+   ],
+   "Resource/runtime/vcredist2013EN_x64.exe": [
+    "PE executable"
+   ],
+   "Resource/runtime/vcredist2015.exe": [
+    "PE executable"
+   ],
+   "Resource/runtime/vcredist_x64.exe": [
+    "PE executable"
+   ],
+   "Resource/runtime/vcredist_x64_VS2017.exe": [
+    "PE executable"
+   ],
+   "S3D_Teamviewer.exe": [
+    "PE executable"
+   ],
+   "Sn3DprocessManager.exe": [
+    "PE executable"
+   ],
+   "TestOpenglHelper.exe": [
+    "PE executable"
+   ],
+   "einscan_net_svr.exe": [
+    "PE executable"
+   ],
+   "informationCollect.exe": [
+    "PE executable"
+   ],
+   "nvidia-smi.exe": [
+    "PE executable"
+   ],
+   "passport/SnCommunity/sn3DCommunity.exe": [
+    "PE executable"
+   ],
+   "passport/hub/passportHub.exe": [
+    "PE executable"
+   ],
+   "passport/openweburl/QtWebEngineProcess.exe": [
+    "PE executable"
+   ],
+   "passport/openweburl/killer.exe": [
+    "PE executable"
+   ],
+   "passport/openweburl/openweburl.exe": [
+    "PE executable"
+   ],
+   "polyWorkModeler.exe": [
+    "PE executable"
+   ],
+   "pskill.exe": [
+    "PE executable"
+   ],
+   "scanhub.exe": [
+    "PE executable"
+   ],
+   "scanservice.exe": [
+    "PE executable"
+   ],
+   "sn3DCommunity.exe": [
+    "PE executable"
+   ],
+   "softwareUpgrade.exe": [
+    "PE executable"
+   ],
+   "solid_edge/api.exe": [
+    "PE executable"
+   ],
+   "syncservice/DeviceHelper.exe": [
+    "PE executable"
+   ],
+   "syncservice/SnSyncService.exe": [
+    "PE executable"
+   ],
+   "uninst.exe": [
+    "PE executable"
+   ],
+   "vs_mesh_loader.exe": [
+    "PE executable"
+   ]
+  }
+ }
+}

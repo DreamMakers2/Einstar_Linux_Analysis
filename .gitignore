@@ -1,0 +1,10 @@
+build/
+build-*/
+fixtures/
+__pycache__/
+*.pyc
+*.o
+*.a
+*.so
+bench_results.json
+.*.swp

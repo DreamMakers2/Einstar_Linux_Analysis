@@ -1,0 +1,12 @@
+# Unresolved blockers register
+
+| # | Blocker | Impact | What would resolve it | Current workaround |
+|---|---|---|---|---|
+| B1 | **No scanner attached** | All hardware-dependent claims stay hypotheses: real throughput, latency, drop behaviour, flash layout at 0x80000/0x200000, calibration round-trip, laser/strobe timing | connect the Einstar and run `driver/` probe + `ReadData(0x80000,0x200)` | simulated transport + recorded device log (`analysis/logs/session_2026-02-09.log`) |
+| B2 | **Calibration format not proven** | Cannot validate depth accuracy end-to-end; libeinstar rejects both real CCF sets as non-orthonormal | resolve the CCF/`.data_cm` field layout (agent in progress); confirm against `ReadData(0,6568)` bytes | invariant checks + per-field byte evidence; no guessed values substituted |
+| B3 | **FPGA vendor/family unproven** | Bitstream semantics, device capacity, and whether any compression is used remain open | identify header/opcode format against vendor docs (agent in progress); confirm with an on-device read of the FPGA region | byte-level structural analysis, version-size comparison (V2.6 vs V3.7 same length) |
+| B4 | **No PDB files** | Vendor function names are inferred, not symbolised | obtain PDBs (not shipped) or map via RTTI/vtable analysis | inferred names clearly labelled; string-anchored function identities |
+| B5 | **Vendor sync-service protocol (QtTunnel) not fully mapped** | Cannot drive the Windows stack headlessly for oracle testing | reverse `qttunnel` + `SnSyncCore` message format | not required for the Linux path; protocol taken from the device plugin instead |
+| B6 | **`ReadData`/`WriteData` device-side opcode unknown** | Writing calibration back to a device is risky/unproven | next step identified: the command *names* are **not** in `einscan10.2.0.0.dll` (verified: no ASCII or UTF-16 occurrence of `ReadData`/`WriteData`/`UpdateFirmware`), they are in `3DDigitalSyncInterface.2.0.0.dll`; map that layer's dispatch to the device-plugin vtable slot, then read the slot's command bytes | read path proven by the session log + libeinstar opcode `0x57`; writes deliberately not implemented |
+| B7 | **No Linux SDK / no public firmware beyond V2.10** | no newer protocol features to target | n/a — verified negative | target V2.10/V3.7, the final release |
+| B8 | **Windows mount is read-only** | cannot run vendor tools for oracle captures | use a disposable Windows VM copy if ever needed | static analysis + recorded log only |

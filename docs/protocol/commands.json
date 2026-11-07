@@ -1,0 +1,1101 @@
+{
+  "schema": "libeinstar-command-catalogue/1",
+  "source": {
+    "repository": "<libeinstar>",
+    "commit": "4564bb19d2b6385016bb355c706245d26cdece87",
+    "working_tree_note": "two uncommitted #include <algorithm> fixes in src/device.cpp and tests/fake_scanner.hpp",
+    "audited_files": [
+      "include/einstar/protocol.hpp",
+      "src/protocol.cpp",
+      "include/einstar/stream.hpp",
+      "src/stream.cpp",
+      "include/einstar/device.hpp",
+      "src/device.cpp",
+      "include/einstar/calibration.hpp",
+      "src/calibration.cpp",
+      "include/einstar/exposure.hpp",
+      "src/exposure.cpp"
+    ]
+  },
+  "confidence_levels": {
+    "code-verified": "layout built/parsed by libeinstar code and/or asserted by a unit test",
+    "code-declared": "opcode/constant exists but has no call site; semantics from the repository's reverse-engineering notes",
+    "inferred": "reasonable reading of code/comment, not proven",
+    "unknown": "not determinable from source"
+  },
+  "usb": {
+    "vendor_id": "0x3267",
+    "product_id": "not constrained by code (any PID under the VID)",
+    "interface": 0,
+    "configuration_selected": false,
+    "alt_setting_selected": false,
+    "endpoints": {
+      "command_out": {
+        "address": "0x01",
+        "type": "interrupt",
+        "direction": "out"
+      },
+      "command_in": {
+        "address": "0x81",
+        "type": "interrupt",
+        "direction": "in"
+      },
+      "bulk_out": {
+        "address": "0x02",
+        "type": "bulk",
+        "direction": "out"
+      },
+      "bulk_in": {
+        "address": "0x82",
+        "type": "bulk",
+        "direction": "in"
+      },
+      "stream_in": {
+        "address": "0x83",
+        "type": "bulk",
+        "direction": "in"
+      }
+    },
+    "control_transfers_used": false,
+    "linux_binterval_quirk_handled": false,
+    "linux_binterval_note": "supplied device fact: interrupt bInterval=0 must be patched to 7 on Linux; no handling exists in the source"
+  },
+  "packet": {
+    "size": 16,
+    "request": {
+      "0": "packet_id (0..253, mod 254; new id per retry attempt)",
+      "1": "0x00",
+      "2": "group (0x00 system, 0x10 camera)",
+      "3": "opcode",
+      "4": "status (0)",
+      "5-6": "reserved 0",
+      "7": "payload length L (0..8)",
+      "8-15": "payload, big-endian, zero-padded to wire_size"
+    },
+    "reply": {
+      "0": "packet id echo",
+      "1": "0x02 marker (not validated)",
+      "2": "group echo",
+      "3": "opcode echo",
+      "4": "status (0 = ok, nonzero = device error, values unknown)",
+      "5-7": "reserved",
+      "8": "value length N",
+      "9+": "value, big-endian; strings NUL-terminated"
+    },
+    "wire_sizes": {
+      "10": [
+        "0x40",
+        "0x41",
+        "0x7b",
+        "system 0x08"
+      ],
+      "16": "default camera-group commands (0x22, 0x23, 0x26, 0x27, 0x50, 0x51, 0x57, ...)",
+      "50": [
+        "0x48",
+        "0x49",
+        "0x67",
+        "0x68",
+        "0x6f",
+        "0x70"
+      ],
+      "64": [
+        "system 0x04",
+        "system 0x05"
+      ],
+      "100": [
+        "system 0x01"
+      ]
+    },
+    "xor_mask": {
+      "enabled_by_default": false,
+      "key": "n | (n << 4) for nibble n",
+      "encode": "data[i] ^ key over whole transfer",
+      "decode": "n = data[1] >> 4; key = n | (n << 4); data[i] ^= key",
+      "source": "protocol.hpp:178-181, protocol.cpp:190-200"
+    }
+  },
+  "commands": [
+    {
+      "name": "Handshake",
+      "group": "special",
+      "group_byte": null,
+      "opcode": "0xFF (first byte)",
+      "wire_size": 100,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "100-byte buffer, byte 0 = 0xFF, bytes 1..99 = 0; no packet header",
+      "reply": "100-byte transfer; bytes 9..16 must equal ASCII \"Shining3\"",
+      "meaning": "attach/handshake; identifies a compatible device",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "device.cpp:188-212",
+        "protocol.cpp:168-171",
+        "protocol.hpp:28-29,168"
+      ],
+      "opcode_int": 255
+    },
+    {
+      "name": "ProductName",
+      "group": "system",
+      "group_byte": "0x00",
+      "opcode": "0x01",
+      "opcode_int": 1,
+      "wire_size": 100,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": null,
+      "payload_length": 0,
+      "reply": "value length N at byte 8; NUL-terminated string at byte 9",
+      "meaning": "device product name, e.g. \"EinScan10_01\"",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified for layout; code-declared for semantics",
+      "source": [
+        "protocol.hpp:56",
+        "protocol.cpp:45,113-121",
+        "device.cpp:265-269",
+        "tests/test_protocol.cpp:95-96,101"
+      ]
+    },
+    {
+      "name": "Serial",
+      "group": "system",
+      "group_byte": "0x00",
+      "opcode": "0x04",
+      "opcode_int": 4,
+      "wire_size": 64,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": null,
+      "payload_length": 0,
+      "reply": "value at byte 9; first 8 bytes rendered as 16 uppercase hex digits; observed value length 12 with 4 trailing bytes",
+      "meaning": "device serial number",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:57",
+        "protocol.cpp:46,173-183",
+        "device.cpp:173-177",
+        "tests/test_protocol.cpp:93-94,100"
+      ]
+    },
+    {
+      "name": "FirmwareVersion",
+      "group": "system",
+      "group_byte": "0x00",
+      "opcode": "0x05",
+      "opcode_int": 5,
+      "wire_size": 64,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": null,
+      "payload_length": 0,
+      "reply": "NUL-terminated string at byte 9",
+      "meaning": "firmware/FPGA version string, e.g. EinScan10_01_SC130_FX3_V2.14_FPGA_V3.7_EN",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified for layout; not parsed or gated",
+      "source": [
+        "protocol.hpp:58",
+        "protocol.cpp:47",
+        "device.cpp:271-275",
+        "tests/test_protocol.cpp:163-167"
+      ]
+    },
+    {
+      "name": "Reboot",
+      "group": "system",
+      "group_byte": "0x00",
+      "opcode": "0x08",
+      "opcode_int": 8,
+      "wire_size": 10,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": null,
+      "payload_length": 0,
+      "reply": "not implemented",
+      "meaning": "reboot device (deliberately never sent)",
+      "used_by_library": false,
+      "forbidden": true,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:59",
+        "protocol.cpp:38",
+        "device.cpp:214-219"
+      ]
+    },
+    {
+      "name": "VendorId",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x00",
+      "opcode_int": 0,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": 0,
+      "reply": "unknown",
+      "meaning": "vendor id",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:64"
+      ]
+    },
+    {
+      "name": "ProductId",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x01",
+      "opcode_int": 1,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": 0,
+      "reply": "unknown",
+      "meaning": "product id",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:65"
+      ]
+    },
+    {
+      "name": "MaxWidth",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x16",
+      "opcode_int": 22,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8 (offset 8), length 1",
+      "payload_length": 1,
+      "reply": "u16 BE at byte 9; observed 0x0500 = 1280",
+      "meaning": "sensor maximum width",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:66",
+        "device.cpp:304",
+        "tests/test_protocol.cpp:90,97"
+      ]
+    },
+    {
+      "name": "MaxHeight",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x17",
+      "opcode_int": 23,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u16 BE at byte 9; 1024",
+      "meaning": "sensor maximum height",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:67",
+        "device.cpp:306"
+      ]
+    },
+    {
+      "name": "MaxExposure",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x20",
+      "opcode_int": 32,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u32 BE (microseconds assumed)",
+      "meaning": "exposure upper limit",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:68",
+        "docs/PROTOCOL.md:102"
+      ]
+    },
+    {
+      "name": "MinExposure",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x21",
+      "opcode_int": 33,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u32 BE",
+      "meaning": "exposure lower limit",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:69"
+      ]
+    },
+    {
+      "name": "GetExposure",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x22",
+      "opcode_int": 34,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u32 BE at byte 9; observed default 2184",
+      "meaning": "read exposure",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:70",
+        "device.cpp:296",
+        "tests/test_protocol.cpp:91,98"
+      ]
+    },
+    {
+      "name": "SetExposure",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x23",
+      "opcode_int": 35,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8 at 8; exposure u32 BE at 9; length 5",
+      "payload_length": 5,
+      "reply": "empty value (N=0)",
+      "meaning": "set exposure (microseconds assumed)",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:71",
+        "device.cpp:415-419",
+        "tests/test_protocol.cpp:11-17"
+      ]
+    },
+    {
+      "name": "MaxGain",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x24",
+      "opcode_int": 36,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u16 BE",
+      "meaning": "gain upper limit",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:72"
+      ]
+    },
+    {
+      "name": "MinGain",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x25",
+      "opcode_int": 37,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u16 BE",
+      "meaning": "gain lower limit",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:73"
+      ]
+    },
+    {
+      "name": "GetGain",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x26",
+      "opcode_int": 38,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u16 BE at byte 9; default 500 per documentation",
+      "meaning": "read gain",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:74",
+        "device.cpp:298-302",
+        "tests/test_protocol.cpp:39-44"
+      ]
+    },
+    {
+      "name": "SetGain",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x27",
+      "opcode_int": 39,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8 at 8; gain u16 BE at 9; length 3",
+      "payload_length": 3,
+      "reply": "empty value",
+      "meaning": "set gain",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:75",
+        "device.cpp:421-425",
+        "tests/test_protocol.cpp:19-23"
+      ]
+    },
+    {
+      "name": "PixelBits",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x2e",
+      "opcode_int": 46,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8, length 1",
+      "payload_length": 1,
+      "reply": "u8; 8 per documentation",
+      "meaning": "bits per pixel",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:76",
+        "docs/PROTOCOL.md:20"
+      ]
+    },
+    {
+      "name": "GetTriggerSwitch",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x40",
+      "opcode_int": 64,
+      "wire_size": 10,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": null,
+      "payload_length": 0,
+      "reply": "u8: rgb<<4 | mono",
+      "meaning": "frames captured per trigger",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:77",
+        "device.cpp:317-321",
+        "tests/test_protocol.cpp:153-159"
+      ]
+    },
+    {
+      "name": "SetTriggerSwitch",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x41",
+      "opcode_int": 65,
+      "wire_size": 10,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "packed counts u8 at 8, length 1: ((rgb & 0xF) << 4) | (mono & 0xF)",
+      "payload_length": 1,
+      "reply": "empty value",
+      "meaning": "enable/disable triggering; 0x11 = 1 IR + 1 RGB, 0x00 = off",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:78",
+        "protocol.cpp:105-111",
+        "device.cpp:444-450"
+      ]
+    },
+    {
+      "name": "GetTriggerPeriod",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x48",
+      "opcode_int": 72,
+      "wire_size": 50,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": null,
+      "payload_length": 0,
+      "reply": "u32 BE (microseconds assumed)",
+      "meaning": "trigger period",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified layout; unit inferred",
+      "source": [
+        "protocol.hpp:79",
+        "device.cpp:308"
+      ]
+    },
+    {
+      "name": "SetTriggerPeriod",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x49",
+      "opcode_int": 73,
+      "wire_size": 50,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "u32 BE at 8, length 4",
+      "payload_length": 4,
+      "reply": "empty value",
+      "meaning": "set trigger period; library writes 200000 before counts and 90000 for scanning",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:80",
+        "device.cpp:427-431,444-457"
+      ]
+    },
+    {
+      "name": "Temperature",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x50",
+      "opcode_int": 80,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": 0,
+      "reply": "i16 BE at byte 9, arithmetic shift right by 7 (LM75-style); units 0.5 degC assumed",
+      "meaning": "device temperature",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified decode; units inferred",
+      "source": [
+        "protocol.hpp:81",
+        "protocol.cpp:185-188",
+        "device.cpp:310-315"
+      ]
+    },
+    {
+      "name": "SensorCount",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x51",
+      "opcode_int": 81,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": 0,
+      "reply": "u8; observed 3",
+      "meaning": "number of sensors",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:82",
+        "device.cpp:290-294",
+        "tests/test_protocol.cpp:92,99"
+      ]
+    },
+    {
+      "name": "PageRead",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x57",
+      "opcode_int": 87,
+      "wire_size": null,
+      "transport": "bulk",
+      "endpoints": {
+        "out": "0x02",
+        "in": "0x82"
+      },
+      "request_payload": "0x1400-byte bulk request: 16-byte command header (opcode 0x57, length 2, page index u16 BE at offset 8) then zero padding",
+      "payload_length": 2,
+      "reply": "0x1400-byte bulk reply: header echo, status at 4, 4096-byte page at offset 9; byte 8 is 0, not a length",
+      "meaning": "read one 4 KiB flash page",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified",
+      "source": [
+        "protocol.hpp:83",
+        "device.cpp:371-393",
+        "tests/fake_scanner.hpp:99-122"
+      ]
+    },
+    {
+      "name": "PageWrite",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x58",
+      "opcode_int": 88,
+      "wire_size": null,
+      "transport": "bulk",
+      "endpoints": {
+        "out": "0x02",
+        "in": "0x82"
+      },
+      "request_payload": "documented as data at offset 10; not implemented or tested",
+      "payload_length": null,
+      "reply": "not implemented",
+      "meaning": "write one flash page (overwrites factory calibration)",
+      "used_by_library": false,
+      "forbidden": true,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:84",
+        "protocol.cpp:39",
+        "docs/PROTOCOL.md:164-165"
+      ]
+    },
+    {
+      "name": "ColorMode",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x5d",
+      "opcode_int": 93,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "camera mask u8?",
+      "payload_length": null,
+      "reply": "unknown",
+      "meaning": "colour mode",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:85",
+        "docs/PROTOCOL.md:112"
+      ]
+    },
+    {
+      "name": "SetIndication",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x62",
+      "opcode_int": 98,
+      "wire_size": 16,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "2 bytes (DEVICESTATE, DISTANCE) per documentation",
+      "payload_length": 2,
+      "reply": "empty value",
+      "meaning": "distance/state indication",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:86",
+        "docs/PROTOCOL.md:113,145"
+      ]
+    },
+    {
+      "name": "GetLaserBrightness",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x67",
+      "opcode_int": 103,
+      "wire_size": 50,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": 0,
+      "reply": "u8",
+      "meaning": "read laser/LED brightness",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:87"
+      ]
+    },
+    {
+      "name": "SetLaserBrightness",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x68",
+      "opcode_int": 104,
+      "wire_size": 50,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "u8 percent at 8, length 1; host clamps to 100",
+      "payload_length": 1,
+      "reply": "empty value",
+      "meaning": "set laser/LED brightness (vendor clamps to 100)",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified payload; code-declared meaning",
+      "source": [
+        "protocol.hpp:88",
+        "device.cpp:439-442",
+        "docs/PROTOCOL.md:144"
+      ]
+    },
+    {
+      "name": "GetStrobeBrightness",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x6f",
+      "opcode_int": 111,
+      "wire_size": 50,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": 0,
+      "reply": "u16?",
+      "meaning": "read strobe brightness",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:89"
+      ]
+    },
+    {
+      "name": "SetStrobeBrightness",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x70",
+      "opcode_int": 112,
+      "wire_size": 50,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "route u8 at 8; luminance u16 BE at 9; length 3",
+      "payload_length": 3,
+      "reply": "empty value",
+      "meaning": "set strobe route brightness; route-to-emitter mapping unknown",
+      "used_by_library": true,
+      "forbidden": false,
+      "confidence": "code-verified payload; route semantics unknown",
+      "source": [
+        "protocol.hpp:90",
+        "device.cpp:433-437",
+        "docs/PROTOCOL.md:252"
+      ]
+    },
+    {
+      "name": "HeartBeat",
+      "group": "camera",
+      "group_byte": "0x10",
+      "opcode": "0x7b",
+      "opcode_int": 123,
+      "wire_size": 10,
+      "transport": "interrupt",
+      "endpoints": {
+        "out": "0x01",
+        "in": "0x81"
+      },
+      "request_payload": "none?",
+      "payload_length": null,
+      "reply": "unknown",
+      "meaning": "heartbeat / button state (vendor sends HeartBeatPeriod host-side)",
+      "used_by_library": false,
+      "forbidden": false,
+      "confidence": "code-declared",
+      "source": [
+        "protocol.hpp:91",
+        "docs/PROTOCOL.md:116,146"
+      ]
+    }
+  ],
+  "counts": {
+    "distinct_opcodes": 32,
+    "system_opcodes": 4,
+    "camera_opcodes": 28,
+    "plus_handshake": 1,
+    "used_by_library_opcodes_excluding_handshake": 18,
+    "declared_or_blocked_opcodes": 14,
+    "handshake_used": true
+  },
+  "timeouts_ms": {
+    "handshake_drain": 10,
+    "handshake_transfer": 1000,
+    "command_transfer": 1000,
+    "bulk_out_chunk": 2000,
+    "bulk_in_chunk": 600,
+    "stream_read": 200,
+    "stop_scan_settle": 1000
+  },
+  "retries": {
+    "command_attempts": 5,
+    "command_backoff_ms": 20,
+    "page_outer_attempts": 5,
+    "page_reply_tries": 3,
+    "page_reply_backoff_ms": 80,
+    "page_chunk_gap_ms": 1,
+    "stream_retries": 0
+  },
+  "errors": {
+    "device_status_0": "success",
+    "device_status_nonzero": "ReplyError::DeviceStatus -> ErrorCode::BadReply (numeric values unknown)",
+    "reply_error_enum": [
+      "TooShort",
+      "IdMismatch",
+      "GroupMismatch",
+      "OpcodeMismatch",
+      "DeviceStatus"
+    ],
+    "library_error_codes": [
+      "UsbError",
+      "NotFound",
+      "NotOpen",
+      "Timeout",
+      "BadReply",
+      "WritesDisabled",
+      "InvalidArgument"
+    ]
+  },
+  "stream": {
+    "transfer_header_size": 32,
+    "payload_offset": 32,
+    "fields": {
+      "0x02": "camera one-hot field (bits 3..5; 1,2,4) + sub-index (bits 0..2)",
+      "0x08": "last-transfer flag, exactly 1",
+      "0x0c": "BE32 frame id, read from last transfer",
+      "0x10": "BE64 timestamp, read from first transfer",
+      "0x20": "payload start"
+    },
+    "frame_size_default": 1310720,
+    "frame_size_source": "1280*1024, caller-supplied to start_stream",
+    "camera_map": {
+      "1": 0,
+      "2": 1,
+      "4": 2
+    },
+    "calibration_index": {
+      "0": 2,
+      "1": 1,
+      "2": 0
+    },
+    "orientation_180": [
+      0,
+      2
+    ],
+    "magic": null,
+    "size_field": null
+  },
+  "calibration": {
+    "device_blob_size": 6568,
+    "device_ccf_block_offset": "0x39B",
+    "device_ccf_block_size": "0xF21",
+    "device_ccf_magic": "FQFQ",
+    "device_ccf_type": 4,
+    "ccf_color_size": 264,
+    "ccf_ir_size": 520,
+    "ccf_fields": 32,
+    "ccf_ir_key": [
+      5,
+      -7,
+      0,
+      0,
+      8,
+      -3,
+      0,
+      0,
+      5,
+      0,
+      1,
+      0,
+      11,
+      9,
+      13,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      -10,
+      -1,
+      -7,
+      -6,
+      -10,
+      -1,
+      14,
+      -3,
+      -15,
+      -11,
+      -4
+    ],
+    "camera_model_size": 692,
+    "camera_model_offsets_doubles": {
+      "header": 0,
+      "camera0_color": 4,
+      "pair": 26,
+      "camera1_ir_left": 38,
+      "camera2_ir_right": 60,
+      "tail_int32_byte": 676
+    },
+    "stream_camera_to_calibration": {
+      "0": "ir_right",
+      "1": "ir_left",
+      "2": "color"
+    },
+    "orientation": {
+      "0": "Rotated180",
+      "1": "AsCalibrated",
+      "2": "Rotated180"
+    }
+  },
+  "scan_sequence": {
+    "start": [
+      {
+        "opcode": "0x49",
+        "payload": "u32be 200000"
+      },
+      {
+        "opcode": "0x41",
+        "payload": "u8 0x11"
+      },
+      {
+        "opcode": "0x49",
+        "payload": "u32be trigger_period (default 90000)"
+      }
+    ],
+    "stop": [
+      {
+        "opcode": "0x49",
+        "payload": "u32be 200000"
+      },
+      {
+        "opcode": "0x41",
+        "payload": "u8 0x00"
+      },
+      {
+        "sleep_ms": 1000
+      }
+    ]
+  },
+  "open_sequence": [
+    "libusb_init / enumerate VID 0x3267 / libusb_open",
+    "libusb_set_auto_detach_kernel_driver(1)",
+    "libusb_claim_interface(0)",
+    "drain up to 5 interrupt-IN and 30 bulk-IN transfers (10 ms each)",
+    "clear_halt(0x81), clear_halt(0x82)",
+    "send 100-byte 0xFF handshake on 0x01, read 100 bytes on 0x81, require \"Shining3\" at 9..16",
+    "system 0x04 serial query (64-byte wire)"
+  ]
+}

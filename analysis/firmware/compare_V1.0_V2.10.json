@@ -1,0 +1,365 @@
+{
+  "old": {
+    "path": "sources/firmware/official_downloads/EinScan10_01_SC130_FX3_V1.0_FPGA_V2.6_CH.img",
+    "sha256": "067ce53da1cd00c2bab9b61ba3bc1111b631dbb5faac189c1c4a9e8a3b0c9e45",
+    "container": "raw",
+    "image_sha256": "067ce53da1cd00c2bab9b61ba3bc1111b631dbb5faac189c1c4a9e8a3b0c9e45",
+    "image_size": 1310720,
+    "entry": 1073829000,
+    "checksum": 2444164778,
+    "checksum_ok": true,
+    "sections": [
+      {
+        "index": 1,
+        "words": 2248,
+        "size": 8992,
+        "address": 256
+      },
+      {
+        "index": 2,
+        "words": 16384,
+        "size": 65536,
+        "address": 1073754112
+      },
+      {
+        "index": 3,
+        "words": 16384,
+        "size": 65536,
+        "address": 1073819648
+      },
+      {
+        "index": 4,
+        "words": 4320,
+        "size": 17280,
+        "address": 1073885184
+      },
+      {
+        "index": 5,
+        "words": 4258,
+        "size": 17032,
+        "address": 1073938432
+      }
+    ],
+    "fpga_offset": null
+  },
+  "new": {
+    "path": "sources/firmware/EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_EN_IAP.img",
+    "sha256": "52346b33c7b0337566d7cfe8d453533c46f18898e4e7f82c1c00c885a8c68c3d",
+    "container": "records",
+    "image_sha256": "1feb8db0636029672053fe760d8fbab79e416a0110fb8e0c10ba139497b18976",
+    "image_size": 1310720,
+    "entry": 1073835856,
+    "checksum": 266540220,
+    "checksum_ok": true,
+    "sections": [
+      {
+        "index": 1,
+        "words": 2378,
+        "size": 9512,
+        "address": 256
+      },
+      {
+        "index": 2,
+        "words": 16384,
+        "size": 65536,
+        "address": 1073754112
+      },
+      {
+        "index": 3,
+        "words": 16384,
+        "size": 65536,
+        "address": 1073819648
+      },
+      {
+        "index": 4,
+        "words": 6989,
+        "size": 27956,
+        "address": 1073885184
+      },
+      {
+        "index": 5,
+        "words": 5428,
+        "size": 21712,
+        "address": 1073938432
+      }
+    ],
+    "fpga_offset": null
+  },
+  "sections": [
+    {
+      "address": 256,
+      "status": "resized",
+      "old_size": 8992,
+      "new_size": 9512,
+      "delta": 520
+    },
+    {
+      "address": 1073754112,
+      "status": "same-size",
+      "size": 65536,
+      "changed_bytes": 65310,
+      "ranges": [
+        {
+          "address": 1073754140,
+          "size": 1114
+        },
+        {
+          "address": 1073755276,
+          "size": 730
+        },
+        {
+          "address": 1073756028,
+          "size": 162
+        },
+        {
+          "address": 1073756212,
+          "size": 342
+        },
+        {
+          "address": 1073756576,
+          "size": 162
+        },
+        {
+          "address": 1073756760,
+          "size": 278
+        },
+        {
+          "address": 1073757060,
+          "size": 4686
+        },
+        {
+          "address": 1073761760,
+          "size": 568
+        },
+        {
+          "address": 1073762344,
+          "size": 415
+        },
+        {
+          "address": 1073762768,
+          "size": 15485
+        },
+        {
+          "address": 1073778261,
+          "size": 6760
+        },
+        {
+          "address": 1073785032,
+          "size": 1416
+        },
+        {
+          "address": 1073786456,
+          "size": 33192
+        }
+      ],
+      "range_count": 13
+    },
+    {
+      "address": 1073819648,
+      "status": "same-size",
+      "size": 65536,
+      "changed_bytes": 65472,
+      "ranges": [
+        {
+          "address": 1073819648,
+          "size": 16583
+        },
+        {
+          "address": 1073836240,
+          "size": 19526
+        },
+        {
+          "address": 1073855776,
+          "size": 2118
+        },
+        {
+          "address": 1073857904,
+          "size": 4325
+        },
+        {
+          "address": 1073862240,
+          "size": 17109
+        },
+        {
+          "address": 1073879360,
+          "size": 3707
+        },
+        {
+          "address": 1073883080,
+          "size": 2104
+        }
+      ],
+      "range_count": 7
+    },
+    {
+      "address": 1073885184,
+      "status": "resized",
+      "old_size": 17280,
+      "new_size": 27956,
+      "delta": 10676
+    },
+    {
+      "address": 1073938432,
+      "status": "resized",
+      "old_size": 17032,
+      "new_size": 21712,
+      "delta": 4680
+    }
+  ],
+  "total_changed_bytes": 130782,
+  "fpga": {
+    "old": {
+      "offset": 262544,
+      "size": 1005676,
+      "sha256": "1b994d4d1c30305056af09984593e62f9acaf3841627c6ebf9f7316305c4fe85"
+    },
+    "new": {
+      "offset": 262544,
+      "size": 1005676,
+      "sha256": "cca7860b22ec025ff5d7657257b1d3c342867045bd89b99c22ce03c189d057e4"
+    },
+    "identical": false
+  },
+  "changed_functions": [
+    {
+      "name": "FUN_40008d70",
+      "changed_bytes": 41368
+    },
+    {
+      "name": "FUN_400170c8",
+      "changed_bytes": 19526
+    },
+    {
+      "name": "FUN_4001d0e8",
+      "changed_bytes": 17109
+    },
+    {
+      "name": "FUN_40012ec0",
+      "changed_bytes": 16583
+    },
+    {
+      "name": "FUN_400051c8",
+      "changed_bytes": 15485
+    },
+    {
+      "name": "FUN_400035c0",
+      "changed_bytes": 5630
+    },
+    {
+      "name": "FUN_4001c3d8",
+      "changed_bytes": 4325
+    },
+    {
+      "name": "FUN_40021904",
+      "changed_bytes": 3707
+    },
+    {
+      "name": "FUN_4001bd10",
+      "changed_bytes": 2118
+    },
+    {
+      "name": "FUN_400225fc",
+      "changed_bytes": 2104
+    },
+    {
+      "name": "entry",
+      "changed_bytes": 1114
+    },
+    {
+      "name": "FUN_400033e0",
+      "changed_bytes": 730
+    },
+    {
+      "name": "FUN_40004bec",
+      "changed_bytes": 568
+    },
+    {
+      "name": "?",
+      "changed_bytes": 415
+    }
+  ],
+  "strings": {
+    "old_count": 131,
+    "new_count": 167,
+    "removed": [
+      "CallBack type = %x",
+      "Commit Err: %x",
+      "Count = %d ",
+      "DATA CHECK RIGHT ",
+      "DATA update over ",
+      "Data Check Error and Upgrade! Failed!",
+      "FirmwareSize = %d",
+      "IsSame!=0, err_count = %d. ",
+      "Not Handle USB event...%d",
+      "Read back error check beyond 4 times and update firmware failed.",
+      "Receive command ID=0x%x DataSize=%d",
+      "RecvFirmwareSize = %d",
+      "SpiWriteCount = %d",
+      "THE FINAL CalcCheck = %x RxCheck_u=0x%x",
+      "U_u USB enUSBSpeed: 0x%x, enPowerMode: 0x%x, uiConnectStatus: 0x%x, uiDisConnectCnt: 0x%x",
+      "WriteI2C_FPGA Register=0x%x Val:0x%x 0x%x:0x%x:0x%x",
+      "WriteI2C_seneor_register_for_sc130 err, write data",
+      "bmReqType 0x%x bRequest 0x%x wValue 0x%x wIndex 0x%x wLength 0x%x",
+      "read seneor_register from 3e08 failed"
+    ],
+    "added": [
+      "@M3XFMDNE`",
+      "@M3XFMDNEt",
+      "After pstAppFlag->uiNewAppAddr: 0x%x, pstAppFlag->uiOldAppAddr: 0x%x",
+      "Before pstAppFlag->uiNewAppAddr: 0x%x, pstAppFlag->uiOldAppAddr: 0x%x",
+      "Bulk DMA Discard failed!",
+      "Bulk DMA send failed!",
+      "CLEAR_FEATURE Request ",
+      "Class Request Target Device",
+      "Class Request Target Endpoint",
+      "Class Request Target Interface",
+      "Firmware size is %d, update starting...",
+      "Firmware update error",
+      "Firmware update over, firmware size %d, recive bytes %d",
+      "Firmware update package size is 0x%x, TOO BIG",
+      "Firmware update package ucCheckByte(0x%x) != ucCheckCal(0x%x)",
+      "GET_CONFIGURATION Request ",
+      "GET_DESCRIPTOR Request ",
+      "GET_INTERFACE Request ",
+      "GET_STATUS Request ",
+      "Get Event! evtype=0x%x evdata=0x%x ",
+      "GetFpgaLoadAddr: 0x%x",
+      "REQ 0x%x 0x%x 0x%x 0x%x 0x%x",
+      "Reset endpoint1 IN",
+      "Reset endpoint1 IN OK",
+      "Reset endpoint1 OUT",
+      "Reset endpoint1 OUT OK",
+      "Reset endpoint2 IN",
+      "Reset endpoint2 IN OK",
+      "Reset endpoint2 OUT",
+      "Reset endpoint2 OUT OK",
+      "Reset endpoint3 IN",
+      "Reset endpoint3 IN OK",
+      "SET_ADDRESS Request ",
+      "SET_CONFIGURATION Request ",
+      "SET_DESCRIPTOR Request ",
+      "SET_FEATURE Request ",
+      "SET_INTERFACE Request ",
+      "SET_ISOCH_DELAY Request ",
+      "SET_SEL Request ",
+      "SYNCH_FRAME Request ",
+      "USB Powered",
+      "USB SETCONF.",
+      "USB SUSPEND...",
+      "USB Speed Change.",
+      "USB plug out",
+      "USB3_LNKFAIL event,USB plug out?",
+      "U_u USB Reconnect...",
+      "UnKnown Request ",
+      "Vendor Request",
+      "WriteI2C_seneor_register_for_sc130 err, write data:0x%x 0x%x",
+      "after write SR:[0x%x 0x%x 0x%x]",
+      "before write SR:[0x%x 0x%x 0x%x]",
+      "flash_read_status",
+      "latency Exit: 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x ",
+      "uiNewAppAddr: 0x%x, uiOldAppAddr: 0x%x, ucIsBootNewApp: 0x%x"
+    ],
+    "removed_count": 19,
+    "added_count": 55
+  }
+}

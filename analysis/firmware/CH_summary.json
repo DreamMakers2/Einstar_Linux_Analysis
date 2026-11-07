@@ -1,0 +1,59 @@
+{
+  "source": "sources/firmware/EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_CH_IAP.img",
+  "sha256": "0c5a41b5bfdc7f50fb6b55794c36fc4b6200ab28709d25b3e4b82d93fce6e7c5",
+  "size": 1311040,
+  "records": 320,
+  "record_checksum_errors": [],
+  "image_size": 1310720,
+  "image_sha256": "bc96fa0ee55402f1dcfc02bff18c976c1268f959e4d9048b10a728e24912565f",
+  "bImageCTL": 28,
+  "bImageType": 176,
+  "sections": [
+    {
+      "index": 1,
+      "image_offset": 4,
+      "words": 2378,
+      "size": 9512,
+      "address": 256,
+      "region": "ITCM/SYSMEM low"
+    },
+    {
+      "index": 2,
+      "image_offset": 9524,
+      "words": 16384,
+      "size": 65536,
+      "address": 1073754112,
+      "region": "SYSTEM RAM"
+    },
+    {
+      "index": 3,
+      "image_offset": 75068,
+      "words": 16384,
+      "size": 65536,
+      "address": 1073819648,
+      "region": "SYSTEM RAM"
+    },
+    {
+      "index": 4,
+      "image_offset": 140612,
+      "words": 6989,
+      "size": 27956,
+      "address": 1073885184,
+      "region": "SYSTEM RAM"
+    },
+    {
+      "index": 5,
+      "image_offset": 168576,
+      "words": 5428,
+      "size": 21712,
+      "address": 1073938432,
+      "region": "SYSTEM RAM"
+    }
+  ],
+  "entry": 1073835856,
+  "stored_checksum": 266538682,
+  "computed_checksum": 266538682,
+  "checksum_ok": true,
+  "terminator_offset": 190296,
+  "fpga_offset": 262544
+}

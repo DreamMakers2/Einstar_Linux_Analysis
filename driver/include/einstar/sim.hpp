@@ -1,0 +1,243 @@
+// SPDX-License-Identifier: MIT
+// Deterministic, fault-injecting USB device simulator with a virtual clock.
+#pragma once
+
+#include <cstdint>
+#include <deque>
+#include <map>
+#include <memory>
+#include <queue>
+#include <span>
+#include <string>
+#include <vector>
+
+#include "einstar/clock.hpp"
+#include "einstar/recorder.hpp"
+#include "einstar/transport.hpp"
+#include "einstar/usb_descriptor.hpp"
+
+namespace einstar {
+
+struct FaultConfig {
+  double loss_probability = 0.0;            // drop a whole packet
+  double reorder_probability = 0.0;         // interleave packets across frames
+  double short_read_probability = 0.0;      // split a transfer into 2 reads
+  double stall_probability = 0.0;           // endpoint stall
+  double timeout_probability = 0.0;         // completion without data
+  double corrupt_length_probability = 0.0;  // corrupt the u32 length prefix
+  double duplicate_header_probability = 0.0;// emit an extra header-only packet
+  double truncate_frame_probability = 0.0;  // stop emitting a frame early
+  std::int64_t injected_latency_ns = 0;     // added to every completion
+  std::uint32_t reorder_window = 4;         // packets buffered for reordering
+
+  [[nodiscard]] bool clean() const noexcept;
+};
+
+struct SimConfig {
+  std::uint64_t seed = 1;
+  /// Number of frames the simulated device produces.  Once exhausted, reads
+  /// complete with Timeout so a pipeline can drain and stop.
+  std::uint32_t frames = 0;
+  std::uint8_t camera_id = 1;
+  std::uint32_t frame_size = 1280U * 1024U;
+  std::uint32_t chunk_payload = 0xA000;
+  std::int64_t trigger_period_ns = 40'000'000;  // 25 fps
+  std::uint64_t bandwidth_bytes_per_sec = 300'000'000;
+  std::int64_t transfer_latency_ns = 500'000;
+  FaultConfig faults;
+
+  /// When true, packets from two consecutive frames are interleaved (packet
+  /// reordering across frames).  Within one frame the protocol carries no chunk
+  /// index, so intra-frame reordering is unrecoverable by design.
+  bool interleave_frames = false;
+  std::uint8_t second_camera_id = 2;
+
+  /// Model the Linux bInterval=0 quirk: claim_interface fails until
+  /// apply_descriptor_patch() is called.
+  bool require_interval_patch = true;
+
+  /// Replay mode: serve bytes from a recording instead of generating them.
+  recording::ReplaySource replay;
+};
+
+class SimulatedTransport final : public Transport {
+ public:
+  explicit SimulatedTransport(SimConfig config);
+  ~SimulatedTransport() override;
+
+  Status open() override;
+  void close() override;
+  [[nodiscard]] bool is_open() const noexcept override { return open_; }
+
+  Status claim_interface(std::uint8_t interface_number) override;
+  Status release_interface(std::uint8_t interface_number) override;
+  Status clear_halt(std::uint8_t endpoint) override;
+
+  TransferId submit_bulk_in(std::uint8_t endpoint,
+                            std::span<std::byte> destination,
+                            CompletionSink& sink, void* user) override;
+  bool cancel(TransferId id) override;
+  std::size_t poll(int timeout_ms) override;
+
+  [[nodiscard]] std::size_t outstanding() const noexcept override {
+    return pending_.size();
+  }
+  [[nodiscard]] const Clock& clock() const noexcept override { return clock_; }
+  [[nodiscard]] TransportKind kind() const noexcept override {
+    return TransportKind::Simulated;
+  }
+  [[nodiscard]] std::string_view name() const noexcept override {
+    return "simulated";
+  }
+
+  // ---- deterministic test / tooling introspection -------------------------
+  [[nodiscard]] VirtualClock& virtual_clock() noexcept { return clock_; }
+  [[nodiscard]] const SimConfig& config() const noexcept { return config_; }
+  [[nodiscard]] bool descriptor_patched() const noexcept { return patched_; }
+  Status apply_descriptor_patch();
+  [[nodiscard]] const UsbConfigDescriptor& descriptor() const noexcept {
+    return descriptor_;
+  }
+  [[nodiscard]] bool halted(std::uint8_t endpoint) const;
+
+  [[nodiscard]] std::uint64_t generated_packets() const noexcept {
+    return generated_packets_;
+  }
+  [[nodiscard]] std::uint64_t generated_frames() const noexcept {
+    return generated_frames_;
+  }
+  [[nodiscard]] std::uint64_t delivered_bytes() const noexcept {
+    return delivered_bytes_;
+  }
+  [[nodiscard]] std::uint64_t scheduled_completions() const noexcept {
+    return scheduled_;
+  }
+  [[nodiscard]] std::uint64_t stalled_completions() const noexcept {
+    return stalls_;
+  }
+  [[nodiscard]] std::uint64_t timed_out_completions() const noexcept {
+    return timeouts_;
+  }
+  [[nodiscard]] std::uint64_t cancels() const noexcept { return cancels_; }
+
+ private:
+  struct Pending {
+    TransferId id = 0;
+    std::span<std::byte> destination;
+    CompletionSink* sink = nullptr;
+    void* user = nullptr;
+    std::int64_t submitted_ns = 0;
+    std::int64_t ready_ns = 0;
+    std::uint64_t epoch = 0;
+    bool cancelled = false;
+    bool done = false;
+    std::size_t bytes = 0;
+    TransferStatus status = TransferStatus::Ok;
+  };
+
+  struct Event {
+    std::int64_t ready_ns = 0;
+    TransferId id = 0;
+    std::uint64_t epoch = 0;
+    bool operator>(const Event& other) const noexcept {
+      if (ready_ns != other.ready_ns) {
+        return ready_ns > other.ready_ns;
+      }
+      return id > other.id;
+    }
+  };
+
+  struct GenFrame;
+
+  void ensure_stream(std::size_t bytes);
+  void generate_packet();
+  void generate_one(GenFrame& frame);
+  void start_frame(GenFrame& frame, std::uint32_t frame_index,
+                   std::uint8_t camera_id);
+  [[nodiscard]] std::vector<std::byte> build_packet_bytes(const GenFrame& frame,
+                                                          std::uint32_t chunk);
+  void append_stream(const std::byte* data, std::size_t size);
+  void emulate_completion(Pending& pending);
+  std::size_t serve_replay(std::span<std::byte> destination,
+                           TransferStatus& status);
+  std::int64_t schedule(std::size_t bytes, std::int64_t now_ns,
+                        std::int64_t available_at_ns);
+  void schedule_event(Pending& pending);
+  [[nodiscard]] std::uint64_t hash(std::uint64_t a, std::uint64_t b,
+                                   std::uint64_t c) const noexcept;
+  [[nodiscard]] bool chance(double probability, std::uint64_t a, std::uint64_t b,
+                            std::uint64_t c) const noexcept;
+
+  SimConfig config_;
+  VirtualClock clock_;
+  UsbConfigDescriptor descriptor_;
+  bool open_ = false;
+  bool claimed_ = false;
+  bool patched_ = false;
+  std::map<std::uint8_t, bool> halted_;
+  std::int64_t device_free_ns_ = 0;
+  std::uint64_t submit_counter_ = 0;
+
+  std::map<TransferId, Pending> pending_;
+  std::priority_queue<Event, std::vector<Event>, std::greater<>> events_;
+  TransferId next_id_ = 1;
+  std::uint64_t scheduled_ = 0;
+  std::uint64_t stalls_ = 0;
+  std::uint64_t timeouts_ = 0;
+  std::uint64_t cancels_ = 0;
+  std::uint64_t delivered_bytes_ = 0;
+  std::uint64_t generated_packets_ = 0;
+  std::uint64_t generated_frames_ = 0;
+  std::uint64_t packet_hash_counter_ = 0;
+
+  // Generated byte stream not yet consumed by a read.
+  std::vector<std::byte> stream_;
+  std::size_t stream_offset_ = 0;
+
+  // Absolute byte counters and per-packet availability marks used to model the
+  // 40 ms trigger period (bytes of frame N become readable at N * period).
+  std::uint64_t stream_generated_total_ = 0;
+  std::uint64_t stream_consumed_total_ = 0;
+  struct AvailabilityMark {
+    std::uint64_t end_offset = 0;
+    std::int64_t available_ns = 0;
+  };
+  std::deque<AvailabilityMark> stream_marks_;
+
+  // Generator state.
+  struct GenFrame {
+    std::uint32_t frame_index = 0;
+    std::uint8_t camera_id = 1;
+    std::uint32_t chunk = 0;
+    std::uint32_t chunks_total = 0;
+    std::uint32_t chunks_emit = 0;
+    bool started = false;
+  };
+  GenFrame gen_[2];
+  int emit_index_ = 0;
+  std::uint32_t next_frame_ = 0;
+  bool generator_done_ = false;
+  bool reorder_pair_ = false;
+
+  // Replay cursor.
+  std::size_t replay_index_ = 0;
+  std::size_t replay_offset_ = 0;
+};
+
+/// Deterministic payload byte used by the simulator.  Tests can reproduce the
+/// expected frame content without keeping frames in memory.
+std::uint8_t simulated_payload_byte(std::uint32_t frame_index,
+                                    std::uint32_t chunk_index,
+                                    std::size_t offset_in_chunk) noexcept;
+
+/// Fill `out` with the deterministic payload pattern.
+void fill_simulated_payload(std::uint32_t frame_index, std::uint32_t chunk_index,
+                            std::span<std::byte> out) noexcept;
+
+/// FNV-1a 64 digest of a whole simulated frame (chunked pattern assembled in
+/// order), useful for assertions without materializing the frame.
+std::uint64_t simulated_frame_digest(std::uint32_t frame_index,
+                                     std::uint32_t frame_size,
+                                     std::uint32_t chunk_payload) noexcept;
+
+}  // namespace einstar
