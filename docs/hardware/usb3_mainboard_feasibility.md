@@ -305,11 +305,11 @@ Items 1–2 are a **BGA rework**. Items 3–6 are a **new PCB**. That is the who
 | # | Option | What it takes | Effort | Risk | Verdict |
 |---|---|---|---|---|---|
 | **A** | Cable swap only | a USB 3.0 cable with the same 7-pin connector | minutes | none | **Impossible.** Four SS conductors do not fit in the connector's one spare pin. |
-| **B** | Populate missing parts on existing footprints | find unpopulated AC-cap / ESD / connector footprints | hours | low | **Impossible.** No such footprints exist. |
-| **C** | Solder a flying USB 3.0 lead to exposed vias/pads | locate SS vias, cut stubs, add caps + ESD, strain-relieve | days | **very high** | **No-go.** No SS vias were found; SI analysis (§7) predicts certain failure. |
+| **B** | Populate missing parts on existing footprints | find an unpopulated **series** AC-cap footprint and an ESD footprint | hours | low | **No-go for AC coupling.** The only footprint on the TX pair is a two-pad part **across** the pair, not in series; populating it cannot create series AC coupling. No ESD footprint found. |
+| **C** | Solder a flying USB 3.0 lead to exposed vias/pads | locate SS vias, cut stubs, add caps + ESD, strain-relieve | days | **very high** | **No-go.** The SS traces are accessible at the connector and the two-pad footprint, but a flying lead still violates the SI budget (§7). |
 | **D** | BGA rework + new internal harness | lift the FX3, bond to A3–A6 and B3, re-ball, add caps/ESD, add a panel-mount USB-C, new cable | weeks, specialist | **very high** | **Not recommended.** Cost and risk exceed a new board; reliability of a reworked 0.8 mm BGA in a handheld device is poor. |
-| **E** | New plug-in daughterboard (mainboard untouched) | *only if* X-ray/TDR proves SS on J4; then design a daughterboard with AC caps, ESD and a USB-C receptacle, plus a new cable | weeks | medium | **Conditionally possible.** Probability that J4 carries SS: **low (~10–15 %)**. This is the only path that would not touch the mainboard. |
-| **F** | New mainboard PCB (re-spin) | reuse FX3 + PGL25G + DDR3L + firmware; route SS properly, add USB-C, keep the 12 V input | months | medium | **The only "properly engineered" solution.** The firmware already offers SS with no code change; the FPGA bitstream and protocol are already documented in this workspace. |
+| **E** | New plug-in daughterboard (mainboard untouched) | design a daughterboard with the two 0.1 µF series caps, ESD and a USB-C receptacle; use the four SS pins found by M1/M2; new cable | weeks | medium | **Conditionally possible — the leading option.** The optical route and the six-point continuity report put the probability that the component-side connector carries SS at **~75–85 %**, pending M1/M2 and M3. |
+| **F** | New mainboard PCB (re-spin) | reuse FX3 + PGL25G + DDR3L + firmware; route SS properly, add USB-C, keep the 12 V input | months | medium | **The most robust solution, no longer the only one.** The daughterboard (E) is viable if M1–M3 pass; a re-spin remains the fallback. |
 
 **Effort vs. benefit.** SuperSpeed removes the throughput wall that currently limits the scanner: at
 High Speed the practical ceiling is ≈ 40–45 MB/s, while the documented 68 ms three-camera cadence needs
@@ -326,7 +326,9 @@ known not to do it, but it is worth stating so the argument is not overclaimed.
 
 The supplied cable's measured allocation — 12 V, ground, four USB 2.0 conductors, one unconnected — has
 **one** spare contact against a requirement of **four**. No re-pinning of the existing cable can bridge
-that. The connector is therefore a binding constraint independent of everything else in this report.
+that. The connector is therefore a binding constraint **for re-using the stock cable**. A daughterboard
+that replaces the cable (option E) is not bound by it, but it must carry the four SS conductors and the
+two AC-coupling caps on its own harness.
 
 ### 6.2 Why the firmware enables SuperSpeed on a USB 2.0 product
 
@@ -367,7 +369,8 @@ add two 0.1 µF caps, and run the cable out of the housing. The channel budget s
 the device falls back to USB 2.0 High Speed — exactly the failure mode USB-IF documents as "not able to
 train to SuperSpeed, instead trained to operate at USB 2.0 high speed". The optimistic outcomes are an
 intermittent 5 Gb/s link that drops under load, and radiated-emissions failures. **A tap that works
-requires a real 90 Ω channel — i.e. a board.**
+requires a real 90 Ω channel — i.e. a board.** A properly designed daughterboard is such a board; a
+flying lead is not. This section rules out the flying lead, not option E.
 
 ---
 
@@ -400,18 +403,23 @@ identification, not in the idea.
 
 | Rank | Candidate | Where | Confidence it is SS | Access | Comment |
 |---|---|---|---|---|---|
-| 1 | **J4 pins** (if SS was routed for a future variant) | 40-pin connector, both sides accessible | **low, ~10–15 %** | good | The only place SS could exist without BGA rework. Test with X-ray or TDR; a DMM cannot settle it. |
-| 2 | **Vias in the 1.6 mm strip below the FX3** | x 1330–1470, y 985–1080 (P1) | **very low, <5 %** | medium | Two or three vias are visible; none aligns with a 4-trace bundle and none is labelled. Destructive to test. |
-| 3 | **FX3 balls A3–A6** | under the package, row A | **n/a — they are SS by definition** | **none** | 1.0 mm inside the body edge; 0.30 mm balls at 0.8 mm pitch. Not probeable, not solderable with the part fitted. |
-| 4 | **FX3 ball B3 (R_USB3)** | under the package, row B | **n/a — required for SS** | **none** | Second row; even harder. Without it the PHY cannot calibrate. |
-| 5 | **New PCB** | — | — | — | Not a "connection point"; the only path that satisfies every requirement. |
+| 1 | **Component-side 40-pin connector pins** | 40-pin board-to-board, both sides accessible | **moderate-high, ~75–85 %** | good | The four SS traces route into the via field beside this connector, and the operator's six-point continuity report found six connector-side points. M1/M2 identify the pins. |
+| 2 | **The four traces / two-pad footprint below the FX3** | x 1330–1470, y 985–1100 (P1) | **high (optical)** | medium | Hough + Radon + re-encode stability; the two-pad footprint is an accessible probe point on the TX pair. |
+| 3 | **FX3 balls A3–A6** | under the package, row A | **n/a — they are SS by definition** | **none** | 1.0 mm inside the body edge; 0.30 mm balls at 0.8 mm pitch. Not probeable; the traces are the accessible proxy. |
+| 4 | **FX3 ball B3 (R_USB3)** | under the package, row B | **n/a — required for SS** | **none** | Second row; only the 200 Ω resistor itself is accessible. M3. |
+| 5 | **Daughterboard / new PCB** | — | — | — | The daughterboard is the leading path (option E); a re-spin is the fallback. |
 
-The board also has **no unpopulated footprints** anywhere in the USB path that could be populated as a
-shortcut; every 2-pad site near the FX3 and J4 is occupied.
+The board has a **two-pad footprint across the TX pair** (unpopulated or shunt) — not a series AC-cap
+site — and no ESD footprint. There is no shortcut that creates series AC coupling without a
+daughterboard.
 
 ---
 
 ## 10. Unpowered multimeter inspection plan
+
+> **Superseded in part by Addendum 2 §A2.7.** The plan below is the original M1–M5; Addendum 2 adds
+> M1/M2 (connector continuity from the two-pad footprint and the RX runs), M3 (B3), M4 (128 Ω
+> disambiguation), M5 (diode-mode identity) and M6 (TDR/X-ray). Use the Addendum 2 plan.
 
 > **Visual guide:** `hardware/annotated/A7_multimeter_procedure.png` — probe map, ground reference,
 > preparation notes and the decision tree on one page.
@@ -465,17 +473,17 @@ Interpretation:
 * Beware false positives: 200 Ω parts also appear in LED bias and termination networks. Require the
   part to be adjacent to the FX3 and to have one pad on ground.
 
-### M4 — Only if M3 found the 200 Ω: characterise J4 for SuperSpeed
+### M4 — Only if M3 found the 200 Ω: characterise the component-side connector for SuperSpeed
 
 A DMM cannot see a 90 Ω differential pair. Two options:
 
 | Method | What it proves | Cost |
 |---|---|---|
-| **2D X-ray** of the J4-to-FX3 region | whether four traces leave row A and where they go | a lab visit |
-| **TDR** on each J4 pin (50 ps rise) | a 90 Ω differential signature on a pin pair = a routed SS pair | lab equipment |
-| **Capacitance** J4 pin → GND | weak: distinguishes "connected to something" from "floating" only | DMM with pF range |
+| **2D X-ray** of the component-side-connector-to-FX3 region | whether four traces leave row A and where they go | a lab visit |
+| **TDR** on each component-side connector pin (50 ps rise) | a 90 Ω differential signature on a pin pair = a routed SS pair | lab equipment |
+| **Capacitance** component-side connector pin → GND | weak: distinguishes "connected to something" from "floating" only | DMM with pF range |
 
-If either test shows four SS conductors reaching J4, **option E becomes viable** and only a new
+If either test shows four SS conductors reaching the component-side connector, **option E becomes viable** and only a new
 daughterboard + cable is needed — with the mainboard left untouched. If not, **option F** is the only path.
 
 ### M5 — Record and stop
@@ -509,9 +517,9 @@ Nothing in this plan requires soldering.
 
 ## 12. Residual unknowns
 
-1. **BGA ball connectivity** — invisible by construction; only X-ray or destructive inspection resolves it.
+1. **BGA ball connectivity** — the last 1 mm under the package is invisible. The four traces constrain the assignment to A3–A6 (Addendum 2), but only X-ray or electrical test resolves it exactly.
 2. **R_USB3 population** — decidable by M3, not by photograph.
-3. **J4 pinout** — 40 pins, only 4 identified by inference (DP, DN, CLK, PCLK).
+3. **Connector pinout** — 40 pins; four labelled test points (DP, DN, CLK, PCLK) plus the operator's six unlabelled continuity points (Addendum 2 §A2.5.1). The exact nets are unidentified.
 4. **Layer count and stackup** — not visible; ≥ 4 required by AN70707, ≥ 6 probable.
 5. **The board's identity within the product** — most consistent with the acquisition ("head") board;
    the external 7-pin connector is not in frame on either side.
@@ -523,21 +531,29 @@ Nothing in this plan requires soldering.
 
 ## 13. Recommendation
 
-**Do not modify this board.** The evidence is coherent and points one way: a USB-2.0-only FX3 design,
-built to Infineon's own USB-2.0-only checklist, with a connector that physically cannot carry
-SuperSpeed. The only modification that could work is a BGA rework plus a new harness — more work, more
-risk and worse reliability than a new board.
+**Do not modify the mainboard.** The evidence now points to a board that already carries **two
+SuperSpeed pairs from A3–A6 to the component-side connector**, but leaves the **AC coupling and ESD
+to the daughterboard**, and may or may not fit the **200 Ω B3 reference**. The rational next step is
+therefore **not** a BGA rework and **not** a re-spin: it is **two unpowered continuity measurements
+(M1/M2) and the B3 sweep (M3)**.
 
-**If USB 3.0 throughput is the goal, the rational path is option F:** a new mainboard that reuses the
-CYUSB3014, the PGL25G, the DDR3L, the boot flash and — crucially — the **existing firmware**, which
-already advertises SuperSpeed and would negotiate 5 Gb/s with no code change. This workspace already
-contains the FX3 memory map, the FPGA bitstream analysis, the USB protocol, the calibration format and
-a working acquisition backend, so a re-spin is an engineering exercise with known unknowns rather than
-a research project.
+* **If M1/M2 identify two connector pins per pair and M3 finds 200 Ω**, build the **daughterboard**.
+  It must carry the two 0.1 µF series caps on SSTX and a ≤ 0.5 pF ESD array, use the four pins found
+  by M1/M2, and hold 90 Ω ±7 % from the connector to a USB 3.0 receptacle. The stock 7-pin cable is
+  not reused; the daughterboard is part of the SS front end, not a passive break-out.
+* **If M3 finds no 200 Ω**, the SS PHY cannot calibrate and the conditional GO fails; only a board
+  re-spin (option F) remains.
+* **If M1/M2 find no path**, the pairs stop at the connector and only a re-spin remains.
 
-**Before committing to a re-spin**, run **M3**. Twenty minutes with a multimeter decides whether this
-board is the textbook App. C design (expected) or a board that was quietly provisioned for SuperSpeed —
-and that single measurement determines whether option E is worth a lab visit.
+**Before any of that**, run **M3**. Twenty minutes with a multimeter decides whether this board is
+the textbook App. C design (no B3) or a board provisioned for SuperSpeed (200 Ω) — and that single
+measurement is the cheapest way to kill or fund the whole programme.
+
+**If a re-spin is chosen**, it can reuse the CYUSB3014, the PGL25G, the DDR3L, the boot flash and the
+**existing firmware**, which already advertises SuperSpeed and would negotiate 5 Gb/s with no code
+change. This workspace already contains the FX3 memory map, the FPGA bitstream analysis, the USB
+protocol, the calibration format and a working acquisition backend, so a re-spin is an engineering
+exercise with known unknowns rather than a research project.
 
 ---
 
