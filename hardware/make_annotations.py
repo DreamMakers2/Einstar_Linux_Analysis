@@ -269,3 +269,61 @@ def fig_ballmap():
     c.save(f'{OUT}/A5_ball_map.png'); print('A5',c.size)
 
 fig_path(); fig_ballmap()
+
+# ------------------------------------------------------------------ A6 A-row escape zoom
+def fig_arow():
+    box=(1320,930,1520,1090); S=8
+    im=up(p1.crop(box),S)
+    W=im.width+600; H=im.height+230
+    c=Image.new('RGB',(W,H),(12,12,18)); c.paste(im,(0,170)); d=ImageDraw.Draw(c,'RGBA')
+    fN=font(22); fB=font(19,False); fS=font(16,False)
+    def T(x,y): return ((x-box[0])*S,(y-box[1])*S+170)
+    def label(x,y,txt,col,f=fN,bg=(0,0,0,225)):
+        bb=d.textbbox((0,0),txt,font=f)
+        d.rectangle([x-4,y-3,x+(bb[2]-bb[0])+4,y+(bb[3]-bb[1])+5],fill=bg)
+        d.text((x,y),txt,font=f,fill=col)
+    balls=[("A6","SSTXM",1370),("A5","SSTXP",1401),("A4","SSRXP",1431),("A3","SSRXM",1462)]
+    for name,sig,x in balls:
+        X0,Y0=T(x,930); X1,Y1=T(x,1000)
+        for yy in range(int(Y0),int(Y1),20):
+            d.line([(X0,yy),(X0,yy+10)],fill=(0,255,255,190),width=3)
+        X2,Y2=T(x,940)
+        label(X0-34,Y2,name,C_SS,font(24))
+        label(X0-36,Y2+30,sig,C_SS,fS)
+    d.line([T(1320,985),T(1520,985)],fill=(255,255,255,235),width=3)
+    label(8,T(1320,985)[1]-26,"package edge",(255,255,255),fS)
+    # silkscreen callout
+    Xs,Ys=T(1330,1005)
+    label(Xs+6,Ys-34,"silkscreen lines (NOT copper)",(255,210,120),fS)
+    # unrelated traces
+    Xt,Yt=T(1330,1045)
+    label(Xt+6,Yt+4,"unrelated traces, diagonal",(160,255,180),fS)
+    d.text((30,26),"A6 — Row-A escape region, 8×: where four SuperSpeed traces would have to appear",font=font(30),fill=C_WHITE)
+    d.text((30,72),"Cyan ticks = projected columns of balls A3–A6, derived from the A1 dot and the 0.8 mm pitch. The wide bright bands are silkscreen, not traces.",font=fB,fill=(185,185,198))
+    px=im.width+24
+    d.rectangle([px-12,170,W-12,H-30],fill=(16,16,24,255),outline=(64,64,84,255),width=2)
+    lines=[("What is visible",C_WHITE),
+           ("ground pour, two silkscreen lines, and",(220,220,228)),
+           ("two thin traces of unrelated nets",(220,220,228)),
+           ("",None),
+           ("What a routed SuperSpeed pair",C_WHITE),
+           ("would look like here",C_WHITE),
+           ("four traces crossing the package edge",C_SS),
+           ("as two coupled pairs on 0.8 mm centres",C_SS),
+           ("",None),
+           ("Assessment",C_WHITE),
+           ("no such bundle is present",(255,190,90)),
+           ("high confidence nothing is routed",(255,190,90)),
+           ("on this layer",(255,190,90)),
+           ("",None),
+           ("Caveat",C_WHITE),
+           ("a dog-bone via inside the 1 mm band",(200,200,210)),
+           ("under the package leaves no visible",(200,200,210)),
+           ("trace — this image cannot exclude it.",(200,200,210))]
+    yy=190
+    for t,col in lines:
+        if t: d.text((px+8,yy),t,font=fS,fill=col or (220,220,228))
+        yy+=30
+    c.save(f'{OUT}/A6_row_a_escape.png'); print('A6',c.size)
+
+fig_arow()

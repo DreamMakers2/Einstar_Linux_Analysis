@@ -521,6 +521,7 @@ Local copies and extracted text: `hardware/analysis/sources/`, `hardware/analysi
 | `hardware/annotated/A3_bottom_side_overview.png` | back-side features, DP/DN and CLK/PCLK test points |
 | `hardware/annotated/A4_signal_path_audit.png` | signal-path audit and the five missing requirements |
 | `hardware/annotated/A5_ball_map.png` | documented 121-ball map, colour-coded |
+| `hardware/annotated/A6_row_a_escape.png` | 8× zoom of the row-A escape region with the projected A3–A6 columns |
 | `hardware/analysis/fx3_ballout.md` / `.json` | full ball map with citations, machine-readable |
 | `hardware/analysis/fx3_ss_layout_requirements.md` | BOM, impedance, BGA escape, SI of a tap |
 | `hardware/analysis/product_teardown_corroboration.md` | public evidence, connector, vendor software |
