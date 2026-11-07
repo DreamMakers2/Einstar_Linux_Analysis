@@ -14,6 +14,9 @@
 | [protocol/libeinstar_gap_analysis.md](protocol/libeinstar_gap_analysis.md) | 21 ranked gaps in the existing Linux driver |
 | [protocol/libeinstar_code_map.md](protocol/libeinstar_code_map.md) | file/function map and build record |
 | [calibration/ccf_format.md](calibration/ccf_format.md) | CCF layout, the IR key proof, geometry, device-blob map |
+| [calibration/model.md](calibration/model.md) | three-camera model, proved vs bounded key, rectification/triangulation validation, hardware checklist |
+| [benchmarks/offline_benchmarks.md](benchmarks/offline_benchmarks.md) | separated USB 2.0 / USB 3.0 / trigger / host scenarios and the 58-vs-40 MB/s cadence finding |
+| [readiness.md](readiness.md) | implemented / offline-validated / hardware-validated matrix and replacement gates |
 | [windows/architecture.md](windows/architecture.md) | runtime architecture and IPC chain |
 | [windows/module_map.md](windows/module_map.md) | 741-module inventory, dependency graph, API surface |
 | [reconstruction/vendor_pipeline_analysis.md](reconstruction/vendor_pipeline_analysis.md) | evidence-backed vendor pipeline survey |

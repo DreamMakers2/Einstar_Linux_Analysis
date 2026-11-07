@@ -194,8 +194,9 @@ einstar_pipeline* einstar_pipeline_create(const einstar_config* config,
     einstar::SimConfig sim;
     sim.seed = copy.sim_seed == 0 ? 1 : copy.sim_seed;
     sim.frames = copy.sim_frames == 0 ? 1000 : copy.sim_frames;
-    sim.camera_id = static_cast<std::uint8_t>(
-        copy.sim_camera_id == 0 ? 1 : copy.sim_camera_id);
+    sim.camera_count = 1;  // the C ABI exposes one stream + camera_id
+    sim.first_camera_index = static_cast<std::uint8_t>(
+        copy.sim_camera_id == 0 ? 0 : (copy.sim_camera_id - 1));
     sim.frame_size = pipeline_config.frame_size;
     sim.bandwidth_bytes_per_sec =
         copy.sim_bandwidth_bps == 0 ? 300'000'000 : copy.sim_bandwidth_bps;
@@ -205,7 +206,7 @@ einstar_pipeline* einstar_pipeline_create(const einstar_config* config,
     sim.transfer_latency_ns =
         copy.sim_transfer_latency_ns == 0 ? 500'000
                                           : copy.sim_transfer_latency_ns;
-    sim.require_interval_patch = false;
+    sim.expect_interval_quirk = false;
     transport = std::make_unique<einstar::SimulatedTransport>(sim);
   } else if (copy.backend == EINSTAR_BACKEND_LIBUSB) {
 #if defined(EINSTAR_WITH_LIBUSB)

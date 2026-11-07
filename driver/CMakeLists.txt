@@ -64,6 +64,7 @@ set(EINSTAR_SOURCES
   src/reassembler.cpp
   src/recorder.cpp
   src/sim.cpp
+  src/control_channel.cpp
   src/pipeline.cpp
 )
 
@@ -116,6 +117,8 @@ if(EINSTAR_BUILD_TESTS)
   enable_testing()
 
   set(EINSTAR_TESTS
+    test_conformance
+    test_fuzz
     test_packet
     test_reassembler
     test_queue
@@ -123,6 +126,7 @@ if(EINSTAR_BUILD_TESTS)
     test_pipeline
     test_record_replay
     test_descriptor_ffi
+    test_control_channel
     test_stress
   )
 

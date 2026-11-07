@@ -63,7 +63,7 @@ SimConfig clean_config(std::uint64_t seed = 1, std::uint32_t frames = 4) {
   SimConfig config;
   config.seed = seed;
   config.frames = frames;
-  config.require_interval_patch = false;
+  config.expect_interval_quirk = false;
   return config;
 }
 
@@ -251,22 +251,21 @@ EINSTAR_TEST(sim_cancel_delivers_cancelled) {
 }
 
 EINSTAR_TEST(sim_descriptor_quirk_patch) {
-  SimConfig quirk_config = clean_config(7, 1);
-  quirk_config.require_interval_patch = true;
-  SimulatedTransport transport(quirk_config);
+  SimConfig config;
+  config.frames = 1;
+  config.expect_interval_quirk = true;
+  SimulatedTransport transport(config);
   REQUIRE(transport.open().ok());
+  // bInterval=0 is detected but must NOT block claiming: Linux USB core
+  // repairs the interval to 7 at high speed (usb_parse_endpoint).
   const auto claim = transport.claim_interface(0);
-  CHECK(!claim.ok());
-  CHECK(claim.code() == ErrorCode::DescriptorQuirk);
-  CHECK_EQ(transport.descriptor().zero_interval_interrupt_endpoints().size(),
-           2U);
-  REQUIRE(transport.apply_descriptor_patch().ok());
-  CHECK(transport.descriptor_patched());
-  CHECK(transport.descriptor().zero_interval_interrupt_endpoints().empty());
-  REQUIRE(transport.claim_interface(0).ok());
-  const EndpointInfo* endpoint = transport.descriptor().find_endpoint(0x81);
-  REQUIRE(endpoint != nullptr);
-  CHECK_EQ(endpoint->interval, 7U);
+  CHECK(claim.ok());
+  CHECK(!transport.descriptor().quirk_notes().empty());
+  CHECK(!transport.descriptor().zero_interval_interrupt_endpoints().empty());
+  // The patch API stays available for diagnostics and must be idempotent.
+  CHECK(transport.apply_descriptor_patch().ok());
+  CHECK(transport.apply_descriptor_patch().ok());
+  CHECK(transport.release_interface(0).ok());
 }
 
 EINSTAR_TEST(sim_replay_is_byte_exact) {
@@ -289,7 +288,7 @@ EINSTAR_TEST(sim_replay_is_byte_exact) {
 
   SimConfig config;
   config.replay = recording::ReplaySource{transfers};
-  config.require_interval_patch = false;
+  config.expect_interval_quirk = false;
   config.frames = 0;
   SimulatedTransport transport(config);
   open_claim(transport);

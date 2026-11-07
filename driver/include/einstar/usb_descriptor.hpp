@@ -2,16 +2,18 @@
 // USB configuration-descriptor parsing and the Einstar bInterval quirk.
 //
 // The Einstar (3267:0003) declares bInterval = 0 on its interrupt endpoints.
-// bInterval 0 is invalid per USB 2.0 (valid range 1..16 for full speed; xHCI
-// computes 1 << (bInterval - 1)), so Linux hosts must present 7 instead.
+// bInterval 0 is invalid per USB 2.0, but Linux USB core does NOT require a
+// patch: usb_parse_endpoint() rewrites it to 7 at high speed
+// ("8 ms = 2^(7-1) uframes"), which is why libeinstar captured images on a
+// stock kernel without any modification.  The codec below exists to *detect*
+// and *report* the quirk (and, for experiments, to patch a local copy).
 //
 // This module is a pure byte-level codec: it parses raw configuration
-// descriptors, detects the quirk, and produces a patched descriptor.  It is
-// unit-tested offline and is used by LibUsbTransport to (a) validate the
-// descriptor it received and (b) publish the corrected interval.  libusb-1.0
-// has no public API to install a modified descriptor into the kernel, so the
-// transport reports the patch and refuses to claim the interface unless the
-// quirk is resolved; README documents the kernel/udev side of the workaround.
+// descriptors and detects the quirk.  libusb reports the raw bInterval, but the
+// Linux kernel schedules with the repaired value, so the transports report the
+// quirk and continue: claiming never depends on a patch.  patch_interrupt_interval
+// / patch_zero_intervals are retained for diagnostics and experiments (for
+// example, to model a host that really did present a different descriptor).
 #pragma once
 
 #include <cstddef>

@@ -43,7 +43,7 @@ device-info dump that carries them.
 Only **two distinct calibrations** exist on disk (set A = `res_Einscan-E10_200x150`,
 set B = `ccf_200x150` and its three duplicate installs); the rest of the
 analysis treats them as two independent samples.
-| `<device-dump.bin>` (not published) | 6568 | — |
+| `<device-dump.bin>` | 6568 | `557a79926fbd…` |
 
 Cross-reference material shipped with EXStar that pins the field semantics:
 

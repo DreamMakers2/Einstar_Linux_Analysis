@@ -139,7 +139,7 @@ EINSTAR_TEST(ffi_simulated_read_frame) {
       continue;
     }
     REQUIRE(rc == EINSTAR_STATUS_OK);
-    CHECK_EQ(view.camera_id, 1U);
+    CHECK_EQ(view.camera_id, 0U);
     CHECK_EQ(view.payload_size, 1280U * 1024U);
     CHECK_EQ(view.chunk_count, 1U);
     CHECK((view.flags & 1U) != 0U);

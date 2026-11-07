@@ -1,8 +1,22 @@
 // SPDX-License-Identifier: MIT
-// Frame reassembly keyed by (camera_id, frame_index), with gap detection,
-// duplicate/orphan handling, partial-frame timeouts and bounded in-flight state.
+// Frame reassembly for the Einstar image stream.
+//
+// Wire semantics (verified: einscan10.2.0.0.dll::ImageStreamThread::run and the
+// hardware-proven libeinstar parser):
+//   * the frame id is only valid on the packet whose header[8] == 1 (the LAST
+//     packet), so a frame cannot be keyed by its id while it is being received;
+//   * there is no "first packet" flag: a frame starts implicitly after the
+//     previous one completed, and the timestamp is latched from the first packet
+//     the reassembler sees for that frame;
+//   * camera selection is the one-hot field in header byte 2 bits 3..5.
+//
+// Therefore the reassembler keeps exactly ONE in-flight frame per camera and
+// completes it when a last-flagged packet arrives after exactly frame_size
+// payload bytes.  A size mismatch, overflow or timeout drops that camera's
+// partial frame; the next packet starts a new one.
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -25,6 +39,7 @@ enum class FrameLossReason : std::uint8_t {
   Stale = 6,
   Flush = 7,
   PoolExhausted = 8,
+  Incomplete = 9,   // last packet arrived but the payload size did not match
 };
 
 std::string_view to_string(FrameLossReason reason) noexcept;
@@ -51,12 +66,16 @@ struct ReassemblyStats {
   std::uint64_t frames_dropped = 0;
   std::uint64_t capacity_evictions = 0;
   std::uint64_t pool_exhausted = 0;
+  std::uint64_t size_mismatch = 0;
+  std::uint64_t invalid_camera = 0;
 };
 
 struct ReassemblyConfig {
   std::uint32_t frame_size = kDefaultFrameSize;
   std::uint32_t width = 1280;
   std::uint32_t height = 1024;
+  /// Kept for API compatibility; the wire format allows one in-flight frame
+  /// per camera (3 total).
   std::size_t max_inflight_frames = 16;
   std::int64_t partial_frame_timeout_ns = 100'000'000;  // 100 ms
   CopyMode mode = CopyMode::Copy;
@@ -94,7 +113,7 @@ class FrameReassembler {
   std::vector<FrameLossEvent> take_loss_events();
 
   [[nodiscard]] const ReassemblyStats& stats() const noexcept { return stats_; }
-  [[nodiscard]] std::size_t inflight() const noexcept { return slots_.size(); }
+  [[nodiscard]] std::size_t inflight() const noexcept;
   [[nodiscard]] std::uint32_t expected_next(std::uint8_t camera_id) const;
   [[nodiscard]] const ReassemblyConfig& config() const noexcept { return config_; }
 
@@ -102,8 +121,7 @@ class FrameReassembler {
 
  private:
   struct Slot {
-    std::uint8_t camera_id = 0;
-    std::uint32_t frame_index = 0;
+    std::uint8_t camera_index = kInvalidCamera;
     std::uint64_t device_timestamp = 0;
     std::int64_t first_host_ns = 0;
     std::int64_t last_host_ns = 0;
@@ -114,28 +132,23 @@ class FrameReassembler {
   };
 
   struct CameraState {
-    bool initialized = false;
     bool completed_any = false;
     std::uint32_t last_completed = 0;
-    std::uint32_t highest_started = 0;
-    std::uint32_t expected_next = 0;
+    std::uint32_t expected_next = 0;   // last_completed + 1 once initialised
+    std::uint64_t packets = 0;
+    std::uint64_t dropped = 0;
   };
 
-  static std::uint64_t key(std::uint8_t camera_id, std::uint32_t frame_index) {
-    return (static_cast<std::uint64_t>(camera_id) << 32U) | frame_index;
-  }
-
-  Slot* find_slot(std::uint8_t camera_id, std::uint32_t frame_index);
+  Slot* find_slot(std::uint8_t camera_index);
   void drop_slot(Slot& slot, FrameLossReason reason, std::int64_t host_ns,
                  std::uint32_t missing_frames = 0);
-  void record_loss(std::uint8_t camera_id, std::uint32_t frame_index,
+  void record_loss(std::uint8_t camera_index, std::uint32_t frame_index,
                    FrameLossReason reason, std::uint32_t missing_frames,
                    std::int64_t host_ns);
-  void enforce_capacity(std::int64_t host_ns);
 
   ReassemblyConfig config_;
-  std::map<std::uint64_t, Slot> slots_;
-  std::map<std::uint8_t, CameraState> cameras_;
+  std::array<std::optional<Slot>, kCameraCount> slots_;
+  std::array<CameraState, kCameraCount> cameras_{};
   std::vector<FrameLossEvent> loss_events_;
   ReassemblyStats stats_;
 };

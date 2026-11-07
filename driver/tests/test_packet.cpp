@@ -11,8 +11,12 @@ using namespace einstar;
 
 namespace {
 
-std::vector<std::byte> make_packet(std::uint8_t camera, std::uint32_t frame,
-                                   std::uint64_t timestamp, bool first,
+// Build a canonical wire packet: one-hot camera in header[2] bits 3..5,
+// sub-index in bits 0..2, header[8] == 1 only on the last packet, frame id at
+// header[12] (poisoned on non-last packets, as the device leaves it invalid
+// until the final packet), timestamp at header[16].
+std::vector<std::byte> make_packet(std::uint8_t camera_field, std::uint32_t frame,
+                                   std::uint64_t timestamp, bool last,
                                    std::uint32_t chunk,
                                    std::size_t payload_size,
                                    std::uint8_t base = 0x40) {
@@ -20,10 +24,12 @@ std::vector<std::byte> make_packet(std::uint8_t camera, std::uint32_t frame,
   store_be32(wire.data(), static_cast<std::uint32_t>(kStreamHeaderSize +
                                                      payload_size));
   std::byte* header = wire.data() + 4;
-  header[2] = static_cast<std::byte>(camera | ((chunk & 0x07U) << 3U));
-  header[8] = static_cast<std::byte>(first ? 1 : 0);
-  store_be32(header + 12, frame);
-  store_be64(header + 16, timestamp);
+  header[kHdrCameraByte] = static_cast<std::byte>(
+      static_cast<std::uint8_t>((camera_field & 0x07U) << 3U) |
+      static_cast<std::uint8_t>(chunk & 0x07U));
+  header[kHdrLastFlag] = static_cast<std::byte>(last ? 1 : 0);
+  store_be32(header + kHdrFrameId, last ? frame : 0xFFFFFFFFU);
+  store_be64(header + kHdrTimestamp, timestamp);
   for (std::size_t i = 0; i < payload_size; ++i) {
     wire[4 + kStreamHeaderSize + i] =
         static_cast<std::byte>((base + i + chunk) & 0xFFU);
@@ -41,7 +47,7 @@ struct Collector {
 EINSTAR_TEST(packet_single) {
   PacketFramer framer;
   FramerStats stats;
-  const auto wire = make_packet(2, 0x11223344, 0x0102030405060708ULL, true, 1,
+  const auto wire = make_packet(4, 0x11223344, 0x0102030405060708ULL, true, 1,
                                 100, 0x10);
   std::vector<StreamPacket> packets;
   const std::size_t count = framer.consume(
@@ -50,9 +56,9 @@ EINSTAR_TEST(packet_single) {
   CHECK_EQ(count, 1U);
   REQUIRE(packets.size() == 1U);
   const StreamPacket& packet = packets[0];
-  CHECK_EQ(packet.camera_id, 2U);
-  CHECK_EQ(packet.aux_bits, 1U);
-  CHECK(packet.first_of_frame);
+  CHECK_EQ(packet.camera_index, 2U);
+  CHECK_EQ(packet.sub_index, 1U);
+  CHECK(packet.last_of_frame);
   CHECK_EQ(packet.frame_index, 0x11223344U);
   CHECK_EQ(packet.device_timestamp, 0x0102030405060708ULL);
   CHECK_EQ(packet.payload_size, 100U);
@@ -70,7 +76,7 @@ EINSTAR_TEST(packet_multiple_in_one_transfer) {
   std::vector<std::byte> wire;
   for (int i = 0; i < 3; ++i) {
     const auto packet = make_packet(1, 7, 1000 + static_cast<std::uint64_t>(i),
-                                    i == 0, static_cast<std::uint32_t>(i), 64);
+                                    i == 2, static_cast<std::uint32_t>(i), 64);
     wire.insert(wire.end(), packet.begin(), packet.end());
   }
   std::vector<StreamPacket> packets;
@@ -153,8 +159,8 @@ EINSTAR_TEST(packet_corrupt_length_resyncs) {
 EINSTAR_TEST(packet_unknown_camera_is_passed_to_reassembly) {
   PacketFramer framer;
   FramerStats stats;
-  const auto bad = make_packet(0, 1, 10, true, 0, 20);
-  const auto good = make_packet(2, 2, 20, true, 0, 20);
+  const auto bad = make_packet(0, 1, 10, true, 0, 20);   // field 0 -> invalid
+  const auto good = make_packet(2, 2, 20, true, 0, 20);  // field 2 -> index 1
   std::vector<std::byte> wire(bad.begin(), bad.end());
   wire.insert(wire.end(), good.begin(), good.end());
   std::vector<StreamPacket> packets;
@@ -165,8 +171,8 @@ EINSTAR_TEST(packet_unknown_camera_is_passed_to_reassembly) {
   // of the device's cameras.  The framer passes it through; the reassembler is
   // the component that rejects unknown cameras.
   REQUIRE(packets.size() == 2U);
-  CHECK_EQ(packets[0].camera_id, 0U);
-  CHECK_EQ(packets[1].camera_id, 2U);
+  CHECK_EQ(packets[0].camera_index, kInvalidCamera);
+  CHECK_EQ(packets[1].camera_index, 1U);
   CHECK_EQ(packets[1].frame_index, 2U);
   CHECK_EQ(stats.protocol_errors, 0U);
 }

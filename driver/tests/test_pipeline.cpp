@@ -80,7 +80,9 @@ SimConfig clean_sim(std::uint32_t frames) {
   sim.frames = frames;
   sim.trigger_period_ns = 40'000'000;
   sim.bandwidth_bytes_per_sec = 300'000'000;
-  sim.require_interval_patch = false;
+  sim.expect_interval_quirk = false;
+  sim.camera_count = 1;  // single-camera pipeline expectations
+  sim.first_camera_index = 0;
   return sim;
 }
 
@@ -269,16 +271,29 @@ EINSTAR_TEST(pipeline_callback_mode) {
 }
 
 EINSTAR_TEST(pipeline_cross_frame_reordering) {
+  // The wire carries no frame id until the last packet, so two in-flight
+  // frames of the SAME camera are indistinguishable by design.  Cross-frame
+  // interleaving is therefore modelled between two cameras, which is legal and
+  // is what the device does when it streams all sensors in one trigger group.
   SimConfig sim = clean_sim(10);
+  sim.camera_count = 2;
   sim.faults.reorder_probability = 1.0;  // interleave every consecutive pair
   PipelineConfig config = base_config();
   const RunOutcome outcome = run_until(sim, config, 10, 400000);
   REQUIRE(outcome.frames.size() == 10U);
-  for (std::size_t i = 0; i < outcome.frames.size(); ++i) {
-    CHECK_EQ(outcome.frames[i].digest,
-             simulated_frame_digest(static_cast<std::uint32_t>(i),
-                                    kDefaultFrameSize, kStreamChunkPayload));
+  std::vector<std::uint64_t> got;
+  for (const auto& frame : outcome.frames) {
+    got.push_back(frame.digest);
   }
+  std::vector<std::uint64_t> expected;
+  for (std::uint32_t id = 0; id < 5; ++id) {
+    expected.push_back(simulated_frame_digest(id, kDefaultFrameSize,
+                                              kStreamChunkPayload));
+    expected.push_back(expected.back());  // one frame per camera per id
+  }
+  std::sort(got.begin(), got.end());
+  std::sort(expected.begin(), expected.end());
+  CHECK(got == expected);
   CHECK_EQ(outcome.stats.frames_dropped, 0U);
   CHECK_EQ(outcome.stats.sequence_gaps, 0U);
 }

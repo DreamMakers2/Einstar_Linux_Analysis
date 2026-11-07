@@ -1,10 +1,5 @@
 # Findings register
 
-
-> **Publication note.** Paths such as `sources/…` and `analysis/logs/…` refer to the private
-> research workspace and are not part of this repository; see `analysis/README.md` for the
-> fixture layout and the SHA-256 of each excluded input.
-
 Numbered claims with confidence and evidence. Confidence: **A** = mathematically proved /
 byte-exact verified, **B** = code-verified in a vendor binary, **C** = cross-validated from two
 independent sources, **D** = inference, **E** = open question.
@@ -29,9 +24,9 @@ independent sources, **D** = inference, **E** = open question.
 
 | # | Finding | Conf | Evidence |
 |---|---|---|---|
-| F12 | Newest official EXStar for the Einstar is **1.2.2.0** (2024-06-28); macOS build 1.2.2.5 | A | `docs/firmware/official_versions.md`, CDN Last-Modified |
+| F12 | Newest official EXStar found for the Einstar is **1.2.2.0** (2024-06-28); macOS build 1.2.2.5 (negative within the official sources searched: 2023–2024 installers and the 2025–2026 KB pages) | A | `docs/firmware/official_versions.md`, CDN Last-Modified |
 | F13 | Newest firmware is **FX3 V2.10 / FPGA V3.7**, byte-identical across 1.0.6.0, 1.2.2.0 and the macOS package | A | SHA-256 equality |
-| F14 | **No FX3 V2.14+ exists**; the `V2.14` string in `libeinstar` is an example, and the real device reports V2.10 | A | session log + official archive + `3DDigitalSyncInterface-E10.pdf` |
+| F14 | **No official artifact contains FX3 firmware newer than V2.10** (searched: all EXStar 1.x installers, the macOS package, KB pages); the `V2.14` string in `libeinstar` is an example, and the real device reports V2.10. This is a verified negative, not a proof of non-existence | A | session log + official archive + `3DDigitalSyncInterface-E10.pdf` |
 | F15 | Official recovery artifacts exist only in 1.0.6.0: `Fx3BootAppGcc.img` (29,876 B) and a raw V1.0/V2.6 image (1,310,720 B) | A | `sources/firmware/official_downloads/` |
 | F16 | No public Linux SDK; `Shining3D/EinstarSDK1.4` and `EXStarSDK1.6` are private | A | negative result, official pages |
 
@@ -76,6 +71,23 @@ independent sources, **D** = inference, **E** = open question.
 | F39 | The vendor stack is synchronous per-frame with a 100 ms timeout and a single reassembly accumulator shared by three cameras | B | `FUN_18000c8f0` |
 | F40 | An asynchronous, per-camera, bounded-queue pipeline with clear_halt recovery is required to do better; the design is implemented in `driver/` with a deterministic simulator | — | `driver/` |
 
+## Streaming, kernel and benchmark findings (session 3)
+
+| # | Finding | Conf | Evidence |
+|---|---|---|---|
+| F41 | Frame completion is marked by `header[8] == 1` on the **last** packet; the frame is delivered only when the accumulated payload equals the frame size | A | vendor `FUN_18000c8f0`; libeinstar `kOffStreamLastFlag`; hardware-proven parser |
+| F42 | Camera id is the **one-hot** field at `header[2]` bits **3..5**; bits 0..2 are a sub-index/chunk counter | A | vendor `(pkg[6] >> 3) & 7`; libeinstar `(t[2] >> 3) & 7`; hardware |
+| F43 | The frame id at `header[12..15]` is valid **only on the last packet**; the timestamp at `header[16..23]` is latched from the first packet | A | vendor completion branch + libeinstar |
+| F44 | The published driver initially had all three of F41–F43 inverted and passed only because its simulator shared the same error. Fixed; `driver/tests/test_conformance.cpp` now pins the semantics with hand-written golden vectors independent of the simulator | A | `driver/` diff, conformance tests |
+| F45 | `bInterval = 0` is repaired by **Linux USB core** to 7 at high speed (`usb_parse_endpoint`: `fls(0*8) == 0 -> 7`); no kernel patch, udev rule or descriptor override is required, and libeinstar captured images on a stock kernel | A | Linux `drivers/usb/core/config.c`; observed CachyOS behaviour |
+| F46 | At `ScanTriggerPeriod 68000 µs` with three full frames per trigger the device needs **57.9 MB/s** aggregate; practical USB 2.0 HS (~40 MB/s) cannot carry it, so either the link is SuperSpeed in normal use or the transmitted frame set is reduced | A (arithmetic) / E (which branch is true) | `docs/benchmarks/offline_benchmarks.md` |
+| F47 | Async issuance raises saturated throughput 3.2–3.7× over one outstanding transfer **only when the link is the limit**; at the vendor cadence all depths deliver the same frame rate and differ in tail latency only. Zero-copy roughly halves host wall time | A (simulated) | benchmark tables |
+| F48 | The vendor session shows 115 `errorCode 1034` timeouts in ~1.5 h; recovery must be per-pipe (`clear_halt`), not device reset | A | session log + vendor reset paths |
+
+| F49 | The command channel is implemented and byte-validated offline: request id/group/opcode, u32 BE argument = payload length, reply status at 4 and u32 BE value length at 5..8, per-opcode wire sizes, five total attempts with per-pipe `clear_halt` recovery | A (offline) | `driver/src/control_channel.cpp`, `driver/tests/test_control_channel.cpp` |
+| F50 | The CCF intrinsic key is bounded, not proved: feasible integer keys are fx∈{8,9}, fy∈{-4,-3}, cx∈{-7,-6}, cy∈{-2,-1} (left) and the square-pixel constraint fixes key(fx)−key(fy)=12. A 1 px focal-key error is 0.26 mm in depth at 300 mm, versus 2.9 mm from the baseline spread | A (bound) / E (choice) | `tools/calib/key_analysis.py`, `docs/calibration/model.md` |
+| F51 | Real captures (three complete camera triples plus one extra frame) rectify with a median absolute vertical residual of **0.90–1.0 px** under the decoded CCF model; a deliberately mismatched pairing produces no accepted matches, and the dump model only produces window-edge matches (2.0 px) | B (few correspondences; integer-quantised) | `tools/calib/real_capture_check.py` |
+
 ## Corrections issued
 
 1. **FX3 V2.14 does not exist** (F14).
@@ -83,4 +95,8 @@ independent sources, **D** = inference, **E** = open question.
 3. The 6-byte EN/CH difference is locale + derived checksums only (F6).
 4. libeinstar's calibration key values are wrong (F36) even though its *approach* (per-field
    integer offsets on the same 32 doubles) was directionally right.
-5. The stream "first packet" flag is actually the **last**-packet flag (F22).
+5. The stream "first packet" flag is actually the **last**-packet flag (F41).
+6. The camera field is bits 3..5, not 0..2 (F42).
+7. The frame id is not usable per packet (F43).
+8. `bInterval=0` needs no kernel change; USB core repairs it (F45).
+9. "300 MB/s simulator" is a modelling choice, not scanner performance (F46/F47).

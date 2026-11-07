@@ -88,8 +88,11 @@ SimulatedTransport::SimulatedTransport(SimConfig config)
   if (config_.bandwidth_bytes_per_sec == 0) {
     config_.bandwidth_bytes_per_sec = 1;
   }
-  if (config_.second_camera_id == 0) {
-    config_.second_camera_id = 2;
+  if (config_.camera_count == 0) {
+    config_.camera_count = 1;
+  }
+  if (config_.camera_count > kCameraCount) {
+    config_.camera_count = kCameraCount;
   }
 
   InterfaceInfo interface_info;
@@ -107,7 +110,8 @@ SimulatedTransport::SimulatedTransport(SimConfig config)
   };
   descriptor_ = UsbConfigDescriptor::make_synthetic(
       1, {std::move(interface_info)}, /*zero_intervals=*/true);
-  patched_ = !config_.require_interval_patch;
+  // Linux USB core repairs bInterval=0 to 7; nothing to patch here.
+  patched_ = true;
 }
 
 SimulatedTransport::~SimulatedTransport() = default;
@@ -155,19 +159,7 @@ Status SimulatedTransport::claim_interface(std::uint8_t interface_number) {
     return Status::error(ErrorCode::InvalidArgument,
                          "Einstar only exposes interface 0");
   }
-  if (config_.require_interval_patch && !patched_) {
-    std::string message =
-        "interrupt endpoints declare bInterval=0; apply_descriptor_patch() "
-        "before claiming (endpoints:";
-    for (const auto address : descriptor_.zero_interval_interrupt_endpoints()) {
-      message += " 0x";
-      constexpr char hex[] = "0123456789ABCDEF";
-      message += hex[(address >> 4U) & 0x0FU];
-      message += hex[address & 0x0FU];
-    }
-    message += ")";
-    return Status::error(ErrorCode::DescriptorQuirk, std::move(message));
-  }
+  // bInterval=0 is a diagnostic, not a blocker: the kernel repairs it.
   claimed_ = true;
   return Status::success();
 }
@@ -181,6 +173,9 @@ Status SimulatedTransport::release_interface(std::uint8_t interface_number) {
 }
 
 Status SimulatedTransport::apply_descriptor_patch() {
+  // Diagnostic only.  A real Linux host does not need this: USB core rewrites
+  // the endpoint interval to 7.  Kept so tests can exercise the descriptor
+  // codec and to model a hypothetical user-space repair path.
   auto patched = descriptor_.patch_zero_intervals(7);
   if (!patched.has_value()) {
     return patched.error();
@@ -257,17 +252,26 @@ std::vector<std::byte> SimulatedTransport::build_packet_bytes(
       std::min<std::size_t>(config_.chunk_payload,
                             config_.frame_size - byte_offset));
 
+  // "Last" refers to the frame's true chunk count: a truncated frame (fault
+  // injection) loses its trailing packets and therefore never carries the last
+  // flag, which is what the timeout path must see.
+  const bool last_chunk = (chunk + 1U) >= frame.chunks_total;
   std::array<std::byte, kStreamHeaderSize> header{};
-  header[2] = static_cast<std::byte>(
-      static_cast<std::uint8_t>(frame.camera_id & 0x07U) |
-      static_cast<std::uint8_t>((chunk & 0x07U) << 3U));
-  header[8] = static_cast<std::byte>(chunk == 0 ? 1 : 0);
-  store_be32(header.data() + 12, frame.frame_index);
+  // Canonical wire header: one-hot camera in bits 3..5, sub-index in bits 0..2.
+  header[kHdrCameraByte] = static_cast<std::byte>(
+      static_cast<std::uint8_t>((camera_field_from_index(frame.camera_id) & 0x07U) << 3U) |
+      static_cast<std::uint8_t>(chunk & 0x07U));
+  // Header byte 8 marks the LAST packet of the frame.
+  header[kHdrLastFlag] = static_cast<std::byte>(last_chunk ? 1 : 0);
+  // The frame id is only valid on the last packet.  Deliberately poison it on
+  // every earlier packet so a decoder that relies on it fails conformance.
+  store_be32(header.data() + kHdrFrameId,
+             last_chunk ? frame.frame_index : 0xFFFFFFFFU);
   const std::uint64_t timestamp =
       static_cast<std::uint64_t>(frame.frame_index) *
       static_cast<std::uint64_t>(
           config_.trigger_period_ns > 0 ? config_.trigger_period_ns : 1);
-  store_be64(header.data() + 16, timestamp);
+  store_be64(header.data() + kHdrTimestamp, timestamp);
 
   std::uint32_t declared = kStreamHeaderSize + payload_size;
   if (chance(config_.faults.corrupt_length_probability, frame.frame_index,
@@ -327,6 +331,17 @@ void SimulatedTransport::generate_one(GenFrame& frame) {
   }
 }
 
+std::uint32_t SimulatedTransport::next_frame_id(std::uint8_t camera) {
+  const std::uint8_t index = camera < kCameraCount ? camera : 0;
+  return cam_frame_ids_[index]++;
+}
+
+std::uint8_t SimulatedTransport::pick_camera() {
+  const std::uint8_t count = config_.camera_count == 0 ? 1 : config_.camera_count;
+  return static_cast<std::uint8_t>(config_.first_camera_index +
+                                   (next_frame_ % count));
+}
+
 void SimulatedTransport::generate_packet() {
   const bool interleaving = config_.interleave_frames || reorder_pair_;
   if (interleaving) {
@@ -338,12 +353,8 @@ void SimulatedTransport::generate_packet() {
         if (next_frame_ >= config_.frames) {
           continue;
         }
-        const std::uint8_t camera =
-            config_.interleave_frames
-                ? ((next_frame_ % 2U) == 0U ? config_.camera_id
-                                           : config_.second_camera_id)
-                : config_.camera_id;
-        start_frame(gen_[index], next_frame_, camera);
+        const std::uint8_t camera = pick_camera();
+        start_frame(gen_[index], next_frame_id(camera), camera);
         next_frame_++;
       }
       if (gen_[index].started) {
@@ -375,7 +386,10 @@ void SimulatedTransport::generate_packet() {
       generator_done_ = true;
       return;
     }
-    start_frame(gen_[0], next_frame_, config_.camera_id);
+    {
+      const std::uint8_t camera = pick_camera();
+      start_frame(gen_[0], next_frame_id(camera), camera);
+    }
     next_frame_++;
     if (chance(config_.faults.reorder_probability, next_frame_, 0x90, 0)) {
       reorder_pair_ = true;

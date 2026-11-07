@@ -56,21 +56,26 @@ Real configure/build output (abridged):
 Real `ctest` output:
 
 ```
-1/8 Test #1: test_packet ......................   Passed    0.00 sec
-2/8 Test #7: test_descriptor_ffi ..............   Passed    0.04 sec
-3/8 Test #3: test_queue .......................   Passed    0.01 sec
-4/8 Test #4: test_transport_sim ...............   Passed    0.01 sec
-5/8 Test #2: test_reassembler .................   Passed    0.00 sec
-6/8 Test #6: test_record_replay ...............   Passed    0.07 sec
-7/8 Test #5: test_pipeline ....................   Passed    0.18 sec
-8/8 Test #8: test_stress ......................   Passed   20.29 sec
+ 1/11 Test #1  test_conformance ...............   Passed    0.00 sec
+ 2/11 Test #2  test_packet ....................   Passed    0.00 sec
+ 3/11 Test #3  test_reassembler ...............   Passed    0.00 sec
+ 4/11 Test #4  test_queue .....................   Passed    0.01 sec
+ 5/11 Test #5  test_transport_sim .............   Passed    0.01 sec
+ 6/11 Test #6  test_pipeline ..................   Passed    0.18 sec
+ 7/11 Test #7  test_record_replay .............   Passed    0.07 sec
+ 8/11 Test #8  test_descriptor_ffi ............   Passed    0.04 sec
+ 9/11 Test #9  test_fuzz ......................   Passed    1.20 sec
+10/11 Test #10 test_control_channel ...........   Passed    0.02 sec
+11/11 Test #11 test_stress ....................   Passed   20.29 sec
 
-100% tests passed out of 8
-Total Test time (real) =  20.30 sec
+100% tests passed out of 11
+Total Test time (real) =  21.7 sec
 ```
 
-53 test cases / 44,434 checks in total (`test_stress` alone: 10,000 frames,
-40,017 checks). Additional builds verified:
+90 test cases / 57,450 checks in total (`test_stress` alone: 10,000 frames, 40,017 checks;
+`test_control_channel` 4,379; `test_fuzz` 8,547). The same suite is clean under
+AddressSanitizer + UndefinedBehaviorSanitizer and ThreadSanitizer, including the stress and fuzz
+binaries. Additional builds verified:
 
 ```sh
 # Library only (no tools/tests) - the requested core build:
@@ -122,11 +127,14 @@ the resync/recovery paths instead of clean frames.
 
 ## Benchmark (SIMULATED - not a hardware measurement)
 
-`einstar-bench` models a 300 MB/s link, 40 ms trigger period, 1280x1024
-grayscale frames (1,310,720 B, 32 x 40,960 B chunks), 500 us per-URB service
-latency, and a virtual clock. `host_ms` / `host_fps` are the only real
-(wall-clock) numbers; they measure this machine's CPU cost of parsing,
-reassembling and callback delivery.
+`einstar-bench` separates the link model explicitly: **USB 2.0 HS** (~40 MB/s practical),
+a **hypothetical USB 3.0 SS** (~350 MB/s), the **vendor 68 ms trigger cadence**, and a
+**host-only** ceiling (`--scenarios-only`). The generic 300 MB/s model is used only for the
+relative depth/copy tables and is never a scanner result. Frames are 1280x1024 grayscale
+(1,310,720 B, 32 x 40,960 B chunks) with 500 us per-URB service latency and a virtual clock.
+`host_ms` / `host_fps` are the only real (wall-clock) numbers; they measure this machine's CPU
+cost of parsing, reassembling and callback delivery. Full analysis:
+`docs/benchmarks/offline_benchmarks.md`.
 
 ```
 SIMULATED RESULTS - no scanner, no CUDA, no network. Device model: 300 MB/s link, 40.0 ms trigger period, 1280x1024 frames.
@@ -275,27 +283,37 @@ counters and per-transfer/frame latency histograms (min, p50, p95, p99, max,
 mean). Percentiles are nearest-rank over a bounded ring of recent samples
 (deterministic for identical inputs).
 
-## The Linux `bInterval = 0` quirk (honest status)
+## The Linux `bInterval = 0` quirk (corrected)
 
-The Einstar declares `bInterval = 0` on its interrupt endpoints (`0x01`,
-`0x81`), which is invalid for USB. This component:
+The Einstar declares `bInterval = 0` on its interrupt endpoints (`0x01`, `0x81`), which is
+invalid per USB 2.0. **No kernel patch, udev rule or user-space descriptor override is needed:**
+Linux USB core repairs the value before any driver is involved.
 
-1. parses the raw configuration descriptor (`UsbConfigDescriptor::parse`),
-2. detects interrupt endpoints with interval 0,
-3. produces and validates a patched descriptor with interval 7
-   (`patch_zero_intervals(7)`), unit-tested offline,
-4. simulates the Linux gate: `SimulatedTransport` refuses to claim interface 0
-   until the patch is applied, so the recovery flow is exercised in tests,
-5. reports the quirk from `LibUsbTransport` and offers
-   `require_patched_interval` to refuse claiming.
+`drivers/usb/core/config.c::usb_parse_endpoint()`:
 
-**Limitation:** libusb-1.0.30 has no public API to install a modified
-configuration descriptor into the kernel; the kernel enumerated the device
-with interval 0. The patch computed here is therefore diagnostic and
-validation data, not a kernel-level fix. Bring-up on real Linux hardware needs
-a kernel quirk/usbfs-level interval override (or a vendor kernel patch); the
-error message from `claim_interface()` points at this. The simulator path fully
-tests the logic; the libusb path is compile/link verified only.
+```c
+case USB_SPEED_HIGH:
+    n = fls(d->bInterval * 8);
+    if (n == 0)
+        n = 7;              /* 8 ms = 2^(7-1) uframes */
+    j = 16;
+...
+if (d->bInterval < i || d->bInterval > j) {
+    dev_notice(..., "has an invalid bInterval %d, changing to %d", ..., n);
+    endpoint->desc.bInterval = n;      /* kernel schedules with 7 */
+}
+```
+
+Consequences for this component:
+
+* `UsbConfigDescriptor::parse()` still detects the raw value 0 and exposes
+  `zero_interval_interrupt_endpoints()` / `quirk_notes()` for diagnostics — libusb reports the
+  raw descriptor even though the kernel schedules with 7.
+* Claiming the interface **never** depends on a patch. The simulator's old "refuse to claim
+  until patched" gate was wrong and has been removed; `apply_descriptor_patch()` remains as a
+  diagnostic/experiment helper.
+* This matches the field observation: libeinstar captured images on a stock CachyOS kernel with
+  no modification.
 
 ## Integration boundary
 
@@ -371,12 +389,16 @@ C++23/CUDA/TensorRT engines ── einstar::Frame ring (zero-copy BufferHandle c
   is not implemented here; the existing libeinstar control layer remains the
   command-plane reference. The `Transport` interface and descriptor handling
   are ready for it.
-- `bInterval` patch cannot be installed into the kernel from libusb; see above.
+- `bInterval = 0` is repaired by Linux USB core (see above); no kernel change is required.
 - Device timestamp units/epoch are unknown; the u64 is preserved verbatim and
   host monotonic time is recorded separately.
-- Camera id is `header[2] & 0x07` and the first-packet flag is `header[8] == 1`
-  per Windows DLL evidence; `libeinstar` reads different bit positions/flags.
-  Confirm both on hardware before relying on multi-camera attribution.
+- Framing follows the verified semantics: one-hot camera in `header[2]` bits 3..5, sub-index in
+  bits 0..2, `header[8] == 1` on the **last** packet, frame id `header[12..15]` valid only on
+  that packet, timestamp `header[16..23]` latched from the first packet. Locked by
+  `tests/test_conformance.cpp` with hand-written vectors.
+- The command channel (interrupt EP1 request/reply: serial, firmware string, exposure, gain,
+  trigger, page read) is implemented in `control_channel.*`; see `CONTROL_CHANNEL.md`. Firmware
+  update and persistent flash writes are deliberately out of scope.
 - Without a chunk index, intra-frame reordering cannot be repaired; the
   simulator only reorders across frames/cameras.
 - Zero-copy retention couples the transfer pool to consumer speed. If the

@@ -1,10 +1,5 @@
 # Evidence index
 
-
-> **Publication note.** Paths such as `sources/…` and `analysis/logs/…` refer to the private
-> research workspace and are not part of this repository; see `analysis/README.md` for the
-> fixture layout and the SHA-256 of each excluded input.
-
 Every substantive claim in this repository should be traceable to one of these evidence
 classes. Evidence IDs refer to REA records where applicable; file paths are relative to the
 repository root.

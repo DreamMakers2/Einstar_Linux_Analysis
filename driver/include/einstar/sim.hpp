@@ -13,6 +13,7 @@
 
 #include "einstar/clock.hpp"
 #include "einstar/recorder.hpp"
+#include "einstar/packet.hpp"
 #include "einstar/transport.hpp"
 #include "einstar/usb_descriptor.hpp"
 
@@ -38,7 +39,10 @@ struct SimConfig {
   /// Number of frames the simulated device produces.  Once exhausted, reads
   /// complete with Timeout so a pipeline can drain and stop.
   std::uint32_t frames = 0;
-  std::uint8_t camera_id = 1;
+  /// Number of cameras the simulated device streams (1..3).  Each trigger
+  /// group emits one frame per camera, matching the vendor's 3-image groups.
+  std::uint8_t camera_count = 3;
+  std::uint8_t first_camera_index = 0;
   std::uint32_t frame_size = 1280U * 1024U;
   std::uint32_t chunk_payload = 0xA000;
   std::int64_t trigger_period_ns = 40'000'000;  // 25 fps
@@ -50,11 +54,14 @@ struct SimConfig {
   /// reordering across frames).  Within one frame the protocol carries no chunk
   /// index, so intra-frame reordering is unrecoverable by design.
   bool interleave_frames = false;
-  std::uint8_t second_camera_id = 2;
+  std::uint8_t second_camera_index = 1;
 
-  /// Model the Linux bInterval=0 quirk: claim_interface fails until
-  /// apply_descriptor_patch() is called.
-  bool require_interval_patch = true;
+  /// The device descriptor declares bInterval=0 on both interrupt endpoints.
+  /// Linux USB core repairs this to 7 automatically (usb_parse_endpoint:
+  /// fls(0*8)==0 -> 7 at High Speed), so no user-space patch is required.
+  /// The transport still exposes the raw value and a `quirk_detected()` flag
+  /// for diagnostics; opening must succeed without any patch.
+  bool expect_interval_quirk = true;
 
   /// Replay mode: serve bytes from a recording instead of generating them.
   recording::ReplaySource replay;
@@ -154,6 +161,10 @@ class SimulatedTransport final : public Transport {
   void generate_one(GenFrame& frame);
   void start_frame(GenFrame& frame, std::uint32_t frame_index,
                    std::uint8_t camera_id);
+  std::uint8_t pick_camera();
+  /// Per-camera frame ids: the device numbers frames per camera, which is what
+  /// the reassembler's gap detection assumes.
+  std::uint32_t next_frame_id(std::uint8_t camera);
   [[nodiscard]] std::vector<std::byte> build_packet_bytes(const GenFrame& frame,
                                                           std::uint32_t chunk);
   void append_stream(const std::byte* data, std::size_t size);
@@ -207,12 +218,13 @@ class SimulatedTransport final : public Transport {
   // Generator state.
   struct GenFrame {
     std::uint32_t frame_index = 0;
-    std::uint8_t camera_id = 1;
+    std::uint8_t camera_id = 0;   // 0-based camera index
     std::uint32_t chunk = 0;
     std::uint32_t chunks_total = 0;
     std::uint32_t chunks_emit = 0;
     bool started = false;
   };
+  std::array<std::uint32_t, kCameraCount> cam_frame_ids_{};
   GenFrame gen_[2];
   int emit_index_ = 0;
   std::uint32_t next_frame_ = 0;

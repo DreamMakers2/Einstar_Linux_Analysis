@@ -98,7 +98,7 @@ int cmd_record(int argc, char** argv) {
   SimConfig sim;
   sim.seed = seed;
   sim.frames = frames;
-  sim.require_interval_patch = false;
+  sim.expect_interval_quirk = false;
   if (faults == "lossy") {
     sim.faults.loss_probability = 0.02;
     sim.faults.short_read_probability = 0.25;
@@ -240,7 +240,7 @@ int cmd_play(int argc, char** argv) {
 
   // ---- byte-exact verification through the simulated transport -------------
   SimConfig replay_config;
-  replay_config.require_interval_patch = false;
+  replay_config.expect_interval_quirk = false;
   replay_config.replay = einstar::recording::make_replay_source(*recording);
   SimulatedTransport replay(replay_config);
   if (!replay.open().ok() || !replay.claim_interface(0).ok()) {
@@ -290,7 +290,7 @@ int cmd_play(int argc, char** argv) {
 
   // ---- frame-level replay ---------------------------------------------------
   SimConfig pipeline_sim;
-  pipeline_sim.require_interval_patch = false;
+  pipeline_sim.expect_interval_quirk = false;
   pipeline_sim.replay = einstar::recording::make_replay_source(*recording);
   pipeline_sim.frames = 0;
   PipelineConfig config;

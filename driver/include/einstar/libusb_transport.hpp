@@ -16,12 +16,13 @@
 #include <vector>
 
 #include "einstar/clock.hpp"
+#include "einstar/command_io.hpp"
 #include "einstar/transport.hpp"
 #include "einstar/usb_descriptor.hpp"
 
 namespace einstar {
 
-class LibUsbTransport final : public Transport {
+class LibUsbTransport final : public Transport, public CommandIo {
  public:
   struct Config {
     std::uint16_t vendor_id = 0x3267;
@@ -30,10 +31,15 @@ class LibUsbTransport final : public Transport {
     int bus = -1;   // -1 = any
     int port = -1;  // -1 = any
     bool auto_detach_kernel_driver = true;
-    bool patch_interval = true;
+    /// Retained for API compatibility; no longer used to patch anything.
+    /// bInterval=0 is repaired by Linux USB core, not by user space.
+    bool patch_interval = false;
+    /// The interval Linux assigns to a bInterval=0 high-speed interrupt
+    /// endpoint (usb_parse_endpoint default).  Informational only.
     std::uint8_t patched_interval = 7;
     /// Refuse to claim the interface when bInterval == 0 remains in the
     /// descriptor (no userspace-visible override exists in libusb-1.0).
+    /// Ignored: opening never depends on a descriptor patch.
     bool require_patched_interval = false;
     bool debug = false;
 
@@ -51,6 +57,17 @@ class LibUsbTransport final : public Transport {
   Status claim_interface(std::uint8_t interface_number) override;
   Status release_interface(std::uint8_t interface_number) override;
   Status clear_halt(std::uint8_t endpoint) override;
+
+  // CommandIo: synchronous command-pipe I/O used by ControlChannel.
+  Status write_interrupt(std::uint8_t endpoint, std::span<const std::byte> data,
+                         std::uint32_t timeout_ms) override;
+  Status write_bulk(std::uint8_t endpoint, std::span<const std::byte> data,
+                    std::uint32_t timeout_ms) override;
+  Status read_interrupt(std::uint8_t endpoint, std::span<std::byte> destination,
+                        std::uint32_t timeout_ms,
+                        std::size_t& transferred) override;
+  Status read_bulk(std::uint8_t endpoint, std::span<std::byte> destination,
+                   std::uint32_t timeout_ms, std::size_t& transferred) override;
 
   TransferId submit_bulk_in(std::uint8_t endpoint,
                             std::span<std::byte> destination,
@@ -83,7 +100,7 @@ class LibUsbTransport final : public Transport {
   static void LIBUSB_CALL transfer_callback(libusb_transfer* transfer);
   Status map_error(int libusb_error, std::string_view what) const;
   std::size_t deliver_queued();
-  void cancel_all_and_wait();
+  bool cancel_all_and_wait();
 
   struct QueuedCompletion {
     TransferCompletion completion;
@@ -100,6 +117,7 @@ class LibUsbTransport final : public Transport {
   int claimed_interface_ = -1;
 
   std::atomic<std::size_t> outstanding_{0};
+  bool shutdown_incomplete_ = false;
   std::atomic<TransferId> next_id_{1};
 
   mutable std::mutex mutex_;

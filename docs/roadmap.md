@@ -23,9 +23,10 @@ claim in `README.md` cites a file.
 
 ## Phase 1 — hardware bring-up and truth capture (needs the scanner)
 
-1. `driver/` probe: enumerate 3267:0003, patch `bInterval`, claim interface, run the documented
-   init sequence (`FirmwareVersion`, `Serial`, `SensorCount`, resolution, exposure/gain limits,
-   `ReadData(0,6568)`).
+1. `driver/` probe: enumerate 3267:0003, claim interface (the kernel already repairs
+   `bInterval` to 7 — nothing to patch), run the documented init sequence (`FirmwareVersion`,
+   `Serial`, `SensorCount`, resolution, exposure/gain limits, `ReadData(0,6568)`), and record the
+   negotiated link speed plus frames per trigger group.
 2. Capture ground truth:
    * full flash dumps via `ReadData` at `0x0`, `0x3F0`, `0x40000`, `0x80000`, `0x1C0000`,
      `0x200000` (validates/refutes the flash-layout hypothesis in `docs/firmware/format.md` §7);
@@ -48,7 +49,8 @@ corrected; calibration round-trip exact.
    measure recovery time.
 
 **Exit gate:** replay reproduces the live capture exactly; failure recovery < 100 ms with no
-frame corruption; numbers labelled `mode: hardware`.
+frame corruption; numbers labelled `mode: hardware`; the USB 2.0 vs 3.0 question in
+`docs/benchmarks/offline_benchmarks.md` settled with measurements.
 
 ## Phase 3 — calibrated depth (accuracy core)
 

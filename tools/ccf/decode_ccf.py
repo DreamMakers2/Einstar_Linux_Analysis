@@ -38,7 +38,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import struct
 import sys
 from dataclasses import dataclass, field
@@ -282,6 +281,29 @@ def locate_ccf_block(buf: bytes) -> int:
     raise ValueError("CCF block not found (no 'FQFQ' with a type-4 header)")
 
 
+def _printable_runs(buf: bytes, min_len: int = 8) -> list[dict]:
+    """NUL-free printable ASCII runs, reported by offset only.
+
+    Used instead of matching vendor tag prefixes so that this public tool
+    carries no device-identifying literal strings.
+    """
+    runs: list[dict] = []
+    i = 0
+    n = len(buf)
+    while i < n:
+        if 0x20 <= buf[i] < 0x7F:
+            j = i
+            while j < n and 0x20 <= buf[j] < 0x7F:
+                j += 1
+            if j - i >= min_len:
+                runs.append({"offset": i,
+                             "value": buf[i:j].decode("ascii", "replace")})
+            i = j
+        else:
+            i += 1
+    return runs
+
+
 def _parse_para_sections(buf: bytes) -> list[dict]:
     """Locate the tagged FAFA/FBFB white-balance / colour-correction blocks."""
     out = []
@@ -347,16 +369,11 @@ def decode_bin(path: str, key_mode: str = "best") -> dict:
     result["ccf_slots"] = {k: {"offset": block + CCF_SLOT_OFFSETS[k],
                                "length": CCF_SLOT_SIZES[k]} for k in slots}
 
-    # --- printable identifier-like runs in the tail ----------------------
-    # Structural detection only: any printable ASCII run of 8..40 characters
-    # after the calibration records.  Device-specific values (serial, part
-    # number, date) are returned for the caller's own dump and are never
-    # embedded in this repository.
+    # --- misc tagged blocks ----------------------------------------------
     result["tagged_sections"] = _parse_para_sections(buf)
-    for m in re.finditer(rb"[ -~]{8,40}", buf[0x1600:]):
-        result.setdefault("strings", []).append(
-            {"offset": 0x1600 + m.start(),
-             "value": m.group(0).decode("ascii", "replace")})
+    # Report embedded printable runs structurally instead of matching specific
+    # vendor prefixes, so the tool itself carries no device-identifying strings.
+    result.setdefault("strings", []).extend(_printable_runs(buf, min_len=8))
     result["trailer_sha256_hint"] = None
     return result
 

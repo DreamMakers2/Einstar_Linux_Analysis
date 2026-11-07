@@ -26,7 +26,19 @@
 
 namespace einstar {
 
+// Header field offsets, verified in einscan10.2.0.0.dll::ImageStreamThread::run and
+// independently in libeinstar (which captured images from real hardware):
+//   [2] bits 3..5 : one-hot camera selector (1, 2, 4); bits 0..2: sub-index/chunk counter
+//   [8]           : 1 on the LAST packet of a frame (frame is complete only then)
+//   [12..15]      : u32 BE frame id  -- valid on the last packet only
+//   [16..23]      : u64 BE device timestamp -- latched from the first packet of a frame
 inline constexpr std::size_t kStreamHeaderSize = 32;
+inline constexpr std::size_t kHdrCameraByte = 2;
+inline constexpr std::size_t kHdrLastFlag = 8;
+inline constexpr std::size_t kHdrFrameId = 12;
+inline constexpr std::size_t kHdrTimestamp = 16;
+inline constexpr std::uint8_t kInvalidCamera = 0xFF;
+inline constexpr std::uint8_t kCameraCount = 3;
 inline constexpr std::size_t kStreamLengthSize = 4;
 inline constexpr std::uint32_t kStreamChunkPayload = 0xA000;  // 40,960
 inline constexpr std::uint32_t kStreamPacketLen = 0xA020;     // 32 + 0xA000
@@ -56,13 +68,33 @@ inline void store_be64(std::byte* p, std::uint64_t value) noexcept {
   store_be32(p + 4, static_cast<std::uint32_t>(value & 0xFFFFFFFFULL));
 }
 
+/// Map the one-hot camera selector to a 0-based index (1->0, 2->1, 4->2).
+[[nodiscard]] inline constexpr std::uint8_t camera_index_from_field(
+    std::uint8_t field) noexcept {
+  return field == 1U ? 0U : field == 2U ? 1U : field == 4U ? 2U : kInvalidCamera;
+}
+
+/// Inverse of camera_index_from_field (0->1, 1->2, 2->4).
+[[nodiscard]] inline constexpr std::uint8_t camera_field_from_index(
+    std::uint8_t index) noexcept {
+  return index == 0U ? 1U : index == 1U ? 2U : index == 2U ? 4U : 0U;
+}
+
 struct StreamPacket {
   std::uint32_t declared_length = 0;
   std::uint8_t raw_camera_byte = 0;
-  std::uint8_t camera_id = 0;   // bits 0..2 of header byte 2
-  std::uint8_t aux_bits = 0;    // bits 3..5 of header byte 2
-  bool first_of_frame = false;  // header byte 8 == 1
+  /// One-hot selector from header byte 2 bits 3..5 (1, 2 or 4).
+  std::uint8_t camera_field = 0;
+  /// 0-based camera index derived from camera_field (0, 1, 2) or kInvalidCamera.
+  std::uint8_t camera_index = kInvalidCamera;
+  /// Sub-index/chunk counter from header byte 2 bits 0..2.
+  std::uint8_t sub_index = 0;
+  /// True when header byte 8 == 1: this packet completes the frame.
+  bool last_of_frame = false;
+  /// Frame id (u32 BE at header 12).  Only meaningful when last_of_frame is true.
   std::uint32_t frame_index = 0;
+  /// Device timestamp (u64 BE at header 16).  Only meaningful on the first
+  /// packet of a frame; the reassembler latches it there.
   std::uint64_t device_timestamp = 0;
   const std::byte* payload = nullptr;
   std::size_t payload_size = 0;
@@ -191,15 +223,14 @@ class PacketFramer {
     StreamPacket packet;
     packet.declared_length = length;
     std::memcpy(packet.header.data(), header_bytes, kStreamHeaderSize);
-    packet.raw_camera_byte = std::to_integer<std::uint8_t>(packet.header[2]);
-    packet.camera_id = static_cast<std::uint8_t>(
-        std::to_integer<std::uint8_t>(packet.header[2]) & 0x07U);
-    packet.aux_bits = static_cast<std::uint8_t>(
-        (std::to_integer<std::uint8_t>(packet.header[2]) >> 3) & 0x07U);
-    packet.first_of_frame =
-        std::to_integer<std::uint8_t>(packet.header[8]) == 1U;
-    packet.frame_index = load_be32(packet.header.data() + 12);
-    packet.device_timestamp = load_be64(packet.header.data() + 16);
+    packet.raw_camera_byte = std::to_integer<std::uint8_t>(packet.header[kHdrCameraByte]);
+    packet.camera_field = static_cast<std::uint8_t>((packet.raw_camera_byte >> 3) & 0x07U);
+    packet.camera_index = camera_index_from_field(packet.camera_field);
+    packet.sub_index = static_cast<std::uint8_t>(packet.raw_camera_byte & 0x07U);
+    packet.last_of_frame =
+        std::to_integer<std::uint8_t>(packet.header[kHdrLastFlag]) == 1U;
+    packet.frame_index = load_be32(packet.header.data() + kHdrFrameId);
+    packet.device_timestamp = load_be64(packet.header.data() + kHdrTimestamp);
     packet.payload = header_bytes + kStreamHeaderSize;
     packet.payload_size = length - kStreamHeaderSize;
     packet.staged = staged;

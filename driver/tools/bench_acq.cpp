@@ -2,8 +2,12 @@
 // Offline benchmark harness.
 //
 // Every number printed here is produced by the deterministic simulated device
-// (virtual clock, 300 MB/s link model, 40 ms trigger period).  This is NOT a
-// hardware measurement.  Host wall time is measured separately and labelled.
+// Every row is produced by the deterministic simulated device (virtual clock).
+// This is NOT a hardware measurement.  Host wall time is measured separately
+// and labelled.  The "scenario:" rows isolate the link explicitly: USB 2.0 HS
+// (~40 MB/s), a hypothetical USB 3.0 SS (~350 MB/s), the vendor 68 ms trigger
+// cadence, and a host-only ceiling.  A generic 300 MB/s model is not a scanner
+// result and must not be presented as one.
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
@@ -30,6 +34,7 @@ struct Options {
   double bandwidth_mbps = 300.0;
   std::int64_t trigger_us = 40'000;
   bool quick = false;
+  bool scenarios_only = false;
 };
 
 struct Row {
@@ -39,6 +44,7 @@ struct Row {
   std::uint32_t depth = 0;
   std::string copy;
   std::uint32_t frames = 0;
+  std::uint32_t cameras = 1;
   double virtual_seconds = 0.0;
   double fps = 0.0;
   double mbps = 0.0;
@@ -75,6 +81,7 @@ Row run_case(std::string experiment, const SimConfig& base_sim,
   row.depth = depth;
   row.copy = mode == CopyMode::ZeroCopy ? "zero-copy" : "copy";
   row.frames = frames;
+  row.cameras = sim.camera_count == 0 ? 1 : sim.camera_count;
 
   auto transport = std::make_unique<einstar::SimulatedTransport>(sim);
   auto pipeline = std::make_unique<einstar::AcquisitionPipeline>(
@@ -178,6 +185,101 @@ void write_json(const Options& options, const std::vector<Row>& rows) {
   out << "  ]\n}\n";
 }
 
+// ---------------------------------------------------------------------------
+// Separated link scenarios.  The earlier tables all used one generic 300 MB/s
+// model; that number is neither USB 2.0 nor USB 3.0 and must not be read as an
+// achievable scanner result.  These scenarios are explicit about the link:
+//   usb2-hs      : practical USB 2.0 High Speed bulk throughput (~40 MB/s)
+//   usb3-ss      : hypothetical USB 3.0 SuperSpeed (~350 MB/s), unverified
+//   trigger-68ms : vendor cadence (ScanTriggerPeriod 68000 us, 3 cameras)
+//   host-only    : link not limiting; measures the host pipeline ceiling
+// ---------------------------------------------------------------------------
+struct Scenario {
+  const char* name;
+  double bandwidth_mbps;
+  std::int64_t trigger_us;
+  std::uint8_t cameras;
+  const char* note;
+};
+
+constexpr Scenario kScenarios[] = {
+    {"usb2-hs", 40.0, 0, 3, "USB 2.0 HS bulk, back-to-back (link-limited)"},
+    {"usb3-ss", 350.0, 0, 3, "USB 3.0 SS, hypothetical (unverified)"},
+    {"trigger-68ms", 350.0, 68'000, 3, "vendor cadence, 3 cameras per group"},
+    {"host-only", 10'000.0, 0, 3, "no link limit (host CPU ceiling)"},
+};
+
+double frame_wire_bytes() {
+  const std::uint32_t chunks =
+      (einstar::kDefaultFrameSize + einstar::kStreamChunkPayload - 1) /
+      einstar::kStreamChunkPayload;
+  return static_cast<double>(einstar::kDefaultFrameSize) +
+         static_cast<double>(chunks) *
+             (einstar::kStreamHeaderSize + einstar::kStreamLengthSize);
+}
+
+void print_limit_analysis() {
+  const double per_frame = frame_wire_bytes();
+  const double group = per_frame * 3.0;
+  const double period = 0.068;  // 68 ms
+  std::printf(
+      "\n-- bandwidth vs cadence (1280x1024, 8-bit, 32 packets/frame) --\n");
+  std::printf("frame on the wire   : %.0f B (payload 1310720 + framing)\n",
+              per_frame);
+  std::printf("3-camera group      : %.0f B\n", group);
+  std::printf("68 ms cadence needs : %.1f MB/s aggregate\n", group / period / 1e6);
+  std::printf("USB2 HS practical   : 40 MB/s -> %.1f fps aggregate, %.1f fps/camera\n",
+              40e6 / per_frame, 40e6 / per_frame / 3.0);
+  std::printf("USB3 SS (if usable) : 350 MB/s -> cadence-limited %.1f fps aggregate, "
+              "%.1f fps/camera\n",
+              3.0 / period, 1.0 / period);
+  std::printf(
+      "=> at 68 ms and three full frames per trigger the device needs ~58 MB/s; "
+      "a USB 2.0 HS link cannot carry it.  Either the scanner enumerates at "
+      "SuperSpeed in normal use, or it reduces the transmitted frame set.  This "
+      "must be measured on hardware.\n");
+}
+
+void run_scenarios(const Options& options, const PipelineConfig& base_config,
+                   std::vector<Row>& rows) {
+  for (const Scenario& scenario : kScenarios) {
+    for (std::uint32_t depth : {1U, 8U}) {
+      SimConfig sim;
+      sim.seed = options.seed;
+      sim.frame_size = einstar::kDefaultFrameSize;
+      sim.chunk_payload = einstar::kStreamChunkPayload;
+      sim.trigger_period_ns = scenario.trigger_us * 1000;
+      sim.bandwidth_bytes_per_sec =
+          static_cast<std::uint64_t>(scenario.bandwidth_mbps * 1'000'000.0);
+      sim.transfer_latency_ns = 500'000;
+      sim.expect_interval_quirk = false;
+      sim.camera_count = scenario.cameras;
+      sim.first_camera_index = 0;
+      const bool saturated = scenario.trigger_us == 0;
+      rows.push_back(run_case(std::string("scenario:") + scenario.name, sim,
+                              base_config, options.frames, depth,
+                              CopyMode::Copy, saturated));
+    }
+  }
+}
+
+void print_scenarios(const std::vector<Row>& rows) {
+  std::printf(
+      "\n=== link scenarios (SIMULATED; host columns are real) ===\n");
+  std::printf("%-18s %5s %7s %10s %9s %11s %8s %8s %8s %9s\n", "scenario",
+              "depth", "cameras", "agg MB/s", "frame/s", "fps/camera", "p50us",
+              "p99us", "host_ms", "host_fps");
+  for (const Row& row : rows) {
+    if (row.experiment.rfind("scenario:", 0) != 0) {
+      continue;
+    }
+    std::printf("%-18s %5u %7u %10.1f %9.1f %11.2f %8.0f %8.0f %8.1f %9.0f\n",
+                row.experiment.c_str() + 9, row.depth, row.cameras, row.mbps,
+                row.fps, row.fps / std::max(1U, row.cameras), row.p50_us,
+                row.p99_us, row.host_ms, row.host_fps);
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -196,10 +298,13 @@ int main(int argc, char** argv) {
       options.bandwidth_mbps = std::strtod(argv[++i], nullptr);
     } else if (argument == "--trigger-us" && i + 1 < argc) {
       options.trigger_us = std::strtoll(argv[++i], nullptr, 0);
+    } else if (argument == "--scenarios-only") {
+      options.scenarios_only = true;
     } else if (argument == "--help" || argument == "-h") {
       std::printf(
           "usage: einstar-bench [--frames N] [--out FILE] [--seed S]\n"
-          "                     [--bandwidth-mbps B] [--trigger-us T] [--quick]\n");
+          "                     [--bandwidth-mbps B] [--trigger-us T] [--quick]\n"
+          "                     [--scenarios-only]\n");
       return 0;
     } else {
       std::fprintf(stderr, "unknown argument: %s\n", argument.c_str());
@@ -218,7 +323,7 @@ int main(int argc, char** argv) {
   base_sim.bandwidth_bytes_per_sec =
       static_cast<std::uint64_t>(options.bandwidth_mbps * 1'000'000.0);
   base_sim.transfer_latency_ns = 500'000;  // 500 us per URB
-  base_sim.require_interval_patch = false;
+  base_sim.expect_interval_quirk = false;
 
   PipelineConfig base_config;
   base_config.transfer_buffer_size = 0xA400;
@@ -227,6 +332,15 @@ int main(int argc, char** argv) {
   base_config.partial_frame_timeout_ns = 500'000'000;
 
   std::vector<Row> rows;
+
+  if (options.scenarios_only) {
+    run_scenarios(options, base_config, rows);
+    print_scenarios(rows);
+    print_limit_analysis();
+    write_json(options, rows);
+    std::printf("\nJSON written to %s\n", options.output.c_str());
+    return 0;
+  }
 
   // A. Sync vs async queue depth (triggered, copy path).
   for (std::uint32_t depth : {1U, 2U, 4U, 8U, 16U}) {
@@ -264,6 +378,12 @@ int main(int argc, char** argv) {
       "'sync' = one outstanding transfer. host_ms/host_fps are real wall-clock "
       "measurements of this machine; everything else is virtual-clock.\n\n");
   print_table(rows);
+
+  // E. Separated link scenarios (see kScenarios).
+  run_scenarios(options, base_config, rows);
+  print_scenarios(rows);
+  print_limit_analysis();
+
   write_json(options, rows);
   std::printf("\nJSON written to %s\n", options.output.c_str());
   return 0;

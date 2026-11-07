@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include <algorithm>
 #include <filesystem>
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -113,7 +114,7 @@ EINSTAR_TEST(recording_replay_is_byte_exact) {
   SimConfig sim;
   sim.seed = 77;
   sim.frames = 6;
-  sim.require_interval_patch = false;
+  sim.expect_interval_quirk = false;
   sim.faults.loss_probability = 0.1;
   sim.faults.short_read_probability = 0.4;
   sim.faults.corrupt_length_probability = 0.05;
@@ -157,7 +158,7 @@ EINSTAR_TEST(recording_replay_is_byte_exact) {
   CHECK_EQ(expected_digest, recording->trailer_digest);
 
   SimConfig replay_sim;
-  replay_sim.require_interval_patch = false;
+  replay_sim.expect_interval_quirk = false;
   replay_sim.replay = recording::make_replay_source(*recording);
   replay_sim.frames = 0;
   SimulatedTransport replay(std::move(replay_sim));
@@ -189,6 +190,50 @@ EINSTAR_TEST(recording_replay_is_byte_exact) {
   CHECK_EQ(replay.delivered_bytes(), recorded_bytes.size());
   CHECK_EQ(recording->trailer_bytes, recorded_bytes.size());
   remove_file(path);
+}
+
+EINSTAR_TEST(recording_rejects_bad_magic_and_bomb_lengths) {
+  const std::string path = temp_path("einstar_badmagic.bin");
+  remove_file(path);
+  recording::Recording source;
+  recording::RecordedTransfer transfer;
+  transfer.bytes.assign(64, std::byte{0x11});
+  source.transfers.push_back(transfer);
+  REQUIRE(recording::write_recording(path, source).ok());
+
+  std::ifstream input(path, std::ios::binary);
+  std::vector<char> bytes((std::istreambuf_iterator<char>(input)),
+                          std::istreambuf_iterator<char>());
+  input.close();
+
+  // 1) corrupt the file magic
+  auto bad_magic = bytes;
+  bad_magic[0] = 'X';
+  const std::string bad_magic_path = temp_path("einstar_badmagic2.bin");
+  {
+    std::ofstream out(bad_magic_path, std::ios::binary | std::ios::trunc);
+    out.write(bad_magic.data(), static_cast<std::streamsize>(bad_magic.size()));
+  }
+  CHECK(!recording::read_recording(bad_magic_path).has_value());
+
+  // 2) a record whose declared length is enormous must be rejected without
+  //    attempting to allocate it.
+  auto bomb = bytes;
+  // File header is 64 bytes; the first record's u32 record_bytes is at +4.
+  if (bomb.size() > 64 + 8) {
+    const std::uint32_t huge = 0xFFFFFFF0U;
+    std::memcpy(bomb.data() + 64 + 4, &huge, sizeof(huge));
+  }
+  const std::string bomb_path = temp_path("einstar_bomb.bin");
+  {
+    std::ofstream out(bomb_path, std::ios::binary | std::ios::trunc);
+    out.write(bomb.data(), static_cast<std::streamsize>(bomb.size()));
+  }
+  CHECK(!recording::read_recording(bomb_path).has_value());
+
+  remove_file(path);
+  remove_file(bad_magic_path);
+  remove_file(bomb_path);
 }
 
 EINSTAR_TEST_MAIN()

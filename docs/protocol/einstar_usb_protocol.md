@@ -26,7 +26,7 @@ verified in vendor binary or libeinstar), **HW** (observed on hardware, from the
 | Interfaces | 1 (interface 0, alt 0, 5 endpoints) | W |
 | Endpoints | `0x01` INT OUT, `0x81` INT IN, `0x02` BULK OUT, `0x82` BULK IN, `0x83` BULK IN | W: endpoint descriptors @ image `0xDF7E..0xDF9F`; L §2.2 |
 | Max packet | 512 B (HS set), 1024 B (SS set) | W |
-| `bInterval` | **0** for `0x01`/`0x81` — invalid for HS interrupt; Linux patches to 7 | W (descriptor), L §2.3 |
+| `bInterval` | **0** for `0x01`/`0x81` — invalid per USB 2.0; **Linux USB core repairs it to 7 automatically**, no kernel patch or user-space override needed | W (descriptor), Linux `usb_parse_endpoint()`, libeinstar (captured images on a stock kernel) |
 | Endpoint roles | EP1 = command channel (request/reply), EP2 = bulk data (page read/write, firmware update), EP3 IN = image stream | W (function roles), L |
 
 The five-endpoint set is **exactly** what the vendor firmware declares, which independently
@@ -116,6 +116,47 @@ one-hot field in header byte 2 bits 3..5 (`1/2/4`), with bits 0..2 as a sub-inde
 (`libeinstar_protocol_spec.md` §7.1) reads the same fields. The vendor keeps one reassembly
 accumulator and relies on the stream being grouped per camera.
 
+### 3.1 Definitive framing semantics (three independent sources)
+
+The three primary sources agree, and the earlier implementation in `driver/` did not:
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Which header byte marks the end? | `header[8] == 1` on the **last** packet; the frame is delivered only then | W: `FUN_18000c8f0` completes only when `pkg[0x0C] == 1` **and** accumulated size equals the frame size; L: `kOffStreamLastFlag = 0x08`, `last` required for `FrameComplete`; HW: libeinstar captured frames on real hardware |
+| Camera encoding | **one-hot** in `header[2]` bits **3..5** (`1`,`2`,`4`), sub-index in bits 0..2 | W: `(pkg[6] >> 3) & 7` extracted as one field; L: `(t[2] >> 3) & 0x7` with `{1:0, 2:1, 4:2}`; HW-proven |
+| Frame id validity | `header[12..15]` is **only valid on the last packet** | W: the id is read in the completion branch; L: `read_be32(t, kOffStreamFrameId)` only when `last` |
+| Timestamp | `header[16..23]` u64 BE, latched from the **first** packet of the frame | W: latched when `received == 0`; L: `if (filled_ == 0) timestamp_ = read_be64(...)` |
+| Start of frame | **no start flag**; a frame starts implicitly after the previous one completes | W/L; therefore a decoder must keep one in-flight slot per camera and must not key on the frame id |
+
+The published `driver/` initially implemented the opposite (`first_of_frame`, camera in bits
+0..2, frame id on every packet). That was a real defect: it passed only because the simulator
+shared the same wrong convention. It is fixed, and `driver/tests/test_conformance.cpp` now
+locks the semantics with hand-written golden vectors that do not involve the simulator.
+
+### 3.2 `bInterval = 0` is repaired by Linux, not patched by user space
+
+`drivers/usb/core/config.c::usb_parse_endpoint()` contains:
+
+```c
+case USB_SPEED_HIGH:
+    n = fls(d->bInterval * 8);
+    if (n == 0)
+        n = 7;              /* 8 ms = 2^(7-1) uframes */
+    j = 16;
+...
+if (d->bInterval < i || d->bInterval > j) {
+    dev_notice(..., "has an invalid bInterval %d, changing to %d", ..., n);
+    endpoint->desc.bInterval = n;
+}
+```
+
+With `bInterval = 0` at high speed, `fls(0) == 0` so the kernel assigns **7** to both
+interrupt endpoints before any driver claims the interface. libusb still *reports* the raw
+descriptor value (it reads the cached descriptor bytes), which is why a detector may see 0;
+nothing needs to be installed into the kernel. libeinstar worked on a stock CachyOS kernel for
+exactly this reason. The backend therefore reports the quirk and continues — it must not
+refuse to claim, and no kernel/udev change is required.
+
 Observed reliability: the session log contains **115 `grabImage failed. errorCode: 1034`**
 (timeout) events over ~1.5 h of scanning — the vendor stack itself drops frames under load.
 That is a concrete argument for the asynchronous, loss-aware backend (§`driver/`).
@@ -129,7 +170,7 @@ Camera selector for pixel commands: `mask = 1 << camera` (`0x01`, `0x02`, `0x04`
 | Name | Op | Wire | Request payload | Reply value | Confidence / evidence |
 |---|---|---|---|---|---|
 | ProductName | `0x01` | 100 | — | NUL-terminated string `EinScan10_01` | **CV-W** `FUN_180009130` + **CV-L** |
-| Serial | `0x04` | 64 | — | 8 bytes rendered as 16 hex digits, e.g. `<redacted-device-serial>` | **CV-L**, **HW** log |
+| Serial | `0x04` | 64 | — | 8 bytes rendered as 16 hex digits (example synthetic: `0123456789ABCDEF`) | **CV-L**, **HW** log |
 | FirmwareVersion | `0x05` | 64 | — | `EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_EN` | **CV-W** `FUN_180008f90` + **HW** log + **CV-L** |
 | FirmwareUpdate | `0x06` | 0x1400 | see §5 | — | **CV-W** `FUN_18000bc80` |
 | ButtonTemp | `0x07` | 50 | — | bytes 9,10,11 = BUTTON0/1/2 state; bytes 12..13 = u16 BE board temperature / 100.0 | **CV-W** `FUN_180008d00` (new, not in L) |

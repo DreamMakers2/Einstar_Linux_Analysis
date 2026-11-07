@@ -17,10 +17,11 @@ constexpr std::uint32_t kStressFrames = 10000;
 EINSTAR_TEST(stress_10k_frames_zero_copy) {
   SimConfig sim;
   sim.seed = 2024;
+  sim.camera_count = 1;
   sim.frames = kStressFrames;
   sim.trigger_period_ns = 40'000'000;
   sim.bandwidth_bytes_per_sec = 300'000'000;
-  sim.require_interval_patch = false;
+  sim.expect_interval_quirk = false;
 
   PipelineConfig config;
   config.queue_depth = 16;

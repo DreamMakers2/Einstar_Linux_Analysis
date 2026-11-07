@@ -9,6 +9,16 @@
 #include <string>
 #include <vector>
 
+#include "einstar/status.hpp"
+
+namespace einstar {
+// Lets CHECK_EQ print a readable ErrorCode instead of instantiating a stream
+// insertion that does not exist for the enum.
+inline std::ostream& operator<<(std::ostream& stream, ErrorCode code) {
+  return stream << to_string(code);
+}
+}  // namespace einstar
+
 namespace etest {
 
 struct TestCase {

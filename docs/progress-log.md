@@ -1,10 +1,5 @@
 # Progress log
 
-
-> **Publication note.** Paths such as `sources/…` and `analysis/logs/…` refer to the private
-> research workspace and are not part of this repository; see `analysis/README.md` for the
-> fixture layout and the SHA-256 of each excluded input.
-
 Chronological, UTC-ish. Newest last.
 
 ## 2026-11-07 — session 1
@@ -32,7 +27,7 @@ Chronological, UTC-ish. Newest last.
    libeinstar (independent code-verified implementation) — layouts agree.
 7. **Real device log** (132 MB, from the Windows install) recovered and analysed: 637,523 lines,
    full command history, frame sizes, trigger parameters, 115 frame timeouts. Confirms firmware
-   string, serial `<redacted-device-serial>`, `ReadData(0, 6568)` for calibration.
+   string, the device serial, `ReadData(0, 6568)` for calibration.
 8. **FX3 firmware** imported into Ghidra via a generated ELF (correct load addresses); 518
    functions decompiled. Located ThreadX threads, FPGA boot thread, `GetFpgaLoadAddr`, SPI flash
    access, SC130GS sensor strings, A/B slot logic.
@@ -99,3 +94,38 @@ Chronological, UTC-ish. Newest last.
 * `docs/firmware/fpga_bitstream.md` — dedicated Pango analysis (the identification itself is
   recorded in `format.md` §4.1 with independently reproduced parsing).
 * `docs/reconstruction/modern_pipeline_design.md` and `validation_plan.md` — survey is complete.
+
+## Session 3 — protocol conformance audit and repair
+
+1. **Framing defect found and repaired.** The published backend decoded header byte 8 as a
+   *first*-packet flag, read the camera from bits 0..2, and required a frame id on every packet.
+   All three are wrong: byte 8 marks the **last** packet, the camera is the one-hot field in bits
+   3..5, and the frame id is valid only on the last packet (vendor `FUN_18000c8f0`, libeinstar,
+   hardware). The simulator had encoded the same mistake, so the tests were circular. The
+   reassembler now keeps one in-flight frame per camera and completes on last-packet + exact size.
+2. **Independent conformance vectors** (`driver/tests/test_conformance.cpp`) were written by hand
+   from the wire format and never instantiate the simulator: golden packet, camera-bit position,
+   exact-value last flag, invalid camera fields, byte-granular framing, frame-id-from-last,
+   loss-then-recovery, three-camera trigger group, sequence-gap accounting.
+3. **`bInterval = 0` corrected.** Linux `usb_parse_endpoint()` rewrites it to 7 at high speed; no
+   patch, udev rule or kernel change is required, matching the field observation that libeinstar
+   worked on a stock kernel. The claim-refusal gate and the "kernel patch required" narrative were
+   removed from code, simulator, tests and docs.
+4. **Tests hardened.** 10 binaries / 67 cases before the control channel: conformance, deterministic
+   fuzzing (random soup, mutations, loss), 10 000-frame stress, malformed-recording rejection.
+   ASan+UBSan and TSan clean; `tsan/test_stress` 40 017 checks clean.
+5. **Benchmarks separated.** `einstar-bench --scenarios-only` now reports USB 2.0 HS (~40 MB/s),
+   hypothetical USB 3.0 (~350 MB/s), the vendor 68 ms trigger cadence and a host-only ceiling,
+   plus the arithmetic showing that three full frames per 68 ms need ~58 MB/s — more than USB 2.0
+   HS can carry. The generic 300 MB/s model is no longer presented as a scanner result.
+6. **libusb shutdown hardened**: `close()` drains cancelled transfers and refuses to close a
+   context libusb still owns, reporting `shutdown_complete()` instead of risking a use-after-free.
+7. **Command channel** integrated (`control_channel.*`): serial, firmware string, sensor count,
+   resolution, exposure/gain, trigger mode/period, temperature, read-only page read; retries, echo
+   validation, status propagation, per-pipe recovery. Firmware update and flash writes excluded.
+8. **Calibration quantified, not guessed**: the unkeyed dump records and the CCF are two different
+   calibrations (distortion identical, R/T/intrinsics differ), so the intrinsic key is bounded to
+   ±1 px per field with a quantified depth effect (~0.26 mm at 300 mm), and rectification is shown
+   to be insensitive to that key. Real captures (three complete triples plus one extra frame) give a median
+   |vertical residual| of 0.90–1.0 px under the decoded CCF model; the wrong-pair control
+   produces no matches, and the dump model only reaches window-edge matches (2.0 px).
