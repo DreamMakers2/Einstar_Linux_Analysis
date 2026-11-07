@@ -9,6 +9,12 @@ USB 3.0 connection, bypassing the existing 7-pin external connector?
 both board sides, and the firmware/protocol evidence already established in this workspace.
 **Nothing was soldered, flashed, powered or modified.** All conclusions are static.
 
+> **Addendum 1 (2026-11-07) — read with this report.**
+> A re-examination of the FX3's lower edge at native resolution found copper the original analysis
+> missed: a genuine 45° coupled pair escaping the package edge, plus six long through-routes in the
+> same channel. The verdict below still stands, but §3.6 and §5 are amended. See
+> [`usb3_feasibility_addendum_1.md`](usb3_feasibility_addendum_1.md).
+
 ---
 
 ## 0. Verdict

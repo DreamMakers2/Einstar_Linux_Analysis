@@ -8,6 +8,9 @@ Infineon's own USB-2.0-only checklist, with a 7-pin external connector that has 
 where four are needed. SuperSpeed here requires a board re-spin, not a modification.
 
 Full reasoning: [`../docs/hardware/usb3_mainboard_feasibility.md`](../docs/hardware/usb3_mainboard_feasibility.md).
+**Amended by** [`../docs/hardware/usb3_feasibility_addendum_1.md`](../docs/hardware/usb3_feasibility_addendum_1.md):
+a re-examination at native resolution found a genuine 45° coupled pair escaping the package edge plus
+six through-routes; the verdict stands but the reasoning changed.
 
 ---
 
@@ -23,6 +26,8 @@ Full reasoning: [`../docs/hardware/usb3_mainboard_feasibility.md`](../docs/hardw
 | `annotated/A5_ball_map.png` | documented ball map, colour-coded |
 | `annotated/A6_row_a_escape.png` | 8× zoom of the row-A escape region, with the projected A3–A6 columns |
 | `annotated/A7_multimeter_procedure.png` | where to probe, how to probe, and what each reading decides |
+| `annotated/B1_escape_pair_measured.png` | the 45° coupled pair below the FX3, fitted and extrapolated to the package edge |
+| `annotated/B2_routing_channel.png` | the six through-routes in the strip below the FX3 |
 | `analysis/fx3_ballout.md` · `.json` | all 121 balls with citations; machine-readable |
 | `analysis/fx3_ss_layout_requirements.md` | BOM, impedance/skew rules, BGA escape, SI of a wire tap |
 | `analysis/product_teardown_corroboration.md` | public teardown/connector/vendor-software evidence |
