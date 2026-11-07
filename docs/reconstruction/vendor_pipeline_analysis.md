@@ -20,7 +20,7 @@ Status: **first complete pass**, read-only static analysis of the shipped EXStar
 
 Every claim cites the module and a file offset (string/section) or an exported symbol. Offsets are
 **file offsets** in the on-disk DLL, not RVAs. Raw evidence lives in
-`analysis/gnu/reconstruction_strings/`; machine-readable metadata is in
+`analysis/gnu/reconstruction_strings/` (not published; see `analysis/README.md`); machine-readable metadata is in
 `analysis/gnu/reconstruction_survey.json`; the survey is reproducible with
 `tools/analysis/survey_modules.py`.
 
