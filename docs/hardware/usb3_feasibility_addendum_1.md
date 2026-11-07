@@ -291,7 +291,61 @@ traces emerge.
 
 ---
 
-## A1.10 Reproduce
+## A1.10 Direct answers to the seven questions
+
+**1. Are the four diagonal features actually copper traces?**
+**Two of them are, one pair, confirmed.** The pair measures 45.2°/45.9°, 0.41–0.46 mm spacing, 3 px
+width, +30 luminance over mask — the calibrated copper signature — and three alternatives (silkscreen,
+compression ringing, hatched pour) were tested and rejected. **The other two are not established as
+diagonal copper.** The diagonal-looking marks elsewhere in that strip are the through-routes crossing
+the silkscreen bands and the bend at (1300,1085); they are horizontal copper, not a second diagonal
+pair. Net finding: **one coupled pair, not two.**
+
+**2. Are their locations geometrically consistent with A3–A6?**
+**Partially — and not well enough to claim it.** The left trace extrapolates to x = 1403, which is
+3.5 px from A5 (1399.5). But the pair's centre (1411) sits 26.5 px from the A5/A6 midpoint and
+33.5 px from the A3/A4 midpoint — 2.6 σ and 3.3 σ respectively at ±10 px uncertainty. The only ball
+pairing it matches (A4/A5) is not a valid differential pair. **Consistent in position, inconsistent in
+pairing.**
+
+**3. Is there evidence of two matched SuperSpeed differential pairs?**
+**No.** Exactly one matched pair exists in the region. A SuperSpeed device needs TX *and* RX; a single
+pair cannot form a link. This is the strongest single argument against Hypothesis A.
+
+**4. Where could those signals physically terminate?**
+Unresolved, and honestly so. The pair bends at ≈(1300,1085) into the horizontal channel and runs left
+toward J4 (x 365–595), but the channel carries at least three other pairs, and the region where the
+traces would turn up to J4 is obscured by components and by J4's own footprint. **No via termination
+could be resolved.** Candidates: a J4 pin, a blind/buried via to an inner layer, or the exposed pad
+cluster at x 150–330, y 1060–1120 (observation O5, function unknown).
+
+**5. Does the board appear to have the necessary SuperSpeed PHY support circuitry?**
+**No.** Mandatory: 0.1 µF series pair on SSTX — **absent**. Recommended: ≤0.5 pF ESD array —
+**absent**. Required: 200 Ω ±1 % on B3 — **not determinable optically** (this is exactly what M-A
+settles). The USB 2.0 reference (6.04 kΩ on C8) is necessarily present but was not individually
+identified either.
+
+**6. Does the prior NO-GO verdict still hold, or should it be revised?**
+**It holds, with an amended rationale.** The verdict was right; the reasoning was partly wrong.
+"Nothing escapes the package" is false — a coupled pair does. But a single unattributable pair,
+without AC coupling, without ESD, fitting no valid ball pair, cannot make a link. The probability
+assigned to option E (new daughterboard, mainboard untouched) rises from ~10–15 % to **~25–35 %**.
+
+**7. What single additional measurement would most decisively change the answer?**
+**The 200 Ω sweep (M-A).** It is the only accessible measurement whose outcome is binary and
+conclusive:
+
+* **200 Ω present** → the SS PHY is biased, the routed pair is probably intended as SuperSpeed, and an
+  X-ray becomes worth commissioning. Option E is alive.
+* **200 Ω absent** → the PHY has no calibration reference. *No amount of routing can make it train.*
+  The NO-GO becomes final, and every other measurement on this board becomes pointless.
+
+Everything else — continuity mapping, capacitance, even the X-ray — only refines a question that this
+one resistor answers outright.
+
+---
+
+## A1.11 Reproduce
 
 ```bash
 cd <repo>
