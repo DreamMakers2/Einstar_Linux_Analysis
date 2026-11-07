@@ -22,6 +22,7 @@ Full reasoning: [`../docs/hardware/usb3_mainboard_feasibility.md`](../docs/hardw
 | `annotated/A4_signal_path_audit.png` | signal-path audit and the five missing SS requirements |
 | `annotated/A5_ball_map.png` | documented ball map, colour-coded |
 | `annotated/A6_row_a_escape.png` | 8× zoom of the row-A escape region, with the projected A3–A6 columns |
+| `annotated/A7_multimeter_procedure.png` | where to probe, how to probe, and what each reading decides |
 | `analysis/fx3_ballout.md` · `.json` | all 121 balls with citations; machine-readable |
 | `analysis/fx3_ss_layout_requirements.md` | BOM, impedance/skew rules, BGA escape, SI of a wire tap |
 | `analysis/product_teardown_corroboration.md` | public teardown/connector/vendor-software evidence |

@@ -327,3 +327,110 @@ def fig_arow():
     c.save(f'{OUT}/A6_row_a_escape.png'); print('A6',c.size)
 
 fig_arow()
+
+# ------------------------------------------------------------------ A7 multimeter procedure
+def fig_multimeter():
+    W,H=2760,1560
+    c=Image.new('RGB',(W,H),(13,13,19)); d=ImageDraw.Draw(c,'RGBA')
+    fT=font(36); fH=font(25); fB=font(20,False); fS=font(17,False)
+    d.text((40,26),"A7 — The 20-minute unpowered test that decides everything",font=fT,fill=C_WHITE)
+    d.text((40,74),"One DMM, one probe on ground, every 0402/0603 resistor within ~12 mm of the FX3. No power, no soldering.",font=fB,fill=(180,180,195))
+
+    # ---- photo
+    box=(600,470,1720,1120); S=1.62
+    im=up(p1.crop(box),S); c.paste(im,(40,128))
+    def T(x,y): return (40+(x-box[0])*S, 128+(y-box[1])*S)
+    zx0,zy0=T(618,548); zx1,zy1=T(1690,1082)
+    for xx in range(int(zx0),int(zx1),26):
+        d.line([(xx,zy0),(xx+13,zy0)],fill=(0,255,255,255),width=4)
+        d.line([(xx,zy1),(xx+13,zy1)],fill=(0,255,255,255),width=4)
+    for yy in range(int(zy0),int(zy1),26):
+        d.line([(zx0,yy),(zx0,yy+13)],fill=(0,255,255,255),width=4)
+        d.line([(zx1,yy),(zx1,yy+13)],fill=(0,255,255,255),width=4)
+    d.text((48,100),"search zone — every 2-pad part in here, plus the mirror-image area on the back",font=fS,fill=(0,255,255))
+    def tagbox(b,txt,col):
+        x0,y0=T(b[0],b[1]); x1,y1=T(b[2],b[3])
+        d.rectangle([x0,y0,x1,y1],outline=col,width=3)
+        bb=d.textbbox((0,0),txt,font=fS)
+        d.rectangle([x0,y0-30,x0+(bb[2]-bb[0])+12,y0-2],fill=(0,0,0,230))
+        d.text((x0+6,y0-27),txt,font=fS,fill=col)
+    tagbox((1185,630,1555,980),"FX3 — the balls we cannot reach",(255,255,255))
+    tagbox((630,700,950,960),"cluster A  (1)",(255,190,90))
+    tagbox((975,815,1125,1010),"cluster B  (2)",(255,190,90))
+
+    # ---- ground inset
+    thumb=p1.crop((60,190,300,430)).resize((240,240),Image.LANCZOS)
+    c.paste(thumb,(60,1180)); d.rectangle([60,1180,300,1420],outline=(120,220,140),width=3)
+    d.text((330,1186),"GND reference",font=fH,fill=(120,220,140))
+    for i,t in enumerate(["black lead on a mounting-hole ring (bare metal)",
+                          "or a plated shield pad — never on solder mask.",
+                          "",
+                          "Unmarked 0402/0603 parts (~1.0×0.5 mm):",
+                          "the value can only be measured."]):
+        d.text((330,1224+i*27),t,font=fS,fill=(225,225,232))
+
+    # ---- decision tree (fixed positions)
+    px=1900
+    d.text((px,120),"Decision tree",font=font(30),fill=C_WHITE)
+    def dbox(x,y,w,title,lines,col):
+        h=52+len(lines)*27
+        d.rectangle([x,y,x+w,y+h],fill=(24,24,32),outline=col,width=3)
+        d.text((x+16,y+11),title,font=fH,fill=col)
+        for i,l in enumerate(lines):
+            d.text((x+16,y+47+i*27),l,font=fS,fill=(222,222,230))
+        return h
+    def down(x,y0,y1,col=(150,150,160)):
+        d.line([(x,y0),(x,y1-12)],fill=col,width=3)
+        d.polygon([(x-9,y1-12),(x+9,y1-12),(x,y1)],fill=col)
+
+    h=dbox(px,165,790,"START",["board unpowered: 12 V adapter and USB disconnected",
+                               "DMM in resistance mode, fine-tipped probes"],(200,200,210))
+    down(px+395,165+h,165+h+38)
+    y=165+h+38
+    h=dbox(px,y,790,"STEP 1",["black lead on a ground ring, red lead on one 2-pad part",
+                              "tap the part firmly — do not read through your fingers"],(200,200,210))
+    down(px+395,y+h,y+h+38); y=y+h+38
+    h=dbox(px,y,790,"STEP 2",["sweep every resistor near the FX3, on both sides",
+                              "log each value — about 40–60 parts, 15–20 minutes"],(200,200,210))
+    y2=y+h+52
+    bar_y=y2-40
+    down(px+395,y+h,bar_y)
+    bx=[px-6,px+268,px+542]; bw=252
+    d.line([(bx[0]+bw//2,bar_y),(bx[2]+bw//2,bar_y)],fill=(150,150,160),width=3)
+    outs=[("6.04 kΩ",["R_USB2 (C8) found.","Method validated —","you are reading real","reference resistors."],(140,200,255)),
+          ("200 Ω",["R_USB3 (B3) fitted.","SS PHY is biased.","Next: X-ray / TDR","on J4 (lab step)."],(0,255,255)),
+          ("neither",["R_USB3 absent.","Textbook AN70707","App. C design."],(255,90,90))]
+    hmax=0
+    for (t,lines,col),x in zip(outs,bx):
+        down(x+bw//2,bar_y,y2)
+        hmax=max(hmax,dbox(x,y2,bw,t,lines,col))
+    y3=y2+hmax+34
+    d.text((px,y3),"Only the middle branch keeps a modification alive.",font=font(21),fill=(255,255,255))
+    d.text((px,y3+30),"left: the control that proves the method   ·   right: the end of the investigation",font=fS,fill=(190,190,205))
+
+    # ---- signature table
+    y4=y3+80
+    d.rectangle([px-20,y4,W-28,y4+250],fill=(20,20,28),outline=(80,80,100),width=2)
+    d.text((px,y4+14),"What the two reference resistors look like",font=font(23),fill=C_WHITE)
+    d.text((px,y4+52),"both are 1 % parts from a ball to GND, within a few mm of the package",font=fS,fill=(170,170,185))
+    for i,(a,b,cc) in enumerate([("6.04 kΩ ±1 %","R_USB2 on C8","present on every working board"),
+                                 ("200 Ω ±1 %","R_USB3 on B3","optional — absent on USB-2.0-only designs"),
+                                 ("0 Ω / open","not a reference","keep looking")]):
+        yy=y4+96+i*42
+        d.text((px,yy),a,font=font(21),fill=C_USB2); d.text((px+220,yy),b,font=fS,fill=(225,225,232))
+        d.text((px+450,yy),cc,font=fS,fill=(180,180,192))
+    d.text((px,y4+226),"200 Ω also appears in LED-bias and termination networks — require one pad on ground, close to the FX3.",font=fS,fill=(255,190,90))
+
+    # ---- before you start
+    d.rectangle([900,1180,1810,1432],fill=(20,20,28),outline=(80,80,100),width=2)
+    d.text((922,1196),"Before you start",font=fH,fill=C_WHITE)
+    for i,t in enumerate(["12 V adapter and USB both disconnected — wait until the LEDs are out.",
+                          "Photograph every part first: an 0402 slides away if you push it.",
+                          "Probe the metal end caps, not the body. ≤0.5 mm tips or a needle probe.",
+                          "Never probe the BGA balls themselves — one slip bridges 1.2 V to 5 V."]):
+        d.text((922,1240+i*30),"— "+t,font=fS,fill=(225,225,232))
+
+    d.text((40,1490),"Nothing here needs power or a soldering iron. If the 200 Ω part is absent, stop — the photographs already showed there is nowhere for SuperSpeed to go.",font=fB,fill=(200,200,210))
+    c.save(f'{OUT}/A7_multimeter_procedure.png'); print('A7',c.size)
+
+fig_multimeter()

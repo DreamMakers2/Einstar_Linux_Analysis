@@ -378,6 +378,9 @@ shortcut; every 2-pad site near the FX3 and J4 is occupied.
 
 ## 10. Unpowered multimeter inspection plan
 
+> **Visual guide:** `hardware/annotated/A7_multimeter_procedure.png` — probe map, ground reference,
+> preparation notes and the decision tree on one page.
+
 **Purpose.** These measurements cannot prove that a BGA ball is unconnected — only X-ray or
 de-soldering can. What they *can* do is settle the two facts that decide between options D, E and F:
 **(i) is the SuperSpeed PHY biased at all**, and **(ii) what does J4 actually carry**.
@@ -522,6 +525,7 @@ Local copies and extracted text: `hardware/analysis/sources/`, `hardware/analysi
 | `hardware/annotated/A4_signal_path_audit.png` | signal-path audit and the five missing requirements |
 | `hardware/annotated/A5_ball_map.png` | documented 121-ball map, colour-coded |
 | `hardware/annotated/A6_row_a_escape.png` | 8× zoom of the row-A escape region with the projected A3–A6 columns |
+| `hardware/annotated/A7_multimeter_procedure.png` | probe map, ground reference and decision tree for the 20-minute test |
 | `hardware/analysis/fx3_ballout.md` / `.json` | full ball map with citations, machine-readable |
 | `hardware/analysis/fx3_ss_layout_requirements.md` | BOM, impedance, BGA escape, SI of a tap |
 | `hardware/analysis/product_teardown_corroboration.md` | public evidence, connector, vendor software |
