@@ -4,12 +4,13 @@ All coordinates are source-photo pixels.  Scale: 36 px ~= 1 mm (FX3 10 mm body
 measured at 370 px, Pango PGL25G 22x22 ball field used as cross-check).
 """
 import sys, math, os
-sys.path.insert(0, '<repo>/hardware')
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 from annotate import *
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
-ROOT='<repo>'; OUT=f'{ROOT}/hardware/annotated'
+ROOT=os.path.dirname(HERE); OUT=f'{ROOT}/hardware/annotated'
 os.makedirs(OUT,exist_ok=True)
 
 def load(name):
@@ -136,7 +137,7 @@ def fig_fx3():
     arrow(d,(X1,Y1),(X0,Y0),(255,255,255,220),4,16)
     d.text(T((1206,1030)),"silk arrow → pin 1 at right",font=fS,fill=(255,255,255))
     px=1935
-    d.rectangle([px-30,160,W-20,1560],fill=(16,16,24,255),outline=(64,64,84,255),width=2)
+    d.rectangle([px-30,160,W-20,1180],fill=(16,16,24,255),outline=(64,64,84,255),width=2)
     d.text((px,180),"Documented ball field (reconstructed)",font=fN,fill=C_WHITE)
     d.text((px,210),"Infineon 001-52136 Rev.*Z, Fig. 6 + Table 7",font=fS,fill=(150,150,165))
     y=252
