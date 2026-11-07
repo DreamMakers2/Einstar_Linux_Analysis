@@ -22,6 +22,7 @@ calibration records or user data (see [Scope and exclusions](#scope-and-exclusio
 | Official versions | newest EXStar found for this model **1.2.2.0**; newest firmware **FX3 V2.10 / FPGA V3.7**; no official artifact contains V2.14 (verified negative within the sources searched) | **Verified** (hash-equal across 2023–2024 installers) | [docs/firmware/official_versions.md](docs/firmware/official_versions.md) |
 | Firmware evolution | V2.10 adds in-firmware IAP with per-package checksum + read-back verify, full USB request handling, pipe/DMA recovery, A/B slots | **Verified** (string diff + both sides decompiled) | [docs/firmware/firmware_evolution.md](docs/firmware/firmware_evolution.md) |
 | USB transport | 5 endpoints `01/81` INT, `02/82` BULK, `83` stream; `bInterval=0` descriptor bug **repaired to 7 by Linux USB core** — no patch or udev rule needed | **Verified** (descriptors + kernel source + field use) | [docs/protocol/einstar_usb_protocol.md](docs/protocol/einstar_usb_protocol.md) §3.2 |
+| Measured cadence | With the working libeinstar driver on the physical scanner: HS ceiling **45.2 MB/s**, three-frame group floor **86.2 ms**; (1,1) at 90–100 ms sustainable with **zero loss**, (3,1) = 3 × period with **7 frames/trigger**; header[16..23] is a trigger-group counter, not a timestamp | **Measured** | [docs/benchmarks/measured_cadence.md](docs/benchmarks/measured_cadence.md) |
 | USB 3.0 SuperSpeed | Firmware **implements and enables** SS (SS device descriptor, BOS, 103-byte SS config with 1024-byte packets and EP3 maxburst 15, `CyU3PConnectState(1,1)`, SS PHY programming, `USB3_LNKFAIL` handler), but the connected scanner negotiates **HS 480 Mbps**; the host port is SS-capable, so the block is the device-side physical path | **Verified** (firmware + live link) | [docs/protocol/usb3_capability.md](docs/protocol/usb3_capability.md) |
 | Command protocol | `[id][?][cmd u16 BE][arg u32 BE][payload]`; reply status at 4, `u32 BE` value length at 5..8 | **Verified** (host + device decoded independently) | same |
 | Image stream | `[u32 BE len][32-byte header][payload]`; 32 × 40,960 B per 1280×1024 frame; **last**-packet flag at byte 8; **one-hot camera at bits 3..5** (sub-index 0..2); frame id valid only on the last packet; timestamp latched from the first | **Verified** (vendor code + hardware-proven parser + golden vectors) | same §3.1 |
@@ -60,11 +61,21 @@ reports quoted a single generic "300 MB/s" model — that is neither USB 2.0 nor
 
 The important arithmetic: a frame is 1,311,872 B on the wire (payload + 32×36 B framing), so
 three full frames per 68 ms need **57.9 MB/s** — more than practical USB 2.0 HS (~40 MB/s).
-The scanner was connected on 2026-11-07 and negotiates **High Speed 480 Mbps** (`bcdUSB 2.00`,
-no BOS), so the USB 2.0 branch is the operative one: at 68 ms the device must be dropping or
-throttling frames. The firmware does enable SuperSpeed, but the physical path does not train it
-([details](docs/protocol/usb3_capability.md)); HS is ~1.45× short of the cadence, matching the
-115 frame timeouts in the vendor log.
+The scanner was connected on 2026-11-07 and negotiates **High Speed 480 Mbps**; the firmware does
+enable SuperSpeed but the physical path does not train it
+([details](docs/protocol/usb3_capability.md)). A direct measurement through libeinstar on the real
+device ([measured_cadence.md](docs/benchmarks/measured_cadence.md)) replaces the model:
+
+| requested | measured | outcome |
+|---|---|---|
+| (1,1) 90–100 ms | 39.2–43.6 MB/s, exact period, 0 lost | sustainable (86–96 % of the ceiling) |
+| (1,1) 68 / 30 / 10 ms | clamped to **86.2 ms**, 45.1–45.2 MB/s | link-limited |
+| (3,1) 68 ms | 7 frames/trigger, **222.5 ms** per trigger | period applies per slot |
+| (3,1) 90 ms | 7 frames/trigger, **270.0 ms** per trigger | 3 × period |
+
+The link's measured ceiling is **45.2 MB/s** (34.5 frames/s); EXStar's 68 ms slot cadence with two
+IR frames per slot plus a colour frame every third slot averages ~45 MB/s — **99 % of the
+measured ceiling**, which is why the vendor log contains 115 frame-grab timeouts.
 
 Async issuance raises *saturated* throughput 3.2–3.7× over one outstanding transfer, but at the
 vendor cadence every queue depth delivers the same frame rate and only the latency tail changes.

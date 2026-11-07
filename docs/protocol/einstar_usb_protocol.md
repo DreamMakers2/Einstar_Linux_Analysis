@@ -104,8 +104,8 @@ Header fields observed:
 |---|---|---|---|
 | 2 | 6 | one-hot camera id in bits 3..5 (`1`, `2`, `4`) and a sub-index in bits 0..2 | CV (W + L agree) |
 | 8 | 0x0C | `1` = **last** packet of a frame (frame is delivered on this packet) | CV — vendor `FUN_18000c8f0` and libeinstar agree |
-| 12..15 | 0x10..0x13 | u32 BE frame id (valid on the last packet) | CV (W + L) |
-| 16..23 | 0x14..0x1B | u64 BE device timestamp, latched from the first packet of the frame | CV (W + L) |
+| 12..15 | 0x10..0x13 | u32 BE **slot counter** (valid on the last packet): +1 per mono exposure slot; both IR cameras share the slot id, the colour frame carries the last slot's id | **Measured** (2026-11-07) |
+| 16..23 | 0x14..0x1B | u64 BE **trigger-group counter**, latched from the first packet of the group: +1 per trigger group, identical for every frame in it. **Not a clock** | **Measured** (2026-11-07) |
 | others | — | not yet decoded | UNK |
 
 Framing rules (CV): a frame is 32 packets × 40,960 payload bytes (`len = 0xA020`,

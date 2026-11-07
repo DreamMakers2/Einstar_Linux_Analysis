@@ -17,6 +17,7 @@
 | [calibration/ccf_format.md](calibration/ccf_format.md) | CCF layout, the IR key proof, geometry, device-blob map |
 | [calibration/model.md](calibration/model.md) | three-camera model, proved vs bounded key, rectification/triangulation validation, hardware checklist |
 | [benchmarks/offline_benchmarks.md](benchmarks/offline_benchmarks.md) | separated USB 2.0 / USB 3.0 / trigger / host scenarios and the 58-vs-40 MB/s cadence finding |
+| [benchmarks/measured_cadence.md](benchmarks/measured_cadence.md) | measured cadence on the real scanner through libeinstar: 45.6 MB/s ceiling, 86.2 ms group floor, loss accounting |
 | [readiness.md](readiness.md) | implemented / offline-validated / hardware-validated matrix and replacement gates |
 | [windows/architecture.md](windows/architecture.md) | runtime architecture and IPC chain |
 | [windows/module_map.md](windows/module_map.md) | 741-module inventory, dependency graph, API surface |

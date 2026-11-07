@@ -1,0 +1,142 @@
+[
+ {
+  "name": "ceil",
+  "requested_period_us": 10000,
+  "mono": 1,
+  "rgb": 1,
+  "frames": 348,
+  "wall_s": 10.09,
+  "fps": 34.49,
+  "mbytes_s": 45.21,
+  "groups": 116,
+  "frames_per_group": [
+   3
+  ],
+  "group_period_ms": 86.2,
+  "per_camera": {
+   "0": 116,
+   "1": 116,
+   "2": 116
+  }
+ },
+ {
+  "name": "p11_100",
+  "requested_period_us": 100000,
+  "mono": 1,
+  "rgb": 1,
+  "frames": 600,
+  "wall_s": 20.055,
+  "fps": 29.92,
+  "mbytes_s": 39.21,
+  "groups": 200,
+  "frames_per_group": [
+   3
+  ],
+  "group_period_ms": 100.0,
+  "per_camera": {
+   "0": 200,
+   "1": 200,
+   "2": 200
+  }
+ },
+ {
+  "name": "p11_90",
+  "requested_period_us": 90000,
+  "mono": 1,
+  "rgb": 1,
+  "frames": 999,
+  "wall_s": 30.047,
+  "fps": 33.25,
+  "mbytes_s": 43.58,
+  "groups": 333,
+  "frames_per_group": [
+   3
+  ],
+  "group_period_ms": 90.0,
+  "per_camera": {
+   "0": 333,
+   "1": 333,
+   "2": 333
+  }
+ },
+ {
+  "name": "p68000",
+  "requested_period_us": 68000,
+  "mono": 1,
+  "rgb": 1,
+  "frames": 279,
+  "wall_s": 8.108,
+  "fps": 34.41,
+  "mbytes_s": 45.1,
+  "groups": 93,
+  "frames_per_group": [
+   3
+  ],
+  "group_period_ms": 86.2,
+  "per_camera": {
+   "0": 93,
+   "1": 93,
+   "2": 93
+  }
+ },
+ {
+  "name": "p30000",
+  "requested_period_us": 30000,
+  "mono": 1,
+  "rgb": 1,
+  "frames": 279,
+  "wall_s": 8.115,
+  "fps": 34.38,
+  "mbytes_s": 45.07,
+  "groups": 93,
+  "frames_per_group": [
+   3
+  ],
+  "group_period_ms": 86.4,
+  "per_camera": {
+   "0": 93,
+   "1": 93,
+   "2": 93
+  }
+ },
+ {
+  "name": "vendor68",
+  "requested_period_us": 68000,
+  "mono": 3,
+  "rgb": 1,
+  "frames": 469,
+  "wall_s": 15.523,
+  "fps": 30.21,
+  "mbytes_s": 39.6,
+  "groups": 67,
+  "frames_per_group": [
+   7
+  ],
+  "group_period_ms": 222.5,
+  "per_camera": {
+   "0": 201,
+   "1": 201,
+   "2": 67
+  }
+ },
+ {
+  "name": "p31_90",
+  "requested_period_us": 90000,
+  "mono": 3,
+  "rgb": 1,
+  "frames": 259,
+  "wall_s": 10.285,
+  "fps": 25.18,
+  "mbytes_s": 33.01,
+  "groups": 37,
+  "frames_per_group": [
+   7
+  ],
+  "group_period_ms": 270.0,
+  "per_camera": {
+   "0": 111,
+   "1": 111,
+   "2": 37
+  }
+ }
+]

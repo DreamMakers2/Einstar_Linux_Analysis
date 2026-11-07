@@ -56,7 +56,7 @@ Each gate is a concrete check with a pass condition. All must pass on the physic
 | G2 | Identity | `Serial` (sys 0x04) and `FirmwareVersion` (0x05) match the vendor string format; sensor count = 3; resolution 1280×1024 per camera |
 | G3 | Command channel | set/get exposure and gain round-trip within 1 LSB; trigger period read-back equals 68 000 µs after set; page 0 read equals the factory calibration blob byte-for-byte |
 | G4 | Framing | a 60 s capture yields zero parse errors, three camera streams, monotonic per-camera frame ids, no size mismatches |
-| G5 | Cadence | measured frames per trigger group and per-camera rate. The link question is now partly answered: the device negotiates HS 480 Mbps, so the 68 ms/3-frame cadence exceeds the link (~1.45×) and the device must be dropping or throttling frames |
+| G5 | Cadence | **done offline (2026-11-07)**: measured 45.2 MB/s ceiling, 86.2 ms three-frame group floor, (1,1)@90–100 ms sustainable with zero loss, (3,1) = 3 × period with 7 frames/trigger. Remaining: multi-hour soak and the vendor's exact production mode |
 | G6 | Recovery | induced `clear_halt`/cable event: stream resumes < 100 ms, no corrupted or short frames delivered, loss events counted |
 | G7 | Recording | record 60 s, replay offline, byte-exact digest, then decode both paths and compare frames |
 | G8 | Calibration | rectified IR pair shows vertical disparity residual < 0.5 px (median) on real captures; depth of a flat target within the vendor's own spread |

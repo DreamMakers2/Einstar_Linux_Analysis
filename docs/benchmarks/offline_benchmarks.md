@@ -30,8 +30,10 @@ cmake -S driver -B build && cmake --build build -j
 
 Reading:
 
-* **usb2-hs saturates at 40.0 MB/s** with depth 8 — the link is the limit, and per-camera rate
-  falls to 10.2 fps. Deeper queues cannot beat a bandwidth wall.
+* **usb2-hs saturates at 40.0 MB/s** in the model. The real scanner was measured at
+  **45.2 MB/s** with an 86.2 ms three-frame group floor (see
+  [measured_cadence.md](measured_cadence.md)), so treat 40 MB/s as a conservative floor and
+  45.2 MB/s as the measured ceiling.
 * **usb3-ss is hypothetical.** The device exposes USB 3.0 descriptor sets, but the previously
   observed connection was High Speed. This row exists to bound the upside, not to claim it.
 * **trigger-68ms** is cadence-limited: 44.4 frames/s aggregate = 14.8 fps per camera. p99 rises

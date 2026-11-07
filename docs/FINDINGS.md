@@ -95,6 +95,12 @@ independent sources, **D** = inference, **E** = open question.
 | F56 | At 68 ms and three full frames the HS practical ceiling (~40 MB/s) is **1.45× short** of the required 57.9 MB/s; the vendor log's 115 `errorCode 1034` timeouts are consistent with that deficit | A (arithmetic + log) | `docs/protocol/usb3_capability.md` §6 |
 | F57 | The exact FX3 variant (CYUSB3011/3012/3013/3014) is **not recoverable from the firmware image**; a teardown/package marking is required | A (negative) | this report §3 |
 
+| F58 | Measured HS acquisition ceiling with libeinstar: **45.1–45.2 MB/s (34.4–34.5 frames/s, frame-to-frame; 45.7 wall-clock including start-up)**. Requesting 68, 30 or 10 ms all yield the same 86.2 ms three-frame group period: the device clamps the cadence rather than dropping frames | A (measured) | `docs/benchmarks/measured_cadence.md` |
+| F59 | `(1,1)` at 90–100 ms is sustainable: 39.2–43.6 MB/s (86–96 % of the ceiling), 3 frames/group, exactly the requested period, **zero loss over 30 s** | A (measured) | same |
+| F60 | `(3,1)` produces **7 wire frames per trigger** (3 mono slots × 2 IR + 1 colour), so the group period is **3 × the requested period** (68 → 222.5 ms, 90 → 270 ms). The period applies per exposure slot | A (measured) | same |
+| F61 | The vendor session's capture thread logs one **slot** per line (2–3 images at 68/90/100 ms). At 68 ms with two IR frames plus a colour frame every third slot the average is **~45 MB/s = 99 % of the measured ceiling**; the 115 `errorCode 1034` timeouts are consistent with operating at the wall | A (log) / B (causal link) | `analysis/cadence/vendor_log_slots.json` |
+| F62 | Header[16..23] is a **trigger-group counter**, not a timestamp; header[12..15] is a **slot counter** shared by the IR pair. Loss detection must use the slot stride | A (measured) | same; protocol §3.1 |
+
 ## Corrections issued
 
 1. **FX3 V2.14 does not exist** (F14).

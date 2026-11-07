@@ -1,0 +1,54 @@
+{
+ "source": "vendor session 2026-02-09 (EXStar on Windows)",
+ "note": "capture thread logs one slot per line",
+ "epochs": {
+  "mode_1_1_period_100000": {
+   "trigger_mode": {
+    "mono": 1,
+    "rgb": 1
+   },
+   "period_us": 100000,
+   "slots": 2225,
+   "images_per_slot": {
+    "3": 2220,
+    "2": 5
+   },
+   "median_interval_ms": 100.0,
+   "mean_interval_ms": 105.5,
+   "duration_s": 8316.3,
+   "grab_timeouts": 0
+  },
+  "mode_3_1_period_68000": {
+   "trigger_mode": {
+    "mono": 3,
+    "rgb": 1
+   },
+   "period_us": 68000,
+   "slots": 49407,
+   "images_per_slot": {
+    "3": 16557,
+    "2": 32850
+   },
+   "median_interval_ms": 68.0,
+   "mean_interval_ms": 74.5,
+   "duration_s": 8055.2,
+   "grab_timeouts": 0
+  },
+  "mode_3_1_period_90000": {
+   "trigger_mode": {
+    "mono": 3,
+    "rgb": 1
+   },
+   "period_us": 90000,
+   "slots": 102752,
+   "images_per_slot": {
+    "2": 68411,
+    "3": 34341
+   },
+   "median_interval_ms": 90.0,
+   "mean_interval_ms": 90.2,
+   "duration_s": 11875.1,
+   "grab_timeouts": 115
+  }
+ }
+}
