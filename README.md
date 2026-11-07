@@ -24,6 +24,7 @@ calibration records or user data (see [Scope and exclusions](#scope-and-exclusio
 | USB transport | 5 endpoints `01/81` INT, `02/82` BULK, `83` stream; `bInterval=0` descriptor bug **repaired to 7 by Linux USB core** — no patch or udev rule needed | **Verified** (descriptors + kernel source + field use) | [docs/protocol/einstar_usb_protocol.md](docs/protocol/einstar_usb_protocol.md) §3.2 |
 | Measured cadence | With the working libeinstar driver on the physical scanner: HS ceiling **45.2 MB/s**, three-frame group floor **86.2 ms**; (1,1) at 90–100 ms sustainable with **zero loss**, (3,1) = 3 × period with **7 frames/trigger**; header[16..23] is a trigger-group counter, not a timestamp | **Measured** | [docs/benchmarks/measured_cadence.md](docs/benchmarks/measured_cadence.md) |
 | USB 3.0 SuperSpeed | Firmware **implements and enables** SS (SS device descriptor, BOS, 103-byte SS config with 1024-byte packets and EP3 maxburst 15, `CyU3PConnectState(1,1)`, SS PHY programming, `USB3_LNKFAIL` handler), but the connected scanner negotiates **HS 480 Mbps**; the host port is SS-capable, so the block is the device-side physical path | **Verified** (firmware + live link) | [docs/protocol/usb3_capability.md](docs/protocol/usb3_capability.md) |
+| **USB 3.0 hardware feasibility** | The mainboard carries a **CYUSB3014-BZXI** (121-ball, 0.8 mm BGA) whose SuperSpeed balls **A3–A6** have no AC-coupling pair, no SS ESD array, no test pad and no four-conductor route to any connector; the 7-pin external connector has **1 spare contact against 4 required**. A hand-soldered tap cannot meet 90 Ω ±7 %, < 76 mm and zero-via rules — the only properly engineered options are a new daughterboard (if SS is later *proved* on J4) or a board re-spin | **High** (package markings + vendor ball map + measured geometry + SI budget) | [docs/hardware/usb3_mainboard_feasibility.md](docs/hardware/usb3_mainboard_feasibility.md) — annotated figures in [hardware/annotated](hardware/annotated) |
 | Command protocol | `[id][?][cmd u16 BE][arg u32 BE][payload]`; reply status at 4, `u32 BE` value length at 5..8 | **Verified** (host + device decoded independently) | same |
 | Image stream | `[u32 BE len][32-byte header][payload]`; 32 × 40,960 B per 1280×1024 frame; **last**-packet flag at byte 8; **one-hot camera at bits 3..5** (sub-index 0..2); frame id valid only on the last packet; timestamp latched from the first | **Verified** (vendor code + hardware-proven parser + golden vectors) | same §3.1 |
 | Firmware update | system op `0x06`; `len = arg − 2`; device erases/programs/read-back-verifies 4 KiB pages, writes app flag at flash `0x3F000`, reboots | **Verified** (device code) | same §5 |
@@ -88,7 +89,7 @@ AddressSanitizer + UndefinedBehaviorSanitizer and ThreadSanitizer.
 ## Repository layout
 
 ```
-docs/                     technical reports (firmware, FPGA, protocol, calibration, Windows, reconstruction)
+docs/                     technical reports (firmware, FPGA, protocol, calibration, Windows, reconstruction, hardware)
   FINDINGS.md             numbered findings with confidence + evidence
   roadmap.md              phased plan with measurable exit gates
   blockers.md             unresolved problems and what would resolve them
@@ -99,6 +100,7 @@ tools/protocol/           einstar_proto.py (command/reply/stream/update model)
 driver/                   C++23 asynchronous acquisition backend + simulator + tools + tests
 tests/                    fixture-free synthetic suite + evidence-backed suites (skip without fixtures)
 analysis/                 derived metadata (PE classifications, FX3 symbol map, summaries)
+hardware/                 USB 3.0 feasibility: board photos, annotated figures, 121-ball map, analysis
 scripts/verify_all.sh     one-command verification
 ```
 

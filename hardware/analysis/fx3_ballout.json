@@ -1,0 +1,1511 @@
+{
+  "generated": "2026-11-07",
+  "part": "CYUSB3014-BZX (EZ-USB FX3), 121-ball FBGA 10x10 mm 0.8 mm pitch",
+  "package": {
+    "balls": 121,
+    "matrix": "11 x 11, fully populated (no depopulated positions)",
+    "rows": "A,B,C,D,E,F,G,H,J,K,L (letter I omitted per JEDEC)",
+    "columns": "1..11",
+    "body_mm": [
+      10.0,
+      10.0
+    ],
+    "body_height_max_mm": 1.2,
+    "array_mm": [
+      8.0,
+      8.0
+    ],
+    "pitch_mm": 0.8,
+    "ball_diameter_mm": {
+      "min": 0.25,
+      "nom": 0.3,
+      "max": 0.35
+    },
+    "ball_a1_height_mm_min": 0.15,
+    "sd_se_mm": 0.0,
+    "a1_corner": "chamfer / laser or ink mark / metallization / indentation at the A1 corner (package drawing note 7)",
+    "view_convention": "Figure 6/7 are TOP VIEW: A1 top-left, columns 1->11 left-to-right, rows A->L top-to-bottom",
+    "ball_center_offset_from_edge_mm": 1.0,
+    "package_code": "BK0AA / FBI121 / T4A121",
+    "package_drawing": "001-54471 *F"
+  },
+  "documents": [
+    {
+      "id": "001-52136 Rev. *Z",
+      "date": "2022-09-29",
+      "kind": "datasheet (EN, current)",
+      "url": "https://www.infineon.com/assets/row/public/documents/30/49/infineon-cyusb301x-cyusb201x-ez-usb-fx3-superspeed-usb-controller-datasheet-en.pdf"
+    },
+    {
+      "id": "001-79232 Rev. *C",
+      "date": "2022-11-30",
+      "kind": "datasheet (JA translation of 001-52136 *Z)",
+      "url": "https://www.infineon.com/dgdl/Infineon-CYUSB301X_CYUSB201X_EZ-USB_FX3_SuperSpeed_USB_Controller-DataSheet-v04_00-JA.pdf?fileId=8ac78c8c7d0d8da4017d0eca15ef4296"
+    },
+    {
+      "id": "001-54471 *F",
+      "date": "2017-06-28",
+      "kind": "package outline drawing 121-ball FBGA (embedded as Figure 30 in datasheet)",
+      "url": "https://www.infineon.com/assets/row/public/documents/30/49/infineon-cyusb301x-cyusb201x-ez-usb-fx3-superspeed-usb-controller-datasheet-en.pdf#page=66"
+    },
+    {
+      "id": "001-70707 Rev. *Q",
+      "date": "2021-10-26",
+      "kind": "application note AN70707 hardware design guidelines & schematic checklist",
+      "url": "https://www.infineon.com/assets/row/public/documents/30/42/infineon-an70707---ez-usb-fx3-fx3s-sx3-hardware-design-guidelines-and-schematic-checklist-applicationnotes-en.pdf"
+    },
+    {
+      "id": "001-76074 Rev. *F",
+      "date": "2019-05-09",
+      "kind": "technical reference manual",
+      "url": "https://www.infineon.com/assets/row/public/documents/30/57/infineon-ez-usb-fx3-technical-reference-manual-additionaltechnicalinformation-en.pdf"
+    }
+  ],
+  "ordering_codes": {
+    "note": "BZX is the PACKAGE code (BGA), not a complete orderable part number. Orderable codes add temperature grade: -BZXC (0..+70 C) or -BZXI (-40..+85 C); append T for tape & reel (-BZXCT / -BZXIT).",
+    "orderable": [
+      "CYUSB3014-BZXC",
+      "CYUSB3014-BZXI",
+      "CYUSB3014-BZXCT",
+      "CYUSB3014-BZXIT"
+    ],
+    "definition": "CY | USB | X(3=USB3.0) | 014(marketing) | - | BZX(package BGA) | C/I(temp) | T(tape&reel)"
+  },
+  "balls": [
+    {
+      "ball": "A1",
+      "row": "A",
+      "col": 1,
+      "signal": "U3VSSQ",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground return for the USB3 SS block; corner ball A1."
+    },
+    {
+      "ball": "A2",
+      "row": "A",
+      "col": 2,
+      "signal": "U3RXVDDQ",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V. Must be powered (ferrite bead) even if SS unused (AN70707 App. C)."
+    },
+    {
+      "ball": "A3",
+      "row": "A",
+      "col": 3,
+      "signal": "SSRXM",
+      "alias": "SSRX- / SS_RX_M (USB3 SS receive, inverting)",
+      "type": "I",
+      "power_domain": "U3RXVDDQ",
+      "note": "SuperSpeed RX differential pair, row A. Datasheet name: SSRXM."
+    },
+    {
+      "ball": "A4",
+      "row": "A",
+      "col": 4,
+      "signal": "SSRXP",
+      "alias": "SSRX+ / SS_RX_P (USB3 SS receive, non-inverting)",
+      "type": "I",
+      "power_domain": "U3RXVDDQ",
+      "note": "SuperSpeed RX differential pair, row A. Datasheet name: SSRXP."
+    },
+    {
+      "ball": "A5",
+      "row": "A",
+      "col": 5,
+      "signal": "SSTXP",
+      "alias": "SSTX+ / SS_TX_P (USB3 SS transmit, non-inverting)",
+      "type": "O",
+      "power_domain": "U3TXVDDQ",
+      "note": "SuperSpeed TX differential pair, row A. 0.1 uF AC-coupling cap in series (AN70707)."
+    },
+    {
+      "ball": "A6",
+      "row": "A",
+      "col": 6,
+      "signal": "SSTXM",
+      "alias": "SSTX- / SS_TX_M (USB3 SS transmit, inverting)",
+      "type": "O",
+      "power_domain": "U3TXVDDQ",
+      "note": "SuperSpeed TX differential pair, row A. 0.1 uF AC-coupling cap in series (AN70707)."
+    },
+    {
+      "ball": "A7",
+      "row": "A",
+      "col": 7,
+      "signal": "AVDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V analog core supply. Ferrite-bead isolated (AN70707)."
+    },
+    {
+      "ball": "A8",
+      "row": "A",
+      "col": 8,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "A9",
+      "row": "A",
+      "col": 9,
+      "signal": "DP",
+      "alias": "DPLUS / USB_D+ / DP",
+      "type": "I/O",
+      "power_domain": "VBUS/VBATT",
+      "note": "USB 2.0 HS/FS/OTG data +."
+    },
+    {
+      "ball": "A10",
+      "row": "A",
+      "col": 10,
+      "signal": "DM",
+      "alias": "DMINUS / USB_D- / DM",
+      "type": "I/O",
+      "power_domain": "VBUS/VBATT",
+      "note": "USB 2.0 HS/FS/OTG data -."
+    },
+    {
+      "ball": "A11",
+      "row": "A",
+      "col": 11,
+      "signal": "NC",
+      "alias": "No connect",
+      "type": "NC",
+      "power_domain": "",
+      "note": "Do not connect (leave open)."
+    },
+    {
+      "ball": "B1",
+      "row": "B",
+      "col": 1,
+      "signal": "VIO4",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "GPIO[53..57] / UART / SPI I/O supply."
+    },
+    {
+      "ball": "B2",
+      "row": "B",
+      "col": 2,
+      "signal": "FSLC[0]",
+      "alias": "FSLC[0] / clock-frequency select 0",
+      "type": "I",
+      "power_domain": "CVDDQ",
+      "note": "Strapped at reset; selects 19.2 MHz crystal vs ext. clock frequency."
+    },
+    {
+      "ball": "B3",
+      "row": "B",
+      "col": 3,
+      "signal": "R_USB3",
+      "alias": "USB3 reference resistor",
+      "type": "I/O",
+      "power_domain": "U3TXVDDQ",
+      "note": "200 ohm +/-1% to GND (AN70707 Table/Fig 14). May be left open in USB2-only designs (AN70707 App. C)."
+    },
+    {
+      "ball": "B4",
+      "row": "B",
+      "col": 4,
+      "signal": "FSLC[1]",
+      "alias": "FSLC[1] / clock-frequency select 1",
+      "type": "I",
+      "power_domain": "CVDDQ",
+      "note": "Strapped at reset."
+    },
+    {
+      "ball": "B5",
+      "row": "B",
+      "col": 5,
+      "signal": "U3TXVDDQ",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V. Must be powered (ferrite bead) even if SS unused (AN70707 App. C)."
+    },
+    {
+      "ball": "B6",
+      "row": "B",
+      "col": 6,
+      "signal": "CVDDQ",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.7-3.6 V; supply for XTAL/CLKIN/RESET#/FSLC pins."
+    },
+    {
+      "ball": "B7",
+      "row": "B",
+      "col": 7,
+      "signal": "AVSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Analog ground return."
+    },
+    {
+      "ball": "B8",
+      "row": "B",
+      "col": 8,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "B9",
+      "row": "B",
+      "col": 9,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "B10",
+      "row": "B",
+      "col": 10,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "B11",
+      "row": "B",
+      "col": 11,
+      "signal": "TRST#",
+      "alias": "JTAG TRST#",
+      "type": "I",
+      "power_domain": "VIO5",
+      "note": "JTAG, VIO5 domain, active low."
+    },
+    {
+      "ball": "C1",
+      "row": "C",
+      "col": 1,
+      "signal": "GPIO[54]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO4",
+      "note": "UART_CTS / SPI_SSN"
+    },
+    {
+      "ball": "C2",
+      "row": "C",
+      "col": 2,
+      "signal": "GPIO[55]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO4",
+      "note": "UART_TX / SPI_MISO"
+    },
+    {
+      "ball": "C3",
+      "row": "C",
+      "col": 3,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "C4",
+      "row": "C",
+      "col": 4,
+      "signal": "GPIO[57]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO4",
+      "note": "I2S_MCLK"
+    },
+    {
+      "ball": "C5",
+      "row": "C",
+      "col": 5,
+      "signal": "RESET#",
+      "alias": "RESET# / XRES / active-low reset",
+      "type": "I",
+      "power_domain": "CVDDQ",
+      "note": "Hard reset, active low."
+    },
+    {
+      "ball": "C6",
+      "row": "C",
+      "col": 6,
+      "signal": "XTALIN",
+      "alias": "XTALIN / crystal in",
+      "type": "I/O",
+      "power_domain": "AVDD",
+      "note": "19.2 MHz crystal (C6-C7). Can be left unconnected if external clock used."
+    },
+    {
+      "ball": "C7",
+      "row": "C",
+      "col": 7,
+      "signal": "XTALOUT",
+      "alias": "XTALOUT / crystal out",
+      "type": "I/O",
+      "power_domain": "AVDD",
+      "note": "19.2 MHz crystal (C6-C7). Can be left unconnected if external clock used."
+    },
+    {
+      "ball": "C8",
+      "row": "C",
+      "col": 8,
+      "signal": "R_USB2",
+      "alias": "USB2 reference resistor",
+      "type": "I/O",
+      "power_domain": "VBUS/VBATT",
+      "note": "6.04 kohm +/-1% to GND. May be left open in USB3-only designs (AN70707 App. D)."
+    },
+    {
+      "ball": "C9",
+      "row": "C",
+      "col": 9,
+      "signal": "OTG_ID",
+      "alias": "OTG_ID",
+      "type": "I",
+      "power_domain": "VBUS/VBATT",
+      "note": "USB OTG ID. May be left unconnected for device-only designs."
+    },
+    {
+      "ball": "C10",
+      "row": "C",
+      "col": 10,
+      "signal": "TDO",
+      "alias": "JTAG TDO",
+      "type": "O",
+      "power_domain": "VIO5",
+      "note": "JTAG, VIO5 domain."
+    },
+    {
+      "ball": "C11",
+      "row": "C",
+      "col": 11,
+      "signal": "VIO5",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "I2C + JTAG I/O supply (can run at 1.2 V)."
+    },
+    {
+      "ball": "D1",
+      "row": "D",
+      "col": 1,
+      "signal": "GPIO[50]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "I2S_CLK"
+    },
+    {
+      "ball": "D2",
+      "row": "D",
+      "col": 2,
+      "signal": "GPIO[51]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "I2S_SD"
+    },
+    {
+      "ball": "D3",
+      "row": "D",
+      "col": 3,
+      "signal": "GPIO[52]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "I2S_WS"
+    },
+    {
+      "ball": "D4",
+      "row": "D",
+      "col": 4,
+      "signal": "GPIO[53]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO4",
+      "note": "UART_RTS / SPI_SCK"
+    },
+    {
+      "ball": "D5",
+      "row": "D",
+      "col": 5,
+      "signal": "GPIO[56]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO4",
+      "note": "UART_RX / SPI_MOSI"
+    },
+    {
+      "ball": "D6",
+      "row": "D",
+      "col": 6,
+      "signal": "CLKIN_32",
+      "alias": "CLKIN_32 / 32 kHz clock in",
+      "type": "I",
+      "power_domain": "CVDDQ",
+      "note": "32.768 kHz RTC/standby clock input."
+    },
+    {
+      "ball": "D7",
+      "row": "D",
+      "col": 7,
+      "signal": "CLKIN",
+      "alias": "CLKIN / external clock in",
+      "type": "I",
+      "power_domain": "CVDDQ",
+      "note": "19.2/26/38.4/52 MHz external clock. Leave open if crystal used."
+    },
+    {
+      "ball": "D8",
+      "row": "D",
+      "col": 8,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "D9",
+      "row": "D",
+      "col": 9,
+      "signal": "I2C_GPIO[58]",
+      "alias": "I2C_SCL (GPIO[58])",
+      "type": "I/O",
+      "power_domain": "VIO5",
+      "note": "I2C master SCL; also GPIO. Boot-from-I2C uses this port."
+    },
+    {
+      "ball": "D10",
+      "row": "D",
+      "col": 10,
+      "signal": "I2C_GPIO[59]",
+      "alias": "I2C_SDA (GPIO[59])",
+      "type": "I/O",
+      "power_domain": "VIO5",
+      "note": "I2C master SDA; also GPIO."
+    },
+    {
+      "ball": "D11",
+      "row": "D",
+      "col": 11,
+      "signal": "NC",
+      "alias": "No connect",
+      "type": "NC",
+      "power_domain": "",
+      "note": "Do not connect (leave open)."
+    },
+    {
+      "ball": "E1",
+      "row": "E",
+      "col": 1,
+      "signal": "GPIO[47]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "DQ[29] / UART_CTS"
+    },
+    {
+      "ball": "E2",
+      "row": "E",
+      "col": 2,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "E3",
+      "row": "E",
+      "col": 3,
+      "signal": "VIO3",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "GPIO[46..52] / UART / I2S I/O supply."
+    },
+    {
+      "ball": "E4",
+      "row": "E",
+      "col": 4,
+      "signal": "GPIO[49]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "DQ[31] / UART_RX"
+    },
+    {
+      "ball": "E5",
+      "row": "E",
+      "col": 5,
+      "signal": "GPIO[48]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "DQ[30] / UART_TX"
+    },
+    {
+      "ball": "E6",
+      "row": "E",
+      "col": 6,
+      "signal": "FSLC[2]",
+      "alias": "FSLC[2] / clock-frequency select 2",
+      "type": "I",
+      "power_domain": "CVDDQ",
+      "note": "Strapped at reset."
+    },
+    {
+      "ball": "E7",
+      "row": "E",
+      "col": 7,
+      "signal": "TDI",
+      "alias": "JTAG TDI",
+      "type": "I",
+      "power_domain": "VIO5",
+      "note": "JTAG, VIO5 domain."
+    },
+    {
+      "ball": "E8",
+      "row": "E",
+      "col": 8,
+      "signal": "TMS",
+      "alias": "JTAG TMS",
+      "type": "I",
+      "power_domain": "VIO5",
+      "note": "JTAG, VIO5 domain."
+    },
+    {
+      "ball": "E9",
+      "row": "E",
+      "col": 9,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "E10",
+      "row": "E",
+      "col": 10,
+      "signal": "VBATT",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Battery/alternate USB I/O supply."
+    },
+    {
+      "ball": "E11",
+      "row": "E",
+      "col": 11,
+      "signal": "VBUS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "4.0-6.0 V. USB VBUS sense/supply."
+    },
+    {
+      "ball": "F1",
+      "row": "F",
+      "col": 1,
+      "signal": "VIO2",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "GPIO[33..45] I/O supply."
+    },
+    {
+      "ball": "F2",
+      "row": "F",
+      "col": 2,
+      "signal": "GPIO[45]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "F3",
+      "row": "F",
+      "col": 3,
+      "signal": "GPIO[44]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "F4",
+      "row": "F",
+      "col": 4,
+      "signal": "GPIO[41]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": "DQ[24] / A0 (24-bit bus)"
+    },
+    {
+      "ball": "F5",
+      "row": "F",
+      "col": 5,
+      "signal": "GPIO[46]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO3",
+      "note": "DQ[28] / UART_RTS"
+    },
+    {
+      "ball": "F6",
+      "row": "F",
+      "col": 6,
+      "signal": "TCK",
+      "alias": "JTAG TCK",
+      "type": "I",
+      "power_domain": "VIO5",
+      "note": "JTAG, VIO5 domain."
+    },
+    {
+      "ball": "F7",
+      "row": "F",
+      "col": 7,
+      "signal": "GPIO[2]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[2]"
+    },
+    {
+      "ball": "F8",
+      "row": "F",
+      "col": 8,
+      "signal": "GPIO[5]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[5]"
+    },
+    {
+      "ball": "F9",
+      "row": "F",
+      "col": 9,
+      "signal": "GPIO[1]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[1]"
+    },
+    {
+      "ball": "F10",
+      "row": "F",
+      "col": 10,
+      "signal": "GPIO[0]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[0]"
+    },
+    {
+      "ball": "F11",
+      "row": "F",
+      "col": 11,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "G1",
+      "row": "G",
+      "col": 1,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "G2",
+      "row": "G",
+      "col": 2,
+      "signal": "GPIO[42]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": "DQ[25] / A1 (24-bit bus)"
+    },
+    {
+      "ball": "G3",
+      "row": "G",
+      "col": 3,
+      "signal": "GPIO[43]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "G4",
+      "row": "G",
+      "col": 4,
+      "signal": "GPIO[30]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "PMODE[0] strap (sampled at reset)"
+    },
+    {
+      "ball": "G5",
+      "row": "G",
+      "col": 5,
+      "signal": "GPIO[25]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[8]"
+    },
+    {
+      "ball": "G6",
+      "row": "G",
+      "col": 6,
+      "signal": "GPIO[22]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[5] / FLAGB"
+    },
+    {
+      "ball": "G7",
+      "row": "G",
+      "col": 7,
+      "signal": "GPIO[21]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[4] / FLAGA"
+    },
+    {
+      "ball": "G8",
+      "row": "G",
+      "col": 8,
+      "signal": "GPIO[15]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[15]"
+    },
+    {
+      "ball": "G9",
+      "row": "G",
+      "col": 9,
+      "signal": "GPIO[4]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[4]"
+    },
+    {
+      "ball": "G10",
+      "row": "G",
+      "col": 10,
+      "signal": "GPIO[3]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[3]"
+    },
+    {
+      "ball": "G11",
+      "row": "G",
+      "col": 11,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "H1",
+      "row": "H",
+      "col": 1,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "H2",
+      "row": "H",
+      "col": 2,
+      "signal": "GPIO[39]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "H3",
+      "row": "H",
+      "col": 3,
+      "signal": "GPIO[40]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "H4",
+      "row": "H",
+      "col": 4,
+      "signal": "GPIO[31]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "PMODE[1] strap (sampled at reset)"
+    },
+    {
+      "ball": "H5",
+      "row": "H",
+      "col": 5,
+      "signal": "GPIO[29]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[12] / A0"
+    },
+    {
+      "ball": "H6",
+      "row": "H",
+      "col": 6,
+      "signal": "GPIO[26]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[9]"
+    },
+    {
+      "ball": "H7",
+      "row": "H",
+      "col": 7,
+      "signal": "GPIO[20]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[3] / SLRD#"
+    },
+    {
+      "ball": "H8",
+      "row": "H",
+      "col": 8,
+      "signal": "GPIO[24]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[7] / PKTEND#"
+    },
+    {
+      "ball": "H9",
+      "row": "H",
+      "col": 9,
+      "signal": "GPIO[7]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[7]"
+    },
+    {
+      "ball": "H10",
+      "row": "H",
+      "col": 10,
+      "signal": "GPIO[6]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[6]"
+    },
+    {
+      "ball": "H11",
+      "row": "H",
+      "col": 11,
+      "signal": "VIO1",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "GPIF II / GPIO[0..32] I/O supply. Must not be turned off while GPIF II is used (errata #1)."
+    },
+    {
+      "ball": "J1",
+      "row": "J",
+      "col": 1,
+      "signal": "GPIO[38]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "J2",
+      "row": "J",
+      "col": 2,
+      "signal": "GPIO[36]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "J3",
+      "row": "J",
+      "col": 3,
+      "signal": "GPIO[37]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "J4",
+      "row": "J",
+      "col": 4,
+      "signal": "GPIO[34]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "J5",
+      "row": "J",
+      "col": 5,
+      "signal": "GPIO[28]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[11] / A1"
+    },
+    {
+      "ball": "J6",
+      "row": "J",
+      "col": 6,
+      "signal": "GPIO[16]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "PCLK (GPIF II clock output)"
+    },
+    {
+      "ball": "J7",
+      "row": "J",
+      "col": 7,
+      "signal": "GPIO[19]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[2] / SLOE#"
+    },
+    {
+      "ball": "J8",
+      "row": "J",
+      "col": 8,
+      "signal": "GPIO[14]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[14]"
+    },
+    {
+      "ball": "J9",
+      "row": "J",
+      "col": 9,
+      "signal": "GPIO[9]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[9]/A1 (8-bit bus)"
+    },
+    {
+      "ball": "J10",
+      "row": "J",
+      "col": 10,
+      "signal": "GPIO[8]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[8]/A0 (8-bit bus)"
+    },
+    {
+      "ball": "J11",
+      "row": "J",
+      "col": 11,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "K1",
+      "row": "K",
+      "col": 1,
+      "signal": "GPIO[35]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "K2",
+      "row": "K",
+      "col": 2,
+      "signal": "GPIO[33]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO2",
+      "note": ""
+    },
+    {
+      "ball": "K3",
+      "row": "K",
+      "col": 3,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "K4",
+      "row": "K",
+      "col": 4,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "K5",
+      "row": "K",
+      "col": 5,
+      "signal": "GPIO[27]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[10]"
+    },
+    {
+      "ball": "K6",
+      "row": "K",
+      "col": 6,
+      "signal": "GPIO[23]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[6]"
+    },
+    {
+      "ball": "K7",
+      "row": "K",
+      "col": 7,
+      "signal": "GPIO[18]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[1] / SLWR#"
+    },
+    {
+      "ball": "K8",
+      "row": "K",
+      "col": 8,
+      "signal": "GPIO[17]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "CTL[0] / SLCS#"
+    },
+    {
+      "ball": "K9",
+      "row": "K",
+      "col": 9,
+      "signal": "GPIO[13]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[13]"
+    },
+    {
+      "ball": "K10",
+      "row": "K",
+      "col": 10,
+      "signal": "GPIO[12]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[12]"
+    },
+    {
+      "ball": "K11",
+      "row": "K",
+      "col": 11,
+      "signal": "GPIO[10]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[10]"
+    },
+    {
+      "ball": "L1",
+      "row": "L",
+      "col": 1,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "L2",
+      "row": "L",
+      "col": 2,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "L3",
+      "row": "L",
+      "col": 3,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "L4",
+      "row": "L",
+      "col": 4,
+      "signal": "GPIO[32]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "PMODE[2] strap (sampled at reset)"
+    },
+    {
+      "ball": "L5",
+      "row": "L",
+      "col": 5,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "L6",
+      "row": "L",
+      "col": 6,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    },
+    {
+      "ball": "L7",
+      "row": "L",
+      "col": 7,
+      "signal": "VDD",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "1.15-1.25 V core supply."
+    },
+    {
+      "ball": "L8",
+      "row": "L",
+      "col": 8,
+      "signal": "INT#",
+      "alias": "INT# / CTL[15]",
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II INT# (input) or CTL[15]."
+    },
+    {
+      "ball": "L9",
+      "row": "L",
+      "col": 9,
+      "signal": "VIO1",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "GPIF II / GPIO[0..32] I/O supply. Must not be turned off while GPIF II is used (errata #1)."
+    },
+    {
+      "ball": "L10",
+      "row": "L",
+      "col": 10,
+      "signal": "GPIO[11]",
+      "alias": null,
+      "type": "I/O",
+      "power_domain": "VIO1",
+      "note": "GPIF II DQ[11]"
+    },
+    {
+      "ball": "L11",
+      "row": "L",
+      "col": 11,
+      "signal": "VSS",
+      "alias": null,
+      "type": "PWR",
+      "power_domain": "",
+      "note": "Ground."
+    }
+  ],
+  "edges": {
+    "top_row_A": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5",
+      "A6",
+      "A7",
+      "A8",
+      "A9",
+      "A10",
+      "A11"
+    ],
+    "bottom_row_L": [
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "L5",
+      "L6",
+      "L7",
+      "L8",
+      "L9",
+      "L10",
+      "L11"
+    ],
+    "left_col_1": [
+      "A1",
+      "B1",
+      "C1",
+      "D1",
+      "E1",
+      "F1",
+      "G1",
+      "H1",
+      "J1",
+      "K1",
+      "L1"
+    ],
+    "right_col_11": [
+      "A11",
+      "B11",
+      "C11",
+      "D11",
+      "E11",
+      "F11",
+      "G11",
+      "H11",
+      "J11",
+      "K11",
+      "L11"
+    ]
+  },
+  "focus": {
+    "superspeed": {
+      "SSRXM": {
+        "ball": "A3",
+        "edge": "top (row A)",
+        "alias": "SSRX-"
+      },
+      "SSRXP": {
+        "ball": "A4",
+        "edge": "top (row A)",
+        "alias": "SSRX+"
+      },
+      "SSTXP": {
+        "ball": "A5",
+        "edge": "top (row A)",
+        "alias": "SSTX+"
+      },
+      "SSTXM": {
+        "ball": "A6",
+        "edge": "top (row A)",
+        "alias": "SSTX-"
+      }
+    },
+    "usb2": {
+      "DPLUS": "A9",
+      "DMINUS": "A10",
+      "R_USB2": "C8",
+      "OTG_ID": "C9"
+    },
+    "power": {
+      "VDD": [
+        "B10",
+        "C3",
+        "E9",
+        "F11",
+        "H1",
+        "J11",
+        "L5",
+        "L7"
+      ],
+      "AVDD": [
+        "A7"
+      ],
+      "AVSS": [
+        "B7"
+      ],
+      "VIO1": [
+        "H11",
+        "L9"
+      ],
+      "VIO2": [
+        "F1"
+      ],
+      "VIO3": [
+        "E3"
+      ],
+      "VIO4": [
+        "B1"
+      ],
+      "VIO5": [
+        "C11"
+      ],
+      "CVDDQ": [
+        "B6"
+      ],
+      "VBATT": [
+        "E10"
+      ],
+      "VBUS": [
+        "E11"
+      ],
+      "U3TXVDDQ": [
+        "B5"
+      ],
+      "U3RXVDDQ": [
+        "A2"
+      ],
+      "U3VSSQ": [
+        "A1"
+      ],
+      "VSS": [
+        "A8",
+        "B8",
+        "B9",
+        "D8",
+        "E2",
+        "G1",
+        "G11",
+        "K3",
+        "K4",
+        "L1",
+        "L2",
+        "L3",
+        "L6",
+        "L11"
+      ]
+    },
+    "clock_reset": {
+      "XTALIN": "C6",
+      "XTALOUT": "C7",
+      "CLKIN": "D7",
+      "CLKIN_32": "D6",
+      "FSLC[0]": "B2",
+      "FSLC[1]": "B4",
+      "FSLC[2]": "E6",
+      "RESET#": "C5"
+    },
+    "boot": {
+      "PMODE[0]": "G4",
+      "PMODE[1]": "H4",
+      "PMODE[2]": "L4",
+      "I2C_SCL": "D9",
+      "I2C_SDA": "D10"
+    },
+    "jtag": {
+      "TCK": "F6",
+      "TMS": "E8",
+      "TDI": "E7",
+      "TDO": "C10",
+      "TRST#": "B11"
+    },
+    "spi": {
+      "SPI_SCK": "D4",
+      "SPI_SSN": "C1",
+      "SPI_MISO": "C2",
+      "SPI_MOSI": "D5"
+    },
+    "uart": {
+      "UART_RTS": "D4",
+      "UART_CTS": "C1",
+      "UART_TX": "C2",
+      "UART_RX": "D5",
+      "alt_32bit": {
+        "UART_RTS": "F5",
+        "UART_CTS": "E1",
+        "UART_TX": "E5",
+        "UART_RX": "E4"
+      }
+    },
+    "gpif_ii": {
+      "PCLK": "J6",
+      "SLCS#": "K8",
+      "SLWR#": "K7",
+      "SLOE#": "J7",
+      "SLRD#": "H7",
+      "PKTEND#": "H8",
+      "FLAGA": "G7",
+      "FLAGB": "G6",
+      "region": "rows F-L, columns 4-11 (bottom half / bottom-right quadrant)"
+    }
+  },
+  "discrepancies": [
+    {
+      "item": "ball D11",
+      "detail": "Figure 6/7 (ball map) says NC; Table 7 pin list says 'VIO5, O, O[60] / GPIO[60]'. Unresolved; treat D11 as no-connect for layout."
+    },
+    {
+      "item": "Table 7 power block",
+      "detail": "Several duplicate rows have an empty BGA column (2nd VDD, 2nd/3rd VSS, 2nd VIO1, 2nd VIO2). Ball numbers taken from Figure 6 and cross-checked against AN70707 Table 3."
+    }
+  ],
+  "sources_secondary": [
+    {
+      "url": "https://github.com/danielkucera/cyusb3014-breakout",
+      "detail": "third-party KiCad symbol + PCB; pads confirm A1=GND, A2/A7=+1V2, A3/A4=SS_RX, A5/A6=SS_TX, A9/A10=D+/D-, B1/B6/C11/E3/F1/H11/L9=+3V3, C5=reset, C6/C7=crystal"
+    },
+    {
+      "url": "<repo>/hardware/photos/P1_top_side.webp",
+      "detail": "photo of actual unit marked CYUSB3014-BZX / I 2237; silk prints 1..11 along top and A..L down left side, A1 triangle at top-left, confirming the top-view convention"
+    }
+  ]
+}

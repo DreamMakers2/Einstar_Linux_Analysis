@@ -101,6 +101,19 @@ independent sources, **D** = inference, **E** = open question.
 | F61 | The vendor session's capture thread logs one **slot** per line (2–3 images at 68/90/100 ms). At 68 ms with two IR frames plus a colour frame every third slot the average is **~45 MB/s = 99 % of the measured ceiling**; the 115 `errorCode 1034` timeouts are consistent with operating at the wall | A (log) / B (causal link) | `analysis/cadence/vendor_log_slots.json` |
 | F62 | Header[16..23] is a **trigger-group counter**, not a timestamp; header[12..15] is a **slot counter** shared by the IR pair. Loss detection must use the slot stride | A (measured) | same; protocol §3.1 |
 
+## USB 3.0 hardware feasibility (mainboard photos)
+
+| # | Finding | Conf | Evidence |
+|---|---|---|---|
+| F63 | The Einstar mainboard carries a **CYUSB3014-BZXI** (marking `CYUSB3014-BZX` / `I 2237` = 2022 W37) in the 121-ball 10×10 mm 0.8 mm BGA, plus a **Pango PGL25G** (484-ball), a **Micron D9PTK** DDR3L frame buffer and a **Winbond W25Q64JVSIQ** 8 MB SPI boot flash | C | package markings, `hardware/annotated/A1`, `A3`; ball map `hardware/analysis/fx3_ballout.md` |
+| F64 | FX3 orientation in the supplied photographs is fixed three independent ways (A1 laser dot, two silkscreen direction arrows, upside-down marking): **A1 is the bottom-right corner, row A the bottom edge**, so the SuperSpeed balls A3–A6 sit 2.6–5.0 mm from the package's right edge | A | `hardware/annotated/A2`, `hardware/crops/P1_silk_bottom.png` |
+| F65 | The board carries **no** 0.1 µF series AC-coupling pair, **no** SuperSpeed ESD array and **no** SS test pad in the USB path; the only labelled test points are `DP`, `DN`, `CLK`, `PCLK` | B | `hardware/annotated/A2/A3`, crop inventory in `hardware/crops/` |
+| F66 | The four 0603 capacitors beside J4 are a **shunt** decoupling bank (common rail on both sides), **not** series AC coupling — the one observation that could have inverted the conclusion | B | `hardware/crops/P2_acbank_zoom.png` |
+| F67 | The 7-pin external connector's measured allocation (12 V, GND, 4 × USB 2.0, 1 NC) leaves **one** spare contact against the **four** a SuperSpeed link needs; no re-pinning of the supplied cable can bridge that | A (arithmetic) | `docs/hardware/usb3_mainboard_feasibility.md` §6 |
+| F68 | Infineon's own USB-2.0-only practice permits A3–A6 **and** B3 (R_USB3, 200 Ω) to be left open, while U3TXVDDQ/U3RXVDDQ must stay powered — so a compliant USB-2.0-only FX3 board may have **no SS PHY bias at all** | A (vendor doc) | AN70707 Rev.*Q App. C, p. 40 |
+| F69 | A hand-soldered SuperSpeed tap cannot work: the channel budget is −4…−18 dB at 2.5 GHz, the cable alone takes −7.5 dB, and a 5–10 cm lead violates the length (< 76 mm), 90 Ω ±7 %, reference-plane, no-stub and skew (0.7 ps) rules simultaneously → predicted fallback to HS | C | `hardware/analysis/fx3_ss_layout_requirements.md` §7 |
+| F70 | SHINING 3D's own software treats 480 Mb/s as degraded (`AppCommon_E7.dll`: "The current USB dirve is USB2.0" / "Notice: Please change to USB3.0"), and the driver package is branded **U3** — the platform expects USB 3.0 while this model's manual documents USB 2.0 | B | `hardware/analysis/product_teardown_corroboration.md` §6 |
+
 ## Corrections issued
 
 1. **FX3 V2.14 does not exist** (F14).

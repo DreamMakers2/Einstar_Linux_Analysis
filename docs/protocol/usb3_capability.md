@@ -4,6 +4,13 @@ Status: **investigated with the scanner connected, strictly read-only.** No firm
 no device state was changed, no experimental or vendor-specific requests were sent. Only standard
 GET_DESCRIPTOR queries and passive host inspection were used.
 
+> **Follow-up, 2026-11-07 — the device-side question is now answered.** Mainboard photographs plus the
+> official Infineon ball map settle §4/§7: the FX3 is a **CYUSB3014-BZXI** whose SuperSpeed balls
+> **A3–A6** have no AC-coupling pair, no SS ESD array, no test pads and no four-conductor route to the
+> connector, and the 7-pin connector has **one spare contact against four required**. SuperSpeed is
+> blocked by the board, and a modification cannot fix it. Full analysis:
+> [`docs/hardware/usb3_mainboard_feasibility.md`](../hardware/usb3_mainboard_feasibility.md).
+
 **Answer in one paragraph.** The FX3 firmware is a complete, actively enabled SuperSpeed
 implementation: it installs a USB 3.00 device descriptor, a BOS with the SuperSpeed capability,
 and a 103-byte SS configuration whose bulk endpoints use 1024-byte packets and 16 KB bursts, and
