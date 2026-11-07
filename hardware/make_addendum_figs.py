@@ -9,7 +9,7 @@ ROOT=os.path.dirname(HERE); OUT=f'{ROOT}/hardware/annotated'
 p1=Image.open(f'{ROOT}/hardware/photos/P1_top_side.webp').convert('RGB')
 
 # measured geometry
-A1=(1519.5,952.5); PITCH=30.0; EDGE_Y=990.0
+A1=(1504.49,954.87); PITCH=29.61; EDGE_Y=991.9   # independent calibration
 BALLS={f'A{j}':A1[0]-(j-1)*PITCH for j in range(1,12)}
 # fitted diagonal pair (from row peaks 1048..1080)
 def fit(pts):
@@ -42,7 +42,7 @@ def fig_b1():
         d.text((X+2,176),name,font=fS,fill=col)
     # package edge
     X0,Y0=T(box[0],EDGE_Y); d.line([(0,Y0),(im.width,Y0)],fill=(255,80,80),width=2)
-    d.text((6,Y0-22),"package edge y=990",font=fS,fill=(255,80,80))
+    d.text((6,Y0-22),"package edge y=991.9",font=fS,fill=(255,80,80))
     # fitted traces + extrapolation
     for (m,b),col in [(L,(0,255,255)),(R,(0,220,235))]:
         pts=[T(m*y+b,y) for y in range(1040,1105,2)]
@@ -54,14 +54,14 @@ def fig_b1():
             x=m*y+b; a=T(x,y); bb=T(x,y+2)
             d.line([a,bb],fill=(0,255,255,140),width=2)
     # landing markers
-    for (m,b),lbl in [(L,"x=%.0f"%(m*985+b)),(R,"x=%.0f"%(m*985+b))]:
-        x=m*985+b; X,Y=T(x,EDGE_Y)
+    for (m,b),lbl in [(L,"x=%.0f"%(m*EDGE_Y+b)),(R,"x=%.0f"%(m*EDGE_Y+b))]:
+        x=m*EDGE_Y+b; X,Y=T(x,EDGE_Y)
         d.ellipse([X-7,Y-7,X+7,Y+7],outline=(255,255,255),width=2)
         d.text((X-24,Y-34),lbl,font=fS,fill=(255,255,255))
     # uncertainty band
     X1,_=T(1395,955); X2,_=T(1445,955)
     d.rectangle([X1,170,X2,H-60],fill=(255,255,255,22),outline=None)
-    d.text((X1+4,H-96),"A4–A5 band",font=fS,fill=(230,230,230))
+    d.text((X1+4,H-96),"A4–A5 gap",font=fS,fill=(230,230,230))
     # title
     d.text((24,24),"B1 — The one genuine escape pair, measured",font=fT,fill=C_WHITE)
     d.text((24,70),"Contrast-stretched crop. Cyan = fitted trace centrelines; white rings = where they would cross the package edge.",font=fB,fill=(185,185,198))
@@ -74,19 +74,21 @@ def fig_b1():
            ("width ≈ 3 px = 0.08 mm (mask-covered)",(220,220,228)),
            ("contrast +30 luminance over mask",(220,220,228)),
            ("",None),
-           ("Extrapolated landing at y=990",C_WHITE),
-           ("left  x = 1401",C_SS),("right x = 1418",C_SS),
+           ("Measured crossing at y=992",C_WHITE),
+           ("left  x = 1396.0",C_SS),("right x = 1411.4",C_SS),
+           ("separation 0.416 mm",(200,200,210)),
            ("",None),
-           ("Ball centres in that row",C_WHITE),
-           ("A6 1369.5   A5 1399.5",(200,200,210)),
-           ("A4 1429.5   A3 1459.5",(200,200,210)),
+           ("Calibrated ball centres (row A)",C_WHITE),
+           ("A6 1356.5   A5 1386.1",(200,200,210)),
+           ("A4 1415.7   A3 1445.3",(200,200,210)),
+           ("scale 37.01 px/mm, ±1.5 px",(170,170,180)),
            ("",None),
            ("Read this carefully",(255,190,90)),
-           ("the left trace lands 1.5 px from A5,",(255,220,150)),
-           ("but the pair's centre (1409) is 25 px",(255,220,150)),
-           ("from the A5/A6 midpoint (1384) and",(255,220,150)),
-           ("35 px from A3/A4 (1444).",(255,220,150)),
-           ("No valid SS pair matches both traces.",(255,120,120))]
+           ("left trace is 9.9 px from A5,",(255,220,150)),
+           ("right trace 4.3 px from A4 —",(255,220,150)),
+           ("but the pair centre sits 26.8 px from",(255,220,150)),
+           ("the A3/A4 midpoint and 32.4 px from",(255,220,150)),
+           ("A5/A6: it matches NO valid SS pair.",(255,120,120))]
     yy=186
     for t,col in lines:
         if t: d.text((px,yy),t,font=fS,fill=col or (220,220,228))

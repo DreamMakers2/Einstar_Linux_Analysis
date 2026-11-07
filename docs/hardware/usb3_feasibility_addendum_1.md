@@ -1,358 +1,309 @@
-# Addendum 1 — Re-examination of the FX3 lower edge: what is actually there
+# Addendum 1 — The FX3 lower edge, re-measured
 
-**Supersedes nothing. Amends §3.6 and §5 of `usb3_mainboard_feasibility.md`.**
-Status: read-only photographic re-analysis, 2026-11-07. No hardware was touched.
+**Amends §3.6 and §5 of `usb3_mainboard_feasibility.md`. Does not replace its verdict.**
+Read-only photographic re-analysis, 2026-11-07. No hardware touched, no power applied.
+
+Two independent subagents were run against the same photograph without being told the earlier
+conclusion: one blind feature-forensics pass, one blind ball-grid calibration. Their results are
+folded in below, **including where they disagree with each other and with this analysis**.
 
 ---
 
 ## A1.1 Why this addendum exists
 
-The main report stated that around the FX3's row-A edge "the visible top copper shows the ground
-pour, two silkscreen lines, and at most two thin traces that belong to other nets… **There is no
-bundle of four**." A challenge was raised with six candidate copper features below the package.
+The main report said that around the FX3's row-A edge "the visible top copper shows the ground pour,
+two silkscreen lines, and at most two thin traces that belong to other nets… **There is no bundle of
+four**."
 
-The challenge is **partly correct, and the correction matters**. The earlier statement was based on
-crops that were too tight and on a contrast treatment that crushed dim detail. Re-working the region
-at native resolution with a calibrated copper-vs-silkscreen classifier shows considerably more copper
-than the original report admitted.
+A challenge was raised that six copper traces escape the package. The challenge is **partly right**,
+and chasing it produced two results that matter:
 
-What changed, precisely:
+1. The original analysis **under-counted the copper** in that strip. My "two thin traces" line was
+   wrong: there are at least five copper traces there, one of them a coupled pair that reaches the
+   package edge.
+2. A **second, independent calibration** of the ball grid moved every ball ~15 px (0.4 mm) from where
+   I had put it. All the alignment arithmetic in earlier drafts of this addendum was therefore wrong,
+   and has been redone.
 
 | Original claim | Status now |
 |---|---|
-| "no bundle of four traces" | **Still true** — no four-trace bundle exists |
-| "at most two thin traces that belong to other nets" | **Wrong** — there are six long copper traces plus a coupled 45° pair |
-| "SS pins are likely left open (App. C)" | **No longer supported** — a coupled pair does escape the package edge |
+| "no bundle of four traces" | **still true** — there is no four-trace bundle |
+| "at most two thin traces that belong to other nets" | **wrong** — a coupled pair plus several through-routes |
+| "SS pins probably left open (App. C)" | **no longer supported**, but not replaced by its opposite either |
+| ball positions ±1 px | **wrong** — they were 15 px off; see A1.4 |
 
 ---
 
-## A1.2 Method (and why the classification is trustworthy)
+## A1.2 Method and the copper classifier
 
-Everything here is measured on `hardware/photos/P1_top_side.webp` at native resolution. No AI-generated
-image was used as evidence; the earlier annotated figures were used only as locators.
+Everything is measured on `hardware/photos/P1_top_side.webp` at native resolution. No generated image
+was used as evidence.
 
-A pixel class was accepted as **copper under green soldermask** only if it matched a calibrated
-signature measured on this same photograph:
+A pixel was accepted as **copper under green soldermask** only if its green channel exceeded a *local*
+background (median of the same row, ±6…14 px away) by **≥ 20 counts**, was **2–6 px wide**, and was
+**continuous over ≥ 10 px**. That threshold is calibrated on this image:
 
-| Material | RGB (sample) | Luminance | Width | Behaviour at silkscreen |
+| Material | Green | Luminance | Width | Signature |
 |---|---|---|---|---|
-| Board mask (no copper) | 33, 64, 86 | **61** | — | — |
-| **Copper under mask** (verified on the diagonal pair) | 61, 95, 112 | **89–94** | 2–3 px | passes under, interrupted |
-| Silkscreen | 177, 168, 229 | **191** | 5–8 px | on top, opaque |
-| Exposed pad / bare copper | 62, 133, 140 | 110–140 | — | not covered |
+| Board mask, no copper | 64 | 61 | — | baseline |
+| **Copper under mask** (control: a known 45° pair at x 1080–1260, y 505–565) | 95–107 | 89–94 | 4.4–5.5 px ⟂ | **+31 … +49** |
+| Silkscreen (control: x 1129–1142, y 476–512) | 168–230 | 185–199 | 9–11 px, flat top, round ends | **+131 … +141** |
+| Copper pour | 105–114 | 100–110 | plateau | no ridge, sharp step edges |
 
-The classifier is therefore "green channel elevated by 25–60 over the local median, width ≤ 4 px,
-continuous over ≥ 10 px". Silkscreen is excluded by luminance (>150) and by width.
+Copper and silkscreen differ by a factor of four in contrast, so the classifier is not marginal.
 
-Ridge positions were extracted per row with sub-pixel parabolic interpolation, then linked into tracks.
-All coordinates below are source pixels; **37.5 px ≈ 1 mm**.
+Tracks were extracted as per-row ridge peaks with sub-pixel interpolation, linked across rows, and
+least-squares fitted. **Scale: 37.01 px/mm** (independent calibration, A1.4).
 
 ---
 
-## A1.3 What is actually below the package
+## A1.3 What is below the package
 
-### Observation O1 — the strip is a routing channel, not empty board
+### O1 — a coupled pair really does emerge from under the package
 
-Six copper traces run **horizontally across the whole strip**, in three pairs:
+Two parallel 45° traces run up to the package edge and **cross it**. Measured along the fitted
+centrelines against a *local* background, at every row:
 
-| Pair | y (px) | intra-pair gap | Extent | Continues right of the FX3? |
-|---|---|---|---|---|
-| P1 | 978 / 989 | 11 px = 0.29 mm | x 620 → 1180 | **yes — traced to x ≈ 1680**, i.e. past the FPGA's left edge |
-| P2 | 1030 / 1041 | 11 px = 0.29 mm | x 620 → 1132 | **yes — to x ≈ 1570**, just past the package's right edge |
-| P3 | 1085 / 1096 | 11 px = 0.30 mm | x 620 → 1124 | partially — it enters the copper-pour region and cannot be tracked further |
+| y (px) | 988 | **992** | 996 | 1000 | 1004 | 1008 | 1012 | 1016 | 1020 | 1024 | 1028 | 1032 | 1036 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| D1 contrast | −5 | **+38** | +24 | +24 | −12 | −4 | +40 | +36 | +38 | +36 | −6 | −4 | +32 |
+| D2 contrast | +2 | **+38** | +27 | +32 | −12 | −6 | +40 | +23 | +31 | +23 | −7 | −1 | +47 |
 
-**This is the single most important new fact.** A trace that continues past the package on *both*
-sides — toward J4 on the left and beyond the package on the right — cannot originate at the FX3's
-row-A balls. It is a **through-route in the channel between the FPGA and the connector**. P1 is the
-clearest case: it is continuous from x 620 to x 1680, spanning the entire package.
+The negative rows are the two silkscreen lines (y 1002–1010 and 1028–1034), where an opaque white
+stroke covers whatever is underneath. Everywhere else contrast is +23…+47. At **y = 988 it collapses
+to zero** — four pixels above the package edge at y = 991.9. That is the package shadow: the traces go
+under the part.
 
-The user's hypothesis mapped six traces to A3/A4 + A5/A6 + A9/A10. **That mapping is not supported**:
-the six long traces pass the FX3 rather than terminate at it, and they are 40–100 px below the ball row
-(y = 948), not at it.
+**The pair crosses the package edge at x = 1396.0 and x = 1411.4**, 15.4 px = **0.416 mm** apart. This
+is a direct measurement, not an extrapolation.
 
-### Observation O2 — one genuine coupled pair *does* escape the package
+> **Correction to the blind subagent's conclusion.** It reported that the traces "stop 6–8 px short of
+> the courtyard silkscreen" and "do not reappear in the clean dark gap y 1013–1022". Direct pixel
+> sampling contradicts that: at y = 1016 and 1020 the traces read green 100/89 and 107/99 against a
+> local background of 64/68, i.e. +23…+38. The subagent's own line equations (D1 x+y = 2386,
+> D2 x+y = 2402) predict x = 1366 and 1382 at y = 1020 — exactly where the bright pixels are. Its gap
+> check appears to have used a threshold or window that missed them. The results below use the direct
+> measurement.
 
-Independent of the six through-routes, there is a **two-trace, 45° coupled pair** that ascends toward
-the package's bottom edge and stops there:
+### O2 — the horizontal traces bend into the pair
 
-| Property | Measured |
+The blind pass and this analysis agree on the lower half: horizontal copper at y ≈ 1041, 1085 and 1096
+runs left from x ≈ 700, and at x ≈ 1301–1306 turns 45° up into the pair. The bend is sharp and common
+to both traces — what a routed differential pair looks like at a corner.
+
+### O3 — several more long traces pass through, and they are through-routes
+
+Independent of the pair, three further near-horizontal traces run the width of the strip:
+
+| Pair | y (px) | gap | Extent |
+|---|---|---|---|
+| P1 | 978 / 989 | 11 px = 0.29 mm | **x 620 → 1680** |
+| P2 | 1030 / 1041 | 11 px | x 620 → 1124 |
+| P3 | 1085 / 1096 | 11 px | x 620 → 1124 (merges into the pour) |
+
+P1 is continuous from x 620 to x 1680 — it spans the whole package, from the J4 side to past the FPGA.
+**It cannot originate at the FX3.** These are through-routes in the channel between the FPGA and the
+connector. The six-trace reading of the original challenge is therefore **six traces, but not six FX3
+escapes**.
+
+### O4 — unchanged
+
+No 0.1 µF series pair, no SuperSpeed ESD array, no SSTX/SSRX test pads, on either photographed face.
+
+---
+
+## A1.4 The ball grid, independently calibrated
+
+The first calibration in this study placed the package body at x 1176–1560, y 624–990 (≈37.5 px/mm).
+An independent pass fitted a matched filter to 230–310 scanlines per edge, separating the **package
+bevel** from the **silkscreen courtyard** 40 px further out:
+
+| | Value |
 |---|---|
-| Slope (least squares, 9 rows each) | **45.2°** and **45.9°** |
-| Centre-to-centre spacing | **15–17 px = 0.41–0.46 mm** |
-| Trace width | ≈ 3 px = 0.08 mm |
-| Contrast over mask | +30 luminance (same as verified copper) |
-| Visible extent | (1306, 1080) → (1395, 1005) |
-| Extrapolated landing at the package edge (y = 990) | **x = 1403** and **x = 1419** |
+| Body corners | TL (1172.61, 621.05) · TR (1542.41, 622.37) · BR (1541.35, 991.94) · BL (1170.82, 991.57) |
+| Side lengths | 369.80 / 370.53 / 370.53 / 369.58 px → **370.11 px = 10.00 mm** |
+| Scale | **37.01 px/mm** (0.80 mm = 29.61 px) |
+| Perspective | affine residual 0.30 px r.m.s.; homography differs by ≤0.30 px → **affine adequate** |
+| Pin-1 laser dot | (1509.2, 955.35), r = 8.7 px; maps to (0.873, 0.987) mm vs A1 (1.000, 1.000) → **0.13 mm off A1**, toward the corner |
+| Per-ball uncertainty | **±1.5 px (0.04 mm)** 1σ, worst case ±3 px |
 
-It is a real differential pair by geometry (parallel, constant spacing, equal width, 45°) and by
-material (copper under mask). See `hardware/annotated/B1_escape_pair_measured.png`.
-
-### Observation O3 — the pair bends into the channel
-
-At ≈ (1300, 1085) both traces turn from 45° to horizontal and join the P3 run. The bend is visible as
-a single junction knot. So the path is:
-
-```
-FX3 bottom edge  →  45° down-left  →  bend at (1300,1085)  →  horizontal left, toward J4
-```
-
-### Observation O4 — nothing else changed
-
-Re-checked at the same time and unchanged from the main report: **no 0.1 µF series pair**, **no
-SuperSpeed ESD array**, **no SSTX/SSRX test pads** anywhere on either photographed face.
-
-### Observation O5 — an exposed pad cluster near the left board edge
-
-At x 150–330, y 1060–1120 there is a grid of **exposed (mask-opened) oval pads** on ~0.8 mm pitch,
-surrounded by a 1.2 mm-pitch via field. It is not referenced anywhere in the main report. Its function
-is **unresolved** — candidates are an unpopulated component footprint (ESD/level-shifter class, 0.8 mm
-pitch) or a connector/test-pad array. It is flagged here because it is the kind of site that could be
-populated, and because the six channel traces run toward it.
-
----
-
-## A1.4 Geometry: does the pair match A3–A6?
-
-Ball centres were recomputed from the package body edges (x 1176/1560, y 624/990), the 1.00 mm
-outer-ball inset and the 0.80 mm pitch:
+Row A (y = 954.7):
 
 | Ball | A10 | A9 | A8 | A7 | A6 | A5 | A4 | A3 |
 |---|---|---|---|---|---|---|---|---|
-| x (px) | 1249.5 | 1279.5 | 1309.5 | 1339.5 | **1369.5** | **1399.5** | **1429.5** | **1459.5** |
+| x | 1237.8 | 1267.5 | 1297.1 | 1326.8 | **1356.5** | **1386.1** | **1415.7** | **1445.3** |
 
-Uncertainty: ±5 px on A1 (edge measurement), ±0.3 px/ball on pitch → **±6.5 px at column 5–6**;
-perspective adds ≈ 5 % (≈ 3 px at this radius). Total **±10 px**.
-
-| Test | Result |
-|---|---|
-| Left trace landing 1403 vs A5 1399.5 | **matches within 3.5 px** |
-| Right trace landing 1419 vs A4 1429.5 | 10.5 px off |
-| Pair centre 1411 vs **A5/A6 midpoint 1384.5** (the TX pair) | **26.5 px off = 2.6 σ** |
-| Pair centre 1411 vs **A3/A4 midpoint 1444.5** (the RX pair) | **33.5 px off = 3.3 σ** |
-| Pair centre 1411 vs **A4/A5 midpoint 1414.5** | 3.5 px — but A4/A5 is **not a valid pair** |
-
-**Conclusion: the pair does not align with either valid SuperSpeed pair.** The only ball pairing it
-matches is A4/A5, which pairs SSRXP with SSTXP — electrically meaningless. Either the calibration is
-worse than measured, or the traces converge asymmetrically under the package, or they do not come from
-row A at all.
-
-This is the opposite of the tidy story the hypothesis proposed, and it must be stated plainly.
+The pin-1 dot sits 0.13 mm off the A1 ball centre and 0.87 mm from the column-1 edge — consistent with
+a corner mould mark rather than a ball-centre mark. The 180° orientation is confirmed independently by
+the silkscreen triangle and the two direction arrows emanating from that corner.
 
 ---
 
-## A1.5 Hypothesis testing
+## A1.5 Geometry: does the pair match A3–A6?
 
-### Hypothesis A — the pairs are routed SuperSpeed, a custom USB 3.0 connection is possible
+The pair crosses the package edge at **1396.0** and **1411.4** (y = 991.9), separation 0.416 mm.
 
-**Strongest evidence for:**
-* a genuine coupled pair, correct 45° geometry, verified copper, terminating at the package edge;
-* it is exactly where a row-A escape would be;
-* the product family's software expects USB 3.0, so routing it would not be irrational.
+| Comparison | Offset |
+|---|---|
+| left trace 1396.0 vs **A5** 1386.1 | **9.9 px = 0.27 mm** |
+| right trace 1411.4 vs **A4** 1415.7 | **4.3 px = 0.12 mm** |
+| pair centre 1403.7 vs **A5/A6** midpoint 1371.3 (the TX pair) | **32.4 px = 0.88 mm** |
+| pair centre 1403.7 vs **A3/A4** midpoint 1430.5 (the RX pair) | **26.8 px = 0.72 mm** |
+| pair centre 1403.7 vs A4/A5 midpoint 1400.9 | 2.8 px — but A4/A5 is **not a valid pair** |
 
-**Strongest evidence against:**
-* the pair's centre is 2.6 σ from the TX pair and 3.3 σ from the RX pair — it matches no valid ball pair;
-* **only one pair exists**, not two. A SuperSpeed device needs TX *and* RX; a lone pair is useless;
-* no 0.1 µF series capacitors exist anywhere on either face (mandatory on SSTX, AN70707 §12.1);
-* no ESD array exists (recommended, 0.5 pF);
-* the six long traces in the same strip are through-routes, so "six escapes" does not survive scrutiny.
+Two conclusions follow, and they cut in opposite directions:
 
-### Hypothesis B — unrelated copper, the design remains USB 2.0-only
+* **Against**: the two traces do **not** sit on the two balls of any valid SuperSpeed pair. The
+  offsets (27–32 px) are 9–11σ at the calibrated uncertainty — far outside measurement error. And two
+  traces emerging straight from adjacent row-A balls would be 29.6 px apart, not 15.4 px.
+* **For**: the pair is nonetheless *inside the A3–A6 span* and emerges from the package exactly where
+  a row-A escape would. Traces can reach the top layer from vias rather than from balls directly, in
+  which case the landing position says nothing about which ball feeds them.
 
-**Strongest evidence for:**
-* the six long traces demonstrably pass the FX3 on both sides (through-routes);
-* the one escape pair fits no valid SS ball pair;
-* the missing AC caps and ESD array are exactly what a USB-2.0-only design omits.
+**The photograph cannot decide between these.** What it can do is rule out the tidy version of the
+hypothesis: *the pair is not A3/A4 and it is not A5/A6 as a straight ball escape.*
 
-**Strongest evidence against:**
-* the escape pair is *real*, coupled, and terminates at the package edge — it is not silkscreen, not a
-  pour boundary, and not compression ringing (tested: ringing is parallel to bright edges, i.e.
-  horizontal; the 45° energy is absent beside other silkscreen edges);
-* "unrelated" is not an explanation of *what* it is — the pair still has to go somewhere.
+---
 
-**Neither hypothesis is proved.** A is disfavoured on geometry and on the missing mandatory components;
-B explains the six traces but not the paired escape.
+## A1.6 Hypothesis testing
 
-### Rejected explanations (tested, not assumed)
+### Hypothesis A — SuperSpeed is routed, a custom USB 3.0 connection is possible
+
+**For**: a real coupled pair emerges from the package in the SS region; the product family's software
+expects USB 3.0; the geometry (0.42 mm pitch, 45°, common bend) is exactly how such a pair is drawn.
+
+**Against**:
+* it matches no valid SS ball pair (9–11σ);
+* **only one pair exists where two are required** — no second coupled pair anywhere in the strip;
+* **no 0.1 µF series capacitors** exist on either face (mandatory on SSTX, AN70707 §12.1);
+* **no SuperSpeed ESD array** exists;
+* the six "extra" traces are through-routes, not escapes.
+
+### Hypothesis B — unrelated copper; the design remains USB 2.0-only
+
+**For**: the missing mandatory components; the invalid pairing; the through-routes outnumbering the
+escape.
+
+**Against**: it does not explain *what* the pair is. "Unrelated copper" is a label, not an
+explanation, and the pair is coupled, 45°, and terminates at the package.
+
+**Neither hypothesis is proved.** A is disfavoured on the electronics, B on the unexplained pair.
+
+### Alternatives tested and rejected
 
 | Explanation | Test | Result |
 |---|---|---|
-| Silkscreen | luminance 191, width 5–8 px, rounded ends | **rejected** — features are lum 89–94, 3 px |
-| Compression ringing | ringing is parallel to the bright edge (horizontal) and decays with distance | **rejected** — features are at 45°; orientation histogram shows a single 45° family, no 135° counterpart |
-| Cross-hatched copper pour | a hatch would show both diagonal families | **rejected** — no 135° family (2 counts vs 127 at 45°) |
-| Pour boundary | pour edges follow polygon outlines, not constant-spacing pairs | **rejected** for the pair; **accepted** for the bright region below y ≈ 1100 |
-| Wide trace with edge highlights | a wide trace shows two bright edges with an elevated centre | **accepted** for part of the six-trace set — their inter-line level is 78–83 vs 61 background, unlike the pair (67.5), so some of the six may be three wide traces, not six thin ones |
+| Silkscreen | luminance 185–199, 9–11 px, flat top, round ends | **rejected** — features are 89–107, 5.6 px |
+| Compression ringing | ringing is parallel to the bright edge and decays with distance; here the edges are horizontal | **rejected** — features are at 45°, Radon peak 21.0 at 45–46° vs 13.8 at 30°, and the y≈1042 feature is absent at x = 1320/1520/1560 where the same silkscreen edge is equally bright |
+| Hatched copper pour | a cross-hatch has two diagonal families | **rejected** — zero down-right diagonals in the strip |
+| Pour boundary | sharp step, no ridge, 45° chamfers | **rejected** for the pair; **accepted** for the region below y ≈ 1100 |
+| Wide trace with two bright edges | inter-edge level stays elevated | **partly accepted** for the horizontal set — their inter-line level is 78–83 vs 61 background, unlike the pair (67.5) |
 
 ---
 
-## A1.6 Evidence table
+## A1.7 Evidence table
 
 | # | Statement | Class |
 |---|---|---|
-| 1 | Six long copper traces run in the strip below the FX3, in three near-pairs 0.29–0.30 mm apart | **Directly observable** |
-| 2 | P1 continues past the package on both sides (x 620 → 1680); P2 reaches x ≈ 1570; P3 is lost in the pour | **Directly observable** |
-| 3 | A two-trace 45° coupled pair (0.41–0.46 mm spacing) ascends to the package edge and stops | **Directly observable** |
-| 4 | The pair bends into the horizontal channel at ≈(1300,1085) | **Directly observable** |
-| 5 | No 0.1 µF series pair, no SS ESD array, no SS test pad on either face | **Directly observable** |
-| 6 | The pair is copper under mask, not silkscreen/ringing/hatch | **Strong inference** (calibrated classifier + three rejected alternatives) |
-| 7 | The six traces are through-routes, not FX3 escapes | **Strong inference** (continuity on both sides) |
-| 8 | The pair's landing is 1403/1419 at the package edge | **Strong inference** (±10 px) |
-| 9 | The pair does not match A3/A4 or A5/A6 within uncertainty | **Strong inference** (2.6–3.3 σ) |
-| 10 | The pair connects to specific balls A3–A6 | **Requires electrical test / X-ray** — cannot be read optically |
-| 11 | Where the pair terminates (J4 pin? via? inner layer?) | **Requires electrical test** |
-| 12 | Whether R_USB3 (200 Ω, B3) is fitted | **Requires electrical test** |
-| 13 | Whether the exposed pad cluster (O5) is populated with anything | **Impossible from photograph alone** (needs the bare-board artwork or X-ray) |
-| 14 | Whether the SS PHY is biased and could ever train | **Requires electrical test** |
+| 1 | A coupled 45° pair crosses the package edge at x = 1396.0 and 1411.4, 0.416 mm apart | **Directly observable** (+38 local contrast at y = 992) |
+| 2 | The pair bends at x ≈ 1301–1306 into horizontal traces at y ≈ 1041 / 1085 / 1096 | **Directly observable** |
+| 3 | P1 (y 978/989) runs continuously from x 620 to x 1680, past both package edges | **Directly observable** — a through-route |
+| 4 | No 0.1 µF series pair, no SS ESD array, no SS test pads on either face | **Directly observable** |
+| 5 | Package is 370.11 px = 10.00 mm; scale 37.01 px/mm; affine adequate | **Strong inference** (sub-pixel edge fit, 230–310 scanlines) |
+| 6 | Ball centres: A5 = 1386.1, A4 = 1415.7, A3 = 1445.3, A6 = 1356.5 | **Strong inference** (±1.5 px) |
+| 7 | The pair matches no valid SS ball pair (27–32 px off, 9–11σ) | **Strong inference** |
+| 8 | The pair is copper, not silkscreen / ringing / hatch / pour edge | **Strong inference** (calibrated classifier, three alternatives rejected) |
+| 9 | Which balls feed the pair | **Requires X-ray or electrical test** — vias under the package are invisible |
+| 10 | Where the pair terminates at its other end | **Requires electrical test** — it runs into a channel carrying at least five other traces |
+| 11 | Whether R_USB3 (200 Ω, B3) is fitted | **Requires electrical test** |
+| 12 | Whether the SS PHY is biased, and could ever train | **Requires electrical test** |
+| 13 | Layer of any trace, and whether the pair reaches J4 on an inner layer | **Impossible from photographs alone** |
 
 ---
 
-## A1.7 Revised verdict
+## A1.8 Revised verdict
 
-> **The NO-GO for a passive modification stands — but the reasoning in the main report was too strong
-> in one place and must be corrected.**
->
-> * The board is **not** "empty" under the package. There is a real coupled pair escaping the FX3's
->   bottom edge, and six further copper traces in the same channel.
-> * That pair **cannot be assigned to A3–A6** on the available evidence, and it fits no valid
->   SuperSpeed pair. Only one pair exists where two are required.
-> * The mandatory SuperSpeed components — 0.1 µF SSTX series pair, ≤0.5 pF ESD array — are **still
->   absent**, and the 7-pin connector still has one spare contact against four required.
+> **The NO-GO for a passive modification stands.** The earlier *reasoning* was too strong in one place
+> — the strip is not empty, and a coupled pair does emerge from the package — but the conclusion does
+> not change, and one of the two supporting arguments is now stronger, not weaker.
 
-The practical conclusion therefore survives, but its probability weighting changes:
+What changed and what did not:
 
-| Option | Before | After | Why |
+* **Changed**: the board has real, coupled, high-speed-looking routing emerging from the FX3 region.
+  The statement "nothing is routed" is withdrawn.
+* **Unchanged**: there are no AC-coupling capacitors, no SS ESD array, no SS test points, and the
+  7-pin external connector has one spare contact against four required.
+* **Strengthened**: the pair fits no valid SS ball pair, and there is only one pair where two are
+  needed.
+
+| Option | Before | Now | Why |
 |---|---|---|---|
-| C — tap vias with a flying lead | no-go | **no-go** | unchanged (SI), and no verified tap point exists |
-| E — new daughterboard if SS reaches J4 | ~10–15 % | **~25–35 %** | a coupled pair demonstrably exists and heads toward J4, though it fits no valid ball pair |
-| F — board re-spin | the only clean path | **unchanged** | — |
-
-The single sentence to carry forward: *something* is routed from the FX3's lower edge toward the
-connector, but it is not demonstrably SuperSpeed, it is not a complete pair set, and it lacks every
-mandatory passive component.
+| C — flying-lead tap | no-go | **no-go** | SI budget unchanged; and there is still no verified tap point |
+| E — new daughterboard if SS reaches J4 | ~10–15 % | **~15–20 %** | a coupled pair exists and heads toward J4, but it is unassignable and incomplete |
+| F — board re-spin | only clean path | **unchanged** | — |
 
 ---
 
-## A1.8 The three decisive unpowered measurements
+## A1.9 The three decisive unpowered measurements
 
-All three are on accessible copper, none requires probing under the BGA, none is destructive.
+### M-A · The 200 Ω sweep — still the decisive one
 
-### M-A · The 200 Ω sweep (decisive, unchanged)
+Sweep every 0402/0603 resistor within ~12 mm of the FX3, black lead on a ground ring
+(`hardware/annotated/A7_multimeter_procedure.png`).
 
-Find R_USB3 on B3. Sweep every 0402/0603 resistor within ~12 mm of the FX3 with the black lead on a
-ground ring, as in `hardware/annotated/A7_multimeter_procedure.png`.
+* **6.04 kΩ** → R_USB2 (C8) found: the method is valid.
+* **200 Ω** → R_USB3 (B3) fitted: the SS PHY is biased, the pair is probably SuperSpeed, and an X-ray
+  becomes worth commissioning.
+* **Neither** → the PHY has no calibration reference. **No routing can make it train.** The NO-GO
+  becomes final.
 
-* **6.04 kΩ found** → method validated (R_USB2 on C8).
-* **200 Ω found** → the SS PHY is biased; the routed pair is probably intended as SuperSpeed; proceed
-  to M-C.
-* **No 200 Ω** → the PHY has no calibration reference. **No routing can make it work.** The NO-GO
-  becomes final and no further measurement on this board is worth doing.
+Why it still wins: it is binary, accessible, non-destructive, and it is the only measurement that can
+*disqualify* the whole idea. An X-ray can only describe.
 
-This remains the highest-information measurement per minute of effort.
+### M-B · J4 continuity and diode map
 
-### M-B · Channel continuity: does the pair reach J4?
+Unpowered, in continuity/diode mode, from each of the 40 J4 contacts to the ground ring:
 
-With the board unpowered, in continuity mode, probe between **J4 pins** and the **exposed pad cluster
-at x 150–330, y 1060–1120** (observation O5), and between J4 pins and the ground ring.
+* **< 1 Ω** → ground or a power rail;
+* **0.4–0.7 V one way, open the other** → connected to an IC (FX3 or FPGA) — a live signal pin;
+* **open both ways** → spare, or only reaches a passive.
 
-* A J4 pin that is **DC-continuous to ground** is a ground/power pin.
-* A J4 pin that shows a **0.4–0.7 V diode drop to ground in one direction only** is connected to an IC
-  (FX3 or FPGA) — this is the signature of a live signal pin.
-* A J4 pin that is **open in both directions** carries nothing, or only goes to a passive.
+Establishes whether the mainboard→daughterboard link has *any* spare conductors — the precondition for
+option E. Does not identify SSTX/SSRX.
 
-This maps which of the 40 J4 contacts are live signal pins and which are spare. **What it establishes:**
-whether there is any spare conductor at all in the mainboard→daughterboard link, which is the
-precondition for option E. **What it does not establish:** which pin is SSTX or SSRX.
+### M-C · Capacitance across J4 pairs (only if M-A finds 200 Ω)
 
-### M-C · Differential-pair identification at J4 (only if M-A finds 200 Ω)
+With a pF-capable meter, across candidate J4 pin pairs:
 
-Measure **capacitance pin-to-pin** across J4 pairs with a DMM that has a pF range (or an LCR meter).
-
-* A pair reading **≈ 0.05 µF** (two 0.1 µF caps in series from the far side, or one cap plus trace)
-  would indicate AC-coupled SuperSpeed TX.
-* A pair reading **2–10 pF** is an ordinary signal pair.
-* A pair reading **open** is unconnected.
-
-**What it establishes:** whether any J4 pair is AC-coupled — the one electrical signature that
-distinguishes an SSTX pair from every other pair on the board.
+* **≈ 0.05 µF** → two 0.1 µF caps in series: an AC-coupled SuperSpeed TX pair. This is the one
+  electrical signature that distinguishes SSTX from every other pair on the board.
+* **2–10 pF** → ordinary signal pair.
+* **open** → unconnected.
 
 ---
 
-## A1.9 What would settle it definitively
+## A1.10 What would settle it
 
-A **2D X-ray of the J4-to-FX3 region**, taken from the component side. It resolves, in one image and
-non-destructively:
+A **2D X-ray of the J4-to-FX3 region from the component side**. One image, non-destructive, resolves:
 
-1. whether traces leave balls A3–A6 (visible as copper converging on those ball pads);
+1. whether traces leave balls A3–A6, and whether they pass through vias;
 2. whether B3 carries a trace to a 200 Ω resistor;
-3. where the diagonal pair terminates — via, J4 pin, or inner layer.
+3. where the coupled pair terminates.
 
-No optical method can substitute for it. The photographs are at 37.5 px/mm with 3 px traces and
-compression; the region of interest is 1.6 mm tall and covered by opaque silkscreen exactly where the
-traces emerge.
-
----
-
-## A1.10 Direct answers to the seven questions
-
-**1. Are the four diagonal features actually copper traces?**
-**Two of them are, one pair, confirmed.** The pair measures 45.2°/45.9°, 0.41–0.46 mm spacing, 3 px
-width, +30 luminance over mask — the calibrated copper signature — and three alternatives (silkscreen,
-compression ringing, hatched pour) were tested and rejected. **The other two are not established as
-diagonal copper.** The diagonal-looking marks elsewhere in that strip are the through-routes crossing
-the silkscreen bands and the bend at (1300,1085); they are horizontal copper, not a second diagonal
-pair. Net finding: **one coupled pair, not two.**
-
-**2. Are their locations geometrically consistent with A3–A6?**
-**Partially — and not well enough to claim it.** The left trace extrapolates to x = 1403, which is
-3.5 px from A5 (1399.5). But the pair's centre (1411) sits 26.5 px from the A5/A6 midpoint and
-33.5 px from the A3/A4 midpoint — 2.6 σ and 3.3 σ respectively at ±10 px uncertainty. The only ball
-pairing it matches (A4/A5) is not a valid differential pair. **Consistent in position, inconsistent in
-pairing.**
-
-**3. Is there evidence of two matched SuperSpeed differential pairs?**
-**No.** Exactly one matched pair exists in the region. A SuperSpeed device needs TX *and* RX; a single
-pair cannot form a link. This is the strongest single argument against Hypothesis A.
-
-**4. Where could those signals physically terminate?**
-Unresolved, and honestly so. The pair bends at ≈(1300,1085) into the horizontal channel and runs left
-toward J4 (x 365–595), but the channel carries at least three other pairs, and the region where the
-traces would turn up to J4 is obscured by components and by J4's own footprint. **No via termination
-could be resolved.** Candidates: a J4 pin, a blind/buried via to an inner layer, or the exposed pad
-cluster at x 150–330, y 1060–1120 (observation O5, function unknown).
-
-**5. Does the board appear to have the necessary SuperSpeed PHY support circuitry?**
-**No.** Mandatory: 0.1 µF series pair on SSTX — **absent**. Recommended: ≤0.5 pF ESD array —
-**absent**. Required: 200 Ω ±1 % on B3 — **not determinable optically** (this is exactly what M-A
-settles). The USB 2.0 reference (6.04 kΩ on C8) is necessarily present but was not individually
-identified either.
-
-**6. Does the prior NO-GO verdict still hold, or should it be revised?**
-**It holds, with an amended rationale.** The verdict was right; the reasoning was partly wrong.
-"Nothing escapes the package" is false — a coupled pair does. But a single unattributable pair,
-without AC coupling, without ESD, fitting no valid ball pair, cannot make a link. The probability
-assigned to option E (new daughterboard, mainboard untouched) rises from ~10–15 % to **~25–35 %**.
-
-**7. What single additional measurement would most decisively change the answer?**
-**The 200 Ω sweep (M-A).** It is the only accessible measurement whose outcome is binary and
-conclusive:
-
-* **200 Ω present** → the SS PHY is biased, the routed pair is probably intended as SuperSpeed, and an
-  X-ray becomes worth commissioning. Option E is alive.
-* **200 Ω absent** → the PHY has no calibration reference. *No amount of routing can make it train.*
-  The NO-GO becomes final, and every other measurement on this board becomes pointless.
-
-Everything else — continuity mapping, capacitance, even the X-ray — only refines a question that this
-one resistor answers outright.
+No optical method can substitute. The region of interest is 1.6 mm tall, the traces are 0.15 mm, and
+the exact place where they meet the package is covered by opaque silkscreen.
 
 ---
 
 ## A1.11 Reproduce
 
 ```bash
-cd <repo>
-python3 hardware/make_addendum_figs.py          # B1, B2
+python3 hardware/make_addendum_figs.py     # B1, B2
 ```
 
-Figures: `hardware/annotated/B1_escape_pair_measured.png` (pair geometry and landing points),
-`hardware/annotated/B2_routing_channel.png` (the six through-routes).
-Raw crops used: `hardware/crops/pair_detail.png`, `pair_wide.png`, `bend_precise.png`,
-`copper_map.png`, `track_scatter.png`, `six_lines_zoom.png`, `left_edge_structure.png`.
+Figures: `hardware/annotated/B1_escape_pair_measured.png`,
+`hardware/annotated/B2_routing_channel.png`.
+Independent passes: `hardware/analysis/blind_edge_forensics.md`,
+`hardware/analysis/ball_grid_calibration.md`, overlay `hardware/crops/calib_overlay.png`.
+Crops cited: `pair_detail`, `pair_wide`, `bend_precise`, `copper_map`, `track_scatter`,
+`six_lines_zoom`, `left_edge_structure`.
