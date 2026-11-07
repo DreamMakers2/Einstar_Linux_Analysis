@@ -299,10 +299,10 @@ through the two-pad footprint (TX) / the FX3's internal network (RX).
 Figures: [`N1_edge_netmap.png`](../../hardware/analysis/reopen/figs/N1_edge_netmap.png) (edge close-up) and
 [`N2_route_netmap.png`](../../hardware/analysis/reopen/figs/N2_route_netmap.png) (full route). Coordinates are source-photo pixels.
 
-| net (provisional) | ball | edge crossing y=992 | gap line c | horizontal run | series part | left corridor | destination | confidence |
+| net (provisional) | ball | edge crossing y=992 | gap line c | horizontal run | footprint across TX | left corridor | destination | confidence |
 |---|---|---|---|---|---|---|---|---|
-| SSTX− | **A6** 1356.5 | 1330.9 | 2174.1 | y = 1029 | upper 0805 part | x ≈ 282 | connector via field | high / pin unconfirmed |
-| SSTX+ | **A5** 1386.1 | 1347.4 | 2190.6 | y = 1041 | lower 0805 part | x ≈ 294 | connector via field | high / pin unconfirmed |
+| SSTX− | **A6** 1356.5 | 1330.9 | 2174.1 | y = 1029 | upper pad (across pair) | x ≈ 282 | connector via field | high / pin unconfirmed |
+| SSTX+ | **A5** 1386.1 | 1347.4 | 2190.6 | y = 1041 | lower pad (across pair) | x ≈ 294 | connector via field | high / pin unconfirmed |
 | SSRX+ | **A4** 1415.7 | 1405.9 | 2249.1 | y = 1084 | none | x ≈ 324 | connector via field | high / pin unconfirmed |
 | SSRX− | **A3** 1445.3 | 1390.9 | 2234.1 | y = 1096 | none | x ≈ 335 | connector via field | high / pin unconfirmed |
 | R_USB3 | **B3** 1445.4 | via (1428,1040)? | — | — | 200 Ω? | — | GND | **unknown** |
