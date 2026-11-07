@@ -8,3 +8,6 @@ __pycache__/
 *.so
 bench_results.json
 .*.swp
+
+# intermediate white-balanced working copies produced by make_annotations.py
+hardware/annotated/_P*_wb.png
