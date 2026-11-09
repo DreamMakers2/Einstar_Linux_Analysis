@@ -1,0 +1,16 @@
+{
+ "centroid": {
+  "grids": 72,
+  "rms_px": 0.3669,
+  "baseline_mm": 158.543
+ },
+ "ellipse_guarded_gate": {
+  "grids": 73,
+  "rms_px": 0.351,
+  "baseline_mm": 158.504,
+  "rejected_views": [
+   15
+  ]
+ },
+ "note": "ellipse fit accepted only if within 0.6*blob size of the centroid; a view with RMS > max(2 px, 3x median) is rejected and the fit repeated"
+}

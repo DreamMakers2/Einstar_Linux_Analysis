@@ -144,9 +144,12 @@ stopping, and versioned host-side profiles that preserve the factory snapshot
 and never write the scanner implicitly. Ablations show the original 25-step
 sequence is redundant for metric scale (3 views already recover the baseline to
 0.03 mm) but not for intrinsics (≥20 views to approach the vendor parameters).
-A greedy 8-view plan reduced the synthetic focal error 6× versus a fixed
-8-view subset; a production planner still needs a distance/pose diversity
-constraint.
+A greedy 8-view plan reduced the synthetic focal error 1.8×–6.4× versus a
+fixed 8-view subset, depending on the scene and the distance/tilt diversity
+constraint. Held-out views reproject at **0.378 px** vs 0.368 px training, and
+the IR epipolar consistency is **0.138 px** median (CCF: 0.181 px). An
+optional guarded ellipse sub-pixel mode with per-view rejection reaches
+0.351 px.
 
 **Not claimed:** physical sub-millimetre accuracy or superiority over the
 vendor. That needs the actual board variant (8×5 vs the 8×7 drawn in the

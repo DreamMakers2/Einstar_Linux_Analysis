@@ -61,7 +61,8 @@ def find_images(directory: str | Path) -> dict[tuple[str, int], str]:
     return out
 
 
-def detect_directory(directory: str | Path, auto_polarity: bool = True) -> DetectionSet:
+def detect_directory(directory: str | Path, auto_polarity: bool = True,
+                     refine_mode: str = "centroid") -> DetectionSet:
     files = find_images(directory)
     grids = {}
     failures = []
@@ -70,7 +71,7 @@ def detect_directory(directory: str | Path, auto_polarity: bool = True) -> Detec
         if img is None:
             failures.append(path)
             continue
-        obs = detect_grid_auto(img)
+        obs = detect_grid_auto(img, refine_mode=refine_mode)
         if obs is None or obs.n_lattice < 25:
             failures.append(path)
             continue
@@ -83,8 +84,9 @@ def calibrate_directory(directory: str | Path,
                         pitch_mm: float = plate.DEFAULT_PITCH_MM,
                         free_kc: bool = False,
                         anchor_baseline: bool = True,
-                        max_nfev: int = 1200) -> tuple[CalibrationResult, DetectionSet, dict]:
-    det = detect_directory(directory)
+                        max_nfev: int = 1200,
+                        refine_mode: str = "centroid") -> tuple[CalibrationResult, DetectionSet, dict]:
+    det = detect_directory(directory, refine_mode=refine_mode)
     obs = det.observations()
     if not obs:
         raise RuntimeError("no usable calibration grids found")
@@ -107,8 +109,22 @@ def calibrate_directory(directory: str | Path,
                 init[c] = CameraIntrinsics(1150.0, 1150.0, 640.0, 512.0, np.zeros(5))
     res = calibrate(obs, pitch_mm, init, free_kc=free_kc,
                     free_intrinsics=True, max_nfev=max_nfev)
+    # reject whole views whose detections are grossly inconsistent with the
+    # fitted rig; a single bad grid can otherwise dominate the covariance
+    from .evaluate import per_view_errors
+    pv = per_view_errors(res, obs, pitch_mm)
+    if pv:
+        med = float(np.median([d["rms_px"] for d in pv.values()]))
+        bad = {v for v, d in pv.items() if d["rms_px"] > max(2.0, 3.0 * med)}
+    else:
+        bad = set()
+    if bad:
+        obs = [o for o in obs if o.view not in bad]
+        res = calibrate(obs, pitch_mm, init, free_kc=free_kc,
+                        free_intrinsics=True, max_nfev=max_nfev)
     info = {"summary": result_summary(res), "detections": det.summary(),
-            "pitch_mm": pitch_mm, "anchored": False}
+            "pitch_mm": pitch_mm, "anchored": False,
+            "rejected_views": sorted(int(v) for v in bad)}
     if anchor_baseline and factory and "left" in factory and "right" in factory:
         from .geometry import relative_pose
         R0, t0 = relative_pose(factory["left"].R(), factory["left"].T(),

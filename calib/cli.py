@@ -20,7 +20,7 @@ from .workflow import exstar_sequence, parse_rapid_config
 
 
 def cmd_detect(args):
-    det = detect_directory(args.images)
+    det = detect_directory(args.images, refine_mode=args.refine_mode)
     print(json.dumps(det.summary(), indent=2))
     return 0
 
@@ -29,7 +29,7 @@ def cmd_calibrate(args):
     res, det, info = calibrate_directory(
         args.images, args.factory, pitch_mm=args.pitch,
         free_kc=args.free_distortion, anchor_baseline=not args.no_anchor,
-        max_nfev=args.max_nfev)
+        max_nfev=args.max_nfev, refine_mode=args.refine_mode)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {"result": res.as_dict(), "info": info,
@@ -98,6 +98,7 @@ def main(argv=None):
 
     d = sub.add_parser("detect", help="detect grids in a directory of images")
     d.add_argument("images")
+    d.add_argument("--refine-mode", choices=("centroid", "ellipse"), default="centroid")
     d.set_defaults(func=cmd_detect)
 
     c = sub.add_parser("calibrate", help="calibrate from a directory of images")
@@ -110,6 +111,7 @@ def main(argv=None):
     c.add_argument("--out", default="calibration_result.json")
     c.add_argument("--profile", default=None, help="host-side profile root")
     c.add_argument("--serial", default="unknown")
+    c.add_argument("--refine-mode", choices=("centroid", "ellipse"), default="centroid")
     c.set_defaults(func=cmd_calibrate)
 
     p = sub.add_parser("plan", help="recommend next views from a calibration result")

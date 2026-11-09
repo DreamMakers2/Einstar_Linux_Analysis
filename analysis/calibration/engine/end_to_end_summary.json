@@ -1,0 +1,23 @@
+{
+ "baseline_mm": 158.55702724431995,
+ "baseline_sigma_mm": 0.011985213887625952,
+ "residual_rms_px": 0.36690537750046187,
+ "residual_max_px": 1.9370736805040696,
+ "n_observations": 2864,
+ "n_parameters": 189,
+ "anchored": true,
+ "fx_sigma_px": {
+  "left": 0.05604830243077153,
+  "right": 0.1537306889613606,
+  "tex": 0.14881991910262987
+ },
+ "detections": {
+  "n_grids": 72,
+  "failures": [
+   "imageLeft9",
+   "imageLeft16",
+   "imageLeft17"
+  ]
+ },
+ "stopping_ok": true
+}

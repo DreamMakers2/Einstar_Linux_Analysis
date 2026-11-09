@@ -1,0 +1,24 @@
+{
+ "k5": {
+  "nees_median": 58.7,
+  "n_free": 54,
+  "ratio": 1.087,
+  "fx_sigma_reported": 1.097,
+  "fx_sd_empirical": 1.086
+ },
+ "k10": {
+  "nees_median": 89.6,
+  "n_free": 84,
+  "ratio": 1.067,
+  "fx_sigma_reported": 0.617,
+  "fx_sd_empirical": 0.741
+ },
+ "k25": {
+  "nees_median": 184.9,
+  "n_free": 174,
+  "ratio": 1.063,
+  "fx_sigma_reported": 0.395,
+  "fx_sd_empirical": 0.381
+ },
+ "note": "noise 0.2 px, no outliers, 8 trials per k; NEES computed on the free parameters"
+}

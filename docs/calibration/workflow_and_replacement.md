@@ -513,6 +513,12 @@ images ──► detect.py ──► grid (u,v)->(x,y) ──► calibrate.py �
   2:1 spacing + off-lattice midpoint), affine bootstrap, RANSAC homography,
   full-grid refit. 72/75 vendor images detected with 38–40/40 holes; the three
   failures are left images 9, 16, 17 (the right/tex views still calibrate).
+  An optional `--refine-mode ellipse` fits an ellipse to each hole edge with a
+  centroid-agreement guard; it detects 73–74/75 images but requires the
+  **per-view gate** (a view whose fitted RMS exceeds `max(2 px, 3×median)` is
+  dropped and the fit repeated). With the gate it reaches 0.351 px vs 0.367 px
+  for centroid — a small improvement, not yet the vendor's Canny+ellipse
+  implementation.
 * **Calibration**: joint robust BA as in §7.3, with optional fixed distortion
   (vendor-like) or free distortion, and optional baseline anchoring.
 * **Uncertainty**: `JᵀJ` covariance; synthetic NEES ≈ 1.06 × n (well calibrated).
@@ -579,6 +585,19 @@ rig): mean held-out RMS **0.378 px** vs 0.368 px training — a 3 % gap, so the
 model is not overfitting the training views. Per-fold values are in
 `analysis/calibration/engine/heldout.json`.
 
+**Sub-pixel mode**: the guarded ellipse fit (with one rejected view) gives
+**0.351 px** on the same corpus, versus 0.367 px for the intensity centroid.
+The improvement is small because the detector's threshold/contour is still
+coarser than the vendor's Canny+ellipse edge fit; the production path is to
+port that edge fit and calibrate its threshold against real holes.
+
+**Epipolar consistency** (Sampson distance over 871 left/right grid
+correspondences, independent of the reprojection fit): the CCF rig gives
+median 0.181 px / p90 0.873 px, our rig gives median **0.138 px** / p90
+0.753 px. The replacement is slightly more consistent with the observed
+epipolar geometry on this corpus. This is a relative-geometry check; it does
+not establish absolute depth accuracy.
+
 ### 10.3 Adaptive vs fixed (synthetic, 8 views)
 
 Two independent 2-trial runs:
@@ -636,6 +655,7 @@ residuals, GPU detection) is future work, not the bottleneck.
 | storage | in-place overwrite of factory files + device; no backup | immutable factory snapshot + versioned revisions + rollback; device write only via explicit export plan |
 | validation | fixed residual gate | held-out views, reprojection/epipolar residuals, covariance, synthetic ground truth |
 | compatibility | vendor CCF/device format | same 33-double CCF and 0xF21 device block; same plate (8×5 corpus / configurable 8×7) |
+| epipolar consistency (IR) | median 0.181 px, p90 0.873 px (CCF) | median **0.138 px**, p90 0.753 px |
 | accuracy claim | vendor's own residual | **no physical accuracy claim yet**; relative geometry matches CCF to 0.014 mm baseline / 0.2°, absolute scale needs a physical standard |
 
 ### 11.1 Which stages are necessary

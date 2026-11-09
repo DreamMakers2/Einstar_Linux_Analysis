@@ -296,3 +296,30 @@ def heldout_reprojection(observations: list[Observation], result: CalibrationRes
     allv = [v["rms_px"] for v in errs.values()]
     return {"view": holdout_view, "cameras": errs,
             "rms_px": float(np.sqrt(np.mean(np.square(allv)))) if allv else float("nan")}
+
+
+def per_view_errors(result: CalibrationResult, observations: list[Observation],
+                    pitch: float) -> dict[int, dict]:
+    """Per-view reprojection RMS/max, useful for rejecting bad detections."""
+    obj = plate.board_points_mm(pitch)
+    idx = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
+    out: dict[int, dict] = {}
+    for o in observations:
+        R, t = result.views[o.view]
+        Rc, tc = result.extrinsics[o.camera]
+        keys = [k for k in o.uv if k in idx]
+        if not keys:
+            continue
+        X = obj[[idx[k] for k in keys]]
+        Xc = (X @ R.T + t) @ Rc.T + tc
+        pred = project(result.cameras[o.camera].K, result.cameras[o.camera].kc, Xc)
+        e = np.linalg.norm(pred - np.array([o.uv[k] for k in keys]), axis=1)
+        d = out.setdefault(o.view, {"errors": [], "cameras": []})
+        d["errors"].extend(e.tolist())
+        d["cameras"].append(o.camera)
+    for v, d in out.items():
+        e = np.array(d.pop("errors"))
+        d["rms_px"] = float(np.sqrt(np.mean(e ** 2)))
+        d["max_px"] = float(e.max())
+        d["n"] = int(len(e))
+    return out

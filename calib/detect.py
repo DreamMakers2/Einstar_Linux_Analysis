@@ -67,10 +67,36 @@ def _weighted_centroid(gray: np.ndarray, x: int, y: int, r: int, invert: bool) -
     return float((wt * xs).sum() / s), float((wt * ys).sum() / s)
 
 
+def _ellipse_centre(gray: np.ndarray, x: int, y: int, r: int):
+    """Fit an ellipse to the local edge and return its centre (sub-pixel)."""
+    h, w = gray.shape
+    x0, x1 = max(0, x - r), min(w, x + r + 1)
+    y0, y1 = max(0, y - r), min(h, y + r + 1)
+    patch = gray[y0:y1, x0:x1]
+    if patch.size < 12:
+        return None
+    bg = float(np.percentile(patch, 10))
+    peak = float(np.percentile(patch, 98))
+    if peak - bg < 8:
+        return None
+    thr = bg + 0.5 * (peak - bg)
+    _, bw = cv2.threshold(patch, thr, 255, cv2.THRESH_BINARY)
+    cnts, _ = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    if not cnts:
+        return None
+    c = max(cnts, key=cv2.contourArea)
+    if len(c) < 8:
+        return None
+    (cx, cy), (MA, ma), ang = cv2.fitEllipse(c)
+    if not (2.0 < MA < 40 and 2.0 < ma < 40):
+        return None
+    return float(cx + x0), float(cy + y0)
+
+
 def detect_blobs(gray: np.ndarray, invert: bool = False,
                  percentile: float = 99.0,
                  min_area: float = 25.0, max_diameter: float = 60.0,
-                 refine: bool = True) -> list[Blob]:
+                 refine: bool = True, refine_mode: str = "centroid") -> list[Blob]:
     """Detect circular marker blobs.  ``invert`` selects dark-on-light markers."""
     img = gray if not invert else (255 - gray)
     thr = max(30, int(np.percentile(img, percentile)))
@@ -86,7 +112,14 @@ def detect_blobs(gray: np.ndarray, invert: bool = False,
         if not (0.45 < w / max(h, 1) < 2.2):
             continue
         x, y = float(cent[i][0]), float(cent[i][1])
-        if refine:
+        if refine and refine_mode == "ellipse":
+            e = _ellipse_centre(img, int(round(x)), int(round(y)),
+                                max(6, int(0.9 * max(w, h))))
+            # the ellipse fit can lock onto a neighbouring hole or a saturated
+            # rim; accept it only when it agrees with the blob centroid
+            if e is not None and (e[0] - x) ** 2 + (e[1] - y) ** 2 < (0.6 * max(w, h)) ** 2:
+                x, y = e
+        elif refine:
             x, y = _weighted_centroid(img, int(round(x)), int(round(y)),
                                       max(4, int(0.7 * max(w, h))), False)
         out.append(Blob(x, y, area, w, h))
@@ -261,20 +294,24 @@ def assign_grid(blobs: list[Blob], lattice: Optional[np.ndarray] = None,
 
 
 def detect_grid(gray: np.ndarray, invert: bool = False,
-                percentile: float = 99.0) -> Optional[GridObservation]:
-    blobs = detect_blobs(gray, invert=invert, percentile=percentile)
+                percentile: float = 99.0,
+                refine_mode: str = "centroid") -> Optional[GridObservation]:
+    blobs = detect_blobs(gray, invert=invert, percentile=percentile,
+                         refine_mode=refine_mode)
     obs = assign_grid(blobs)
     if obs is not None:
         return obs
     return None
 
 
-def detect_grid_auto(gray: np.ndarray) -> Optional[GridObservation]:
+def detect_grid_auto(gray: np.ndarray,
+                     refine_mode: str = "centroid") -> Optional[GridObservation]:
     """Try both polarities and several thresholds; return the best observation."""
     best = None
     for invert in (False, True):
         for pct in (99.0, 99.4, 98.5):
-            obs = detect_grid(gray, invert=invert, percentile=pct)
+            obs = detect_grid(gray, invert=invert, percentile=pct,
+                              refine_mode=refine_mode)
             if obs is None:
                 continue
             key = (obs.n_lattice, -obs.rms)
