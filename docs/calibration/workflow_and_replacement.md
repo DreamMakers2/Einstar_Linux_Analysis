@@ -1,6 +1,6 @@
 # EXStar physical calibration: recovered workflow, mathematics, and a Linux-native replacement
 
-Status: 2026-11-09. Offline work only; the scanner is disconnected and no vendor
+Status: 2026-11-10. Offline work only; the scanner is disconnected and no vendor
 binary was executed. Evidence is the shipped EXStar 1.2.2.0 tree, Ghidra 12.1.4
 decompilation of its DLLs, the vendor's own 25 × 3-image calibration corpus, the
 recorded 2026-02-09 EXStar session log, and the 6568-byte device calibration dump.
@@ -50,13 +50,23 @@ check, **B** = one interpretation step, **C** = hypothesis, **U** = unresolved.
    holes plus 4 large holes** at board coordinates (2,1), (4,1), (5,1) and the
    off-lattice (3.5,3). Its pitch, recovered independently from the stereo rig
    and from a joint bundle adjustment, is **27.72 mm** (triangulation
-   27.735 ± 0.022 mm over 22 poses; BA-implied 27.722 mm). **[A]** for the
-   corpus, **U** for whether the physical board is 8×5 or the 8×7 drawn in the
-   manual (see §12.1).
+   27.735 ± 0.022 mm over 22 poses; BA-implied 27.722 mm). That number is
+   **not independent** of the CCF baseline: it is the pitch that makes the
+   board consistent with 158.557 mm. A calibration-free measurement of the
+   plate outline (7.97 × 6.02 pitches) gives **25.00 ± 0.13 mm** if the vendor
+   `200x150` profile is the plate outline, implying a 199 × 151 mm plate; the
+   baseline-consistent pitch would require 221 × 167 mm. **The pitch is
+   unresolved; 27.72 is baseline-consistent, 25.0 is plate-size-consistent.**
+   Use `--pitch` and record the source. **[A]** for the corpus topology,
+   **U** for the metric pitch and for whether the physical board is 8×5 or the
+   8×7 drawn in the manual (see §12.1).
 
 6. The vendor's numerical core is `Sn3D_E10_camera_calibration` →
-   `FUN_1802dca70` → `FUN_1800e0180` (3-camera driver) → `TribleCCF`
-   (`CalibrationCCF::TribleCCF`, dongle-gated). It first solves a per-view
+   `FUN_1802dca70` → `FUN_1800e0180` (3-camera driver) → `Sn3D_Quar_CCF`
+   (`CalibrationCCF::QuarCCF`, 0x1802e5e70, dongle-gated; the 4-camera API is
+   called with three records populated). `TribleCCF` (0x1802e6a20) has the same
+   reference-view convention but **no importer in the dumped modules**; it must
+   not be assumed to be the production writer. The driver first solves a per-view
    extrinsic with `K`/`D` frozen (`sn3DExtrinsicSolver`, Ceres, no robust loss),
    then refines jointly, gated by `isOptK` / `isOptP3D`. The camera model is
    `K5=[fx,cx,cy,fy/fx,alpha]`, `D5=[k1,k2,p1,p2,k3]` with Brown–Conrady in
@@ -75,31 +85,42 @@ check, **B** = one interpretation step, **C** = hypothesis, **U** = unresolved.
    CCF by **2.8–5.1 px** in focal length and 3–9 px in principal point: the
    CCF is a near-optimal but not identical solution. **[A]** (measured)
 
-9. The **colour record is not co-registered with the IR pair in the shipped
-   CCF**: its relative rotation matches our fit to 0.14°, but its translation
-   differs by 3.6 mm in magnitude and ~17 mm in y — a difference that cannot
-   be explained by the plate scale. Either the CCF's colour record comes from a
-   different run/unit, or the vendor's colour calibration is inconsistent.
-   This must be resolved on the user's own unit. **[A]** for the discrepancy,
-   **U** for its cause.
+9. The **colour record is inconsistent with the IR pair in the shipped CCF**:
+   its relative rotation matches our fit to 0.12°, but its translation differs
+   by **17.66 mm** (essentially a pure y shift of 16.9 mm), which moves the
+   projected plate by **46.6 px mean** at the median view. The unit's factory
+   22-double Tex record agrees with our fit to **1.17 mm**, so the shipped Tex
+   CCF is the outlier of three estimates, not a frame/decode artifact. The
+   likely cause is a mixed-generation/stale Tex record (`hasTexture:false` in
+   the 2026 session), not the calibration model. **[A]** for the discrepancy,
+   **B** for the stale-record cause; repair needs the unit.
 
 10. A replacement pipeline was built and evaluated. It uses the same plate,
     sub-pixel blob detection, robust joint bundle adjustment, analytic
     covariance, Fisher-information view selection and uncertainty-driven
-    stopping. On synthetic ground truth the covariance is statistically
-    calibrated (**NEES ≈ 1.06 × n**). On the vendor corpus, **3 views already
-    recover the baseline to 0.03 mm**, but **intrinsics need ≥20 views** to get
-    within ~2–5 px of the vendor CCF. A greedy 8-view adaptive selection
-    reduced the synthetic fx error by 1.8×–6.4× versus a fixed 8-view subset,
-    depending on the scene and the diversity constraint. **[A/B]** (synthetic + real corpus; not a physical accuracy claim)
+    stopping. On synthetic ground truth the covariance is calibrated
+    (**NEES/n = 0.91–1.02** after the sandwich correction; the old conditional
+    formula was ~11× over-confident). On the vendor corpus, **3 views already
+    recover the baseline to 0.03 mm**, but **intrinsics need many views** to
+    approach the CCF (5/10/20 views leave 10.5/5.7/3.7 px mean focal bias).
+    The earlier 1.8×–6.4× adaptive claim used the conditional covariance and is
+    **superseded**; the rigorous held-out comparison is the view-count audit.
+    **[A/B]** (synthetic + real corpus; not a physical accuracy claim)
 
 11. The honest conclusion: the original sequence is **not mathematically
     minimal** (its 5×5 grid contains redundant poses), but the redundancy buys
     robustness against bad detections and makes the intrinsics observable
-    without a covariance model. A properly designed adaptive sequence can
-    match or beat it with **8–15 captures**, provided the scale is anchored and
-    the plate variant is known. The largest remaining uncertainty is **physical
-    scale and the actual plate variant**, not the solver.
+    without a covariance model. The minimum reliable capture count is
+    **target- and selection-dependent**, and the published "8–12" headline is
+    **withdrawn** after the held-out audit: 8–12 can meet a **1 px fx** target
+    with good selection (uniform 8, adaptive 12), but they do **not** meet a
+    0.5 px intrinsic target (no method reaches the UCB95 target even at 25;
+    only oracle selection at 8 does). The standard 0.75 px target needs ~12–20
+    views depending on selection; a high 0.35 px target is not reached by the
+    fixed design at 25. Baseline and held-out reprojection saturate by k≈8;
+    intrinsics dominate the count. The largest remaining uncertainty is
+    **physical scale, the plate variant and the stale colour record**, not the
+    solver.
 
 ---
 
@@ -313,7 +334,7 @@ one. **[A]**
 
 The vendor solves **all three cameras jointly**: the E10 driver receives three
 image arrays and three `CalibParam` outputs and calls the 3-camera
-`CalibrationCCF::TribleCCF`. The per-camera state is `fx, fy, cx, cy, kc[5],
+`CalibrationCCF::QuarCCF` (the E10 call populates three records). The per-camera state is `fx, fy, cx, cy, kc[5],
 alpha, R, T` (23 doubles). The solver state of the two-camera LM class is
 `[K5_A, D5_A, K5_B, D5_B, 6·views, relative pose 6, 3D points 3N]`; the E10
 3-camera path is the same idea with one more camera. **[A]**
@@ -371,7 +392,7 @@ v = fy yd + cy
 alpha` is the CCToolbox `alpha_c`. The model is exactly Brown–Conrady; the
 `docs/calibration/ccf_format.md` model (`K`, `dist`, `alpha_c·fx`) is the same
 model written in OpenCV form. **[A]** (`Sn3D_camera_to_image` 0x18013d3f0;
-`CalibParam` offsets in `CalibrationCCF::TribleCCF`)
+`CalibParam` offsets in `CalibrationCCF::QuarCCF`)
 
 ### 7.2 Vendor solve
 
@@ -387,8 +408,9 @@ model written in OpenCV form. **[A]** (`Sn3D_camera_to_image` 0x18013d3f0;
    else is Ceres default. **[A]** for the structure, **C** for the option names.
 3. **Joint refinement**: a hand-written LM (`Sn3D_LM_SingleCamera`,
    `Sn3D_LM_DoubleCamera`, `Sn3D_LM_RT`) with analytic Jacobians, and/or the
-   `TribleCCF` path; gated by `isOptK` (distortion) and `isOptP3D` (3-D points).
-   The 3-camera routine is `CalibrationCCF::TribleCCF` behind the dongle check.
+   per-camera joint refinement path; gated by `isOptK` (distortion) and
+   `isOptP3D` (3-D points). The 3-camera fusion is `CalibrationCCF::QuarCCF`
+   behind the dongle check (`TribleCCF` has no importer in the dumped modules).
 4. **Output**: `CalibParam` 23 doubles → 33-double CCF; `T` is a valid view's
    `tvec` (so the world frame is a board pose, not a camera).
 
@@ -462,6 +484,21 @@ Interpretation:
 CCF is not necessarily our error; our fit has a lower reprojection error on the
 same images. The honest statement is that the CCF is not the reprojection
 optimum of this corpus, and physical truth requires an artefact measurement.
+**Prefix capture-count check (real corpus, fixed EXStar order, factory-fixed
+distortion).** Marginal fx σ from the corrected covariance:
+
+| k | σfx (L/R/T) px | Δfx vs CCF (L/R/T) px | RMS px |
+|---:|---|---|---:|
+| 8 | 3.79 / 4.02 / 4.09 | +2.6 / −5.1 / −2.8 | 0.409 |
+| 12 | 1.17 / 1.31 / 1.31 | +2.0 / −1.0 / +0.5 | 0.431 |
+| 20 | 0.74 / 0.89 / 0.87 | −2.2 / −4.3 / −3.4 | 0.380 |
+| 25 | 0.48 / 0.52 / 0.52 | −2.8 / −5.1 / −4.2 | 0.367 |
+
+At k=8 the rig is still poorly determined (σ ≈ 4 px); 12 views are borderline
+for a 0.75 px target; 20–25 are required for the standard target, and 25 still
+fails the high target (σ 0.52 > 0.35, held-out 0.455 > 0.35). This is
+CCF-relative, not physical truth, but it shows that "8 captures" is not
+defensible on the real corpus.
 
 ### 8.2 Convergence is not physical accuracy
 
@@ -473,9 +510,9 @@ optimum of this corpus, and physical truth requires an artefact measurement.
 * The **absolute scale** still depends on the plate pitch / baseline. A 0.1 %
   pitch error is 0.16 mm on a 158 mm baseline and ~0.3 mm at 300 mm depth.
   Without a physical length standard this cannot be closed.
-* The CCF's colour record is inconsistent with a single rigid rig (17 mm y
-  offset). No amount of solver convergence fixes a wrong reference; this is a
-  data/registration issue, not an optimisation issue.
+* The CCF's colour record is inconsistent with a single rigid rig (17.66 mm,
+  essentially y). The factory record agrees with our fit to 1.17 mm, so this is
+  a stale/mixed-generation record issue, not an optimisation issue.
 
 ### 8.3 Why the manufacturer requires this sequence
 
@@ -515,13 +552,20 @@ images ──► detect.py ──► grid (u,v)->(x,y) ──► calibrate.py �
   failures are left images 9, 16, 17 (the right/tex views still calibrate).
   An optional `--refine-mode ellipse` fits an ellipse to each hole edge with a
   centroid-agreement guard; it detects 73–74/75 images but requires the
-  **per-view gate** (a view whose fitted RMS exceeds `max(2 px, 3×median)` is
-  dropped and the fit repeated). With the gate it reaches 0.351 px vs 0.367 px
-  for centroid — a small improvement, not yet the vendor's Canny+ellipse
-  implementation.
+  **per-view gate**. With the gate it reaches 0.351 px vs 0.367 px for centroid
+  on the vendor corpus. A separate 6-localizer audit (52 synthetic stress cases)
+  found Canny+sub-pixel edge and conic back-projection to be the best synthetic
+  localizers (0.018–0.029 px; centroid 0.055 px under severe tilt, 0.544 px
+  with neighbouring holes), but on the real vendor images the residual floor is
+  **model-limited**, so the centroid remains best there (0.367 px). Recommended
+  production path: centroid seed → edge/conic refinement after the first
+  homography; retire the threshold-ellipse mode. See
+  `analysis/calibration/audit/detector_report.md`.
 * **Calibration**: joint robust BA as in §7.3, with optional fixed distortion
   (vendor-like) or free distortion, and optional baseline anchoring.
-* **Uncertainty**: `JᵀJ` covariance; synthetic NEES ≈ 1.06 × n (well calibrated).
+* **Uncertainty**: marginal covariance (board poses integrated out), robust
+  sandwich `A⁻¹BA⁻¹`; synthetic NEES/n = **0.91–1.02** (calibrated), with the
+  conditional covariance removed (it was ~11× over-confident).
 * **Adaptive**: candidate pool of board poses (distance × tilt × roll), Fisher
   information gain after eliminating the candidate view by its Schur
   complement; A-optimal greedy selection with a distance/tilt diversity
@@ -567,15 +611,15 @@ tests remain green (see `scripts/verify_all.sh` if present).
 
 | views | median |fx error| | median baseline error | median RMS | NEES / n |
 |---:|---:|---:|---:|---:|
-| 5 | 0.51 px | 0.054 mm | 1.12 px | 1.09 |
-| 10 | 0.34 px | 0.011 mm | 1.03 px | 1.07 |
-| 25 | 0.51 px | 0.022 mm | 1.51 px | 1.06 |
+| 5 | 0.51 px | 0.054 mm | 1.12 px | 0.91 |
+| 10 | 0.34 px | 0.011 mm | 1.03 px | 0.92 |
+| 25 | 0.51 px | 0.022 mm | 1.51 px | 1.02 |
 
 The RMS includes the 2 % gross outliers (8 px); the robust loss keeps the
 parameter errors low. Without outliers the RMS is 0.27 px and the fx error is
-0.20–0.61 px. The covariance is statistically calibrated (NEES ≈ n), and the
-reported fx sigma matches the empirical spread (e.g. 0.395 vs 0.381 px at 25
-views).
+0.20–0.61 px. After the sandwich correction the covariance is calibrated
+(NEES/n 0.91–1.02); the earlier 1.06 figure used a different estimator and is
+superseded.
 
 ### 10.2 Vendor corpus (real images, CCF reference)
 
@@ -603,42 +647,52 @@ median 0.181 px / p90 0.873 px, our rig gives median **0.138 px** / p90
 epipolar geometry on this corpus. This is a relative-geometry check; it does
 not establish absolute depth accuracy.
 
-### 10.3 Adaptive vs fixed (synthetic, 8 views)
+### 10.3 Adaptive vs fixed (corrected covariance)
 
-Two independent 2-trial runs:
+The earlier 8-view result (fixed 0.804 px, adaptive 0.126 px) was computed with
+the **conditional** covariance and is not a valid comparison. With the marginal
+correction and diversity-aware selection, a 10-view synthetic run gave:
 
 | run | fixed median abs(fx) | adaptive | fixed baseline | adaptive |
 |---|---:|---:|---:|---:|
-| no diversity (seed 7100) | 0.804 px | **0.126 px** | 0.050 mm | **0.016 mm** |
-| distance/tilt diversity (seed 7300) | 1.322 px | **0.752 px** | 0.027 mm | **0.014 mm** |
+| 10 views, seed 9000 | 0.105 px | 0.114 px | 0.062 mm | **0.002 mm** |
 
-The unconstrained A-optimal plan clustered all four added views at 240 mm; the
-diversity-constrained plan spread them over 240 and 400 mm. Adaptive selection
-improved parameter accuracy in both runs (1.8×–6.4×), but the magnitude is
-scene-dependent. A production planner must keep the diversity constraint; pure
-A-optimality is not acceptable for a plate whose distortion/pose trade-off
-depends on distance.
+Adaptive selection is not consistently better for focal length; it clearly
+helped the baseline in this scene. The rigorous held-out comparison across
+fixed/uniform/random/oracle/adaptive is the view-count audit
+(`analysis/calibration/audit/viewcount_report.md`); the capture-count claim is
+taken from that, not from this single run.
 
 ### 10.4 Sensitivity and stopping
 
 * **Global 2-D shift** of one view (all 40 points by 10 px): the board pose
-  absorbs it, so the calibration shifts by only 0.15/0.26/0.30 px in
-  fx and 0.019 mm in baseline. A rigid shift is not a "bad view".
+  absorbs it, so the calibration shifts by only 0.15/0.26/0.30 px in fx and
+  0.019 mm in baseline. A rigid shift is not a "bad view".
 * **Non-rigid corruption** (8 of 40 points by 10 px): the corrupted view's
   per-view RMS rises to 4.35 px vs a 0.31 px median and the gate flags it.
-  Dropping a merely noisy view can shift the remaining parameters by
-  ~0.2 px; the gate is intended for gross failures, not for ordinary noise.
-* **Stopping demo** (synthetic, seed 8100): 4/5/6/7 views give focal errors
-  0.68/1.72/1.21/0.27 px; the minimum-view guard stops at **8 views** with
-  0.33 px focal error and a 0.005 mm baseline error. The reported σ at 8 views
-  (0.056 px) is far below the actual error, confirming that σ alone is not a
-  bias detector.
+  Dropping a merely noisy view can shift the remaining parameters by ~0.2 px;
+  the gate is for gross failures, not ordinary noise.
+* **Covariance-only stopping is invalid.** The published conditional
+  covariance under-reported fx σ by ~11×; on the corrected marginal covariance
+  and conservative rule, a 25-view vendor calibration passes the **standard**
+  target (σfx 0.52 px, baseline σ 0.05 mm, held-out 0.455 px, stability 1.13)
+  but **fails the high target** (σfx 0.52 > 0.35, held-out 0.455 > 0.35).
+  Covariance thresholds alone cannot accept; coverage, diversity, stability
+  and held-out checks are mandatory.
+* **NEES/n** after the sandwich correction is 0.91–1.02 at 5/8/12/20 synthetic
+  views, so the uncertainty is calibrated rather than optimistic.
 
 ### 10.4 End-to-end profile
 
-The CLI run on the 75 vendor images produced a revision with:
-baseline **158.557 mm** (anchored), baseline σ **0.012 mm**, fx σ 0.056–0.154 px,
-all stopping checks green, factory snapshot and covariance saved. The legacy
+The corrected CLI run on the 75 vendor images produces:
+baseline **158.557 mm** (anchored), anchor σ **0.05 mm**, fx σ **0.52 px**,
+held-out **0.455 px**, stability max-z **1.13**, IR consistency 0.76 mm and the
+Tex stale-record warning (17.66 mm). The **standard** target passes; the high
+target fails (see above). A view-bootstrap caveat applies: resampling four views
+changes fx by 1.26–1.60 px while the single-fit sigma is 0.48–0.52 px
+(ratio 0.32–0.44 in that audit; our 6-fit drop-4 vendor check gives 0.647 vs
+0.504 px, ratio 0.78). A production profile should run `--bootstrap` and treat
+a ratio below 0.75 as a warning/failure even if the single-fit stop passes. The legacy
 `Calibration.from_ccf_dir` loads the produced directory and reports the same
 baseline. This is the intended host-side workflow: **no device write**.
 
@@ -647,14 +701,17 @@ baseline. This is the intended host-side workflow: **no device write**.
 | operation | time (this machine) |
 |---|---:|
 | detect 75 images | ~7 s (single-threaded Python/OpenCV) |
-| calibrate 25 views, 72 observations | ~10 s (dense Jacobian) |
-| covariance (189 params) | ~9 s |
+| calibrate 25 views, 72 observations | 9.44 s (SciPy dense FD); **1.21 s** with an analytic Jacobian; **0.055 s** native C++ LM (172×) |
+| covariance (189 params) | 3.8 s finite differences; ms analytic; native LM returns analytic covariance |
+| OpenCV per-camera + stereo | 0.137 s (weaker rig-imposed problem, not directly comparable) |
 | vendor solve on the same session | ~1.3 s (C++/Ceres, 3 cameras) |
 | EXStar human positioning | 2 min 56 s (measured) |
 
-The Python prototype is ~10× slower than the vendor's C++ solve but the solve
-is <1 % of the human time. Optimisation (analytic Jacobian, vectorised
-residuals, GPU detection) is future work, not the bottleneck.
+The Python prototype is ~100× slower than the native C++ LM and ~10× slower
+than an analytic SciPy Jacobian, but even 10 s is <1 % of the human time.
+`OPENBLAS_NUM_THREADS=1` alone gives 2.5–2.7× on the dense engine. Ceres 2.2.0
+is installed but **cannot compile** because Eigen 3 headers are absent; the
+validated native LM (`calib/ceres/`) is the recommended production path.
 
 ---
 
@@ -662,10 +719,10 @@ residuals, GPU detection) is future work, not the bottleneck.
 
 | dimension | EXStar 1.2.2.0 | proposed replacement |
 |---|---|---|
-| captures | fixed 25 × 3 = 75 | adaptive 8–20 × 3 (target 8–12) |
+| captures | fixed 25 × 3 = 75 | 8–12 only for a 1 px fx target with good selection; 12–20 for 0.75 px; 20–25 for 0.5 px mean; no UCB95 at 25 for 0.5 px |
 | orientations | 5 fixed | chosen by Fisher information + diversity |
 | distances | 5 fixed bands 240–560 | chosen from a pool; diversity-constrained |
-| human time | 2 min 56 s measured | estimated 40–90 s for 8–12 captures (not yet measured on hardware) |
+| human time | 2 min 56 s measured | ~40–90 s for 8–12 captures is a projection; a 12–20-view standard run is longer |
 | capture→result | ~1.3 s | ~10 s prototype; <2 s achievable with analytic Jacobian/C++ |
 | intrinsic output | fx, fy, cx, cy, alpha, kc fixed | same, kc optionally free |
 | uncertainty | none | full covariance, NEES-validated |
@@ -695,7 +752,7 @@ residuals, GPU detection) is future work, not the bottleneck.
 
 | gain | estimate | confidence |
 |---|---|---|
-| captures | 75 → 24–36 images (8–12 steps) | B (synthetic + corpus ablation) |
+| captures | 75 → 24–36 images (8–12 steps) only for a **1 px** target with good selection; 12–20 for 0.75 px; 20–25 for 0.5 px mean; 8–12 not defensible for high accuracy | A/B (held-out view-count audit) |
 | human time | 176 s → 40–90 s | C (not measured on hardware) |
 | intrinsic error | comparable or better than fixed 8 views; 6× better in synthetic | B |
 | baseline error | 0.05 → 0.02 mm in synthetic; 0.014 mm vs CCF on real | B |
@@ -711,31 +768,54 @@ validation is in §12.
 
 ## 12. Limitations and the evidence still needed
 
-### 12.1 Plate variant (blocking for hardware use)
+### 12.1 Plate variant and hole inventory
 
-The corpus is 8×5; the manual figure is 8×7. The engine is configurable, but
-the **actual board must be counted and measured**:
+The device corpus is **8 × 5 with 41 holes**: 40 lattice nodes (37 small +
+3 large at (2,1),(4,1),(5,1)) plus one off-lattice large at (3.5,3). The DLL
+board drawing and the manual UI panel are **8 × 7 with 57 holes**: 56 lattice
+nodes (53 small + 3 large at (2,2),(4,2),(5,2)) plus one off-lattice large at
+(3.5,4). The video is 8 × 5. The two variants are the same design with rows 0
+and 6 added/removed; `calib.plate` supports both.
 
-1. Count the small holes along both axes (8×5 or 8×7).
-2. Measure the centre-to-centre pitch with calipers (expected ~27.7 mm for the
-   corpus variant; a different value if 8×7).
-3. Record the four large-hole coordinates (the centre-relative rule predicts
-   (2,cy−1),(4,cy−1),(5,cy−1),(3.5,cy+1)).
-4. Measure the board outline and thickness.
+A physical count decides it:
 
-This is a five-minute physical measurement and it decides the plate spec.
+1. Count the holes (41 or 57) and check whether the three large on-lattice
+   markers are on the second row (8×5) or the third row (8×7).
+2. Measure 10 pitches with calipers and the plate outline (the measured outline
+   is 7.97 × 6.02 pitches, aspect 4:3).
+3. Record hole diameters (small 0.130 pitch, large 0.255 pitch, ratio 1.96) and
+   the four large-marker coordinates.
 
-### 12.2 Physical scale
+### 12.2 Metric pitch
 
-Anchor to the factory baseline (implemented) or measure a known length
-(caliper/artefact). A 0.1 % scale error is 0.3 mm at 300 mm depth; only a
-physical standard can bound it.
+The pitch is **unresolved**:
+
+* **27.72 mm** is what triangulation (27.735 ± 0.022) and BA (27.722) give when
+  the CCF baseline is assumed correct. It is **not independent**: the baseline
+  and the pitch are two ends of the same scale.
+* **25.00 ± 0.13 mm** follows from the calibration-free plate outline
+  (7.97 × 6.02 pitches) if the vendor `200x150` profile is the plate outline;
+  it implies a 199 × 151 mm plate.
+* 27.72 mm implies a 221 × 167 mm plate. The folder name may be the scanner's
+  scan volume rather than the plate size, so the 25.0 hypothesis is not proved.
+
+Pitch is a pure scale for this planar target: with the baseline anchored to the
+CCF, the intrinsics, relative rotation and reprojection residual are identical
+for 25.0, 27.72 and 30.0 (measured: fx changes <1e-6 px, RMS identical). The
+choice only changes the raw metric baseline (142.99 / 158.54 / 171.58 mm) and
+the physical interpretation. Calipers on 10 pitches, or an independently
+calibrated length, are required.
 
 ### 12.3 Colour camera
 
-The CCF colour extrinsic is not co-registered with the IR pair (17 mm y
-offset). Re-calibrate the user's own unit jointly (our engine does) and compare
-the colour-to-IR transform before/after; do not trust the shipped colour T.
+The shipped Tex record is **17.66 mm** from our joint fit and from the unit's
+factory 22-double record (1.17 mm). The error is a near-pure y shift and moves
+the projected plate by 46.6 px mean (33.6–77.5). It is a stale/mixed-generation
+record (`hasTexture:false` in the 2026 session), not a decode/frame error.
+`calib.ccf.consistency` + `calib.pipeline` now warn and the engine never fits
+blindly to the Tex CCF. Repair needs a colour-calibration run with texture
+capture enabled on the actual unit; until then use the engine's joint Tex pose
+and validate RGB registration on a textured object.
 
 ### 12.4 Real captures
 

@@ -19,21 +19,45 @@ from .profiles import ProfileStore
 from .workflow import exstar_sequence, parse_rapid_config
 
 
+def _apply_plate(args):
+    if (getattr(args, "cols", 8) != 8 or getattr(args, "rows", 5) != 5
+            or abs(getattr(args, "pitch", plate.DEFAULT_PITCH_MM) - 27.72) > 1e-9):
+        plate.use_spec(plate.PlateSpec(args.cols, args.rows, pitch_mm=args.pitch,
+                                       pitch_source="cli (unvalidated)"))
+    return plate.current_spec()
+
+
 def cmd_detect(args):
+    _apply_plate(args)
     det = detect_directory(args.images, refine_mode=args.refine_mode)
     print(json.dumps(det.summary(), indent=2))
     return 0
 
 
 def cmd_calibrate(args):
+    _apply_plate(args)
     res, det, info = calibrate_directory(
         args.images, args.factory, pitch_mm=args.pitch,
         free_kc=args.free_distortion, anchor_baseline=not args.no_anchor,
         max_nfev=args.max_nfev, refine_mode=args.refine_mode)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    obs = det.observations()
+    from .quality import accuracy_preset
+    stop = stopping_report(res, obs,
+                           heldout_rms_px=info.get("heldout_rms_px"),
+                           pitch=args.pitch, compute_stability=True,
+                           **accuracy_preset(args.target))
+    from .quality import bootstrap_sigma, quality_report
+    boot = bootstrap_sigma(obs, res, args.pitch, n_boot=6, drop=4,
+                           seed=0) if args.bootstrap else None
+    if boot:
+        info["bootstrap"] = boot
+    quality = quality_report(res, obs, heldout_rms_px=info.get("heldout_rms_px"),
+                             target=args.target, pitch=args.pitch,
+                             stopping=stop, bootstrap=boot)
     payload = {"result": res.as_dict(), "info": info,
-               "stopping": stopping_report(res),
+               "stopping": stop, "quality": quality,
                "detections": det.summary()}
     out.write_text(json.dumps(payload, indent=2, default=float))
     print(json.dumps(info["summary"], indent=2))
@@ -57,9 +81,16 @@ def cmd_calibrate(args):
                     "tex": Path(args.factory) / "TexCCF.txt"})
             except FileExistsError:
                 pass
-        rev = store.save_revision(serial, recs, {"info": info}, res.covariance,
+        meta = {"info": info, "quality": quality,
+                "validation": {"status": quality["status"],
+                               "heldout_rms_px": info.get("heldout_rms_px"),
+                               "target": args.target},
+                "pitch_mm": args.pitch,
+                "engine": "calib"}
+        rev = store.save_revision(serial, recs, meta, res.covariance,
                                   res.param_std() and list(res.param_std().keys()))
-        print(f"profile revision {rev.index} at {rev.root}")
+        store.activate(serial, rev.index)
+        print(f"profile revision {rev.index} at {rev.root} (active)")
     return 0
 
 
@@ -68,15 +99,35 @@ def cmd_plan(args):
     res = data["result"]
     # Rebuild a minimal result object from the JSON
     from .calibrate import CalibrationResult, CameraIntrinsics
-    cams = {c: CameraIntrinsics(**{k: (np.array(v["kc"]) if k == "kc" else v[k])
-                                  for k, v in cam.items() if k in ("fx", "fy", "cx", "cy", "kc", "skew")})
+    cams = {c: CameraIntrinsics(**{k: (np.array(val) if k == "kc" else val)
+                                  for k, val in cam.items()
+                                  if k in ("fx", "fy", "cx", "cy", "kc", "skew")})
             for c, cam in res["cameras"].items()}
     extr = {c: (np.array(v["R"]), np.array(v["t"])) for c, v in res["extrinsics"].items()}
     views = [(np.array(v["R"]), np.array(v["t"])) for v in res["views"]]
     cov = None
+    info = dict(res.get("info", {}))
+    if getattr(args, "profile", None):
+        store = ProfileStore(args.profile)
+        active = store.device_dir(args.serial) / "active"
+        if active.exists():
+            rev = store.revisions(args.serial)[int(active.read_text().strip()) - 1]
+        else:
+            revs = store.revisions(args.serial)
+            if not revs:
+                raise SystemExit("no profile revisions; run calibrate --profile first")
+            rev = revs[-1]
+        z = np.load(rev.root / "covariance.npz", allow_pickle=True)
+        cov = z["cov"]
+        info = dict(rev.meta.get("info", {}))
+        info.setdefault("free_mask", [True] * cov.shape[0])
+    elif res.get("covariance_available") is not None:
+        pass
     rr = CalibrationResult(cams, extr, views, cov, res["residual_rms_px"],
                            res["residual_max_px"], res["n_observations"],
-                           res["n_parameters"])
+                           res["n_parameters"], info=info)
+    if cov is None:
+        print("warning: no covariance loaded; pass --profile for a meaningful plan", file=sys.stderr)
     plan = plan_views(candidate_pool(args.pitch), rr, args.pitch, n=args.n)
     print(json.dumps({"selected": plan["selected"],
                       "sigma": {k: v for k, v in list(plan["sigma"].items())[:8]}},
@@ -98,7 +149,9 @@ def main(argv=None):
 
     d = sub.add_parser("detect", help="detect grids in a directory of images")
     d.add_argument("images")
-    d.add_argument("--refine-mode", choices=("centroid", "ellipse"), default="centroid")
+    d.add_argument("--refine-mode", choices=("centroid", "ellipse", "edge"), default="centroid")
+    d.add_argument("--cols", type=int, default=8)
+    d.add_argument("--rows", type=int, default=5)
     d.set_defaults(func=cmd_detect)
 
     c = sub.add_parser("calibrate", help="calibrate from a directory of images")
@@ -111,13 +164,20 @@ def main(argv=None):
     c.add_argument("--out", default="calibration_result.json")
     c.add_argument("--profile", default=None, help="host-side profile root")
     c.add_argument("--serial", default="unknown")
-    c.add_argument("--refine-mode", choices=("centroid", "ellipse"), default="centroid")
+    c.add_argument("--refine-mode", choices=("centroid", "ellipse", "edge"), default="centroid")
+    c.add_argument("--target", choices=("fast", "standard", "high"), default="standard")
+    c.add_argument("--bootstrap", action="store_true",
+                   help="6-fit view-bootstrap sigma check (slower, conservative)")
+    c.add_argument("--cols", type=int, default=8)
+    c.add_argument("--rows", type=int, default=5)
     c.set_defaults(func=cmd_calibrate)
 
     p = sub.add_parser("plan", help="recommend next views from a calibration result")
     p.add_argument("result")
     p.add_argument("--n", type=int, default=8)
     p.add_argument("--pitch", type=float, default=plate.DEFAULT_PITCH_MM)
+    p.add_argument("--profile", default=None)
+    p.add_argument("--serial", default="unknown")
     p.set_defaults(func=cmd_plan)
 
     w = sub.add_parser("workflow", help="parse the EXStar workflow XML")

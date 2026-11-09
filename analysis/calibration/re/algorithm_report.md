@@ -619,3 +619,20 @@ What this confirms:
 The remaining U item is the body of `CalibrationCCF::TribleCCF` itself and the
 exact `deviationN`/`deviationT` consumer. Neither changes the recovered model
 or the replacement design.
+
+### Correction (2026-11-10): the E10 fusion call is `QuarCCF`, not `TribleCCF`
+
+The tail of `FUN_1800e0180` (dump lines 30680–30810) calls
+`Sn3D_Quar_CCF` → `CalibrationCCF::QuarCCF` (`0x1802e5e70`, 2981 bytes), not
+`TribleCCF`. `QuarCCF` is the four-camera API; the E10 call populates three
+records. `TribleCCF` (`0x1802e6a20`) has the same camera-1 reference-view
+convention but **no importer in any dumped module**, so it is not evidence of the
+production path.
+
+`QuarCCF` body (`Sn3DCalibrationJR.dump.txt:82266`): camera 1 gets
+`R=Rodrigues(rvec[v*])`, `T=tvec[v*]` with `v*` = first view whose
+`tvec[2] != −1`; cameras 2/3 get relative poses composed into the same world
+frame. The colour audit's convention analysis therefore applies, but the
+production writer may be per-pair (`CameraCalibrateAlg` / `[LR]`,`[LT]`) rather
+than the fusion API; that remains **U** and does not change the model or the
+replacement design.

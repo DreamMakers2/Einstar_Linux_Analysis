@@ -43,25 +43,37 @@ calibration: 5 board orientations × 5 distance bands (240/320/400/480/560 mm
 ±40) × 3 cameras = **75 images**; only the vertical group enforces ±8°; there is
 no per-step retry. A real session took **2 min 56 s**, the last capture→result
 was ~1.3 s and the device write ~0.34 s. The vendor solve is per-view PnP
-(Ceres, no robust loss) followed by a joint refinement; the distortion is
-preserved and all three CCF records are regenerated. The result **overwrites
+(Ceres, no robust loss) followed by a joint refinement via
+`Sn3D_Quar_CCF`/`CalibrationCCF::QuarCCF` (`TribleCCF` has no importer); the
+distortion is preserved and all three CCF records are regenerated. The result **overwrites
 the factory CCF files in place and the device block at `tagDevData+0x39B`**,
 with no backup.
 
-The vendor's own 25-image corpus recovers an **8×5 plate, 27.72 mm pitch, four
-large markers**. A free re-optimisation reaches 0.367 px and reproduces the IR
-baseline to **0.014 mm**, the relative rotation to **0.20°**, and the IR
-epipolar geometry to 0.138 px median (CCF 0.181 px). The shipped colour record
-is **not co-registered** with the IR pair (17 mm y offset) and must be
-re-estimated on the user's unit. `calib/` is a Linux-native replacement with
-detection, joint robust BA, NEES-calibrated covariance, Fisher-information
-view selection, per-view gating and versioned host profiles; it never writes
-the scanner implicitly.
+The vendor's own 25-image corpus recovers an **8×5 plate with 41 holes** (37
+small + 4 large), plus a documented **8×7 / 57-hole** drawing variant. The
+metric pitch is **unresolved**: 27.72 mm is baseline-consistent but not
+independent; 25.0 mm follows if the vendor `200x150` profile is the plate
+outline. A free re-optimisation reaches 0.367 px and reproduces the IR baseline
+to **0.014 mm**, the relative rotation to **0.20°**, and the IR epipolar
+geometry to 0.138 px median (CCF 0.181 px). The shipped colour record is
+**17.66 mm** from the fit and from the factory record (which agrees to 1.17 mm);
+it is stale/mixed-generation, not a frame error, and moves the projected plate
+by 46.6 px. `calib/` is a Linux-native replacement with detection, joint robust
+BA, **marginal** covariance (synthetic NEES 0.91–1.02 n), Fisher-information
+view selection, conservative coverage/held-out stopping, per-view gating and
+versioned host profiles; it never writes the scanner implicitly.
 
-**Caveat:** the physical plate variant (8×5 vs the 8×7 drawn in the manual), the
-absolute scale, and any sub-millimetre accuracy claim still require a board
-measurement, a known length standard, and a calibration run on the user's unit.
-The roadmap's calibration track lists those gates.
+**Capture-count correction.** The published 8–12 claim used a conditional
+covariance and is superseded. The held-out audit gives 8–12 only for a ~1 px fx
+target with good selection, 12–20 for the standard 0.75 px target, and 20–25
+for 0.5 px mean; no non-oracle method reaches the 0.5 px UCB95 target at 25,
+and 25 still fails a high 0.35 px target. The minimum is target- and
+selection-dependent; do not quote 8–12 universally.
+
+**Caveat:** the plate variant/pitch, the absolute scale, and any sub-millimetre
+accuracy claim still require a board measurement (hole count, calipers), a known
+length standard, a calibration run on the user's unit, and a known artefact. The
+roadmap's calibration gates list them.
 
 ## 2. What is incomplete
 

@@ -95,19 +95,27 @@ def rig_vector(result: CalibrationResult) -> np.ndarray:
     return x
 
 
+def free_rig_mask(result: CalibrationResult) -> np.ndarray:
+    """Boolean mask of the free rig parameters (fixed parameters excluded)."""
+    fm = result.info.get("free_mask")
+    if fm is None:
+        return np.ones(NRIG, bool)
+    return np.asarray(fm[:NRIG], bool)
+
+
 def rig_covariance(result: CalibrationResult) -> np.ndarray:
+    """Marginal covariance of the 39 rig parameters.
+
+    The board poses are nuisance parameters: their uncertainty must be
+    integrated out, not conditioned on.  The marginal covariance is the
+    top-left block of the joint covariance.  The old expression
+    ``C_rr - C_rv C_vv^-1 C_vr`` is the *conditional* covariance given the
+    poses and is therefore too small (a classic uncertainty-audit failure).
+    """
     cov = result.covariance
     if cov is None:
         return np.eye(NRIG) * 1e6
-    rr = cov[:NRIG, :NRIG]
-    rv = cov[:NRIG, NRIG:]
-    vv = cov[NRIG:, NRIG:]
-    if vv.size:
-        try:
-            return rr - rv @ np.linalg.pinv(vv, rcond=1e-12) @ rv.T
-        except np.linalg.LinAlgError:
-            return rr
-    return rr
+    return np.array(cov[:NRIG, :NRIG], copy=True)
 
 
 # --------------------------------------------------------------------------
@@ -168,24 +176,81 @@ def candidate_jacobian(x_rig: np.ndarray, R: np.ndarray, t: np.ndarray,
     return J
 
 
-def information_gain(cov_rig: np.ndarray, J: np.ndarray) -> tuple[float, np.ndarray]:
-    Jr = J[:, :NRIG]
+def rig_information(result: CalibrationResult) -> np.ndarray:
+    """Marginal information of the rig parameters (board poses eliminated).
+
+    Uses the stored full information matrix when available; this is numerically
+    preferable to inverting an ill-conditioned marginal covariance.
+    """
+    free = free_rig_mask(result)
+    if getattr(result, "marginal_information", None) is not None:
+        return np.array(result.marginal_information, copy=True)
+    H = result.information
+    if H is None:
+        C = rig_covariance(result)
+        out = np.zeros((NRIG, NRIG))
+        out[np.ix_(free, free)] = np.linalg.pinv(C[np.ix_(free, free)], rcond=1e-10)
+        return out
+    fm = np.asarray(result.info.get("free_mask", np.ones(H.shape[0], bool)), bool)
+    rig = np.where(fm[:NRIG])[0]
+    view = np.where(fm[NRIG:])[0] + NRIG
+    if len(view) == 0:
+        schur = H[np.ix_(rig, rig)]
+    else:
+        Hrr = H[np.ix_(rig, rig)]
+        Hrv = H[np.ix_(rig, view)]
+        Hvv = H[np.ix_(view, view)]
+        schur = Hrr - Hrv @ np.linalg.pinv(Hvv, rcond=1e-10) @ Hrv.T
+    out = np.zeros((NRIG, NRIG))
+    out[np.ix_(rig, rig)] = schur
+    return out
+
+
+def _inv_spd(A: np.ndarray, floor_rel: float = 1e-12) -> np.ndarray:
+    """Symmetric positive-definite inverse with an eigenvalue floor."""
+    A = 0.5 * (A + A.T)
+    w, V = np.linalg.eigh(A)
+    wmax = max(float(w.max()), 1e-300)
+    w = np.clip(w, floor_rel * wmax, None)
+    return (V / w) @ V.T
+
+
+def information_gain(cov_rig: np.ndarray, J: np.ndarray,
+                     free: np.ndarray | None = None,
+                     prior_info: np.ndarray | None = None) -> tuple[float, np.ndarray]:
+    """Marginal information gain of one candidate view.
+
+    ``cov_rig`` must be the *marginal* rig covariance.  The candidate view's
+    six pose parameters are eliminated by their Schur complement.  The prior
+    information is ``inv(C_rr)`` (not the raw J^T J, whose scale differs by the
+    residual variance); using J^T J directly made A-optimal gains negative.
+    """
+    free = np.ones(NRIG, bool) if free is None else np.asarray(free, bool)
+    idx = np.where(free)[0]
+    prior = cov_rig[np.ix_(idx, idx)]
+    H0 = _inv_spd(prior) if prior_info is None else prior_info[np.ix_(idx, idx)]
+    Jr = J[:, :NRIG][:, idx]
     Jv = J[:, NRIG:]
     Hv = Jv.T @ Jv
     try:
-        Hv_inv = np.linalg.pinv(Hv, rcond=1e-12)
+        Hv_inv = np.linalg.pinv(Hv, rcond=1e-10)
     except np.linalg.LinAlgError:
         return -np.inf, cov_rig
     H_add = Jr.T @ Jr - Jr.T @ Jv @ Hv_inv @ Jv.T @ Jr
-    H0 = np.linalg.pinv(cov_rig, rcond=1e-12)
-    H1 = H0 + H_add
-    cov1 = np.linalg.pinv(H1, rcond=1e-12)
-    return float(np.trace(cov_rig) - np.trace(cov1)), cov1
+    # clip numerical negative directions of the Schur complement
+    wa, Va = np.linalg.eigh(0.5 * (H_add + H_add.T))
+    H_add = (Va * np.clip(wa, 0.0, None)) @ Va.T
+    cov1_free = _inv_spd(H0 + H_add)
+    cov1 = np.zeros_like(cov_rig)
+    cov1[np.ix_(idx, idx)] = cov1_free
+    gain = float(np.trace(prior) - np.trace(cov1_free))
+    return gain, cov1
 
 
 def select_next(candidates: list[ViewCandidate], x_rig: np.ndarray,
                 cov_rig: np.ndarray, pitch: float,
-                used: set[str] | None = None) -> Optional[tuple[ViewCandidate, float, np.ndarray]]:
+                used: set[str] | None = None,
+                free: np.ndarray | None = None) -> Optional[tuple[ViewCandidate, float, np.ndarray]]:
     used = used or set()
     best = None
     for cand in candidates:
@@ -194,20 +259,44 @@ def select_next(candidates: list[ViewCandidate], x_rig: np.ndarray,
         J = candidate_jacobian(x_rig, cand.R, cand.t, pitch)
         if J is None:
             continue
-        gain, cov1 = information_gain(cov_rig, J)
+        gain, cov1 = information_gain(cov_rig, J, free)
         if best is None or gain > best[1]:
             best = (cand, gain, cov1)
     return best
 
 
+def _diverse_pool(pool: list[ViewCandidate], chosen: list[ViewCandidate],
+                  max_per_distance: int = 2, max_per_tilt_sign: int = 2):
+    dcount = {}; scount = {}
+    for c in chosen:
+        db = round(c.distance_mm / 40.0)
+        dcount[db] = dcount.get(db, 0) + 1
+        sx = 0 if abs(c.tilt_x_deg) < 4 else (1 if c.tilt_x_deg > 0 else -1)
+        sy = 0 if abs(c.tilt_y_deg) < 4 else (1 if c.tilt_y_deg > 0 else -1)
+        scount[(sx, sy)] = scount.get((sx, sy), 0) + 1
+    out = []
+    for c in pool:
+        db = round(c.distance_mm / 40.0)
+        sx = 0 if abs(c.tilt_x_deg) < 4 else (1 if c.tilt_x_deg > 0 else -1)
+        sy = 0 if abs(c.tilt_y_deg) < 4 else (1 if c.tilt_y_deg > 0 else -1)
+        if dcount.get(db, 0) >= max_per_distance:
+            continue
+        if scount.get((sx, sy), 0) >= max_per_tilt_sign:
+            continue
+        out.append(c)
+    return out if out else pool
+
+
 def plan_views(candidates: list[ViewCandidate], result: CalibrationResult,
-               pitch: float, n: int = 8) -> dict:
+               pitch: float, n: int = 8, diversity: bool = True) -> dict:
     x_rig = rig_vector(result)
     cov = rig_covariance(result)
+    free = free_rig_mask(result)
     chosen = []
     for _ in range(n):
-        best = select_next(candidates, x_rig, cov, pitch,
-                           used={c.label for c in chosen})
+        search = _diverse_pool(candidates, chosen) if diversity else candidates
+        best = select_next(search, x_rig, cov, pitch,
+                           used={c.label for c in chosen}, free=free)
         if best is None:
             break
         cand, gain, cov = best
@@ -230,36 +319,6 @@ def _sigma_dict(sd: np.ndarray) -> dict:
     return {n: float(s) for n, s in zip(names, sd)}
 
 
-def stopping_report(result: CalibrationResult,
-                    max_sigma_fx_px: float = 0.35,
-                    max_sigma_baseline_mm: float = 0.08,
-                    min_views: int = 8,
-                    heldout_rms_px: float | None = None,
-                    max_heldout_rms_px: float = 0.5) -> dict:
-    cov = rig_covariance(result)
-    sd = np.sqrt(np.maximum(np.diag(cov), 0.0))
-    d = _sigma_dict(sd)
-    checks = {}
-    for c in CAMERAS:
-        checks[f"{c}.fx"] = (d[f"{c}.fx"], max_sigma_fx_px)
-        checks[f"{c}.fy"] = (d[f"{c}.fy"], max_sigma_fx_px)
-    # baseline sigma: first-order propagation through the rig parameters
-    Rr = result.extrinsics["right"][0]
-    tr = result.extrinsics["right"][1]
-    # d|t|/dt = t/|t|
-    t = tr - Rr @ np.zeros(3)
-    n = t / max(np.linalg.norm(t), 1e-12)
-    idx = 27 + 3  # right translation block starts at 27+3
-    b_sigma = float(np.sqrt(max(n @ cov[idx:idx + 3, idx:idx + 3] @ n, 0.0)))
-    n_views = len(result.info.get("views_used", result.views))
-    ok = (n_views >= min_views
-          and all(v[0] <= v[1] for v in checks.values())
-          and b_sigma <= max_sigma_baseline_mm
-          and (heldout_rms_px is None or heldout_rms_px <= max_heldout_rms_px))
-    return {"ok": bool(ok), "baseline_mm": float(np.linalg.norm(t)),
-            "baseline_sigma_mm": b_sigma, "n_views": n_views,
-            "min_views": min_views,
-            "heldout_rms_px": heldout_rms_px,
-            "heldout_limit_px": max_heldout_rms_px,
-            "checks": {k: {"value": float(v[0]), "limit": float(v[1])}
-                       for k, v in checks.items()}}
+# The conservative, explainable stopping rule lives in quality.py; re-export
+# it so existing callers keep working.
+from .quality import stopping_report  # noqa: E402,F401

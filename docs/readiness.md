@@ -1,6 +1,6 @@
 # Readiness assessment — can the new backend replace libeinstar?
 
-Status: 2026-11-07. The scanner is **not attached**. This document separates four states:
+Status: 2026-11-10. The scanner is **not attached**. This document separates four states:
 
 | State | Meaning |
 |---|---|
@@ -22,7 +22,10 @@ Status: 2026-11-07. The scanner is **not attached**. This document separates fou
 | Lossless recording / replay | yes | yes (byte-exact, corruption/bomb rejection) | no | CRC-32 per record, trailer digest |
 | C ABI for a Rust control plane | yes | yes (FFI test) | no | single-stream view; camera_id exposed |
 | Command channel (serial, firmware string, exposure, gain, trigger, page read) | yes | yes — 22 cases / 4,379 checks against a byte-accurate fake FX3 | no | request/echo/status/retry/timeout paths covered; firmware update and flash writes deliberately excluded |
-| Calibration model + rectification + triangulation | yes | yes (synthetic round-trip, real-capture consistency) | no | absolute `fx/fy/cx/cy` key not fully pinned |
+| Calibration model + rectification + triangulation | yes | yes (synthetic round-trip, real-capture consistency) | no | CCF key proved; absolute scale still plate-dependent |
+| EXStar calibration workflow (5×5×3) | documented/implemented | yes (XML, code, real session log; 2m56s) | no | no device write performed |
+| Adaptive 3-camera calibration engine | yes | yes (98 tests; synthetic NEES ≈1; vendor 0.367 px; held-out 0.455 px) | no | `calib/`; marginal covariance/stopping audit 2026-11-10 |
+| Calibration uncertainty/quality report | yes | yes (NEES, coverage, stability, held-out; 0.91–1.02 NEES/n) | no | no physical artefact validation |
 | Depth from real stereo pairs | partial (offline script) | consistency-only | no | no ground truth; needs an artefact measurement |
 | Performance claims | — | simulated scenarios only | no | see `docs/benchmarks/offline_benchmarks.md` |
 
@@ -58,6 +61,8 @@ Each gate is a concrete check with a pass condition. All must pass on the physic
 | G4 | Framing | a 60 s capture yields zero parse errors, three camera streams, monotonic per-camera frame ids, no size mismatches |
 | G5 | Cadence | **done offline (2026-11-07)**: measured 45.2 MB/s ceiling, 86.2 ms three-frame group floor, (1,1)@90–100 ms sustainable with zero loss, (3,1) = 3 × period with 7 frames/trigger. Remaining: multi-hour soak and the vendor's exact production mode |
 | G6 | Recovery | induced `clear_halt`/cable event: stream resumes < 100 ms, no corrupted or short frames delivered, loss events counted |
+| G7 | Calibration plate truth | hole count 41 vs 57; caliper 10 pitches; outline 200×150; large-marker coordinates; `PlateSpec` matches | physical board |
+| G8 | Calibration physical accuracy | run a 12–25-view calibration on the unit, held-out ≤0.5 px and standard target pass; scan a known artefact at 300/400/500 mm | hardware + artefact |
 | G7 | Recording | record 60 s, replay offline, byte-exact digest, then decode both paths and compare frames |
 | G8 | Calibration | rectified IR pair shows vertical disparity residual < 0.5 px (median) on real captures; depth of a flat target within the vendor's own spread |
 | G9 | Side-by-side | the same object scanned with libeinstar and with the new backend; mesh/point-cloud deviation below the noise floor of two repeated vendor scans |

@@ -1,0 +1,620 @@
+{
+ "schema": "einstar-plate-audit/1",
+ "generated": "2026-11-10",
+ "scope": "offline, read-only vendor-file audit; no Ghidra/MCP; no calibration or stereo baseline used except where labelled",
+ "sources": {
+  "corpus": {
+   "path": "<private-inputs>/vendor-calib-rapid/imageLeft{1..25}.bmp",
+   "type": "real IR captures 1280x1024",
+   "variant": "8x5",
+   "confidence": "A"
+  },
+  "dll_board_drawing": {
+   "path": "sources/windows/EXStar/CalibrationPage_EA.dll PNG #1 (offset 45252) -> /tmp/ea_assets/img_00.png",
+   "type": "schematic board drawing 1720x1486",
+   "variant": "8x7",
+   "confidence": "A"
+  },
+  "manual_ui_panel": {
+   "path": "SHINING 3D Einstar User Manual V1.2.2.pdf p.35 (rendered /tmp/manual_pages/hi-35.png)",
+   "type": "UI mock-up",
+   "variant": "8x7",
+   "confidence": "A",
+   "note": "8x7 lattice (56) + 1 off-lattice = 57 positions; 53 dots visible in the page render (focus overlay hides the rest); 4 large"
+  },
+  "manual_3d_scene": {
+   "path": "same page, top figure",
+   "type": "render (same scene family as the video)",
+   "variant": "not independently countable",
+   "confidence": "C"
+  },
+  "video": {
+   "path": "sources/web/extracted/EXStar_v1.2.2.0/videos/calib_quik.mp4",
+   "type": "product animation 664x546, 2262 frames",
+   "variant": "8x5",
+   "confidence": "A for count"
+  },
+  "other_assets": {
+   "paths": [
+    "/tmp/ea_assets/img_01.png (dark texture)",
+    "/tmp/ea_assets/img_02..13.png (650x620 instructional illustrations)",
+    "/tmp/ea_assets/vec_00..23.svg (progress/step icons)"
+   ],
+   "board_geometry": "none countable"
+  }
+ },
+ "variants": {
+  "8x5": {
+   "cols": 8,
+   "rows": 5,
+   "lattice_nodes": 40,
+   "small_holes": 37,
+   "large_on_lattice": 3,
+   "large_off_lattice": 1,
+   "total_holes": 41,
+   "big_markers_uv": [
+    [
+     2,
+     1
+    ],
+    [
+     4,
+     1
+    ],
+    [
+     5,
+     1
+    ],
+    [
+     3.5,
+     3
+    ]
+   ],
+   "big_marker_rule": "three collinear at (2,cy-1),(4,cy-1),(5,cy-1) with gaps 2:1; one off-lattice at (3.5,cy+1), u = midpoint of the outer two, two rows away; cy=(rows-1)/2",
+   "rotated_equivalent_uv": [
+    [
+     2,
+     3
+    ],
+    [
+     3,
+     3
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     3.5,
+     1
+    ]
+   ],
+   "rotated_equivalent_note": "(u,v)->(7-u,4-v); same physical pattern viewed with the plate turned 180 deg; measured on 15/17 good images because the lattice fit's dihedral assignment is arbitrary",
+   "pitch_mm": {
+    "value": 25.0,
+    "sigma": 0.13,
+    "source": "plate outline + vendor 200x150 profile",
+    "confidence": "B",
+    "alternative": 27.72
+   },
+   "plate_mm": {
+    "width": 200.0,
+    "height": 150.0,
+    "source": "vendor profile directory/path table",
+    "confidence": "B"
+   },
+   "plate_in_pitches": {
+    "width": 7.967,
+    "height": 6.024,
+    "sd_w": 0.025,
+    "sd_h": 0.023,
+    "margin_u": [
+     0.5,
+     0.46
+    ],
+    "margin_v": [
+     1.01,
+     1.01
+    ],
+    "n_images": 7,
+    "design": "8 x 6 (measured 7.967 x 6.024)"
+   },
+   "hole_diameters_pitch": {
+    "small": 0.13,
+    "large": 0.255,
+    "ratio": 1.96,
+    "n_images": 8
+   },
+   "hole_diameters_mm_at_25": {
+    "small": 3.25,
+    "large": 6.38
+   },
+   "chirality": "pattern is chiral and not 180-deg symmetric; a single view fixes the board frame",
+   "evidence": [
+    "25/25 corpus images",
+    "calib_quik.mp4 frames"
+   ],
+   "confidence": "A for topology/counts; B that this is the device's physical board"
+  },
+  "8x7": {
+   "cols": 8,
+   "rows": 7,
+   "lattice_nodes": 56,
+   "small_holes": 53,
+   "large_on_lattice": 3,
+   "large_off_lattice": 1,
+   "total_holes": 57,
+   "big_markers_uv": [
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     2
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     3.5,
+     4
+    ]
+   ],
+   "big_marker_rule": "same rule with cy=3",
+   "relation_to_8x5": "8x5 is 8x7 with rows 0 and 6 removed; columns, pitch and off-lattice u are identical",
+   "plate_in_pitches_expected": 8.0,
+   "evidence": [
+    "DLL drawing img_00 (57 rings; big at 2.04/3.99/4.96 row 2.03 and 3.50 row 3.98)",
+    "manual p.35 UI panel (gaps 2.0:1; off 2.07 short gaps away; u=3.5)"
+   ],
+   "confidence": "A for the drawings; U whether a physical 8x7 board exists for this device"
+  }
+ },
+ "pitch_evidence": [
+  {
+   "estimator": "previous triangulation",
+   "value_mm": 27.72,
+   "anchor": "CCF stereo baseline 158.557 mm",
+   "independent_of_baseline": false,
+   "confidence": "C",
+   "note": "must not be called independent validation"
+  },
+  {
+   "estimator": "plate outline width",
+   "value_mm": 25.1,
+   "sigma": 0.08,
+   "anchor": "plate = 200 mm",
+   "independent_of_baseline": true,
+   "confidence": "B"
+  },
+  {
+   "estimator": "plate outline height",
+   "value_mm": 24.9,
+   "sigma": 0.09,
+   "anchor": "plate = 150 mm",
+   "independent_of_baseline": true,
+   "confidence": "B"
+  },
+  {
+   "estimator": "combined",
+   "value_mm": 25.0,
+   "sigma": 0.13,
+   "sem": 0.036,
+   "anchor": "plate = 200x150",
+   "independent_of_baseline": true,
+   "confidence": "B"
+  }
+ ],
+ "pitch_conflict": {
+  "summary": "plate anchor gives 25.00 mm; baseline gives 27.72 mm (11% apart)",
+  "implication_if_25": "plate 199.2 x 150.6 mm, exactly 8x6 pitches, margins 12.5/25.2 mm",
+  "implication_if_27_72": "plate 220.9 x 167.0 mm, not the vendor 200x150 profile",
+  "resolution": "calipers (pitch and plate size)"
+ },
+ "descriptors": {
+  "cloud_calibBoard": {
+   "aa0": 0,
+   "aa1": 0,
+   "bb0": 0,
+   "bb1": 0,
+   "boarddata": "",
+   "boarddatacount": 0,
+   "boarddatatype": "",
+   "file": "",
+   "sn": "",
+   "version": "1.0.0",
+   "geometry_present": false,
+   "source": "analysis/logs/calib_window.log parseScanPackage response"
+  },
+  "ple": {
+   "name": "<redacted-part-number>.ple",
+   "dfsID": "ple/680eb84416e461004fa2074934078b98",
+   "fields": {
+    "AA": 150.804,
+    "BB": 125.071,
+    "authDays": 0,
+    "authorizationTime": "2023-07-20"
+   },
+   "geometry_present": false,
+   "binary_recoverable": false,
+   "note": "plefiledata in the log is lossy (non-printables replaced)"
+  },
+  "device_dump": {
+   "path": "<device-dump.bin>",
+   "size": 6568,
+   "content": "tagDevData: CCF/intrinsics; CCF block at 0x39B (3873 B)",
+   "geometry_present": false
+  },
+  "activeBox": {
+   "path": "sources/vendor/EXStar_1.2.2.0/res/Einscan-E10/activeBox.dat",
+   "size": 48,
+   "content": "6 little-endian doubles (~-12000 x4, 200 x2)",
+   "geometry_present": false
+  },
+  "lookupTable": {
+   "referenced_by": "device path table 200x150/lookupTable.dat",
+   "present": false
+  },
+  "config_db": {
+   "present": false,
+   "searched": "workspace and vendor tree"
+  },
+  "iX_iY_iSpace": {
+   "values": [
+    17,
+    14,
+    14
+   ],
+   "interpretation": "probably LUT/grid parameters (isUseLookup=false, srcCalParam=null); do not match 8x5 or 8x7",
+   "confidence": "C"
+  },
+  "algorithm_dll_strings": [
+   "Sn3D_calibTable_recognition",
+   "CalibrationTableParam",
+   "bigCircleNum",
+   "smallNumThreshold",
+   "matrix6X2",
+   "matrix10X2",
+   "boardData",
+   "iSpace",
+   "six_big_point_calibTable"
+  ],
+  "no_27_72_constant": "27.72 not present as a double in Sn3DCalibrateAlgorithmWrapper.dll or Sn3DCalibrationJR.dll"
+ },
+ "identifiers": {
+  "board_sn": "<redacted-part-number>",
+  "camera_sn": "<redacted-device-serial>",
+  "device_sn": "<redacted-serial>",
+  "device_series": 4,
+  "device_subtype": 2,
+  "firmware": "EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_EN",
+  "activation": "<redacted-production-date>",
+  "authorization": "2023-07-20"
+ },
+ "corpus_per_image": {
+  "L1": {
+   "nc": 8,
+   "nr": 7,
+   "coverage": 0.768,
+   "n_detected": 63,
+   "n_nodes": 43,
+   "d_small_pitch": 0.131,
+   "d_large_pitch": 0.251,
+   "d_ratio": 1.907,
+   "roundness_small": 0.951
+  },
+  "L2": {
+   "nc": 8,
+   "nr": 7,
+   "coverage": 0.786,
+   "n_detected": 64,
+   "n_nodes": 44,
+   "d_small_pitch": 0.13,
+   "d_large_pitch": 0.249,
+   "d_ratio": 1.919,
+   "roundness_small": 0.947
+  },
+  "L3": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.975,
+   "n_detected": 40,
+   "n_nodes": 39
+  },
+  "L4": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.975,
+   "n_detected": 40,
+   "n_nodes": 39
+  },
+  "L5": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 7.944,
+   "plate_H_pitch": 6.017,
+   "pitch_mm_if_200x150": 25.054
+  },
+  "L6": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 7.952,
+   "plate_H_pitch": 6.009,
+   "pitch_mm_if_200x150": 25.058
+  },
+  "L7": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 7.952,
+   "plate_H_pitch": 6.001,
+   "pitch_mm_if_200x150": 25.075
+  },
+  "L8": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 7.959,
+   "plate_H_pitch": 6.024,
+   "pitch_mm_if_200x150": 25.013,
+   "d_small_pitch": 0.133,
+   "d_large_pitch": 0.252,
+   "d_ratio": 1.893,
+   "roundness_small": 0.943
+  },
+  "L9": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 7.967,
+   "plate_H_pitch": 6.024,
+   "pitch_mm_if_200x150": 25.001,
+   "d_small_pitch": 0.13,
+   "d_large_pitch": 0.258,
+   "d_ratio": 1.983,
+   "roundness_small": 0.951
+  },
+  "L10": {
+   "nc": 8,
+   "nr": 7,
+   "coverage": 0.571,
+   "n_detected": 40,
+   "n_nodes": 32,
+   "d_small_pitch": 0.174,
+   "d_large_pitch": 0.342,
+   "d_ratio": 1.963,
+   "roundness_small": 0.488
+  },
+  "L11": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40
+  },
+  "L12": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 7.983,
+   "plate_H_pitch": 6.024,
+   "pitch_mm_if_200x150": 24.976
+  },
+  "L13": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.35,
+   "n_detected": 44,
+   "n_nodes": 16,
+   "d_small_pitch": 0.102,
+   "d_large_pitch": 0.308,
+   "d_ratio": 3.007,
+   "roundness_small": 0.412
+  },
+  "L14": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.425,
+   "n_detected": 31,
+   "n_nodes": 17,
+   "d_small_pitch": 0.166,
+   "d_large_pitch": 0.377,
+   "d_ratio": 2.278,
+   "roundness_small": 0.542
+  },
+  "L15": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.525,
+   "n_detected": 37,
+   "n_nodes": 21,
+   "d_small_pitch": 0.14,
+   "d_large_pitch": 0.287,
+   "d_ratio": 2.044,
+   "roundness_small": 0.829
+  },
+  "L16": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "plate_W_pitch": 8.015,
+   "plate_H_pitch": 6.072,
+   "pitch_mm_if_200x150": 24.829,
+   "d_small_pitch": 0.129,
+   "d_large_pitch": 0.25,
+   "d_ratio": 1.929,
+   "roundness_small": 0.828
+  },
+  "L17": {
+   "nc": 8,
+   "nr": 7,
+   "coverage": 0.571,
+   "n_detected": 40,
+   "n_nodes": 32,
+   "d_small_pitch": 0.186,
+   "d_large_pitch": 0.362,
+   "d_ratio": 1.941,
+   "roundness_small": 0.548
+  },
+  "L18": {
+   "nc": 8,
+   "nr": 7,
+   "coverage": 0.554,
+   "n_detected": 39,
+   "n_nodes": 31,
+   "d_small_pitch": 0.192,
+   "d_large_pitch": 0.376,
+   "d_ratio": 1.957,
+   "roundness_small": 0.541
+  },
+  "L19": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.95,
+   "n_detected": 39,
+   "n_nodes": 38,
+   "d_small_pitch": 0.128,
+   "d_large_pitch": 0.255,
+   "d_ratio": 1.997,
+   "roundness_small": 0.879
+  },
+  "L20": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "d_small_pitch": 0.126,
+   "d_large_pitch": 0.258,
+   "d_ratio": 2.043,
+   "roundness_small": 0.927
+  },
+  "L21": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "d_small_pitch": 0.137,
+   "d_large_pitch": 0.253,
+   "d_ratio": 1.846,
+   "roundness_small": 0.833
+  },
+  "L22": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "d_small_pitch": 0.137,
+   "d_large_pitch": 0.255,
+   "d_ratio": 1.862,
+   "roundness_small": 0.855
+  },
+  "L23": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 0.575,
+   "n_detected": 38,
+   "n_nodes": 23,
+   "d_small_pitch": 0.19,
+   "d_large_pitch": 0.388,
+   "d_ratio": 2.046,
+   "roundness_small": 0.524
+  },
+  "L24": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40,
+   "d_small_pitch": 0.13,
+   "d_large_pitch": 0.258,
+   "d_ratio": 1.989,
+   "roundness_small": 0.915
+  },
+  "L25": {
+   "nc": 8,
+   "nr": 5,
+   "coverage": 1.0,
+   "n_detected": 41,
+   "n_nodes": 40
+  }
+ },
+ "outliers": {
+  "L1_L2": "8x7 alias from edge reflections; 63-64 detections vs the true 41; not a second board",
+  "L10_L17_L18": "every-other-row 8x7 alias (coverage 0.55-0.57); lattice fit locked half a pitch off",
+  "L13_L14_L15_L23": "low contrast / motion blur; 16-23 occupied nodes; counts still 8x5-compatible",
+  "L25": "plate top edge cropped by the image; grid complete (40/40)"
+ },
+ "required_measurements": [
+  {
+   "rank": 1,
+   "action": "count holes on the physical plate",
+   "expected": "41 (8x5+1) or 57 (8x7+1)",
+   "settles": "variant"
+  },
+  {
+   "rank": 2,
+   "action": "caliper 10 adjacent hole pitches (centre-to-centre)",
+   "expected_mm": [
+    25.0,
+    27.7
+   ],
+   "settles": "pitch"
+  },
+  {
+   "rank": 3,
+   "action": "caliper plate width x height x thickness",
+   "expected_mm": [
+    200,
+    150
+   ],
+   "settles": "plate anchor; validates or kills the 25.0 mm estimate"
+  },
+  {
+   "rank": 4,
+   "action": "measure small and large hole diameters",
+   "expected_mm": [
+    3.2,
+    6.4
+   ],
+   "settles": "hole spec and whether IR blobs are holes"
+  },
+  {
+   "rank": 5,
+   "action": "flat front-face photograph with a ruler",
+   "settles": "variant, chirality, plate size in one shot"
+  },
+  {
+   "rank": 6,
+   "action": "read any label/serial on the plate or box",
+   "settles": "vendor part number / size marking"
+  }
+ ],
+ "confidence_summary": {
+  "8x5_is_device_board": "B",
+  "8x7_is_documented_variant": "B",
+  "pitch_25_0_if_plate_200x150": "B",
+  "pitch_27_72": "C (suspect, baseline-derived)",
+  "physical_pitch": "U"
+ }
+}

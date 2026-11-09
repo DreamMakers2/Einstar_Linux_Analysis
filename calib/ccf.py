@@ -106,3 +106,51 @@ def save(path: str | Path, values: np.ndarray, ir: bool = True,
 def compare(a: CCFRecord, b: CCFRecord) -> dict:
     return {"max_abs_diff": float(np.max(np.abs(a.values - b.values))),
             "raw_equal": a.raw == b.raw}
+
+
+def pose(rec: CCFRecord) -> tuple[np.ndarray, np.ndarray]:
+    """World->camera (R, T) as stored."""
+    return rec.R(), rec.T()
+
+
+def relative_pose(a: CCFRecord, b: CCFRecord) -> tuple[np.ndarray, np.ndarray]:
+    """Pose of camera b in camera a's frame: (R_ba, t_ba).
+
+    CCF stores each camera's world->camera pose in the common board frame, so
+    ``t_ba = T_b - R_b R_a^T T_a``.  This is frame-invariant: it is the quantity
+    a consistency guard must compare, not the raw T values.
+    """
+    Ra, Ta = pose(a)
+    Rb, Tb = pose(b)
+    R = Rb @ Ra.T
+    return R, Tb - R @ Ta
+
+
+def rotation_angle_deg(R: np.ndarray) -> float:
+    return float(np.degrees(np.arccos(np.clip((np.trace(R) - 1.0) / 2.0, -1.0, 1.0))))
+
+
+def consistency(a: CCFRecord, b: CCFRecord,
+                expected: tuple[np.ndarray, np.ndarray] | None = None,
+                tau_translation_mm: float = 3.0,
+                tau_rotation_deg: float = 0.3) -> dict:
+    """Compare a pair's relative pose with an independent expectation.
+
+    The guard is intentionally frame-invariant.  A record can be internally
+    well-formed and still be a stale/mixed-generation record; this catches that
+    case when an independent estimate is available.
+    """
+    R, t = relative_pose(a, b)
+    out = {"translation_mm": float(np.linalg.norm(t)),
+           "rotation_deg": rotation_angle_deg(R)}
+    if expected is not None:
+        Re, te = expected
+        dR = R @ Re.T
+        out["delta_translation_mm"] = float(np.linalg.norm(t - te))
+        out["delta_rotation_deg"] = rotation_angle_deg(dR)
+        out["ok"] = bool(out["delta_translation_mm"] <= tau_translation_mm and
+                         out["delta_rotation_deg"] <= tau_rotation_deg)
+    else:
+        out["ok"] = None
+        out["note"] = "no independent expectation supplied"
+    return out

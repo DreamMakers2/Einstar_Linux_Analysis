@@ -129,6 +129,12 @@ class ProfileStore:
         meta = dict(meta or {})
         meta.setdefault("created_utc", _now())
         meta["index"] = idx
+        meta.setdefault("serial", serial)
+        meta.setdefault("ccf_sha256", {
+            name: sha256_bytes(encode_record(rec.values, ir=rec.ir,
+                                             trailer=rec.raw[264:] if rec.ir else None,
+                                             key=rec.key))
+            for name, rec in records.items()})
         (rev / "meta.json").write_text(json.dumps(meta, indent=2, sort_keys=True,
                                                   default=_json_default))
         if covariance is not None:

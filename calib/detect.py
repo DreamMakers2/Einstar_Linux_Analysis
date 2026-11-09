@@ -112,7 +112,17 @@ def detect_blobs(gray: np.ndarray, invert: bool = False,
         if not (0.45 < w / max(h, 1) < 2.2):
             continue
         x, y = float(cent[i][0]), float(cent[i][1])
-        if refine and refine_mode == "ellipse":
+        if refine and refine_mode == "edge":
+            try:
+                from .detectors_audit import loc_edge_ellipse
+                loc = loc_edge_ellipse(img, x, y, max(9, int(0.8 * max(w, h)) + 4),
+                                       adaptive=True, invert=invert,
+                                       prior_r=max(3.0, 0.6 * max(w, h)))
+                if loc.ok:
+                    x, y = float(loc.x), float(loc.y)
+            except Exception:
+                pass
+        elif refine and refine_mode == "ellipse":
             e = _ellipse_centre(img, int(round(x)), int(round(y)),
                                 max(6, int(0.9 * max(w, h))))
             # the ellipse fit can lock onto a neighbouring hole or a saturated
@@ -162,6 +172,7 @@ class GridObservation:
             "n_lattice": self.n_lattice,
             "rms": self.rms,
             "max_residual": self.max_residual,
+            "big_markers": np.asarray(self.big_markers).tolist(),
             "detector": self.detector,
         }
 

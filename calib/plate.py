@@ -2,11 +2,12 @@
 
 Evidence
 --------
-The physical target shipped with the Einstar ("calibration board", 200 x 150 mm)
-is a white plate with a rectangular grid of circular holes.  In the vendor's
-own 25-pose calibration corpus (``res/Einscan-E10/calibrate_image_read_rapid``)
-the grid is **8 columns x 5 rows** of small holes plus **4 large holes** whose
-positions form an orientation code:
+The physical target shipped with the Einstar ("calibration board") is a white
+plate with a rectangular grid of circular holes.  In the vendor's own 25-pose
+calibration corpus (``res/Einscan-E10/calibrate_image_read_rapid``) the grid is
+**8 columns x 5 rows = 40 lattice nodes**, of which **3 are large holes**, plus
+**one off-lattice large hole**: 37 small + 4 large = **41 holes**.  The four
+large holes form an orientation code:
 
     (u, v) = (2, 1), (4, 1), (5, 1)   # three collinear, spacing ratio 2:1
     (u, v) = (3.5, 3)                 # midway between u=3 and u=4, two rows below
@@ -18,10 +19,13 @@ the pattern chiral, so a single view fixes the board frame without ambiguity
 in all 25 left-camera images; the same coordinates appear in every image
 (see ``analysis/calibration/plate_geometry.md``).
 
-The metric pitch is estimated from the vendor images and the CCF stereo rig
-(``calib.geometry``); it is stored in :data:`DEFAULT_PITCH_MM` only after that
-estimate.  All geometry below is expressed in board units so that a wrong
-pitch cannot silently change the topology.
+The metric pitch is *not* independent of the CCF stereo baseline when it is
+estimated from the vendor images and that same rig.  Two hypotheses are open:
+27.72 mm (baseline-consistent triangulation/BA) and ~25.0 mm (if the
+"200x150" profile name is the plate size).  Treat the pitch as a parameter
+until calipers or an independently calibrated length settle it.  All geometry
+below is expressed in board units so that a wrong pitch cannot silently change
+the topology.
 """
 
 from __future__ import annotations
@@ -54,6 +58,7 @@ class PlateSpec:
     rows: int = 5
     big_markers: np.ndarray = None
     pitch_mm: float = 27.72
+    pitch_source: str = "unresolved (baseline-consistent default)"
 
     def __post_init__(self):
         if self.big_markers is None:
@@ -61,6 +66,23 @@ class PlateSpec:
             self.big_markers = np.array([[2.0, cy - 1.0], [4.0, cy - 1.0],
                                          [5.0, cy - 1.0], [3.5, cy + 1.0]])
         self.big_markers = np.asarray(self.big_markers, float)
+
+    @property
+    def n_lattice(self) -> int:
+        return self.cols * self.rows
+
+    @property
+    def n_large_on_lattice(self) -> int:
+        return int(np.sum((self.big_markers[:, 0] == np.round(self.big_markers[:, 0])) &
+                          (self.big_markers[:, 1] == np.round(self.big_markers[:, 1]))))
+
+    @property
+    def n_small(self) -> int:
+        return self.n_lattice - self.n_large_on_lattice
+
+    @property
+    def n_holes(self) -> int:
+        return self.n_small + len(self.big_markers)
 
     @property
     def centre(self) -> np.ndarray:
@@ -89,10 +111,17 @@ def use_spec(spec: PlateSpec) -> PlateSpec:
 
 
 def current_spec() -> PlateSpec:
-    return PlateSpec(GRID_COLS, GRID_ROWS, BIG_MARKERS.copy(), DEFAULT_PITCH_MM)
+    return PlateSpec(GRID_COLS, GRID_ROWS, BIG_MARKERS.copy(), DEFAULT_PITCH_MM,
+                     "unresolved (baseline-consistent default)")
 
-#: nominal plate size in millimetres (vendor directory name ``200x150``)
+#: nominal plate size in millimetres (vendor directory name ``200x150``).
+#: NOTE: this may be the scanner's scan volume, not the plate outline; the
+#: measured plate is ~8.0 x 6.0 pitches, which is 222 x 166 mm at 27.72 mm
+#: pitch or 200 x 150 mm at 25.0 mm.  The conflict is unresolved.
 PLATE_SIZE_MM = (200.0, 150.0)
+
+#: competing pitch hypotheses; neither is a physical measurement yet
+PITCH_CANDIDATES_MM = {"baseline_consistent": 27.72, "profile_size_hypothesis": 25.0}
 
 #: Pitch estimated from the vendor's 25-pose corpus and the CCF stereo rig.
 #: Two independent estimators agree: point-distance triangulation gives
@@ -109,10 +138,17 @@ def lattice_uv() -> np.ndarray:
     return np.array([[u, v] for v in range(GRID_ROWS) for u in range(GRID_COLS)], float)
 
 
-def board_points_mm(pitch: float = DEFAULT_PITCH_MM,
-                    centre: Iterable[float] = BOARD_CENTRE_UV) -> np.ndarray:
-    """Metric 3-D coordinates of the 40 small holes, Z=0 (mm)."""
+def board_points_mm(pitch: float | None = None,
+                    centre: Iterable[float] | None = None) -> np.ndarray:
+    """Metric 3-D coordinates of the 40 lattice nodes, Z=0 (mm).
+
+    The three on-lattice large markers are included: their centres are valid
+    calibration observations.  The off-lattice large marker is in
+    :func:`big_points_mm`.
+    """
     uv = lattice_uv()
+    pitch = DEFAULT_PITCH_MM if pitch is None else pitch
+    centre = BOARD_CENTRE_UV if centre is None else centre
     c = np.asarray(centre, float)
     xy = (uv - c) * float(pitch)
     return np.column_stack([xy, np.zeros(len(uv))])
@@ -122,11 +158,25 @@ def big_points_uv() -> np.ndarray:
     return BIG_MARKERS.copy()
 
 
-def big_points_mm(pitch: float = DEFAULT_PITCH_MM,
-                  centre: Iterable[float] = BOARD_CENTRE_UV) -> np.ndarray:
+def big_points_mm(pitch: float | None = None,
+                  centre: Iterable[float] | None = None) -> np.ndarray:
+    pitch = DEFAULT_PITCH_MM if pitch is None else pitch
+    centre = BOARD_CENTRE_UV if centre is None else centre
     c = np.asarray(centre, float)
     xy = (BIG_MARKERS - c) * float(pitch)
     return np.column_stack([xy, np.zeros(len(BIG_MARKERS))])
+
+
+def plate_summary(spec: PlateSpec | None = None) -> dict:
+    s = spec or current_spec()
+    return {"cols": s.cols, "rows": s.rows, "n_lattice": s.n_lattice,
+            "n_large_on_lattice": s.n_large_on_lattice,
+            "n_small": s.n_small, "n_holes": s.n_holes,
+            "big_markers_uv": s.big_markers.tolist(),
+            "pitch_mm": s.pitch_mm,
+            "pitch_source": s.pitch_source,
+            "pitch_candidates_mm": PITCH_CANDIDATES_MM,
+            "plate_size_nominal_mm": PLATE_SIZE_MM}
 
 
 def uv_index() -> dict[tuple[float, float], int]:

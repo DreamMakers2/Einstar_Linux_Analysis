@@ -1,0 +1,227 @@
+{
+ "audit": "colour (Tex) CCF translation discrepancy",
+ "target": {
+  "files": "sources/calibration/res_Einscan-E10_200x150/{Left,Right,Tex}CCF.txt",
+  "device": "<device-dump.bin>",
+  "offsets": {
+   "ccf_block": 1003,
+   "timestamp": "0x39B+0xA14",
+   "fqfq": "0x39B+0xF1C",
+   "factory_cam_records": [
+    12,
+    260,
+    508
+   ]
+  },
+  "log": "analysis/logs/calib_window.log"
+ },
+ "provenance": {
+  "file_sizes": {
+   "Left": 520,
+   "Right": 520,
+   "Tex": 264
+  },
+  "file_mtimes": "all 2026-11-07 03:04:28.829-830 (copy time, not vendor time)",
+  "device_block": {
+   "offset": 1003,
+   "size": 3873,
+   "type": 4,
+   "slots": [
+    520,
+    520,
+    264
+   ],
+   "timestamp": "2026-02-09 21:34",
+   "terminator": "FQFQ",
+   "bytes_equal_shipped_files": {
+    "Left": true,
+    "Right": true,
+    "Tex": true
+   }
+  },
+  "written_by": {
+   "controller": "Sn3DEACalibrateController!FUN_18000e0a0 (reads 3 files)",
+   "packer": "FUN_180003940 (memset 0xf21, type=4, stamp at 0xa14, write offset 0x39b)",
+   "log_line": 17767,
+   "log_time": "2026-02-09 21:34:58.493",
+   "compute_finished": "calibComputeFinished currentCalibType=4 success (line 17905)"
+  },
+  "same_run": {
+   "bytes": "YES - one atomic block, one timestamp (A)",
+   "estimation": "NOT PROVED - possibly two sub-calibrations [LR] and [LT] (B)"
+  },
+  "hasTexture": false,
+  "factory_records": {
+   "date": "<redacted-production-date>",
+   "layout": "22 doubles fx fy cx cy dist6 R9 T3",
+   "|T|_mm": [
+    554.58,
+    553.72,
+    549.58
+   ],
+   "note": "different world origin; kc identical to CCF (vendor fixes kc)"
+  },
+  "tex_record_reestimated_in_2026": "unproved; K moved vs factory but pose disagrees with two independent estimates"
+ },
+ "conventions": {
+  "R": "world->camera, row-major, det=+1 (A)",
+  "T": "world->camera translation, NOT camera centre (A; centre form gives 56.5 mm IR baseline)",
+  "camera_centre": "C = -R^T T",
+  "ccf_world_frame": "plate frame (z=0) at camera 1's first valid view (A for TribleCCF, B for shipped set)",
+  "tribleccf": {
+   "addr": "0x1802e6a20",
+   "dump": "Sn3DCalibrationJR.dump.txt:82640",
+   "cam1": {
+    "R": "Rodrigues(rvec[v*])",
+    "T": "tvec[v*]",
+    "v*": "first v with tvec[v][2] != -1.0",
+    "lines": "82819-82838, 82840-82861"
+   },
+   "cam2_3": {
+    "R": "R_rel(k)*R_1(v*)",
+    "T": "t_rel(k)+R_rel(k)*T_1(v*)",
+    "lines": "82904-82924, 82936-82962"
+   },
+   "per_camera_reference_view": false,
+   "proof": "param_5/param_6 must have 2 entries (size check 0x30..0x47) -> relative poses, not per-view"
+  },
+  "production_path": "per-pair [LR]/[LT] in CameraCalibrateAlg (FUN_180048230) + E7CameraCalibAlgManager (FUN_18000eb50); Sn3D_Trible_CCF has no importer in the dumps (B)"
+ },
+ "relative_transforms_left_to_tex_mm": {
+  "ccf": {
+   "t": [
+    -122.986,
+    16.894,
+    17.134
+   ],
+   "norm": 125.318,
+   "angle_deg": 17.0049
+  },
+  "our_fit": {
+   "t": [
+    -121.078,
+    -0.069,
+    12.626
+   ],
+   "norm": 121.735,
+   "angle_deg": 16.8847
+  },
+  "factory_22d": {
+   "t": [
+    -122.241,
+    -0.108,
+    12.486
+   ],
+   "norm": 122.877,
+   "angle_deg": 16.9983
+  },
+  "delta_ccf_vs_fit": {
+   "dt": [
+    -1.908,
+    16.963,
+    4.508
+   ],
+   "norm_mm": 17.656,
+   "d_angle_deg": 0.1202
+  },
+  "delta_factory_vs_fit": {
+   "norm_mm": 1.172,
+   "d_angle_deg": 0.1136
+  }
+ },
+ "relative_transforms_left_to_right_mm": {
+  "ccf": {
+   "t": [
+    -155.469,
+    -0.235,
+    31.139
+   ],
+   "norm": 158.557,
+   "angle_deg": 22.1383
+  },
+  "our_fit": {
+   "t": [
+    -155.616,
+    -0.132,
+    30.399
+   ],
+   "norm": 158.557,
+   "angle_deg": 21.9574
+  },
+  "factory_22d": {
+   "t": [
+    -157.143,
+    -0.202,
+    30.583
+   ],
+   "norm": 160.092,
+   "angle_deg": 22.0859
+  },
+  "delta_ccf_vs_fit": {
+   "norm_mm": 0.761,
+   "d_angle_deg": 0.1809
+  },
+  "delta_factory_vs_fit": {
+   "norm_mm": 1.54,
+   "d_angle_deg": 0.1285
+  }
+ },
+ "rgb_impact": {
+  "method": "40 plate holes projected into Tex with identical K; CCF pose vs our-fit pose",
+  "working_distance_mm": [
+   268.8,
+   603.4
+  ],
+  "median_view": {
+   "board_distance_mm": 443.8,
+   "point_depth_mm": [
+    390.7,
+    472.7
+   ],
+   "px_mean": 46.6,
+   "px_max": 52.1,
+   "mm_mean": 17.6,
+   "mm_max": 18.4
+  },
+  "all_views": {
+   "px_mean_range": [
+    33.57354780018683,
+    77.52724491704467
+   ],
+   "px_mean_median": 46.64586030599991,
+   "px_max_range": [
+    34.761226438137456,
+    85.58319810772272
+   ],
+   "px_max_median": 53.51879382529491
+  },
+  "direction": {
+   "du_mean_px": -3.1,
+   "dv_mean_px": 49.4,
+   "note": "essentially pure vertical shift"
+  },
+  "rotation_only_contribution_px": 2.4,
+  "fraction_of_hole_pitch": 0.63
+ },
+ "frame_mismatch_bound": {
+  "min_board_rotation_between_views_deg": 1.0482468484989027,
+  "dt_for_that_pair_mm": 20.064142244110013,
+  "median_board_rotation_deg": 68.5058493922682,
+  "verdict": "per-camera reference view would cost >=1.05 deg; observed 0.12 deg -> excluded (9x)"
+ },
+ "confidence": {
+  "byte_identity_and_timestamp": "A",
+  "tribleccf_assignment": "A",
+  "row_major_world_to_camera_T_is_translation": "A",
+  "tex_ccf_is_outlier_vs_factory_and_fit": "A",
+  "tex_record_not_a_valid_2026_estimate": "B",
+  "root_cause": "U"
+ },
+ "open_questions": [
+  "U1 did the 2026 [LT] stage run with real tex images (hasTexture=false)?",
+  "U2 which sub-calibration wrote the final LeftCCF.txt, [LR] or [LT]?",
+  "U3 does the [LT] solve use a different plate origin (pure-y shift g ~ (-3.1,17.0,3.7) mm)?",
+  "U4 are tex images geometrically consistent with K_tex (ROI/crop offset)?",
+  "U5 is Sn3D_Trible_CCF dead code in this build (no importer found)?"
+ ]
+}

@@ -414,6 +414,70 @@ epipole is not observable in the image. No inconsistency was found.
 
 ---
 
+## 8.5 Worked bad-record example: the shipped Tex record is inconsistent
+
+The shipped `TexCCF.txt` is a concrete example of a record that is
+byte-valid, correctly decoded, and still **wrong**. The frame-invariant
+relative pose is
+
+```
+R_rel = R_b R_a^T,     t_rel = T_b − R_rel T_a
+```
+
+so it can be compared across files and against an independent fit:
+
+| L→Tex source | rotation | `t_rel` (mm) | ‖t_rel‖ | Δ vs our fit |
+|---|---|---:|---:|---:|
+| shipped CCF | 17.005° | (−122.986, **16.894**, 17.134) | 125.318 | **17.66 mm**, 0.12° |
+| our joint fit of the 25-pose corpus | 16.885° | (−121.078, −0.069, 12.626) | 121.735 | — |
+| factory 22-double record (0x1FC) | 16.998° | (−122.241, −0.108, 12.486) | 122.877 | 1.17 mm, 0.11° |
+
+The IR control is 0.76 mm / 0.18° (CCF vs fit) and 1.54 mm / 0.13° (factory vs
+fit). Only the Tex translation is an outlier; its rotation is right. The error
+is essentially a pure vertical shift (Δv ≈ +49 px, Δu ≈ −3 px), i.e.
+**17.6 mm ≈ 0.63 hole pitch**. At the median view it moves the projected plate
+by **46.6 px mean** (range 33.6–77.5 px over the corpus, max 85.6 px).
+
+Provenance is not the explanation:
+
+* the whole 3873-byte block at `0x39B` was written atomically in the
+  2026-02-09 21:34:58 session, and its three slots are byte-identical to the
+  three `.txt` files (`calib_window.log:17767`);
+* the `.txt` mtimes are the 2026-11-07 extraction time, not a vendor timestamp;
+* `deviceStatus` reports `hasTexture:false` (line 466), so the colour camera may
+  not have been re-estimated in that run;
+* the factory Tex record agrees with our fit to 1.17 mm, so the shipped record
+  is the outlier of three independent estimates.
+
+Reading: the record is likely **mixed-generation/stale** (or came from a
+different sub-calibration) rather than a decode/frame error. The 2026 block
+write is proved; fresh 2026 Tex estimation is not. Repair needs the unit: enable
+texture capture and re-run the colour calibration, or mark the record as
+factory/stale.
+
+### 8.5.1 Writer convention
+
+`CalibrationCCF::QuarCCF` (`0x1802e5e70`, called from the E10 driver
+`FUN_1800e0180`) sets camera 1 from `R=Rodrigues(rvec[v*])`, `T=tvec[v*]`, where
+`v*` is the first view whose `tvec[2] != −1`; cameras 2/3 are
+`R_k = R_rel(k) R_1`, `T_k = t_rel(k) + R_rel(k) T_1`. The world frame is the
+plate at camera 1's reference view; all records are world→camera in that one
+frame. `CalibrationCCF::TribleCCF` (`0x1802e6a20`) implements the same rule for
+three cameras but has **no importer in the dumped modules**; do not assume it is
+the production writer. A per-camera reference view is excluded: the API takes
+two relative poses, and a view mismatch would cost ≥1.05° of relative rotation
+(observed 0.12°).
+
+### 8.5.2 Guard
+
+`calib.ccf.relative_pose(a, b)` returns the frame-invariant transform and
+`calib.ccf.consistency(a, b, expected, tau_translation_mm, tau_rotation_deg)`
+compares it with an independent estimate. `calib.pipeline` runs this guard for
+IR (τ=2 mm/0.3°) and Tex (τ=3 mm/0.3°) and emits `tex_consistency_warning`
+instead of silently fitting to a stale record. Tests:
+`tests/test_calibration_audit.py::test_ccf_relative_pose_is_frame_invariant`
+and `::test_ccf_consistency_guard_rejects_bad_translation`.
+
 ## 9. Record variants / how many
 
 * Three records per device: `LeftCCF` (IR 0), `RightCCF` (IR 1), `TexCCF`

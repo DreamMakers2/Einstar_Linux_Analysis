@@ -31,6 +31,11 @@ def test_plate_topology():
     assert uv.shape == (40, 2)
     assert uv[:, 0].max() == 7 and uv[:, 1].max() == 4
     assert np.allclose(plate.BIG_MARKERS, [[2, 1], [4, 1], [5, 1], [3.5, 3]])
+    s = plate.current_spec()
+    assert (s.n_lattice, s.n_small, s.n_holes) == (40, 37, 41)
+    s7 = plate.PlateSpec(8, 7)
+    assert (s7.n_lattice, s7.n_small, s7.n_holes) == (56, 53, 57)
+    assert np.allclose(s7.big_markers, [[2, 2], [4, 2], [5, 2], [3.5, 4]])
 
 
 def test_ccf_roundtrip_exact():

@@ -157,3 +157,26 @@ Exit gates (in order):
 Do **not** claim a physical accuracy improvement before gate 4. The current
 evidence supports relative geometry, covariance calibration, capture-count
 reduction and reversibility — not sub-millimetre absolute accuracy.
+
+### Calibration audit follow-up (2026-11-10)
+
+The published engine's covariance/stopping was audited and corrected:
+
+* `rig_covariance` now returns the **marginal** rig block (the old conditional
+  formula under-reported fx σ by ~11×); `rescaled` uses `J C Jᵀ` and propagates
+  the anchor; the robust sandwich uses `Jᵀdiag((w·r)²)J`.
+* Stopping now requires views, distance/tilt/image coverage, per-camera
+  observations, Jacobian rank/condition, parameter stability, an independent
+  held-out check and covariance thresholds. Covariance alone cannot pass.
+* Synthetic NEES/n is 0.91–1.02 after the correction; vendor high-target stop
+  fails at 25 views (σfx 0.52 px, held-out 0.455 px), standard-target passes.
+* The `8–12 captures` claim is **under re-evaluation** with independent
+  train/held-out splits; do not quote a capture count without its target and
+  protocol.
+* The colour CCF is proved stale/mixed-generation (17.66 mm, 46.6 px); the
+  plate is 41 holes (8×5) with a 57-hole 8×7 drawing variant, and the metric
+  pitch (27.72 vs 25.0) is unresolved pending calipers.
+
+Next gates: physical hole count/pitch/outline; user-unit calibration with
+held-out validation; colour re-calibration with texture enabled; known-artefact
+depth test. No device write before those pass.

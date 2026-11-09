@@ -85,7 +85,9 @@ def calibrate_directory(directory: str | Path,
                         free_kc: bool = False,
                         anchor_baseline: bool = True,
                         max_nfev: int = 1200,
-                        refine_mode: str = "centroid") -> tuple[CalibrationResult, DetectionSet, dict]:
+                        refine_mode: str = "centroid",
+                        heldout: bool = True,
+                        anchor_sigma_mm: float = 0.05) -> tuple[CalibrationResult, DetectionSet, dict]:
     det = detect_directory(directory, refine_mode=refine_mode)
     obs = det.observations()
     if not obs:
@@ -124,6 +126,7 @@ def calibrate_directory(directory: str | Path,
                         free_intrinsics=True, max_nfev=max_nfev)
     info = {"summary": result_summary(res), "detections": det.summary(),
             "pitch_mm": pitch_mm, "anchored": False,
+            "plate": plate.plate_summary(),
             "rejected_views": sorted(int(v) for v in bad)}
     if anchor_baseline and factory and "left" in factory and "right" in factory:
         from .geometry import relative_pose
@@ -132,11 +135,50 @@ def calibrate_directory(directory: str | Path,
         target = float(np.linalg.norm(t0))
         cur = float(np.linalg.norm(res.baseline()))
         if cur > 1e-9:
-            s = target / cur
-            res = res.rescaled(s)
+            res = res.rescaled(target_baseline=target,
+                               anchor_sigma_mm=float(anchor_sigma_mm))
             info.update({"anchored": True, "target_baseline_mm": target,
-                         "scale": s, "measured_baseline_before_anchor_mm": cur,
-                         "implied_pitch_mm": pitch_mm * s})
+                         "scale": res.info.get("scale_factor"),
+                         "anchored_sigma_mm": float(anchor_sigma_mm),
+                         "measured_baseline_before_anchor_mm": cur,
+                         "implied_pitch_mm": pitch_mm * res.info.get("scale_factor", 1.0)})
+            info["summary"] = result_summary(res)
+    # frame-invariant consistency guard against the factory CCF records.  The
+    # shipped Tex record can be mixed-generation/stale; never fit to it blindly.
+    if factory:
+        from .ccf import consistency, relative_pose as ccf_relative
+        cons = {}
+        for cam in ("right", "tex"):
+            if "left" in factory and cam in factory:
+                Rf, tf = ccf_relative(factory["left"], factory[cam])
+                Re = res.extrinsics[cam][0] @ res.extrinsics["left"][0].T
+                te = res.baseline("left", cam)
+                cons[cam] = consistency(factory["left"], factory[cam],
+                                        expected=(Re, te),
+                                        tau_translation_mm=2.0 if cam == "right" else 3.0,
+                                        tau_rotation_deg=0.3)
+        info["factory_consistency"] = cons
+        if cons.get("tex", {}).get("ok") is False:
+            info["tex_consistency_warning"] = (
+                "shipped Tex CCF relative translation disagrees with this fit by "
+                f"{cons['tex'].get('delta_translation_mm'):.2f} mm; the record is "
+                "likely mixed-generation/stale. Do not fit to it without re-checking.")
+
+    # independent held-out check: fit without one view, predict it from the rig
+    if heldout:
+        from .evaluate import heldout_reprojection
+        used = sorted(set(int(o.view) for o in obs))
+        candidates = [v for v in used
+                      if any(o.view == v and o.camera == "left" for o in obs)]
+        if len(candidates) > 4:
+            hv = candidates[-1]
+            tr = [o for o in obs if int(o.view) != hv]
+            rt = calibrate(tr, pitch_mm, init, free_kc=free_kc,
+                           free_intrinsics=True, max_nfev=max_nfev)
+            h = heldout_reprojection(obs, rt, pitch_mm, hv)
+            info["heldout_rms_px"] = h.get("rms_px")
+            info["heldout_view"] = hv
+            info["heldout"] = h
     return res, det, info
 
 

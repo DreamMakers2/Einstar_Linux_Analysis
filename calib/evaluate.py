@@ -66,7 +66,9 @@ def nees(result: CalibrationResult, truth: dict, free_kc: bool) -> float:
         R = np.asarray(truth["extrinsics"][c]["R"], float)
         t = np.asarray(truth["extrinsics"][c]["t"], float)
         xt[pk.extr[c]] = np.concatenate([rvec_from_R(R).ravel(), t])
-    for i, v in enumerate(truth["views"]):
+    used = result.info.get("views_used", list(range(len(result.views))))
+    for i, vi in enumerate(used):
+        v = truth["views"][int(vi)]
         R = np.asarray(v["R"], float); t = np.asarray(v["t"], float)
         xt[pk.views.start + 6 * i: pk.views.start + 6 * (i + 1)] = np.concatenate([rvec_from_R(R).ravel(), t])
     xe = np.zeros(pk.n)
@@ -77,10 +79,7 @@ def nees(result: CalibrationResult, truth: dict, free_kc: bool) -> float:
         xe[pk.extr[c]] = np.concatenate([rvec_from_R(R).ravel(), t])
     for i, (R, t) in enumerate(result.views):
         xe[pk.views.start + 6 * i: pk.views.start + 6 * (i + 1)] = np.concatenate([rvec_from_R(R).ravel(), t])
-    mask = np.ones(pk.n, bool)
-    if not free_kc:
-        for c in CAMERAS:
-            mask[pk.slices[c].start + 4:pk.slices[c].stop] = False
+    mask = np.asarray(result.info.get("free_mask", np.ones(pk.n, bool)), bool)
     d = (xe - xt)[mask]
     C = result.covariance[np.ix_(mask, mask)]
     try:
@@ -95,7 +94,7 @@ def reprojection(result: CalibrationResult, obs: list[Observation],
     idx = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
     errs = []
     for o in obs:
-        R, t = result.views[o.view]
+        R, t = result.view_pose(o.view)
         Rc, tc = result.extrinsics[o.camera]
         keys = [k for k in o.uv if k in idx]
         X = obj[[idx[k] for k in keys]]
@@ -305,7 +304,7 @@ def per_view_errors(result: CalibrationResult, observations: list[Observation],
     idx = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
     out: dict[int, dict] = {}
     for o in observations:
-        R, t = result.views[o.view]
+        R, t = result.view_pose(o.view)
         Rc, tc = result.extrinsics[o.camera]
         keys = [k for k in o.uv if k in idx]
         if not keys:

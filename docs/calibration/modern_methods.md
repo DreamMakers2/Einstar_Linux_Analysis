@@ -25,8 +25,10 @@ code/corpus.
 * **Planar ML calibration** with the correct Brown–Conrady model and a joint
   3-camera refinement — the same family as Zhang/OpenCV/Ceres.
 * **Ellipse-based sub-pixel marker extraction** (Canny 75/150, Gaussian σ=2.1,
-  ellipse fitting), which is more accurate than a thresholded centroid on
-  saturated holes.
+  ellipse fitting). Our audit confirms edge/conic localization is 2–20× better
+  on synthetic tilted/near-hole cases (0.018–0.029 px vs 0.055–0.544 px), while
+  the real-corpus residual floor is model-limited so the centroid still wins
+  there (0.367 px).
 * **A conservative capture plan** that covers the field and tolerates bad
   detections without a robust loss.
 
@@ -65,9 +67,17 @@ code/corpus.
 | stage | current | optimised |
 |---|---|---|
 | detection (75 images) | ~7 s single-thread Python/OpenCV | < 1 s with a process pool over 12–16 images; ROI around the plate |
-| calibration (72 obs, 189 params) | ~10 s dense Jacobian | < 1 s with analytic Jacobians + Schur + Ceres; ~2 s with SciPy sparse |
-| covariance | ~9 s finite differences | < 0.1 s from the same Jacobian |
+| calibration (72 obs, 189 params) | 10.4 s SciPy dense FD | 1.21 s SciPy analytic J (7.8×); 0.055 s native C++ LM (172×); Ceres source cannot compile here (Eigen headers missing) |
+| covariance | 3.8 s finite differences | ms with the analytic Jacobian; native LM returns analytic covariance |
+| BLAS threads | default 32 OpenBLAS is ~20× slower for the dense SVD | `OPENBLAS_NUM_THREADS=1` gives 2.5–2.7× on the engine, no code change |
 | live guidance (3 × 30 fps) | not implemented | downscale to 640×512, detect only the plate ROI, OpenCV CUDA or a small GPU blob kernel; CPU fallback |
+
+Measured on the vendor 25-view problem: SciPy dense 9.44 s, SciPy+analytic
+1.21 s, native C++ LM 0.055 s, OpenCV per-camera+stereo 0.137 s (weaker
+rig-imposed problem, not directly comparable). Ceres 2.2.0 is installed but
+unusable without Eigen 3 headers; do not put it on the critical path until the
+packaging is fixed. The native LM is the recommended production path after an
+independent cross-check.
 
 The GPU is **not** the bottleneck for the offline solve (a few thousand
 residuals); it matters only for live marker feedback. A CPU-first
