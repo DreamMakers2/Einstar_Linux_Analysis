@@ -108,38 +108,40 @@ The view bootstrap with replacement gives 0.39 (reported sigma 2.5x too small); 
 
 k=12, 20 trials per condition (15 for slow cases), 0.2 px i.i.d. noise, no gross outliers unless stated. `z = |error| / reported sigma`; median over trials. The conditions with no outliers are formula-independent (corrected = pre-fix meat).
 
-| condition | n | fx |z| | baseline |z| | rotation |z| | cx |z| | NEES/n all | stop pass | flags |
-|---|---|---|---|---|---|---|---|---|
-| clean_iid | 24 | 0.49 | 0.74 | 0.80 | 0.62 | 1.17 | 0.33 |  |
-| det_global_shift_0.05 | 20 | 0.97 | 0.56 | 0.77 | 0.61 | 3.01 | 0.30 |  |
-| det_global_shift_0.25 | 20 | 1.19 | 0.58 | 0.87 | 0.61 | 48.16 | 0.25 |  |
-| det_subset_shift_30pct_0.3 | 20 | 1.24 | 2.13 | 0.69 | 2.13 | 9.53 | 0.35 |  |
-| det_subset_shift_30pct_0.5 | 20 | 0.94 | 2.69 | 0.89 | 4.33 | 23.73 | 0.15 | left.cx: median|z|=4.3 (sigma=1.176319216266346); tex.cx: median|z|=3.7 (sigma=1.219944850 |
-| det_gradient_0.2px | 20 | 1.36 | 1.49 | 1.18 | 1.18 | 6.14 | 0.40 |  |
-| lens_rational_moderate | 20 | 0.78 | 0.27 | 1.09 | 0.94 | 1071.51 | 0.30 |  |
-| lens_poly8_moderate | 20 | 0.59 | 0.75 | 0.83 | 0.74 | 301.74 | 0.25 |  |
-| pitch_-1.0pct | 20 | 0.89 | 40.28 | 0.69 | 0.50 | 2124.42 | 0.30 | baseline: median|z|=40.3 (sigma=0.041307235210405524) |
-| pitch_-0.5pct | 20 | 0.55 | 21.59 | 0.71 | 0.65 | 573.10 | 0.40 | baseline: median|z|=21.6 (sigma=0.03798792050279097) |
-| pitch_-0.1pct | 20 | 0.65 | 4.77 | 0.65 | 0.62 | 23.76 | 0.40 | baseline: median|z|=4.8 (sigma=0.03824371208129439) |
-| pitch_+0.1pct | 20 | 1.20 | 4.67 | 0.88 | 0.72 | 21.03 | 0.40 | baseline: median|z|=4.7 (sigma=0.03805205207771156) |
-| pitch_+0.5pct | 20 | 0.73 | 24.23 | 0.79 | 0.66 | 603.97 | 0.40 | baseline: median|z|=24.2 (sigma=0.034251985156893386) |
-| pitch_+1.0pct | 20 | 0.37 | 42.15 | 1.04 | 0.78 | 2246.29 | 0.25 | baseline: median|z|=42.2 (sigma=0.03533653637565766) |
-| board_bow_0.3mm | 20 | 2.86 | 1.77 | 3.88 | 0.76 | 4.80 | 0.25 | right.fx: median|z|=3.9 (sigma=0.6795408070831404); tex.fx: median|z|=3.5 (sigma=0.8584728 |
-| board_bow_1.0mm | 20 | 6.06 | 3.08 | 8.27 | 3.11 | 13.47 | 0.00 | left.fx: median|z|=6.1 (sigma=1.1992981532716573); right.fx: median|z|=7.9 (sigma=1.070777 |
-| board_warp_0.1mm | 20 | 1.06 | 0.79 | 0.96 | 1.87 | 2.06 | 0.05 |  |
-| noise_corr_len1_0.2px | 20 | 1.13 | 1.99 | 1.53 | 1.69 | 9.04 | 0.05 |  |
-| noise_corr_len2_0.2px | 20 | 2.19 | 1.97 | 1.60 | 1.25 | 35.53 | 0.00 |  |
-| noise_corr_len1_0.5px | 20 | 1.63 | 1.74 | 1.32 | 1.10 | 9.76 | 0.00 |  |
-| pose_jitter_0.5deg_2mm | 20 | 0.68 | 0.71 | 1.20 | 1.02 | 1.18 | 0.15 |  |
-| pose_jitter_2deg_8mm | 15 | 0.63 | 1.27 | 0.85 | 0.63 | 1.29 | 0.33 |  |
-| missing_20pct | 20 | 0.79 | 0.27 | 0.75 | 0.52 | 1.25 | 0.15 |  |
-| missing_40pct | 20 | 0.67 | 0.46 | 0.83 | 0.80 | 1.40 | 0.00 |  |
-| missing_60pct | 15 | 0.52 | 0.94 | 1.11 | 0.87 | 1.53 | 0.00 |  |
-| missing_columns_40pct | 20 | 0.75 | 1.29 | 1.04 | 0.72 | 1.40 | 0.00 |  |
-| outliers_2pct | 20 | 0.72 | 0.63 | 0.78 | 0.63 | 1.13 | 0.05 |  |
-| outliers_5pct | 20 | 0.82 | 0.64 | 1.04 | 0.86 | 1.17 | 0.05 |  |
-| outliers_10pct | 20 | 0.69 | 0.40 | 0.80 | 0.54 | 1.14 | 0.00 |  |
-| outliers_20pct | 15 | 1.06 | 0.25 | 0.82 | 1.24 | 1.05 | 0.00 |  |
+| condition | n | fx |z| | baseline |z| | rotation |z| | cx |z| | phys NEES | extr NEES | stop pass | flags |
+|---|---|---|---|---|---|---|---|---|---|
+| clean_iid | 24 | 0.49 | 0.74 | 0.80 | 0.62 | 1.04 | 1.09 | 0.33 |  |
+| det_global_shift_0.05 | 20 | 0.97 | 0.56 | 0.77 | 0.61 | 1.19 | 1.05 | 0.30 |  |
+| det_global_shift_0.25 | 20 | 1.19 | 0.58 | 0.87 | 0.61 | 0.92 | 1.00 | 0.25 |  |
+| det_subset_shift_30pct_0.3 | 20 | 1.24 | 2.13 | 0.69 | 2.13 | 2.98 | 2.62 | 0.35 |  |
+| det_subset_shift_30pct_0.5 | 20 | 0.94 | 2.69 | 0.89 | 4.33 | 6.89 | 4.28 | 0.15 | left.cx: median|z|=4.3 (sigma=1.176319216266346); tex.cx: median|z|=3.7 (sigma=1 |
+| det_gradient_0.2px | 20 | 1.36 | 1.49 | 1.18 | 1.18 | 2.53 | 1.85 | 0.40 |  |
+| lens_rational_moderate | 20 | 0.78 | 0.27 | 1.09 | 0.94 | 1.15 | 1.22 | 0.30 |  |
+| lens_poly8_moderate | 20 | 0.59 | 0.75 | 0.83 | 0.74 | 1.30 | 1.16 | 0.25 |  |
+| pitch_-1.0pct | 20 | 0.89 | 40.28 | 0.69 | 0.50 | 1.14 | 227.66 | 0.30 | baseline: median|z|=40.3 (sigma=0.041307235210405524) |
+| pitch_-0.5pct | 20 | 0.55 | 21.59 | 0.71 | 0.65 | 1.01 | 69.40 | 0.40 | baseline: median|z|=21.6 (sigma=0.03798792050279097) |
+| pitch_-0.1pct | 20 | 0.65 | 4.77 | 0.65 | 0.62 | 0.99 | 3.96 | 0.40 | baseline: median|z|=4.8 (sigma=0.03824371208129439) |
+| pitch_+0.1pct | 20 | 1.20 | 4.67 | 0.88 | 0.72 | 0.99 | 3.54 | 0.40 | baseline: median|z|=4.7 (sigma=0.03805205207771156) |
+| pitch_+0.5pct | 20 | 0.73 | 24.23 | 0.79 | 0.66 | 1.04 | 77.79 | 0.40 | baseline: median|z|=24.2 (sigma=0.034251985156893386) |
+| pitch_+1.0pct | 20 | 0.37 | 42.15 | 1.04 | 0.78 | 1.15 | 252.66 | 0.25 | baseline: median|z|=42.2 (sigma=0.03533653637565766) |
+| board_bow_0.3mm | 20 | 2.86 | 1.77 | 3.88 | 0.76 | 8.07 | 6.85 | 0.25 | right.fx: median|z|=3.9 (sigma=0.6795408070831404); tex.fx: median|z|=3.5 (sigma |
+| board_bow_1.0mm | 20 | 6.06 | 3.08 | 8.27 | 3.11 | 24.44 | 21.49 | 0.00 | left.fx: median|z|=6.1 (sigma=1.1992981532716573); right.fx: median|z|=7.9 (sigm |
+| board_warp_0.1mm | 20 | 1.06 | 0.79 | 0.96 | 1.87 | 1.92 | 1.60 | 0.05 |  |
+| noise_corr_len1_0.2px | 20 | 1.13 | 1.99 | 1.53 | 1.69 | 4.60 | 5.93 | 0.05 |  |
+| noise_corr_len2_0.2px | 20 | 2.19 | 1.97 | 1.60 | 1.25 | 6.20 | 12.07 | 0.00 |  |
+| noise_corr_len1_0.5px | 20 | 1.63 | 1.74 | 1.32 | 1.10 | 5.09 | 7.98 | 0.00 |  |
+| pose_jitter_0.5deg_2mm | 20 | 0.68 | 0.71 | 1.20 | 1.02 | 1.00 | 1.14 | 0.15 |  |
+| pose_jitter_2deg_8mm | 15 | 0.63 | 1.27 | 0.85 | 0.63 | 0.98 | 1.37 | 0.33 |  |
+| missing_20pct | 20 | 0.79 | 0.27 | 0.75 | 0.52 | 0.85 | 0.96 | 0.15 |  |
+| missing_40pct | 20 | 0.67 | 0.46 | 0.83 | 0.80 | 1.19 | 1.22 | 0.00 |  |
+| missing_60pct | 15 | 0.52 | 0.94 | 1.11 | 0.87 | 1.07 | 1.37 | 0.00 |  |
+| missing_columns_40pct | 20 | 0.75 | 1.29 | 1.04 | 0.72 | 1.39 | 1.53 | 0.00 |  |
+| outliers_2pct | 20 | 0.72 | 0.63 | 0.78 | 0.63 | 0.76 | 0.98 | 0.05 |  |
+| outliers_5pct | 20 | 0.82 | 0.64 | 1.04 | 0.86 | 1.12 | 1.15 | 0.05 |  |
+| outliers_10pct | 20 | 0.69 | 0.40 | 0.80 | 0.54 | 0.98 | 0.93 | 0.00 |  |
+| outliers_20pct | 15 | 1.06 | 0.25 | 0.82 | 1.24 | 1.12 | 1.17 | 0.00 |  |
+
+The `phys NEES` column is the physical-intrinsics block (fx,fy,cx,cy); `extr NEES` is the 12 extrinsic parameters. The all-parameter NEES is intentionally not shown here: under a lens-model mismatch the distortion truth is not the generating model, and under a pitch error every translation is scaled, so all-parameter NEES is dominated by those expected model errors. The key-parameter |z| columns are the honest per-parameter measures.
 
 **Mechanism notes.**
 
@@ -230,7 +232,7 @@ Stability (drop last view): pass rate 1.00, max|z| median 0.61, p95 1.15; pass i
 | fixed kc | only if verified to a few % | 5% bias gives cx |z| 9.4 |
 | outlier fraction | <=5% (10-20% works but is outside the standard profile) | corrected sandwich calibrated; standard profile conservative |
 
-**Implementation notes for the parent.** The current `quality.stopping_report` already has the right shape (views, diversity, quadrant/observations, rank, sigma, held-out, stability). To make it conservative: (i) set `min_views=15`, `max_sigma_fx_px=0.60`, `max_sigma_baseline_mm=0.08`, `max_sigma_rotation_deg=0.15` for the standard profile; (ii) make `rank_kept==n_free` and `sigma_free>1e-9` mandatory (already rank, add zero-variance); (iii) require all three cameras >=12 views; (iv) pass `factor_sigma` from the pitch tolerance (0.001 for 0.1%) or estimate pitch jointly; (v) warn when `reprojection_rms < 0.8*expected_noise` is false? A residual-RMS consistency check catches the fixed-kc local minimum.
+**Implementation notes for the parent.** The current `quality.stopping_report` already has the right shape (views, diversity, quadrant/observations, rank, sigma, held-out, stability). To make it conservative: (i) set `min_views=15`, `max_sigma_fx_px=0.60`, `max_sigma_baseline_mm=0.08`, `max_sigma_rotation_deg=0.15` for the standard profile; (ii) make `rank_kept==n_free` and `sigma_free>1e-9` mandatory (already rank, add zero-variance); (iii) require all three cameras >=12 views; (iv) pass `factor_sigma` from the pitch tolerance (0.001 for 0.1%) or estimate pitch jointly; (v) add a residual-RMS consistency check: flag if the observed RMS exceeds 1.5x the expected noise floor, or if a fixed-kc fit has RMS >1.2x the free-kc fit; this catches the fixed-kc local minimum.
 
 ### Monte-Carlo acceptance criteria for future changes
 

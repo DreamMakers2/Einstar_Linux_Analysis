@@ -559,7 +559,10 @@ images ──► detect.py ──► grid (u,v)->(x,y) ──► calibrate.py �
   with neighbouring holes), but on the real vendor images the residual floor is
   **model-limited**, so the centroid remains best there (0.367 px). Recommended
   production path: centroid seed → edge/conic refinement after the first
-  homography; retire the threshold-ellipse mode. See
+  homography; retire the threshold-ellipse mode. The CLI `--refine-mode edge`
+  is only an experimental port of that path and is **not** the default: an
+  ungated edge run hit a solver local minimum on the vendor corpus, so it must
+  be combined with the per-view gate. See
   `analysis/calibration/audit/detector_report.md`.
 * **Calibration**: joint robust BA as in §7.3, with optional fixed distortion
   (vendor-like) or free distortion, and optional baseline anchoring.
