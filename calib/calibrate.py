@@ -468,7 +468,8 @@ def calibrate(obs: list[Observation],
                              info={"success": bool(res.success), "nfev": int(res.nfev),
                                    "cost": float(res.cost), "optimality": float(res.optimality),
                                    "message": str(res.message), "pitch_mm": board_pitch_mm,
-                                   "free_kc": free_kc})
+                                   "free_kc": free_kc,
+                                   "views_used": sorted(int(v) for v in set(o.view for o in obs))})
 
 
 def _numeric_jacobian(prob: _Problem, x: np.ndarray, f0: np.ndarray,

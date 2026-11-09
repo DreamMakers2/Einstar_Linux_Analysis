@@ -524,8 +524,13 @@ images ──► detect.py ──► grid (u,v)->(x,y) ──► calibrate.py �
 * **Uncertainty**: `JᵀJ` covariance; synthetic NEES ≈ 1.06 × n (well calibrated).
 * **Adaptive**: candidate pool of board poses (distance × tilt × roll), Fisher
   information gain after eliminating the candidate view by its Schur
-  complement; A-optimal greedy selection; stopping when fx/fy σ and baseline σ
-  are below thresholds and the held-out residual is acceptable.
+  complement; A-optimal greedy selection with a distance/tilt diversity
+  constraint; stopping when fx/fy σ and baseline σ are below thresholds, at
+  least **8 views** are observed, and (optionally) a held-out view reprojects
+  below 0.5 px. The minimum-view guard is essential: in a synthetic demo,
+  covariance alone would stop at 5 views with a 1.72 px focal error; the guard
+  pushes it to 8 views and 0.33 px. Covariance measures variance, not bias, so
+  a held-out or stability check is still recommended.
 * **Profiles**: immutable factory snapshot, numbered revisions, manifest
   hashes, active pointer, rollback, and a device-export plan (offset 0x39B,
   0xF21 bytes) that is **not executed automatically**.
@@ -613,6 +618,21 @@ improved parameter accuracy in both runs (1.8×–6.4×), but the magnitude is
 scene-dependent. A production planner must keep the diversity constraint; pure
 A-optimality is not acceptable for a plate whose distortion/pose trade-off
 depends on distance.
+
+### 10.4 Sensitivity and stopping
+
+* **Global 2-D shift** of one view (all 40 points by 10 px): the board pose
+  absorbs it, so the calibration shifts by only 0.15/0.26/0.30 px in
+  fx and 0.019 mm in baseline. A rigid shift is not a "bad view".
+* **Non-rigid corruption** (8 of 40 points by 10 px): the corrupted view's
+  per-view RMS rises to 4.35 px vs a 0.31 px median and the gate flags it.
+  Dropping a merely noisy view can shift the remaining parameters by
+  ~0.2 px; the gate is intended for gross failures, not for ordinary noise.
+* **Stopping demo** (synthetic, seed 8100): 4/5/6/7 views give focal errors
+  0.68/1.72/1.21/0.27 px; the minimum-view guard stops at **8 views** with
+  0.33 px focal error and a 0.005 mm baseline error. The reported σ at 8 views
+  (0.056 px) is far below the actual error, confirming that σ alone is not a
+  bias detector.
 
 ### 10.4 End-to-end profile
 

@@ -232,7 +232,10 @@ def _sigma_dict(sd: np.ndarray) -> dict:
 
 def stopping_report(result: CalibrationResult,
                     max_sigma_fx_px: float = 0.35,
-                    max_sigma_baseline_mm: float = 0.08) -> dict:
+                    max_sigma_baseline_mm: float = 0.08,
+                    min_views: int = 8,
+                    heldout_rms_px: float | None = None,
+                    max_heldout_rms_px: float = 0.5) -> dict:
     cov = rig_covariance(result)
     sd = np.sqrt(np.maximum(np.diag(cov), 0.0))
     d = _sigma_dict(sd)
@@ -248,8 +251,15 @@ def stopping_report(result: CalibrationResult,
     n = t / max(np.linalg.norm(t), 1e-12)
     idx = 27 + 3  # right translation block starts at 27+3
     b_sigma = float(np.sqrt(max(n @ cov[idx:idx + 3, idx:idx + 3] @ n, 0.0)))
-    ok = all(v[0] <= v[1] for v in checks.values()) and b_sigma <= max_sigma_baseline_mm
+    n_views = len(result.info.get("views_used", result.views))
+    ok = (n_views >= min_views
+          and all(v[0] <= v[1] for v in checks.values())
+          and b_sigma <= max_sigma_baseline_mm
+          and (heldout_rms_px is None or heldout_rms_px <= max_heldout_rms_px))
     return {"ok": bool(ok), "baseline_mm": float(np.linalg.norm(t)),
-            "baseline_sigma_mm": b_sigma,
+            "baseline_sigma_mm": b_sigma, "n_views": n_views,
+            "min_views": min_views,
+            "heldout_rms_px": heldout_rms_px,
+            "heldout_limit_px": max_heldout_rms_px,
             "checks": {k: {"value": float(v[0]), "limit": float(v[1])}
                        for k, v in checks.items()}}
