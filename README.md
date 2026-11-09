@@ -33,6 +33,8 @@ calibration records or user data (see [Scope and exclusions](#scope-and-exclusio
 | IR calibration key | per-field integer offset; rotation key `(-2,-4,-11,-9,0,5,-11,-12,0)` is the **unique** solution of all 2⁹ candidates (det = 1 to 2e-15) | **Proved** (exhaustive + second calibration + independent record) | same |
 | Stereo geometry | baseline **158.557 mm**, L–Tex 125.318, R–Tex 38.628, relative IR rotation **22.138°**, epipole 6693 px → rectification required | **Proved** (from decoded poses) | same |
 | Calibration model | operational CCF model + rectification/triangulation; intrinsic key **bounded** to ≤1 px (depth effect 0.26 mm at 300 mm vs 2.9 mm from the baseline spread); 42/42 invariants; synthetic round trip at 1e-12 mm; real captures rectify with ≈1 px median vertical residual | **Validated for consistency**; physical accuracy unmeasured | [docs/calibration/model.md](docs/calibration/model.md) |
+| Calibration workflow | EXStar's physical calibration = **5 groups × 5 distance bands (240/320/400/480/560 mm ±40) × 3 cameras = 75 images**; only the vertical group enforces ±8°; no per-step retry; measured session **2 min 56 s**, last capture→result ~1.3 s, device write ~0.34 s; the result overwrites the CCF files **and** the device block at `tagDevData+0x39B` with no backup | **Verified** (XML + code + real session log) | [docs/calibration/workflow_and_replacement.md](docs/calibration/workflow_and_replacement.md) |
+| Calibration replacement | `calib/`: marker detection, joint robust bundle adjustment, NEES-calibrated covariance (1.06 × n), Fisher-information view selection, versioned host-side profiles; 0.367 px on the vendor corpus, IR baseline reproduced to 0.014 mm, 0.20° relative rotation | **Offline-validated**; physical accuracy requires a board measurement and a known artefact | [calib/](calib/), [tests/test_calib_engine.py](tests/test_calib_engine.py) |
 | Acquisition backend | C++23 transport/pipeline/FFI + deterministic simulator; framing repaired, golden-vector conformance, fuzzing, 10 k-frame stress; ASan/UBSan/TSan clean | **Offline-validated**; no hardware run | [driver/](driver/), [docs/readiness.md](docs/readiness.md) |
 | Command channel | serial, firmware string, sensor count, resolution, exposure/gain (+ranges), trigger mode/period, temperature, read-only page read; 5 attempts, echo/status validation, per-pipe recovery | **Offline-validated** (22 cases / 4,379 checks against a byte-accurate fake FX3) | [driver/CONTROL_CHANNEL.md](driver/CONTROL_CHANNEL.md) |
 | Windows architecture | `EXStar.exe → SnSyncService.exe → einscan10 plugin → CommunicateLayer → SH3DU3Driver/cyusb3`; 741 PE modules mapped | **Verified** (import graph + strings) | [docs/windows/architecture.md](docs/windows/architecture.md) |
@@ -123,6 +125,33 @@ To run the **evidence-backed** suites you need the vendor artefacts, which are n
 distributed here. Put them under `fixtures/` (or set `EINSTAR_FIXTURES`) as documented in
 [analysis/README.md](analysis/README.md); the fixture-dependent tests then run instead of
 skipping.
+
+## Calibration workflow and replacement engine
+
+The physical scanner calibration was reverse-engineered end-to-end: the 5×5
+capture state machine, the distance/angle gates, the vendor's per-view PnP +
+joint refinement, the CCF/device write-back, and the plate geometry. The vendor
+corpus recovers an **8×5 plate, 27.72 mm pitch, four large markers**; a free
+re-optimisation reproduces the IR baseline to **0.014 mm** and the relative IR
+rotation to **0.20°** at 0.367 px RMS. The shipped colour record is *not*
+co-registered with the IR pair (17 mm y offset), so the colour extrinsic must be
+re-estimated on the user's unit.
+
+`calib/` is a Linux-native replacement: sub-pixel marker detection, joint
+robust bundle adjustment over three cameras, analytic covariance (synthetic
+NEES ≈ 1.06 × n), Fisher-information view selection and uncertainty-driven
+stopping, and versioned host-side profiles that preserve the factory snapshot
+and never write the scanner implicitly. Ablations show the original 25-step
+sequence is redundant for metric scale (3 views already recover the baseline to
+0.03 mm) but not for intrinsics (≥20 views to approach the vendor parameters).
+A greedy 8-view plan reduced the synthetic focal error 6× versus a fixed
+8-view subset; a production planner still needs a distance/pose diversity
+constraint.
+
+**Not claimed:** physical sub-millimetre accuracy or superiority over the
+vendor. That needs the actual board variant (8×5 vs the 8×7 drawn in the
+manual), a measured length standard, a calibration run on the user's unit and a
+known artefact. The roadmap's calibration track lists the gates.
 
 ## Scope and exclusions
 

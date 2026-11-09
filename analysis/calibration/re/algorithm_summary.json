@@ -1,0 +1,644 @@
+{
+  "schema": "einstar-calib-algorithm/1",
+  "target": {
+    "product": "SHINING 3D EXStar 1.2.2.0 (Einstar / Einscan-E10)",
+    "module": "Sn3DCalibrationJR.dll",
+    "image_base": "0x180000000",
+    "decompiler": "Ghidra 12.1.4",
+    "evidence": [
+      "analysis/calibration/ghidra/dumps/Sn3DCalibrationJR.dump.txt",
+      "analysis/calibration/ghidra/dumps/JR_addrs.dump.txt",
+      "analysis/calibration/ghidra/dumps/Sn3DCalibrateAlgorithmWrapper.dump.txt",
+      "analysis/calibration/ghidra/dumps/Sn3DCameraCalibHelper.dump.txt",
+      "analysis/calibration/ghidra/dumps/Sn3DEACalibrateController.dump.txt",
+      "analysis/calibration/ghidra/dumps/Sn3DCalibDevFile.dump.txt"
+    ],
+    "method": "offline static analysis of decompiler dumps; no execution, no writes to vendor files"
+  },
+  "call_path": {
+    "entry": {
+      "name": "Sn3DAlgorithm::Sn3D_E10_camera_calibration",
+      "addr": "0x1801371d0",
+      "size": 231,
+      "cite": "JR:29582",
+      "role": "forwarder: copies Sn3DCalibrationOpt and forwards 10 args",
+      "cite_forward": "JR:29622"
+    },
+    "signature_demangled": "RetVal __cdecl(Sn3DAlgorithm::Sn3D_E10_camera_calibration)(std::vector<Eigen::Vector3d> const&, std::vector<Eigen::Vector2i> const&, std::vector<unsigned char*> const&, std::vector<unsigned char*> const&, std::vector<unsigned char*> const&, std::vector<double>&, CalibParam&, CalibParam&, CalibParam&, Sn3DCalibrationOpt)",
+    "arg_roles": [
+      "1 vector<Vector3d>  : metric plate model (mm)",
+      "2 vector<Vector2i>  : 3 x (width,height) sensor sizes (NOT 2-D points; see A:30369)",
+      "3 vector<uchar*>    : left  IR images",
+      "4 vector<uchar*>    : right IR images",
+      "5 vector<uchar*>    : tex   colour images",
+      "6 vector<double>&   : output coefficient vector",
+      "7 CalibParam&       : left  output",
+      "8 CalibParam&       : right output",
+      "9 CalibParam&       : tex   output",
+      "10 Sn3DCalibrationOpt (by value, 480 B = 0x1e0)"
+    ],
+    "chain": [
+      {
+        "stage": "driver",
+        "fn": "FUN_1802dca70",
+        "addr": "0x1802dca70",
+        "size": 12224,
+        "cite": "A:29977",
+        "does": "recognition + correspondence selection + multi-camera call + CCF packing",
+        "callees": [
+          "GaussianBlur [A:30411]",
+          "Canny [A:30421]",
+          "FastRecognition::set_param [A:30510]",
+          "select_goodcalib_point x3 [A:30608-30612]",
+          "FUN_1800e0180 [A:31217]",
+          "TribleCCF_CalibrationCCF [A:31225]"
+        ]
+      },
+      {
+        "stage": "multi-camera core",
+        "fn": "FUN_1800e0180",
+        "addr": "0x1800e0180",
+        "size": 13661,
+        "cite": "A:31217",
+        "decompiled": false,
+        "note": "the real E10 3-camera solver; also called from Sn3D_multi_camera_calibration* [JR:42159,42293,43008]; body absent from both dumps"
+      },
+      {
+        "stage": "2-camera core (sibling)",
+        "fn": "FUN_1800cc330",
+        "addr": "0x1800cc330",
+        "size": 12224,
+        "cite": "A:27971",
+        "decompiled": true,
+        "callers": [
+          "Sn3D_double_camera_calibration 0x180141f00 [JR:37054]",
+          "Sn3D_double_camera_calibration_extrinsic 0x180142260 [JR:37219]",
+          "Sn3D_double_camera_calibration_pro 0x180142720 [JR:37432]"
+        ],
+        "note": "NOT called by the E10 driver; the task premise (E10 -> FUN_1802dca70 -> FUN_1800cc330) is not what the binary does"
+      }
+    ],
+    "premise_correction": "E10 -> FUN_1802dca70 -> FUN_1800e0180 -> TribleCCF. FUN_1800cc330 belongs to the Sn3D_double_camera_calibration API family.",
+    "open_edge": "whether FUN_1800e0180 calls FUN_1800cc330 is undecidable from these dumps (no call-xref table; FUN_1800e0180 not decompiled)"
+  },
+  "camera_model": {
+    "intrinsics_vector_K5": [
+      "fx",
+      "cx",
+      "cy",
+      "fy/fx",
+      "alpha"
+    ],
+    "distortion_vector_D5": [
+      "k1",
+      "k2",
+      "p1",
+      "p2",
+      "k3"
+    ],
+    "equations": {
+      "normalise": "x' = (u - cx)/fx - alpha*((v - cy)/fy);  y' = (v - cy)/fy",
+      "distort": "x_d = x*(1 + k1*r2 + k2*r2^2 + k3*r2^3) + 2*p1*x*y + p2*(r2 + 2x^2);  y_d = y*(1 + k1*r2 + k2*r2^2 + k3*r2^3) + p1*(r2 + 2y^2) + 2*p2*x*y;  r2 = x^2 + y^2",
+      "project": "u = fx*(x_d + alpha*y_d) + cx;  v = fy*y_d + cy  (fy = fx*K5[3])"
+    },
+    "units": {
+      "intrinsics": "pixels",
+      "distortion": "dimensionless (normalised coords)",
+      "object_points": "mm",
+      "translation": "mm"
+    },
+    "evidence": {
+      "projection": "JR:33600-33601 (Sn3D_camera_to_image 0x18013d3f0)",
+      "distortion": "A:27947-27965 (FUN_1800beed0)",
+      "inverse": "JR:76230-76245 (compute_extrinsic_no_distortion)",
+      "fy_ratio": "JR:82428 (TribleCCF: fy = K5[3]*K5[0])"
+    },
+    "confidence": "A"
+  },
+  "parameter_layouts": {
+    "lm_state_double_camera": {
+      "order": [
+        "K5_A[5]",
+        "D5_A[5]",
+        "K5_B[5]",
+        "D5_B[5]",
+        "per-view rvec[3],tvec[3] x V",
+        "rvec_rel[3]",
+        "tvec_rel[3]",
+        "points3d[3] x N"
+      ],
+      "cite": "JR:117553-117700 (Sn3D_LM_DoubleCamera::update_value)",
+      "confidence": "A"
+    },
+    "lm_state_single_camera": {
+      "order": [
+        "K5[5]",
+        "D5[5]",
+        "per-view rvec[3],tvec[3] x V",
+        "points3d[3] x N"
+      ],
+      "first_point_index": 10,
+      "cite": "JR:115750-115830 (compute_cost), JR:117722 (update_value)",
+      "confidence": "A"
+    },
+    "CalibParam": {
+      "size_bytes": 184,
+      "size_hex": "0xb8",
+      "n_doubles": 23,
+      "cite_size": "W:55242 (QMetaType::registerNormalizedType(...,0xb8,...))",
+      "offsets": {
+        "+0x00": "unknown (not written by TribleCCF) - U",
+        "+0x08": "fx",
+        "+0x10": "fy",
+        "+0x18": "cx",
+        "+0x20": "cy",
+        "+0x28": "k1",
+        "+0x30": "k2",
+        "+0x38": "p1",
+        "+0x40": "p2",
+        "+0x48": "k3",
+        "+0x50": "alpha",
+        "+0x58..0x9f": "R[9] row-major (Rodrigues of rvec)",
+        "+0xa0..0xb7": "T[3] mm"
+      },
+      "cite_offsets": "JR:82427-82444, JR:82463-82490",
+      "confidence": "A (B for +0x00)"
+    },
+    "ccf_record": {
+      "size_colour": 264,
+      "size_ir": 520,
+      "n_doubles": 33,
+      "order": [
+        "fc[0]=fx",
+        "fc[1]=fy",
+        "pad",
+        "pad",
+        "cc[0]=cx",
+        "cc[1]=cy",
+        "pad",
+        "pad",
+        "alpha",
+        "pad",
+        "kc[0]=k1",
+        "kc[1]=k2",
+        "kc[2]=p1",
+        "kc[3]=p2",
+        "kc[4]=k3",
+        "pad x5",
+        "T[0]",
+        "T[1]",
+        "T[2]",
+        "R[0..8] row-major",
+        "error"
+      ],
+      "cite": "JR:82994-83012 (CalibrationCCF::WriteCcf text twin) + docs/calibration/ccf_format.md",
+      "conventions": "world->camera, X_cam = R*X_world + T, no transpose, no sign flip inside JR; IR integer-key obfuscation is applied outside JR",
+      "confidence": "A"
+    }
+  },
+  "ceres": {
+    "problem": {
+      "function": "sn3DExtrinsicSolver::compute_rt",
+      "addr": "0x180277360",
+      "cite": "JR:76432",
+      "signature": "int compute_rt(const vector<Vector2d>& img, const vector<Vector3d>& obj, Matrix<double,3,1>& rvec, Matrix<double,3,1>& tvec)",
+      "residual_blocks": "one per correspondence",
+      "residuals_per_block": 2,
+      "cost_function": "ceres::AutoDiffCostFunction<Sn3DAlgorithm::sn3DExtrinsicSolver_CostFunctor, 2, 3, 3>",
+      "cost_function_cite": "JR:76529 (SizedCostFunction<2,3,3,...> vftable), JR:76530 (set_num_residuals(2)), JR:76537/76547 (block sizes 3,3), JR:76549-76550 (AutoDiff vftable)",
+      "parameter_blocks": [
+        {
+          "name": "rvec",
+          "size": 3,
+          "cite": "JR:76556"
+        },
+        {
+          "name": "tvec",
+          "size": 3,
+          "cite": "JR:76556-76557"
+        }
+      ],
+      "loss_function": null,
+      "loss_cite": "JR:76557 -> AddResidualBlock(problem, cost, 0, &rvec, &tvec): literal null third argument",
+      "local_parameterization": null,
+      "bounds_or_constant_blocks": null,
+      "initial_guess": "rvec from estimate_rt; tvec[0] += 100.0 mm",
+      "initial_guess_cite": "JR:76495",
+      "residual_definition": "pixel reprojection error (u_pred-u_obs, v_pred-v_obs) under the pinhole+Brown-Conrady+skew model of camera_model",
+      "residual_confidence": "B (functor body not in dumps; identical arithmetic proved in compute_residual JR:76325)",
+      "solve": {
+        "call": "ceres::Solve(options, &problem, &summary)",
+        "cite": "JR:76570",
+        "success_test": "summary.termination_type == 0",
+        "success_cite": "JR:76572",
+        "failure_message": "\" Error: \" \"solver is not convergence\"",
+        "failure_cite": "JR:76586"
+      },
+      "unique_in_callee_tree": "yes: one ceres::Problem per view in compute_rt; no other ceres::Problem in FUN_1800cc330's callee tree"
+    },
+    "options": {
+      "constructed": "ceres::Solver::Options::Options() at JR:76566; object base local_228",
+      "explicit_writes": [
+        {
+          "offset": "+0x68",
+          "width_bytes": 4,
+          "value": 100,
+          "likely_field": "max_num_iterations",
+          "default": 50,
+          "cite": "JR:76567",
+          "confidence": "C"
+        },
+        {
+          "offset": "+0x130",
+          "width_bytes": 1,
+          "value": 0,
+          "likely_field": "a bool option (use_nonmonotonic_steps or similar)",
+          "cite": "JR:76568",
+          "confidence": "C"
+        }
+      ],
+      "everything_else_default": true,
+      "defaults_of_note": {
+        "linear_solver_type": "DENSE_QR (default; never assigned)",
+        "num_threads": "1 (default; never assigned)",
+        "max_num_iterations": "50 by default, overridden by the +0x68 write if that field is max_num_iterations",
+        "function_tolerance": "1e-6 (default)",
+        "gradient_tolerance": "1e-10 (default)",
+        "parameter_tolerance": "1e-8 (default)",
+        "minimizer_progress_to_stdout": "false (default; all printing is the module's own std::cout)",
+        "logging": "none configured"
+      },
+      "version_caveat": "ceres.dll is not present in the analysed tree, so Solver::Options field offsets cannot be confirmed for the exact Ceres version; the offsets above are the raw stores"
+    },
+    "other_ceres_users_in_module": {
+      "camera_calibration_entry_points_with_ceres": [
+        "sn3DExtrinsicSolver::compute_rt only"
+      ],
+      "non_calibration": [
+        "global_optimize_landMark* (JR:64415,64730,66141,68714,...)",
+        "Polynomial4/Rational18/30/45::unDistortion (ceres::Jet, JR:74611-74933)",
+        "sn3DMetricVision / sn3DDigiMetric / CameraLightPlaneCali / IMU"
+      ],
+      "auto_diff_functor_family_RTTI": {
+        "sn3DGlobalSolver_CostFunctor<RadialDistortion>": "AutoDiffCostFunction<...,2, 4,4,2,2,2,0,...>",
+        "variants": [
+          "_noP3D",
+          "_noDis",
+          "_noP3D_noDis",
+          "_noK",
+          "_noP3D_noK",
+          "_noDis_noK",
+          "_noP3D_noDis_noK",
+          "sn3DGlobalSolver_Right_CostFunctor(+variants)",
+          "RadialDistortion4 variants (2;4,3,2,2,2)"
+        ],
+        "cite": "JR:23406-23436 (RTTI strings)",
+        "note": "these belong to the landmark/SL bundle adjusters, not to the camera-intrinsic solving in JR"
+      }
+    }
+  },
+  "hand_written_lm": {
+    "classes": [
+      "Sn3D_LM_SingleCamera",
+      "Sn3D_LM_DoubleCamera",
+      "Sn3D_LM_RT"
+    ],
+    "members": [
+      "init_data",
+      "compute_cost",
+      "analytic_jacobian",
+      "update_value",
+      "get_value",
+      "set_init",
+      "derive_rot",
+      "test_ceres",
+      "test_eigen"
+    ],
+    "double_camera_cost": {
+      "cite": "JR:115440-115750",
+      "residuals_per_point": 4,
+      "definition": "project the point with (R_v,t_v) into camera A and with (R_rel,t_rel)*(R_v,t_v) into camera B; 2 pixel residuals each",
+      "validity_guard": "both observed coordinates > 0"
+    },
+    "single_camera_cost": {
+      "cite": "JR:115750-115974",
+      "residuals_per_point": 2
+    },
+    "call_sites": "none visible in the 547 decompiled functions (U)"
+  },
+  "constants": [
+    {
+      "name": "Canny low/high",
+      "value": [
+        75.0,
+        150.0
+      ],
+      "site": "A:30421 (call) + JR:27959-27960 (defaults)",
+      "confidence": "A"
+    },
+    {
+      "name": "Gaussian kernel / sigma",
+      "value": [
+        5,
+        2.1
+      ],
+      "site": "A:30411 + JR:27961",
+      "confidence": "A"
+    },
+    {
+      "name": "bigCircleNum",
+      "value": 4,
+      "site": "JR:27965 (+0x58)",
+      "confidence": "A"
+    },
+    {
+      "name": "radiusRatio-ish check",
+      "value": "r_max*param_7 <= r_next",
+      "site": "JR:53050-53150",
+      "confidence": "B"
+    },
+    {
+      "name": "recognition default block",
+      "value": [
+        5,
+        5,
+        1.0,
+        0.35,
+        0.7,
+        1.0,
+        75.0,
+        150.0,
+        2.1,
+        0.4,
+        1.0,
+        3.0,
+        4,
+        200,
+        0,
+        2,
+        0.3
+      ],
+      "site": "JR:27947-27969",
+      "confidence": "A for the numbers, C for the field names"
+    },
+    {
+      "name": "E10 driver option block",
+      "value": {
+        "0.8": "A:31200",
+        "5.5": "A:31201",
+        "5.0/nImages": "A:31196",
+        "nCams": "3 @ A:31206",
+        "flag": "true @ A:31207"
+      },
+      "confidence": "A"
+    },
+    {
+      "name": "select_goodcalib_point thresholds",
+      "value": [
+        15.0,
+        0.2
+      ],
+      "site": "A:30608-30612",
+      "confidence": "A (values), C (meaning)"
+    },
+    {
+      "name": "invalid-point sentinels",
+      "value": [
+        "(-1,-1) 2D",
+        "(-1,-1,-1) 3D",
+        "tolerance 1e-8"
+      ],
+      "site": "A:28368-28386, JR:76210-76220, JR:82452",
+      "confidence": "A"
+    },
+    {
+      "name": "min correspondences",
+      "value": 4,
+      "site": "JR:76236 (uVar19<4), JR:76491 (3<size)",
+      "confidence": "A"
+    },
+    {
+      "name": "Ceres extrinsic tvec init offset",
+      "value": 100.0,
+      "site": "JR:76495",
+      "confidence": "A"
+    },
+    {
+      "name": "Ceres options max_num_iterations (likely)",
+      "value": 100,
+      "site": "JR:76567",
+      "confidence": "C"
+    },
+    {
+      "name": "pointThre default use",
+      "value": "nInvalidAllowed = (int)(nPoints * pointThre)",
+      "site": "A:28318, A:28446",
+      "confidence": "B"
+    },
+    {
+      "name": "deviations",
+      "value": "deviationN -> config+0x2c, deviationT -> config+0x30",
+      "site": "E:11610-11612",
+      "confidence": "B"
+    },
+    {
+      "name": "space / nm_group_num / nm_cell_num / computeType",
+      "value": "config+0x28 / +0x20 / +0x24 / +0x34",
+      "site": "E:11604-11614",
+      "confidence": "B"
+    }
+  ],
+  "plate_and_scale": {
+    "metric_object_points": "supplied by the caller as vector<Vector3d> (mm); never normalised by the solver",
+    "lattice_builder": "not present in the dumps (wrapper / EACameraCalibAlgManager level) - U",
+    "config_keys": [
+      "devSubType",
+      "deviceDir",
+      "hasTex",
+      "useLookup",
+      "optmFlag",
+      "nm_group_num",
+      "nm_cell_num",
+      "space",
+      "deviationN",
+      "deviationT",
+      "computeType",
+      "aa_pro",
+      "bb_pro",
+      "aa",
+      "bb"
+    ],
+    "config_keys_cite": "E:11596-11620",
+    "srcCalibParam": {
+      "size_bytes": 752,
+      "size_hex": "0x2f0",
+      "kind": "Qt metatype",
+      "cite": "W:33491"
+    },
+    "session_xml": "sources/vendor/EXStar_1.2.2.0/res/calibrateConfig/Einscan-EA/rapidCameraCalibrate.xml: 5 groups x 5 steps x 3 pictures (imageLeft/imageRight/imageTex), distanceMid=200 distanceMax=600, poseAlgMethod=runRapidCameraCalibratePose",
+    "confidence": "A for mm + XML, U for the space->mm multiplication"
+  },
+  "output_packing": {
+    "functions": [
+      {
+        "name": "CalibrationCCF::TribleCCF",
+        "addr": "0x1802e6a20",
+        "cite": "JR:82640"
+      },
+      {
+        "name": "CalibrationCCF::QuarCCF",
+        "addr": "0x1802e5e70",
+        "cite": "JR:82266"
+      },
+      {
+        "name": "Sn3D_Trible_CCF",
+        "addr": "0x180138170",
+        "cite": "JR:30282"
+      },
+      {
+        "name": "CalibrationCCF::WriteCcf",
+        "addr": "0x1802e74e0",
+        "cite": "JR:82984"
+      }
+    ],
+    "K5_to_CalibParam": "fx=K5[0]; fy=K5[3]*K5[0]; cx=K5[1]; cy=K5[2]; alpha=K5[4]",
+    "D5_to_CalibParam": "kc[0..4]=D5[0..4]",
+    "pose": "R=Rodrigues(rvec) row-major; T from the first view whose 3-D point is not (-1,-1,-1); cameras 2/3 get composed relative poses",
+    "ccf_emit": "Sn3DCalibDevFile!FUN_180007250 writes the 520/520/264-byte blocks at buffer offsets 0x455/0xa69/0xf71 (D:6131-6240)"
+  },
+  "quality_gates": {
+    "in_jr": [
+      {
+        "check": "intrinsics size == 5",
+        "site": "A:28285, JR:76085",
+        "result": "reject input"
+      },
+      {
+        "check": "views/points counts consistent",
+        "site": "A:28290-28310",
+        "result": "reject input"
+      },
+      {
+        "check": "valid correspondences >= 4",
+        "site": "JR:76236, JR:76491",
+        "result": "ret 1"
+      },
+      {
+        "check": "per-view invalid fraction <= pointThre",
+        "site": "A:28318, A:28446",
+        "result": "view dropped"
+      },
+      {
+        "check": "extrinsic solve succeeded",
+        "site": "A:28594-28610, A:28735",
+        "result": "view marked failed"
+      },
+      {
+        "check": "ceres termination_type",
+        "site": "JR:76572",
+        "result": "returns ceres code, prints 'solver is not convergence'"
+      },
+      {
+        "check": "mean reprojection residual",
+        "site": "JR:76325",
+        "result": "printed; feeds the 'error' field"
+      }
+    ],
+    "strings_without_decompiled_bodies": [
+      {
+        "string": "camera init error is neg",
+        "addr": "0x1804cb248",
+        "xref": "0x1800905a8"
+      },
+      {
+        "string": "camera error is neg",
+        "addr": "0x1804cb280",
+        "xref": "0x1800905cd"
+      },
+      {
+        "string": "the error is negative,computing is illegal!",
+        "addr": "0x1804cb2b8",
+        "xref": "0x180093092"
+      },
+      {
+        "string": "init error is negative,computing is illegal!",
+        "addr": "0x1804ca660",
+        "xref": "0x1801861bd"
+      },
+      {
+        "string": "result error is negative,computing is illegal!",
+        "addr": "0x1804ca6a8",
+        "xref": "0x180186167"
+      },
+      {
+        "string": "calibration failed, outside residuals",
+        "addr": "0x18001c020",
+        "xref": "C:13161"
+      },
+      {
+        "string": "calibTable registration is not precise!",
+        "addr": "0x1804dc3b8",
+        "xref": "JR:82226"
+      },
+      {
+        "string": "calibTable registration failed!",
+        "addr": "0x1804dc370",
+        "xref": "JR:82229"
+      },
+      {
+        "string": "not enough point for calibTable registration!",
+        "addr": "0x1804dc340",
+        "xref": "JR:82056"
+      }
+    ],
+    "error_field": {
+      "source": "compute_residual mean reprojection distance in px",
+      "cite": "JR:76325, JR:83012",
+      "observed_values": "Tex 0.0765 px, IR 0.0 (docs/calibration/ccf_format.md)",
+      "confidence": "B"
+    },
+    "retval_enum": {
+      "0": "ok",
+      "1": "bad input",
+      "2": "bad parameter (bigCircleNum/smallNumThreshold)",
+      "3": "failure (too few ellipses / radiusRatio / registration precision / solver)"
+    }
+  },
+  "detection_frontend": {
+    "recognition_entry": {
+      "name": "Sn3D_calibTable_recognition",
+      "addr": "0x18013cc70",
+      "cite": "JR:33111",
+      "note": "adapter: copies CalibrationTableParam (15 fields), Image<uchar>->Image<float>, calls CalibrationTableRecognition::recognition [JR:33235]; on failure fills (-1,-1) [JR:33241]"
+    },
+    "pipeline_defaults": {
+      "blur": "GaussianBlur 5x5 sigma=2.1",
+      "canny": "75/150",
+      "ellipse": {
+        "0.4": "?",
+        "1.0": "?",
+        "3.0": "?"
+      },
+      "bigCircleNum": 4,
+      "radiusRatio_check": "r_max*ratio <= r_next"
+    },
+    "pose": {
+      "dispatch": "string-dispatched 'runRapidCameraCalibratePose' at W:44344 -> FUN_18002d0b0",
+      "pnp_candidates": [
+        "Sn3D_compute_E10_factory_pose 0x18013d5b0",
+        "Sn3D_compute_device_Rt_PNP 0x18013e3c0 / 0x18013f700",
+        "sn3DExtrinsicSolver::estimate_rt 0x180277790"
+      ]
+    },
+    "confidence": "A for the thresholds and the adapter, C for the ellipse-parameter meaning and the PnP internals"
+  },
+  "unresolved": [
+    "FUN_1800e0180 (0x1800e0180, 13 661 B) body: the actual E10 3-camera solver",
+    "FUN_180174bf0 (0x180174bf0, 6 501 B) body: joint refinement called twice by the 2-camera core",
+    "whether the Sn3D_LM_* classes are used in production (no call sites in 547 decompiled functions)",
+    "exact ceres::Solver::Options field offsets (no ceres.dll available)",
+    "consumers of deviationN / deviationT / space; the code that builds the metric lattice and SrcCalibParam",
+    "CalibParam+0x00",
+    "the caller of Sn3D_E10_camera_calibration (not present in any provided dump; wrapper imports only Sn3D_multi_camera_calibration / Sn3D_double_camera_calibration[_pro] / Sn3D_single_camera_calibration)"
+  ]
+}

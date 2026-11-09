@@ -1,0 +1,598 @@
+{
+  "schema": "einstar.calibration.storage/1",
+  "target": {
+    "vendor": "SHINING 3D EXStar",
+    "version": "1.2.2.0",
+    "device": "EinScan10_01 (Einstar), 3 cameras, 1280x1024",
+    "image_base": "0x180000000",
+    "arch": "x86-64",
+    "method": "offline read of Ghidra 12.1.4 headless dumps + byte-level checks; no execution"
+  },
+  "modules": {
+    "sn3d_calib_dev_file": "Sn3DCalibDevFile.dll",
+    "sn3d_calibrate_data": "Sn3DCalibrateData.dll",
+    "sn3d_ea_calibrate_controller": "Sn3DEACalibrateController.dll",
+    "sn3d_calibrate_algorithm_wrapper": "Sn3DCalibrateAlgorithmWrapper.dll"
+  },
+  "device_record": {
+    "name": "tagDevData",
+    "size": 6568,
+    "size_hex": "0x19A8",
+    "proof": "Sn3DCalibDevFile!0x1800079b0: memcpy((void *)(param_1 + 0x1420),param_2,0x19a8)",
+    "confidence": "A",
+    "fields": [
+      {
+        "offset": 0,
+        "hex": "0x000",
+        "size": 12,
+        "content": "i32 1 (format/version), i32 1280, i32 1024",
+        "confidence": "B"
+      },
+      {
+        "offset": 12,
+        "hex": "0x00C",
+        "size": 176,
+        "content": "camera[0] 22 x f64: fx,fy,cx,cy,k1,k2,p1,p2,k3,alpha,R[9],T[3]",
+        "confidence": "A"
+      },
+      {
+        "offset": 188,
+        "hex": "0x0BC",
+        "size": 72,
+        "content": "zero (reserved; 9 x f64 = possible CCM slot)",
+        "confidence": "C"
+      },
+      {
+        "offset": 260,
+        "hex": "0x104",
+        "size": 176,
+        "content": "camera[1]",
+        "confidence": "A"
+      },
+      {
+        "offset": 436,
+        "hex": "0x1B4",
+        "size": 72,
+        "content": "zero",
+        "confidence": "A"
+      },
+      {
+        "offset": 508,
+        "hex": "0x1FC",
+        "size": 176,
+        "content": "camera[2]",
+        "confidence": "A"
+      },
+      {
+        "offset": 684,
+        "hex": "0x2AC",
+        "size": 72,
+        "content": "zero",
+        "confidence": "A"
+      },
+      {
+        "offset": 756,
+        "hex": "0x2F4",
+        "size": 167,
+        "content": "tagged f32 tables: 'FAFA'+0x200 + 15 x f32, 'FBFB'+0x300 + 15 x f32 (CCM variants)",
+        "confidence": "B"
+      },
+      {
+        "offset": 923,
+        "hex": "0x39B",
+        "size": 3873,
+        "content": "CCF block (see ccf_block)",
+        "confidence": "A"
+      },
+      {
+        "offset": 4796,
+        "hex": "0x12BC",
+        "size": 4,
+        "content": "i32 5",
+        "confidence": "A"
+      },
+      {
+        "offset": 4800,
+        "hex": "0x12C0",
+        "size": 72,
+        "content": "wbdata 18 x f32, byte-identical to shipped wbdata.txt",
+        "confidence": "A"
+      },
+      {
+        "offset": 5771,
+        "hex": "0x168B",
+        "size": 20,
+        "content": "ASCII device id '<redacted-serial>'",
+        "confidence": "B"
+      },
+      {
+        "offset": 6031,
+        "hex": "0x178F",
+        "size": 21,
+        "content": "ASCII board id '<redacted-part-number>'",
+        "confidence": "B"
+      },
+      {
+        "offset": 6291,
+        "hex": "0x1893",
+        "size": 10,
+        "content": "ASCII date '<redacted-production-date>'",
+        "confidence": "B"
+      }
+    ]
+  },
+  "ccf_block": {
+    "parent": "tagDevData",
+    "offset": 923,
+    "size": 3873,
+    "size_hex": "0xF21",
+    "format_version": 4,
+    "magic": {
+      "offset_in_block": 3868,
+      "hex": "0xF1C",
+      "bytes": "46 51 46 51 00",
+      "ascii": "FQFQ\\0"
+    },
+    "proof": [
+      "Sn3DCalibDevFile!0x180007250: memcpy((void *)(param_1 + 0x455),(void *)(param_1 + 0x17bb),0xf21)",
+      "Sn3DEACalibrateController!0x180003940: memset(param_1,0,0xf21); param_1[0x3c7]=0x51465146; *param_1=4;",
+      "Sn3DEACalibrateController!0x180003540: writeCustomInfo offset 0x39B, size 0xF21"
+    ],
+    "confidence": "A",
+    "fields": [
+      {
+        "offset": 0,
+        "hex": "0x000",
+        "size": 4,
+        "content": "i32 version = 4"
+      },
+      {
+        "offset": 264,
+        "hex": "0x108",
+        "size": 4,
+        "content": "i32 length Left = 520"
+      },
+      {
+        "offset": 268,
+        "hex": "0x10C",
+        "size": 520,
+        "content": "LeftCCF.txt bytes (verbatim)"
+      },
+      {
+        "offset": 1552,
+        "hex": "0x610",
+        "size": 4,
+        "content": "i32 length Right = 520"
+      },
+      {
+        "offset": 1556,
+        "hex": "0x614",
+        "size": 520,
+        "content": "RightCCF.txt bytes (verbatim)"
+      },
+      {
+        "offset": 2580,
+        "hex": "0xA14",
+        "size": 17,
+        "content": "ASCII timestamp 'yyyy-MM-dd hh:mm'"
+      },
+      {
+        "offset": 2840,
+        "hex": "0xB18",
+        "size": 4,
+        "content": "i32 length Tex = 264"
+      },
+      {
+        "offset": 2844,
+        "hex": "0xB1C",
+        "size": 264,
+        "content": "TexCCF.txt bytes (verbatim)"
+      },
+      {
+        "offset": 3868,
+        "hex": "0xF1C",
+        "size": 5,
+        "content": "magic 'FQFQ\\0'"
+      }
+    ]
+  },
+  "ccf_file": {
+    "note": "binary despite .txt extension; LE",
+    "sizes": {
+      "LeftCCF.txt": 520,
+      "RightCCF.txt": 520,
+      "TexCCF.txt": 264
+    },
+    "fields": [
+      {
+        "offset": "0x000",
+        "type": "f64",
+        "name": "fx"
+      },
+      {
+        "offset": "0x008",
+        "type": "f64",
+        "name": "fy"
+      },
+      {
+        "offset": "0x010",
+        "type": "2xf64",
+        "name": "pad 0.0"
+      },
+      {
+        "offset": "0x020",
+        "type": "f64",
+        "name": "cx"
+      },
+      {
+        "offset": "0x028",
+        "type": "f64",
+        "name": "cy"
+      },
+      {
+        "offset": "0x030",
+        "type": "2xf64",
+        "name": "pad 0.0"
+      },
+      {
+        "offset": "0x040",
+        "type": "f64",
+        "name": "alpha"
+      },
+      {
+        "offset": "0x048",
+        "type": "f64",
+        "name": "pad 0.0"
+      },
+      {
+        "offset": "0x050",
+        "type": "5xf64",
+        "name": "k1,k2,p1,p2,k3"
+      },
+      {
+        "offset": "0x078",
+        "type": "5xf64",
+        "name": "pad 0.0"
+      },
+      {
+        "offset": "0x0A0",
+        "type": "3xf64",
+        "name": "Tx,Ty,Tz mm"
+      },
+      {
+        "offset": "0x0B8",
+        "type": "9xf64",
+        "name": "R row-major"
+      },
+      {
+        "offset": "0x100",
+        "type": "f64",
+        "name": "reprojection error (discarded by reader)"
+      },
+      {
+        "offset": "0x108",
+        "type": "64xi32",
+        "name": "IR trailer, values 0..9, per-camera constant"
+      }
+    ],
+    "in_memory_record": {
+      "size": 184,
+      "hex": "0xB8",
+      "fields": "8B header @0x00 + 22 x f64 in order fx,fy,cx,cy,k1,k2,p1,p2,k3,alpha,R[9],T[3]"
+    },
+    "roundtrip": {
+      "Left": "byte-identical",
+      "Right": "byte-identical",
+      "Tex": "differs at byte 256 (double #32 error 0.076458 -> 0.0)"
+    },
+    "confidence": "A"
+  },
+  "key_offsets": {
+    "mechanism": "per-field integer offset, applied by Sn3DCalibrateData!0x180005ca0 with a 64-int key table",
+    "measured_offsets": {
+      "IR (Left/Right)": {
+        "alpha": 2,
+        "k2": 6,
+        "p1": 2,
+        "p2": 7,
+        "k3": 13
+      },
+      "colour (Tex)": {
+        "alpha": 0,
+        "k1": 0,
+        "k2": 0,
+        "p1": 0,
+        "p2": 0,
+        "k3": 0
+      }
+    },
+    "proof": "device 22-double blocks equal shipped CCF coefficients bit-exactly after subtracting these integers",
+    "confidence": "A (offsets) / C (256-byte trailer role: values 0..9, bit-identical across two different calibrations, does not literally contain 2,6,2,7,13)"
+  },
+  "paths": {
+    "runtime_base": "./res/Einscan-E10",
+    "proof_base": "Sn3DEACalibrateController!0x18000e0a0 inserts the 6-byte literal './res/' (DLL .rdata 0x18002fd38 = 2e 2f 72 65 73 2f) before 'Einscan-E10'",
+    "ccf": [
+      "./res/Einscan-E10/200x150/LeftCCF.txt",
+      "./res/Einscan-E10/200x150/RightCCF.txt",
+      "./res/Einscan-E10/200x150/TexCCF.txt"
+    ],
+    "other": [
+      "./res/Einscan-E10/200x150/activeBox.dat (48 B = 6 x f64: -1500,+1500,-1500,+1500,+200,+1500 => box x,y in [-1500,1500], z in [200,1500])",
+      "./res/Einscan-E10/200x150/lookupTable.dat",
+      "./res/Einscan-E10/200x150/cameraCalibFlag.dat (LE QDateTime, written on calibration)",
+      "./res/Einscan-E10/200x150/ParaCCM_{0,1,2}.txt (60 B = 15 x f32)",
+      "./res/Einscan-E10/200x150/ParaDark_{0,1,2}.txt (12 B = 3 x f32)",
+      "./res/Einscan-E10/200x150/wbdata.txt (72 B = 18 x f32)"
+    ],
+    "backup_dir": "backup/Einscan-E10/... exists but contains only ini/ParaCCM/ParaDark - NO CCF backup"
+  },
+  "functions": [
+    {
+      "addr": "0x18000c3c0",
+      "module": "Sn3DCalibDevFile",
+      "role": "handleReadDevDataToFileCmd",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000d490",
+      "module": "Sn3DCalibDevFile",
+      "role": "readDevDataToFileCmd(tagDevData&,QDateTime&)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180008d20",
+      "module": "Sn3DCalibDevFile",
+      "role": "readDevCalDataToDisk driver",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x1800079b0",
+      "module": "Sn3DCalibDevFile",
+      "role": "store raw 0x19A8 blob + path",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180007250",
+      "module": "Sn3DCalibDevFile",
+      "role": "verify 0xF21 block, extract 3 CCF files",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180007a80",
+      "module": "Sn3DCalibDevFile",
+      "role": "write one extracted CCF file",
+      "confidence": "B"
+    },
+    {
+      "addr": "0x180006f20",
+      "module": "Sn3DCalibDevFile",
+      "role": "write CCF set + activeBox.dat",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000abc0",
+      "module": "Sn3DCalibDevFile",
+      "role": "getConfigInfo path table",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180008b60",
+      "module": "Sn3DCalibDevFile",
+      "role": "isCalibrated (returns true if any CCF missing/empty; inverted)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180002d00",
+      "module": "Sn3DCalibDevFile",
+      "role": "file missing-or-empty predicate",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000c0a0",
+      "module": "Sn3DCalibDevFile",
+      "role": "publish notifyIsCalibrated/isCalibrated",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000c020",
+      "module": "Sn3DCalibDevFile",
+      "role": "handleEndCalibComputeCmd (notification only)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000aa00",
+      "module": "Sn3DCalibrateData",
+      "role": "read one CCF file (LE QDataStream, 33 f64 + 64 i32)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180003df0",
+      "module": "Sn3DCalibrateData",
+      "role": "33 doubles -> 22-field record (field order)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180005ca0",
+      "module": "Sn3DCalibrateData",
+      "role": "apply per-field integer offsets",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000a840",
+      "module": "Sn3DCalibrateData",
+      "role": "read up to 3 CCF paths",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180009de0",
+      "module": "Sn3DCalibrateData",
+      "role": "parse device CCF block (magic@0xF1C, version 4)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000ac00",
+      "module": "Sn3DCalibrateData",
+      "role": "readCCF(tagQuickCCFData&)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000ac20",
+      "module": "Sn3DCalibrateData",
+      "role": "readCCF()",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000c8e0",
+      "module": "Sn3DCalibrateData",
+      "role": "writeCCFToFile (fstream wb, len<=1024)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000b8c0",
+      "module": "Sn3DCalibrateData",
+      "role": "serializeCCF -> QVariantMap{leftCCF,rightCCF,texCCF}",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180005eb0",
+      "module": "Sn3DCalibrateData",
+      "role": "deserializeCCF",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180023c40",
+      "module": "Sn3DEACalibrateController",
+      "role": "sendCCF: setCalibCCFData + setProjectCalirateTime",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180008810",
+      "module": "Sn3DEACalibrateController",
+      "role": "cmd dispatch (initComputeConfig/setCalibType/WriteDataRet/cameraCalibCalcResp/whiteBalanceCalcResp)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000e0a0",
+      "module": "Sn3DEACalibrateController",
+      "role": "writeCalibrateResultToDev",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180003940",
+      "module": "Sn3DEACalibrateController",
+      "role": "pack 0xF21 CCF block",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180003540",
+      "module": "Sn3DEACalibrateController",
+      "role": "publish writeCustomInfo{offset=0x39B}",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180002c00",
+      "module": "Sn3DEACalibrateController",
+      "role": "read whole file, cap 1024 B, return size",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180024ae0",
+      "module": "Sn3DEACalibrateController",
+      "role": "vtable+0x88: device flag then sendCCF",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180023910",
+      "module": "Sn3DEACalibrateController",
+      "role": "publish setProjectCalirateTime",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000df30",
+      "module": "Sn3DEACalibrateController",
+      "role": "write cameraCalibFlag.dat (LE QDateTime)",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x180022cf0",
+      "module": "Sn3DEACalibrateController",
+      "role": "factory CCF presence check",
+      "confidence": "A"
+    },
+    {
+      "addr": "0x18000eb50",
+      "module": "Sn3DCalibrateAlgorithmWrapper",
+      "role": "Sn3D_double_CCF + write /200x150/Left|RightCCF.txt",
+      "confidence": "B"
+    },
+    {
+      "addr": "0x180048230",
+      "module": "Sn3DCalibrateAlgorithmWrapper",
+      "role": "'[DP 2022]Not Find CCF.' path",
+      "confidence": "C"
+    }
+  ],
+  "vtable": {
+    "class": "Sn3DEACalibrateDataController",
+    "primary_vtable_va": "0x180032840",
+    "slots": {
+      "+0x88": "0x180024ae0",
+      "+0xD8": "0x180023c40"
+    }
+  },
+  "flow": {
+    "write_back": [
+      "publish cmd=cameraCalibCalcResp -> FUN_180008810 dispatch",
+      "FUN_18000e0a0 writeCalibrateResultToDev",
+      "build paths ./res/Einscan-E10/200x150/{Left,Right,Tex}CCF.txt",
+      "FUN_180003940: read 3 files -> 0xF21 block (ver 4, lengths 0x108/0x610/0xB18, date 0xA14, magic 0xF1C)",
+      "FUN_180003540: publish writeCustomInfo{offset=0x39B, value=block, additionInfo=calibData} -> device flash",
+      "vtable+0x88 FUN_180024ae0 -> device vtable+0x10, +0x78(bool) -> vtable+0xD8 sendCCF",
+      "sendCCF FUN_180023c40: publish setCalibCCFData{calibDateTime, CCF} -> device vtable+0x80",
+      "FUN_180023910: publish setProjectCalirateTime{calibrateTime}",
+      "device replies WriteDataRet{result, additionInfo=calibData}; result!=0 -> error 0x19 (calibType 4) / 0x1f (calibType 2)"
+    ],
+    "read_back": [
+      "handleReadDevDataToFileCmd -> readDevCalDataToDisk(this+0x38, this+0x2e30, &flag, &time)",
+      "FUN_1800079b0 stores 0x19A8 blob verbatim",
+      "FUN_180007250 copies block +0x39B (0xF21), checks magic + version==4",
+      "writes Left/Right/Tex from +0x10C/+0x614/+0xB1C with lengths at +0x108/+0x610/+0xB18",
+      "FUN_180006f20 writes activeBox.dat (48 B) when flag set",
+      "FUN_180009690 reads colour data; setCalibrateTime(flag?time)"
+    ]
+  },
+  "answers": {
+    "Q1": "handleReadDevDataToFileCmd delegates to readDevCalDataToDisk, which stores the caller-supplied 6568-byte tagDevData and extracts 3 CCF files + activeBox.dat; handleEndCalibComputeCmd only reacts to errorCode==0 by notifying isCalibrated.",
+    "Q2": "CCF = 33 LE f64 + optional 64 i32 trailer (520/520/264 B); in-memory record 0xB8 with 22 f64 in order f,c,kc,alpha,R,T; trailer is a per-camera constant, its role unresolved.",
+    "Q3": "Both: the 3 files in ./res/Einscan-E10/200x150 are overwritten and the 0xF21 block is written to device offset 0x39B. cameraCalibFlag.dat is a LE QDateTime marker. No factory CCF backup exists. Failures leave files and device inconsistent (no joint rollback).",
+    "Q4": "Regenerates all 3 camera CCF records (full overwrite, no merge), but measured data shows kc[5] preserved bit-exactly from factory while f,c,alpha,pose are re-estimated; applied at scan time via load_ccf_binary on <base>/200x150/*.txt (+activeBox/lookupTable), with a devData alternative.",
+    "Q5": "Binary LE, 33 f64 in fixed order + 64 i32 trailer, no formatting; writer round-trip reproduces Left/Right byte-identically and loses only the Tex error field; integer-offset keying measured as alpha+2,k2+6,p1+2,p2+7,k3+13 (IR) / 0 (colour).",
+    "Q6": "Immutable factory/ snapshot of the raw 6568 B + 3 files; per-revision full copies + assembled 0xF21 block; write order = persist, writeCustomInfo@0x39B, setCalibCCFData, setProjectCalirateTime, cameraCalibFlag last; read back 0x39B..0x12BC and compare."
+  },
+  "unresolved": [
+    "O1 256-byte trailer role (values 0..9, constant per camera) vs measured key offsets {2,6,2,7,13}",
+    "O2 no reader for cameraCalibFlag.dat in available dumps; exact Qt5 QDateTime serialised length",
+    "O3 device-side USB WriteData/ReadData framing for offset 0x39B / size 0x19A8 (device module not dumped)",
+    "O4 frame of the pose in the device 22-double blocks (Tz 273 -> 554 mm)",
+    "O5 precedence between on-disk CCF files and 'devData' at scan time",
+    "O6 isCalibrated is published inverted; consumer not found"
+  ],
+  "evidence": {
+    "report": "analysis/calibration/re/storage_report.md",
+    "roundtrip_script": "analysis/calibration/re/scratch/ccf_roundtrip.py",
+    "candidates": [
+      "analysis/calibration/re/candidate_LeftCCF.txt",
+      "analysis/calibration/re/candidate_RightCCF.txt",
+      "analysis/calibration/re/candidate_TexCCF.txt"
+    ],
+    "device_dump": "<device-dump.bin>",
+    "shipped_ccf_dir": "sources/calibration/res_Einscan-E10_200x150"
+  },
+  "hashes": {
+    "device_dump_sha256": "<redacted>",
+    "LeftCCF.txt": "6879a68d6926caebe19bdaee9a09dd05c50ee03f23cf6c5158801dcf8b5621d7",
+    "RightCCF.txt": "45b80e2aa8bcece7fe400d79f42c852f67824de0b478f0ea1a0c3aa0b6cf1dc9",
+    "TexCCF.txt": "7b0477a524b3af59d6907445f0e289da6f73891ac1714451de502bb240f84e64"
+  }
+}

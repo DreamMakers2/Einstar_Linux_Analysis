@@ -1,0 +1,986 @@
+{
+ "target": "SHINING 3D Einstar / EXStar 1.2.2.0 (Einscan-EA) scanner calibration workflow",
+ "evidence_base": {
+  "controller": "analysis/calibration/ghidra/dumps/Sn3DEACalibrateController.dump.txt",
+  "capture": "analysis/calibration/ghidra/dumps/Sn3DCalibCaptureImageProcess.dump.txt",
+  "loader": "analysis/calibration/ghidra/dumps/Sn3DCalibrateLoader.dump.txt",
+  "algorithm": "analysis/calibration/ghidra/dumps/Sn3DCalibrateAlgorithmWrapper.dump.txt",
+  "workflow_xml": "sources/vendor/EXStar_1.2.2.0/res/calibrateConfig/Einscan-EA/rapidCameraCalibrate.xml",
+  "manual": "/tmp/manual/en.txt"
+ },
+ "summary": {
+  "groups": 5,
+  "steps_per_group": 5,
+  "steps_total": 25,
+  "frames_per_step": 1,
+  "images_per_step": 3,
+  "images_total": 75,
+  "distance_gate_mm": [
+   200,
+   600
+  ],
+  "step_z_mm": [
+   240,
+   320,
+   400,
+   480,
+   560
+  ],
+  "step_band_mm": 40,
+  "angle_gate": "only group0 (angle valid=\"true\"); +/-8 deg on x,y,z",
+  "lateral_gate_mm": "+/-40 on x,y (thresDim=40, offsets 0)",
+  "ui_scale": "0..300 (150 = on target)",
+  "modes": "capture=true -> mode 1 (manual single shot); capture=false -> mode 3 (continuous, queue cleared)",
+  "finish": "25/25 -> process finish cmds -> 500 ms -> CaptureImageFinished -> compute -> CCF write-back -> calibComputeFinished",
+  "ui_gate": "generic pos2UI returns all-ok bool; EA pos2UI is void and drives setIndication{DISTANCE} + playNormalAudio, caching step index at +0xd8",
+  "feedback": "EA pos2UI: on step-index change -> setIndication{DISTANCE:0}(red)+beep for -2/-3, else setIndication{DISTANCE:1}(green); step index cached at +0xd8"
+ },
+ "stages": [
+  {
+   "index": 0,
+   "plate": "vertical (0,0,180)",
+   "angle_deg": {
+    "x": 0.0,
+    "y": 0.0,
+    "z": 180.0
+   },
+   "thres_deg": {
+    "x": 8,
+    "y": 8,
+    "z": 8
+   },
+   "angle_enforced": true,
+   "distance_range_mm": [
+    200,
+    600
+   ],
+   "step_z_mm": [
+    240,
+    320,
+    400,
+    480,
+    560
+   ],
+   "step_band_mm": 40,
+   "captures": 5,
+   "frames_per_capture": 1,
+   "images_per_capture": 3,
+   "images_total": 15,
+   "exposure": {
+    "cam0": {
+     "exp": 1500,
+     "gain": 400
+    },
+    "cam1": {
+     "exp": 1500,
+     "gain": 400
+    },
+    "cam2_tex": {
+     "exp": 1000,
+     "gain": 180
+    }
+   },
+   "illumination": {
+    "start": {
+     "LED0": 1000,
+     "LED1": 300,
+     "IR": 0,
+     "DistanceIndicate": 1
+    },
+    "init": {
+     "LED": "unchanged",
+     "IR": 0,
+     "DistanceIndicate": 2
+    },
+    "finish": {
+     "LED0": 0,
+     "LED1": 0,
+     "IR": 0,
+     "DistanceIndicate": 2
+    }
+   },
+   "xml_lines": {
+    "group": "XML:110-148",
+    "angle": "XML:138",
+    "pt": "XML:140",
+    "init_ui": "XML:150-157"
+   }
+  },
+  {
+   "index": 1,
+   "plate": "front (+/-X)",
+   "angle_deg": {
+    "x": -18.0,
+    "y": 0.0,
+    "z": 180.0
+   },
+   "thres_deg": {
+    "x": 10,
+    "y": 8,
+    "z": 8
+   },
+   "angle_enforced": false,
+   "distance_range_mm": [
+    200,
+    600
+   ],
+   "step_z_mm": [
+    240,
+    320,
+    400,
+    480,
+    560
+   ],
+   "step_band_mm": 40,
+   "captures": 5,
+   "frames_per_capture": 1,
+   "images_per_capture": 3,
+   "images_total": 15,
+   "exposure": "same global init (XML:27-31)",
+   "illumination": "same global start/pause/finish (XML:45-82)",
+   "xml_lines": {
+    "group": "XML:150-184",
+    "angle": "XML:174",
+    "pt": "XML:176",
+    "setGroupIndex": "XML:156"
+   }
+  },
+  {
+   "index": 2,
+   "plate": "back (∓X)",
+   "angle_deg": {
+    "x": 18.0,
+    "y": 0.0,
+    "z": 180.0
+   },
+   "thres_deg": {
+    "x": 10,
+    "y": 8,
+    "z": 8
+   },
+   "angle_enforced": false,
+   "distance_range_mm": [
+    200,
+    600
+   ],
+   "step_z_mm": [
+    240,
+    320,
+    400,
+    480,
+    560
+   ],
+   "step_band_mm": 40,
+   "captures": 5,
+   "frames_per_capture": 1,
+   "images_per_capture": 3,
+   "images_total": 15,
+   "exposure": "same global init",
+   "illumination": "same global start/pause/finish",
+   "xml_lines": {
+    "group": "XML:186-220",
+    "angle": "XML:210",
+    "pt": "XML:212",
+    "setGroupIndex": "XML:192"
+   }
+  },
+  {
+   "index": 3,
+   "plate": "right (+Y)",
+   "angle_deg": {
+    "x": 0.0,
+    "y": 18.0,
+    "z": 180.0
+   },
+   "thres_deg": {
+    "x": 8,
+    "y": 10,
+    "z": 8
+   },
+   "angle_enforced": false,
+   "distance_range_mm": [
+    200,
+    600
+   ],
+   "step_z_mm": [
+    240,
+    320,
+    400,
+    480,
+    560
+   ],
+   "step_band_mm": 40,
+   "captures": 5,
+   "frames_per_capture": 1,
+   "images_per_capture": 3,
+   "images_total": 15,
+   "exposure": "same global init",
+   "illumination": "same global start/pause/finish",
+   "xml_lines": {
+    "group": "XML:222-256",
+    "angle": "XML:246",
+    "pt": "XML:248",
+    "setGroupIndex": "XML:228"
+   }
+  },
+  {
+   "index": 4,
+   "plate": "left (-Y)",
+   "angle_deg": {
+    "x": 0.0,
+    "y": -18.0,
+    "z": 180.0
+   },
+   "thres_deg": {
+    "x": 8,
+    "y": 10,
+    "z": 8
+   },
+   "angle_enforced": false,
+   "distance_range_mm": [
+    200,
+    600
+   ],
+   "step_z_mm": [
+    240,
+    320,
+    400,
+    480,
+    560
+   ],
+   "step_band_mm": 40,
+   "captures": 5,
+   "frames_per_capture": 1,
+   "images_per_capture": 3,
+   "images_total": 15,
+   "exposure": "same global init",
+   "illumination": "same global start/pause/finish",
+   "xml_lines": {
+    "group": "XML:258-292",
+    "angle": "XML:282",
+    "pt": "XML:284",
+    "setGroupIndex": "XML:264"
+   }
+  }
+ ],
+ "commands": [
+  {
+   "cmd": "startEnterCalibration",
+   "from": "UI",
+   "handler": "Sn3DEACalibrateDataController::onSubscribeData / Sn3DEACalibrateController::dispatchCmd -> handleEnterClibrateCmd",
+   "address": "0x1800213f0 / 0x1800119f0 / 0x180013040",
+   "actions": "fetch tagDevData (3x50ms), setCalirateType(4), publish initCaptureImage+initComputeConfig+initRebuildParam+notifyIsHasSrcClibParam, wait retInit* +2000ms, set m_bIsEnter, publish finishEnterCalibration",
+   "next": "Armed",
+   "confidence": "A"
+  },
+  {
+   "cmd": "initCalibrate",
+   "handler": "0x180013800 + 0x180016260",
+   "address": "0x180013800",
+   "actions": "mode/flag reset",
+   "next": "EnterInit",
+   "confidence": "B"
+  },
+  {
+   "cmd": "initCaptureImage",
+   "handler": "CalibCaptureImageProcess::onSubscribeData",
+   "address": "0x180008130",
+   "actions": "create capture object, enterCalibrate (loadConfig ./res/)",
+   "next": "Armed",
+   "confidence": "A"
+  },
+  {
+   "cmd": "initCaptureImageDev",
+   "handler": "EACalibCaptureImageController::onSubscribeData",
+   "address": "0x18002b3b0",
+   "actions": "initCalibrateDevParam (send XML init DevCommands)",
+   "next": "Armed",
+   "confidence": "A"
+  },
+  {
+   "cmd": "captureCalibImage{capture:bool}",
+   "handler": "0x18002b3b0 branch -> 0x18000d200",
+   "address": "0x18000d200",
+   "actions": "capture=true -> mode 1 manual single shot (start cmds, arm 0x41=1); false -> mode 3 continuous (clear queue, disarm)",
+   "next": "Capturing/Tracking",
+   "confidence": "A"
+  },
+  {
+   "cmd": "changeMode{changeMode:int}",
+   "handler": "0x18002b3b0 branch -> 0x180029920",
+   "address": "0x18002b3b0",
+   "actions": "set capture mode",
+   "next": "varies",
+   "confidence": "A"
+  },
+  {
+   "cmd": "PoseAlgCalc",
+   "handler": "CalibCaptureImageProcess::onSubscribeData",
+   "address": "0x180008130",
+   "actions": "run pose algorithm on queued images",
+   "next": "gate",
+   "confidence": "A"
+  },
+  {
+   "cmd": "CaptureImageFinished",
+   "handler": "Sn3DEACalibCompute::onCmd",
+   "address": "0x180008810",
+   "actions": "join old worker, spawn 0x18000a6b0, calcCameraCalibrate",
+   "next": "Compute",
+   "confidence": "A"
+  },
+  {
+   "cmd": "calcCameraCalibrate",
+   "handler": "alg wrapper (CameraCalibrateAlgManager)",
+   "address": "0x18000a7e0 (producer)",
+   "actions": "{CameraCalibrateAlg, images, isOpt3d, isOptInner}",
+   "next": "alg",
+   "confidence": "A"
+  },
+  {
+   "cmd": "cameraCalibCalcResp",
+   "handler": "Sn3DEACalibCompute::onCmd",
+   "address": "0x180008810",
+   "actions": "residual RespData.value; writeCalibrateResultToDev (3 CCF); calibComputeFinished",
+   "next": "WriteBack/Done",
+   "confidence": "A"
+  },
+  {
+   "cmd": "whiteBalanceCalcResp",
+   "handler": "Sn3DEACalibCompute::onCmd",
+   "address": "0x180008810",
+   "actions": "setCalirateType(2); writeWhiteBalanceResultToDev",
+   "next": "Done",
+   "confidence": "A"
+  },
+  {
+   "cmd": "WriteDataRet",
+   "handler": "Sn3DEACalibCompute::onCmd",
+   "address": "0x180008810",
+   "actions": "result==0 -> refreshCalibrateData; else error 0x19/0x1f",
+   "next": "Done",
+   "confidence": "A"
+  },
+  {
+   "cmd": "setCalibType{calibType}",
+   "handler": "Sn3DEACalibCompute::onCmd",
+   "address": "0x180008810",
+   "actions": "calibType==2 -> initRebuildParam{ccfPath:[dir/200x150/{Left,Right,Tex}CCF.txt]}",
+   "next": "rebuild",
+   "confidence": "A"
+  },
+  {
+   "cmd": "CalibHeightOKChanged{okheight}",
+   "handler": "producer",
+   "address": "0x180015c80 (capture) / 0x18001a000 (ctrl reset -1)",
+   "actions": "UI/indication refresh; -1 = reset exposure params",
+   "next": "-",
+   "confidence": "A"
+  },
+  {
+   "cmd": "CalibRealParamChange{uiInfo:{x,y,z}}",
+   "handler": "producer",
+   "address": "0x180016020",
+   "actions": "live angle/dist gauge (0..300 scale; z = step index / -2 / -3 / -5)",
+   "next": "-",
+   "confidence": "A"
+  },
+  {
+   "cmd": "oneGroupCaptureEnd",
+   "handler": "producer",
+   "address": "0x180017ec0",
+   "actions": "group boundary notification (UI rotate-plate prompt)",
+   "next": "next group",
+   "confidence": "B"
+  },
+  {
+   "cmd": "finishEnterCalibration{lastStep}",
+   "handler": "producer",
+   "address": "0x180014e40",
+   "actions": "init complete, echo lastStep",
+   "next": "Armed",
+   "confidence": "A"
+  },
+  {
+   "cmd": "startExitCalibration / finishExitCalibration",
+   "handler": "0x1800119f0 / 0x180015680",
+   "address": "0x1800206e0",
+   "actions": "reason stored, 10ms timers, stop stream",
+   "next": "Idle",
+   "confidence": "A"
+  },
+  {
+   "cmd": "notifyIsCalibrated{isCalibrated}",
+   "handler": "producer",
+   "address": "0x1800224d0",
+   "actions": "mark calibrated",
+   "next": "-",
+   "confidence": "A"
+  },
+  {
+   "cmd": "setCalibCCFData{calibDateTime,errorCode,CCF}",
+   "handler": "producer",
+   "address": "0x180023c40",
+   "actions": "send CCF to device ('[DP 2023] Send CCF')",
+   "next": "-",
+   "confidence": "A"
+  }
+ ],
+ "device_commands": [
+  {
+   "cmd": "setCameraExp",
+   "params": [
+    "cameraID",
+    "value"
+   ],
+   "emitter": "0x18001abb0 / 0x18001b010",
+   "used_by_xml": "gainExposure (GE1/GE2)"
+  },
+  {
+   "cmd": "setCameraGain",
+   "params": [
+    "cameraID",
+    "value"
+   ],
+   "emitter": "0x18001b5c0 / 0x18001ba00",
+   "used_by_xml": "gainExposure"
+  },
+  {
+   "cmd": "setLedBrightness",
+   "params": [
+    "ledID",
+    "value"
+   ],
+   "emitter": "0x18001d0e0",
+   "used_by_xml": "LedBrightness"
+  },
+  {
+   "cmd": "setIndication",
+   "params": [
+    "DISTANCE"
+   ],
+   "emitter": "0x18001a8c0 / 0x1800206e0 / 0x180031cc0",
+   "used_by_xml": "DistanceIndicate (0 red,1 green,2 blue)"
+  },
+  {
+   "cmd": "enableImageStream",
+   "params": [
+    "enable",
+    "offline"
+   ],
+   "emitter": "0x1800128b0",
+   "used_by_xml": "stream"
+  },
+  {
+   "cmd": "setLaserBrightness",
+   "params": [
+    "value"
+   ],
+   "emitter": "0x18001c3d0 / 0x18001c9b0",
+   "used_by_xml": "not in EA xml"
+  },
+  {
+   "cmd": "setLaserStatus",
+   "params": [
+    "enable"
+   ],
+   "emitter": "0x18001c6c0",
+   "used_by_xml": "not in EA xml"
+  },
+  {
+   "cmd": "setLaserWorkMode",
+   "params": [
+    "laserNum",
+    "cross"
+   ],
+   "emitter": "0x18001cca0",
+   "used_by_xml": "not in EA xml"
+  },
+  {
+   "cmd": "setProjectorBrightness",
+   "params": [
+    "value"
+   ],
+   "emitter": "0x18001daa0",
+   "used_by_xml": "not in EA xml"
+  },
+  {
+   "cmd": "setTriggorMode",
+   "params": [],
+   "emitter": "0x18001e910",
+   "used_by_xml": "stream start"
+  },
+  {
+   "cmd": "setTriggorPeriod",
+   "params": [
+    "triggorPeriod"
+   ],
+   "emitter": "0x18001e1d0 / 0x18001ec00 / 0x18001eef0",
+   "used_by_xml": "stream start"
+  },
+  {
+   "cmd": "setTriggerPulseWidth",
+   "params": [
+    "route",
+    "width"
+   ],
+   "emitter": "0x18001e4d0",
+   "used_by_xml": "stream start"
+  },
+  {
+   "cmd": "setPowerStrobeSwitch",
+   "params": [
+    "route",
+    "switch"
+   ],
+   "emitter": "0x18001d660",
+   "used_by_xml": "strobeSwitch"
+  },
+  {
+   "cmd": "setStrobeFlickerControlSwitch",
+   "params": [
+    "route",
+    "switch"
+   ],
+   "emitter": "0x18001dd90",
+   "used_by_xml": "strobeControl"
+  },
+  {
+   "cmd": "setGrayCameraResolution",
+   "params": [
+    "width",
+    "height"
+   ],
+   "emitter": "0x18001bf90",
+   "used_by_xml": "no"
+  },
+  {
+   "cmd": "setBinningSize",
+   "params": [
+    "int"
+   ],
+   "emitter": "0x18001a540",
+   "used_by_xml": "binningSize"
+  },
+  {
+   "cmd": "resetCameraTimeStamp",
+   "params": [
+    "hasTexCam"
+   ],
+   "emitter": "0x180019b50 / 0x180019d10",
+   "used_by_xml": "no"
+  },
+  {
+   "cmd": "startCalibrateStream",
+   "params": [
+    "subType"
+   ],
+   "emitter": "0x18001f340",
+   "used_by_xml": "stream start"
+  },
+  {
+   "cmd": "startHandleSequenceStream",
+   "params": [
+    "subType"
+   ],
+   "emitter": "0x18001f630",
+   "used_by_xml": "no"
+  },
+  {
+   "cmd": "runTurntable",
+   "params": [
+    "angle"
+   ],
+   "emitter": "0x1800203f0",
+   "used_by_xml": "no"
+  },
+  {
+   "cmd": "playNormalAudio",
+   "params": [
+    "value"
+   ],
+   "emitter": "0x18000c4f0 / 0x1800314f0",
+   "used_by_xml": "operator feedback"
+  },
+  {
+   "cmd": "refreshCalibrateData",
+   "params": [
+    "currentCalibType"
+   ],
+   "emitter": "0x18000c800",
+   "used_by_xml": "after write-back"
+  }
+ ],
+ "constants": [
+  {
+   "name": "ui_deviation_scale",
+   "value": 300.0,
+   "unit": "gauge units",
+   "site": "CAP:21661,CAP:21672",
+   "meaning": "(nominal-measured)/(hi-lo)*300; 150 = on target",
+   "confidence": "A"
+  },
+  {
+   "name": "ui_code_too_close",
+   "value": -2,
+   "site": "CAP:21713",
+   "meaning": "pt.z < distanceMid",
+   "confidence": "A"
+  },
+  {
+   "name": "ui_code_too_far",
+   "value": -3,
+   "site": "CAP:21709",
+   "meaning": "pt.z > distanceMax",
+   "confidence": "A"
+  },
+  {
+   "name": "ui_code_capture_error",
+   "value": -5,
+   "site": "CAP:43517",
+   "meaning": "pose/capture errorCode!=0",
+   "confidence": "A"
+  },
+  {
+   "name": "init_settle",
+   "value": 2000,
+   "unit": "ms",
+   "site": "CTRL:18368",
+   "confidence": "A"
+  },
+  {
+   "name": "device_blob_retry",
+   "value": 3,
+   "unit": "attempts x 50 ms",
+   "site": "CTRL:18290",
+   "confidence": "A"
+  },
+  {
+   "name": "pre_capture_settle",
+   "value": "10 + 50",
+   "unit": "ms",
+   "site": "CAP:17340,CAP:17355",
+   "confidence": "A"
+  },
+  {
+   "name": "finish_settle",
+   "value": 500,
+   "unit": "ms",
+   "site": "CAP:43203",
+   "confidence": "A"
+  },
+  {
+   "name": "step_count",
+   "value": 5,
+   "unit": "steps/group",
+   "site": "XML:110 count=5",
+   "confidence": "A"
+  },
+  {
+   "name": "group_count",
+   "value": 5,
+   "unit": "groups",
+   "site": "XML:108",
+   "confidence": "A"
+  },
+  {
+   "name": "frames_per_step",
+   "value": 1,
+   "site": "XML:89",
+   "confidence": "A"
+  },
+  {
+   "name": "pictures_per_frame",
+   "value": 3,
+   "site": "XML:101-103",
+   "confidence": "A"
+  },
+  {
+   "name": "distance_mid",
+   "value": 200,
+   "unit": "mm",
+   "site": "XML:110",
+   "confidence": "A"
+  },
+  {
+   "name": "distance_max",
+   "value": 600,
+   "unit": "mm",
+   "site": "XML:110",
+   "confidence": "A"
+  },
+  {
+   "name": "step_spacing",
+   "value": 40,
+   "unit": "mm",
+   "site": "LOAD:9430-9450 (computed)",
+   "confidence": "A"
+  },
+  {
+   "name": "pt_thres_dim",
+   "value": 40.0,
+   "unit": "mm",
+   "site": "XML:140",
+   "confidence": "A"
+  },
+  {
+   "name": "angle_nominal_x",
+   "value": [
+    -18,
+    0,
+    0,
+    18,
+    18
+   ],
+   "unit": "deg",
+   "site": "XML:138/174/210/246/282",
+   "confidence": "A"
+  }
+ ],
+ "addresses": [
+  {
+   "addr": "0x180008810",
+   "role": "Sn3DEACalibCompute::onCmd (initComputeConfig/setCalibType/CaptureImageFinished/WriteDataRet/cameraCalibCalcResp/whiteBalanceCalcResp)",
+   "dump": "CTRL:10597"
+  },
+  {
+   "addr": "0x1800119f0",
+   "role": "Sn3DEACalibrateController::dispatchCmd",
+   "dump": "CTRL:17118"
+  },
+  {
+   "addr": "0x180013040",
+   "role": "handleEnterClibrateCmd (init fan-out)",
+   "dump": "CTRL:18120"
+  },
+  {
+   "addr": "0x180014e40",
+   "role": "finishEnterCalibration publisher",
+   "dump": "CTRL:19455"
+  },
+  {
+   "addr": "0x180015d90",
+   "role": "initCaptureImage publisher",
+   "dump": "CTRL:20160"
+  },
+  {
+   "addr": "0x180016260",
+   "role": "initCaptureImageDev/changeMode publisher",
+   "dump": "CTRL:20381"
+  },
+  {
+   "addr": "0x180016970",
+   "role": "initComputeConfig publisher",
+   "dump": "CTRL:20699"
+  },
+  {
+   "addr": "0x180017090",
+   "role": "initRebuildParam publisher",
+   "dump": "CTRL:21018"
+  },
+  {
+   "addr": "0x1800177b0",
+   "role": "notifyIsHasSrcClibParam publisher",
+   "dump": "CTRL:21337"
+  },
+  {
+   "addr": "0x180017ec0",
+   "role": "oneGroupCaptureEnd publisher",
+   "dump": "CTRL:21655"
+  },
+  {
+   "addr": "0x18001a000",
+   "role": "resetExpParamNew -> CalibHeightOKChanged{okheight:-1}",
+   "dump": "CTRL:23224"
+  },
+  {
+   "addr": "0x1800213f0",
+   "role": "Sn3DEACalibrateDataController::onSubscribeData (startEnterCalibration, readDevDataToFileCmd)",
+   "dump": "CTRL:28439"
+  },
+  {
+   "addr": "0x1800224d0",
+   "role": "notifyIsCalibrated publisher",
+   "dump": "CTRL:29100"
+  },
+  {
+   "addr": "0x180023c40",
+   "role": "setCalibCCFData publisher (Send CCF)",
+   "dump": "CTRL:29976"
+  },
+  {
+   "addr": "0x18000a6b0",
+   "role": "CaptureImageFinished worker body",
+   "dump": "CTRL:11828"
+  },
+  {
+   "addr": "0x18000a7e0",
+   "role": "calcCameraCalibrate",
+   "dump": "CTRL:11881"
+  },
+  {
+   "addr": "0x18000b620",
+   "role": "calibComputeFinished publisher",
+   "dump": "CTRL:12527"
+  },
+  {
+   "addr": "0x18000bd10",
+   "role": "initComputeAlg publisher",
+   "dump": "CTRL:12806"
+  },
+  {
+   "addr": "0x18000e0a0",
+   "role": "writeCalibrateResultToDev (Left/Right/Tex CCF)",
+   "dump": "CTRL:14119"
+  },
+  {
+   "addr": "0x180008130",
+   "role": "CalibCaptureImageProcess::onSubscribeData",
+   "dump": "CAP:12948"
+  },
+  {
+   "addr": "0x18000d200",
+   "role": "capture mode machine (manual=1, stop=2/4, continuous=3)",
+   "dump": "CAP:17300"
+  },
+  {
+   "addr": "0x18000e230",
+   "role": "CalibCaptureImageProcessPrivate::enterCalibrate",
+   "dump": "CAP:17968"
+  },
+  {
+   "addr": "0x18000f440",
+   "role": "generic handleCaptureImageCalcPose",
+   "dump": "CAP:18786"
+  },
+  {
+   "addr": "0x180012d50",
+   "role": "generic pos2UI (gate + uiInfo)",
+   "dump": "CAP:21333"
+  },
+  {
+   "addr": "0x180015c80",
+   "role": "CalibHeightOKChanged publisher",
+   "dump": "CAP:23445"
+  },
+  {
+   "addr": "0x180016020",
+   "role": "CalibRealParamChange publisher",
+   "dump": "CAP:23607"
+  },
+  {
+   "addr": "0x180017180",
+   "role": "finish/advance-all (send finish cmds, join worker)",
+   "dump": "CAP:24388"
+  },
+  {
+   "addr": "0x180018ae0",
+   "role": "CmdsManager emitter (registered handler or passthrough)",
+   "dump": "CAP:25850"
+  },
+  {
+   "addr": "0x1800192c0",
+   "role": "send calibCommands set 'init'",
+   "dump": "CAP:26314"
+  },
+  {
+   "addr": "0x1800193f0",
+   "role": "send calibCommands set 'pause'",
+   "dump": "CAP:26377"
+  },
+  {
+   "addr": "0x180019520",
+   "role": "send calibCommands set 'start'",
+   "dump": "CAP:26440"
+  },
+  {
+   "addr": "0x180019bd0",
+   "role": "XML DevCommand -> concrete device commands",
+   "dump": "CAP:26776"
+  },
+  {
+   "addr": "0x18002b3b0",
+   "role": "EACalibCaptureImageController::onSubscribeData",
+   "dump": "CAP:40438"
+  },
+  {
+   "addr": "0x18002e2c0",
+   "role": "EA handleCameraCaptureImageCalcPose (capture loop body)",
+   "dump": "CAP:42662"
+  },
+  {
+   "addr": "0x18002f090",
+   "role": "EA handleCaptureImageCalcPose (dispatch by CalirateType)",
+   "dump": "CAP:43285"
+  },
+  {
+   "addr": "0x1800309c0",
+   "role": "EA initCalibrateDevParam",
+   "dump": "CAP:44395"
+  },
+  {
+   "addr": "0x180030bf0",
+   "role": "EA pos2UI (void): angle/pt/step evaluation, setIndication{DISTANCE:0|1}, playNormalAudio, step-index cache",
+   "dump": "CAP:44506"
+  },
+  {
+   "addr": "0x180031cc0",
+   "role": "setIndication{DISTANCE:0|1}",
+   "dump": "CAP:45314"
+  },
+  {
+   "addr": "0x1800314f0",
+   "role": "playNormalAudio",
+   "dump": "CAP:44969"
+  },
+  {
+   "addr": "0x180008d60",
+   "role": "Sn3DCalibrateLoader DevCommand XML parser",
+   "dump": "LOAD:8184"
+  },
+  {
+   "addr": "0x18000aa20",
+   "role": "group/step builder (z ladder)",
+   "dump": "LOAD:9190"
+  },
+  {
+   "addr": "0x18000f010",
+   "role": "StepNode::setStepPoseInfo (min/max windows)",
+   "dump": "LOAD:13185"
+  },
+  {
+   "addr": "0x1800043f0",
+   "role": "angle XML parser (x,y,z,thresX/Y/Z,valid)",
+   "dump": "LOAD:4550"
+  },
+  {
+   "addr": "0x180004ff0",
+   "role": "pt XML parser (x,y,z,thresDim,thresHeight,offsetX/Y)",
+   "dump": "LOAD:5137"
+  },
+  {
+   "addr": "0x180004960",
+   "role": "group distance parser (Max,Mid,Min tuple)",
+   "dump": "LOAD:4819"
+  }
+ ],
+ "confidence": {
+  "A": "command names/branches, init sequence and timers, XML->model mapping, step ladder and gates, ui codes, CCF write-back",
+  "B": "pos2UI (generic, returns bool) gate precedes handleCameraCaptureImageCalcPose; EA pos2UI override is void (UI/indication only); oneGroupCaptureEnd = UI rotate prompt; redo = full re-entry",
+  "C": "UI rendering of uiInfo/okheight (UI binaries not in evidence set)"
+ },
+ "unresolved": [
+  "exact virtual call site of pos2UI / handleCaptureImageCalcPose (EA private vtable not dumped)",
+  "callers of controller publishers oneGroupCaptureEnd / notifyIsCalibrated / setCalibCCFData / resetExpParamNew (Qt slot/vtable)",
+  "semantics of UICommand lastStep resume path",
+  "GE1 vs GE2 'type' attribute camera-type enum",
+  "XML distance gate (200-600) vs INI algorithm volume (zMinLimit=250,zMaxLimit=700) disagreement"
+ ],
+ "capture_loop": {
+  "frame_source": "sn3d_imagequeue::Sn3DImageQueue singleton; mode 3 clearQueue at CAP:17329",
+  "commit": "first frame with _captured==0 of the first incomplete step -> _captured=1 (CAP:42998); image handed to pose-alg manager via virtual +0xb8 (CAP:43040)",
+  "abort": "pending entries up to timeStamp erased under mutex (FUN_180015b00, CAP:23331)",
+  "offline_read": "EACalibCaptureImageController::readTotalImages uses ImageQueueItem::makeImageData (CAP:41258)",
+  "counters": "group index / step index / frame index from loader nodes; completion via isCompletelyCaptured() vtable+0x20"
+ }
+}

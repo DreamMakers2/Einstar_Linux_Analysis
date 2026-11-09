@@ -166,3 +166,46 @@ python3 tools/calib/key_analysis.py                     # feasible key sets, unc
 python3 tools/calib/real_capture_check.py --contrast    # needs private captures; CCF vs dump
 python3 -m pytest -q tests/test_calib_model.py          # 20 tests
 ```
+
+---
+
+## 9. EXStar's own calibration procedure (2026-11-09)
+
+This section connects the operational model above to the workflow that
+regenerates those numbers. The full derivation is in
+`docs/calibration/workflow_and_replacement.md`.
+
+* **What it is**: a planar-marker calibration of the three cameras (left/right
+  IR + colour). It re-estimates `fx, fy, cx, cy, alpha, R, T` for all three
+  cameras and **preserves `kc` bit-exactly**; the projector's factory geometry
+  is not part of it.
+* **Workflow**: 5 groups (0°, x∓18°, y±18°) × 5 distance bands
+  (240/320/400/480/560 mm ±40) × 1 frame × 3 cameras = 75 images. Only the
+  vertical group has an enforced angle gate (±8°). There is no per-step retry;
+  “redo” is a full re-entry. A real session took **2 min 56 s**, of which the
+  solve was ~1.3 s and the device write ~0.34 s.
+* **Storage**: the result replaces `res/Einscan-E10/200x150/{Left,Right,Tex}CCF.txt`
+  and the same 3873-byte block is written to the device at `tagDevData+0x39B`.
+  No backup is kept. `calib/profiles.py` implements the safe host-side
+  alternative (immutable factory snapshot + versioned revisions + rollback).
+* **Plate**: the vendor corpus shows an 8 × 5 grid with four large markers at
+  (2,1), (4,1), (5,1), (3.5,3); the measured pitch is **27.72 mm**. The manual
+  figure draws 8 × 7, so the physical variant must be counted before hardware
+  use (`calib.plate.PlateSpec` supports both).
+* **Reproduction**: a free re-optimisation of the 75 vendor images reaches
+  0.367 px RMS, reproduces the IR baseline to 0.014 mm (158.543 vs 158.557)
+  and the IR relative rotation to 0.20°. The shipped CCF's colour record is
+  **not co-registered** with the IR pair (17 mm y offset), so the colour
+  extrinsic should be re-estimated on the user's unit.
+* **New engine**: `calib/` implements detection, joint robust bundle
+  adjustment, covariance, Fisher-information view selection and profiles;
+  `python -m calib.cli calibrate ...` produces a versioned host-side revision
+  without touching the device. The covariance is NEES-calibrated (1.06 × n).
+
+### 9.1 What is still needed before claiming physical accuracy
+
+1. Count the holes and measure the pitch of the **actual** board (8×5 vs 8×7).
+2. Anchor the scale with a physical length (factory baseline is a proxy).
+3. Calibrate the user's own unit and compare the colour-to-IR transform.
+4. Measure a known artefact (plane/sphere/step gauge) to turn reprojection
+   residuals into a physical error number.

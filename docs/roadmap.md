@@ -118,3 +118,42 @@ responsive, clean shutdown with no leaked USB transfers; crash-free 8 h soak.
 4. Extend the calibration decoder to emit a validation report for the *device* blob, not just
    the `.txt` records; wire it into the driver's probe output.
 5. Write the hardware bring-up checklist as a runnable script (`driver/tools/probe`).
+
+## Calibration track (2026-11-09)
+
+Status: **offline prototype complete; physical validation blocked on the
+disconnected scanner and on a board measurement.**
+
+What is done:
+
+* the EXStar workflow is recovered end-to-end (5×5×3, acceptance gates,
+  state machine, real-session timings, compute/write-back);
+* the plate geometry and 27.72 mm pitch are recovered from the vendor corpus;
+* the vendor numerical core is mapped (`Sn3D_E10_camera_calibration` →
+  `FUN_1802dca70` → `FUN_1800e0180` → `TribleCCF`), including the camera model,
+  the Ceres PnP stage and the fixed-distortion behaviour;
+* `calib/` implements a replacement engine with detection, robust joint bundle
+  adjustment, calibrated covariance, Fisher-information view selection and
+  versioned profiles, evaluated on the vendor corpus and on synthetic truth.
+
+Exit gates (in order):
+
+1. **Board measurement** (5 min, no scanner): count the holes (8×5 vs 8×7),
+   measure the pitch and outline, record the four large-hole coordinates.
+   Gate: `PlateSpec` matches the physical board; detector finds ≥ 38/40 holes
+   on a real photo.
+2. **Scale anchor**: measure a known length (caliper/artefact) and compare with
+   the factory baseline. Gate: |scale error| < 0.05 %.
+3. **User-unit calibration** (scanner connected): capture 12–25 images,
+   calibrate, compare to the factory CCF, run a bootstrap repeatability test.
+   Gate: baseline repeatability < 0.05 mm, reprojection < 0.5 px.
+4. **Physical accuracy**: scan a calibrated artefact (plane/sphere/step gauge)
+   with the factory and replacement CCFs. Gate: no worse than factory on the
+   same artefact, with the uncertainty interval reported.
+5. **Device write**: only after gates 1–4; the `profiles.export_plan` describes
+   the exact 0x39B/0xF21 write, and the factory snapshot is restored on any
+   failure.
+
+Do **not** claim a physical accuracy improvement before gate 4. The current
+evidence supports relative geometry, covariance calibration, capture-count
+reduction and reversibility — not sub-millimetre absolute accuracy.
