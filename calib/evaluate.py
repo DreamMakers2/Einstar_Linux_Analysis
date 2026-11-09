@@ -254,3 +254,45 @@ def run_repeatability(detections: dict, init: dict[str, CameraIntrinsics],
             "fx_sd": fx.std(0, ddof=1).tolist(),
             "baseline_mean_mm": float(bl.mean()),
             "baseline_sd_mm": float(bl.std(ddof=1))}
+
+
+def heldout_reprojection(observations: list[Observation], result: CalibrationResult,
+                         pitch: float, holdout_view: int) -> dict:
+    """Reprojection of a view that was NOT used in the calibration.
+
+    The held-out board pose is solved with the calibrated left camera only;
+    the other cameras are then predicted through the calibrated rig.  This is
+    a genuine generalisation check, not a training-set residual.
+    """
+    from .geometry import solve_pnp
+    import cv2
+    obj = plate.board_points_mm(pitch)
+    idx = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
+    left_obs = [o for o in observations if o.view == holdout_view and o.camera == "left"]
+    if not left_obs:
+        return {"error": "no left observation for holdout view"}
+    o = left_obs[0]
+    keys = [k for k in o.uv if k in idx]
+    X = obj[[idx[k] for k in keys]]
+    uv = np.array([o.uv[k] for k in keys], np.float32)
+    pose = solve_pnp(X, uv, result.cameras["left"].K, result.cameras["left"].kc)
+    if pose is None:
+        return {"error": "holdout PnP failed"}
+    errs = {}
+    for cam in CAMERAS:
+        oc = [z for z in observations if z.view == holdout_view and z.camera == cam]
+        if not oc:
+            continue
+        oo = oc[0]
+        kk = [k for k in oo.uv if k in idx]
+        Xc = obj[[idx[k] for k in kk]]
+        Rc, tc = result.extrinsics[cam]
+        Xcam = (Xc @ pose.R.T + pose.t) @ Rc.T + tc
+        pred = project(result.cameras[cam].K, result.cameras[cam].kc, Xcam)
+        obs = np.array([oo.uv[k] for k in kk])
+        e = np.linalg.norm(pred - obs, axis=1)
+        errs[cam] = {"rms_px": float(np.sqrt(np.mean(e ** 2))),
+                     "max_px": float(e.max()), "n": int(len(e))}
+    allv = [v["rms_px"] for v in errs.values()]
+    return {"view": holdout_view, "cameras": errs,
+            "rms_px": float(np.sqrt(np.mean(np.square(allv)))) if allv else float("nan")}

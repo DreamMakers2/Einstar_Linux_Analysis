@@ -14,6 +14,7 @@ Companion documents (deeper, per module):
 | `analysis/calibration/re/storage_report.md` | CCF/device layout, write-back, failure semantics, profile design |
 | `docs/calibration/model.md` | the operational three-camera model used for scanning |
 | `docs/calibration/ccf_format.md` | CCF byte format and key recovery |
+| `docs/calibration/modern_methods.md` | Zhang/OpenCV/ChArUco/AprilTag/Ceres/Fisher comparison and the CPU/GPU plan |
 | `calib/` | the replacement engine; `tests/test_calib_engine.py` |
 
 Confidence labels: **A** = code-proven and/or byte-exact with an independent
@@ -89,8 +90,8 @@ check, **B** = one interpretation step, **C** = hypothesis, **U** = unresolved.
     calibrated (**NEES ≈ 1.06 × n**). On the vendor corpus, **3 views already
     recover the baseline to 0.03 mm**, but **intrinsics need ≥20 views** to get
     within ~2–5 px of the vendor CCF. A greedy 8-view adaptive selection
-    reduced the synthetic fx error from 0.80 px (fixed first 8 views) to
-    0.13 px. **[A/B]** (synthetic + real corpus; not a physical accuracy claim)
+    reduced the synthetic fx error by 1.8×–6.4× versus a fixed 8-view subset,
+    depending on the scene and the diversity constraint. **[A/B]** (synthetic + real corpus; not a physical accuracy claim)
 
 11. The honest conclusion: the original sequence is **not mathematically
     minimal** (its 5×5 grid contains redundant poses), but the redundancy buys
@@ -572,19 +573,27 @@ IR relative rotation difference **0.202°**, intrinsics 2.8–5.1 px from CCF.
 The ablation is §8.1. Six bootstrap resamples (21 views each): baseline
 158.549 ± 0.026 mm; fx sd 1.00 / 0.82 / 0.68 px for left/right/tex.
 
-### 10.3 Adaptive vs fixed (synthetic, 8 views, 2 trials)
+**Held-out validation** (5 folds; the held-out board pose is solved from the
+left camera only and the other cameras are predicted through the calibrated
+rig): mean held-out RMS **0.378 px** vs 0.368 px training — a 3 % gap, so the
+model is not overfitting the training views. Per-fold values are in
+`analysis/calibration/engine/heldout.json`.
 
-| method | median |fx error| | median baseline error | rotation error |
-|---|---:|---:|---:|
-| fixed first 8 views | 0.804 px | 0.050 mm | 0.051° |
-| greedy Fisher 8 views | **0.126 px** | **0.016 mm** | 0.050° |
+### 10.3 Adaptive vs fixed (synthetic, 8 views)
 
-The greedy plan selected four close-distance, high-tilt poses — the most
-informative for focal length, but **all at 240 mm**. That is a warning: pure
-A-optimality clusters at the nearest distance; a production planner should add
-a distance/pose diversity constraint or a distortion prior. The 6× intrinsic
-improvement is real for this scene but should not be generalised without the
-diversity constraint.
+Two independent 2-trial runs:
+
+| run | fixed median abs(fx) | adaptive | fixed baseline | adaptive |
+|---|---:|---:|---:|---:|
+| no diversity (seed 7100) | 0.804 px | **0.126 px** | 0.050 mm | **0.016 mm** |
+| distance/tilt diversity (seed 7300) | 1.322 px | **0.752 px** | 0.027 mm | **0.014 mm** |
+
+The unconstrained A-optimal plan clustered all four added views at 240 mm; the
+diversity-constrained plan spread them over 240 and 400 mm. Adaptive selection
+improved parameter accuracy in both runs (1.8×–6.4×), but the magnitude is
+scene-dependent. A production planner must keep the diversity constraint; pure
+A-optimality is not acceptable for a plate whose distortion/pose trade-off
+depends on distance.
 
 ### 10.4 End-to-end profile
 

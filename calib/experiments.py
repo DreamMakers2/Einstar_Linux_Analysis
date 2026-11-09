@@ -47,10 +47,34 @@ def _run(scene: SyntheticScene, obs: list[Observation], init: dict,
     return res, obs2
 
 
+def _diverse_subset(pool, chosen, max_per_distance: int = 2,
+                    max_per_tilt_sign: int = 2):
+    """Keep candidates that do not over-concentrate on one distance/tilt."""
+    out = []
+    dcount = {}
+    scount = {}
+    for c in chosen:
+        db = round(c.distance_mm / 40.0)
+        dcount[db] = dcount.get(db, 0) + 1
+        sx = 0 if abs(c.tilt_x_deg) < 4 else (1 if c.tilt_x_deg > 0 else -1)
+        sy = 0 if abs(c.tilt_y_deg) < 4 else (1 if c.tilt_y_deg > 0 else -1)
+        scount[(sx, sy)] = scount.get((sx, sy), 0) + 1
+    for c in pool:
+        db = round(c.distance_mm / 40.0)
+        sx = 0 if abs(c.tilt_x_deg) < 4 else (1 if c.tilt_x_deg > 0 else -1)
+        sy = 0 if abs(c.tilt_y_deg) < 4 else (1 if c.tilt_y_deg > 0 else -1)
+        if dcount.get(db, 0) >= max_per_distance:
+            continue
+        if scount.get((sx, sy), 0) >= max_per_tilt_sign:
+            continue
+        out.append(c)
+    return out if out else pool
+
+
 def run_adaptive_vs_fixed(n_trials: int = 3, seed_views: int = 4,
                           budget: int = 8, noise_px: float = 0.2,
                           outlier_frac: float = 0.02, free_kc: bool = False,
-                          seed0: int = 7000) -> dict:
+                          seed0: int = 7000, diversity: bool = True) -> dict:
     rows = []
     for trial in range(n_trials):
         rng = np.random.default_rng(seed0 + trial)
@@ -69,7 +93,8 @@ def run_adaptive_vs_fixed(n_trials: int = 3, seed_views: int = 4,
         n_add = budget - seed_views
         timeline = []
         for step in range(n_add):
-            best = select_next(pool, rig_vector(res_a), rig_covariance(res_a),
+            search = _diverse_subset(pool, chosen) if diversity else pool
+            best = select_next(search, rig_vector(res_a), rig_covariance(res_a),
                                scene.pitch_mm, used={c.label for c in chosen})
             if best is None:
                 break

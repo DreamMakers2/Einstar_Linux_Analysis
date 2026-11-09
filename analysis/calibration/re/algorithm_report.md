@@ -585,3 +585,37 @@ multi-camera core is `FUN_1800e0180`, 3 cameras, called once per session.
 6. Value of `CalibParam+0x00`.
 7. `Sn3D_camera_to_image`'s first log key (`0x1804c8868`, an unnamed `.rdata` pointer) — the key strings
    `"cameracoord"`/`"imagecoord"` are resolved but one is not.
+
+---
+
+## Addendum (2026-11-09): the E10 core is now decompiled
+
+After the first report, the missing driver functions were dumped into
+`analysis/calibration/ghidra/dumps/JR_core2.dump.txt` (`DumpCalib` in `addrs`
+mode over the analysed project). This lifts several items from U/B to A:
+
+| function | size | finding |
+|---|---:|---|
+| `FUN_1800e0180` (`0x1800e0180`) | 13.6 KB | **E10 3-camera driver.** Loops over the three cameras; for each camera it constructs `sn3DExtrinsicSolver` and calls `compute_extrinsic_no_distortion` for every view, then calls the joint refinement `FUN_180174bf0` with that camera's poses. It assembles the per-camera `CalibParam` and forwards the three results to `CalibrationCCF::TribleCCF`. |
+| `FUN_180174bf0` (`0x180174bf0`) | 6.5 KB | **Joint refinement** of one camera's `K5/D5`, all view poses and the 3-D points. Log strings: `init residual:`, `solver is failure`, `result residual:`, `no valid distance ref`. It consumes the per-view extrinsic solutions and the reference distances. |
+| `CalendarCCF::TribleCCF` (`0x180138170` wrapper) | 240 B | Calls the static `CalibrationCCF::TribleCCF` after the `Sn3DLock::is_has_dongle` check. `Sn3D_Quar_CCF` (`0x180137d20`) is the four-camera sibling. This is the **3-camera fusion** entry; the static body is not in the dump. |
+| `FUN_180184a50` | — | Residual/error refinement with `init residual is:`, `result residual is:`, `result error is negative...`; likely the per-camera final polish. |
+| `FUN_18008f910`, `FUN_180091990` | — | The `camera error is neg` / `error1 and error2` quality-gate bodies; strings only in the first dump, now decompiled. |
+
+What this confirms:
+
+* the E10 path really is **per-camera PnP → per-camera joint refinement →
+  3-camera fusion**, not a single monolithic Ceres problem;
+* `kc` is frozen during the PnP stage (`compute_extrinsic_no_distortion` takes
+  the K/D vectors but does not optimise them); the joint refinement is gated by
+  `isOptK` / `isOptP3D`;
+* the 3-camera fusion is license-gated, which is why the vendor's full solver
+  cannot be executed offline without the dongle;
+* the replacement's single joint BA is mathematically a superset of this
+  staged scheme (it estimates the same parameters jointly and adds a robust
+  loss + covariance); the vendor's staging is an implementation choice, not a
+  model requirement.
+
+The remaining U item is the body of `CalibrationCCF::TribleCCF` itself and the
+exact `deviationN`/`deviationT` consumer. Neither changes the recovered model
+or the replacement design.
