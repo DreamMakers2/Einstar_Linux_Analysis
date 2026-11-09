@@ -35,6 +35,34 @@ question.
 | Calibration model + rectification + triangulation | **works (consistency-validated)** | `tools/calib/`; 42/42 checks, round trip at 1e-12 mm, real captures align at ~1 px |
 | Offline verification of everything above | **works** | `scripts/verify_all.sh`; 83 Python tests + C++ suite |
 
+## 1b. Physical calibration workflow (new this round)
+
+EXStar's scanner calibration is now recovered end-to-end. It is a **planar
+marker calibration of the three cameras**, not a projector or sync
+calibration: 5 board orientations × 5 distance bands (240/320/400/480/560 mm
+±40) × 3 cameras = **75 images**; only the vertical group enforces ±8°; there is
+no per-step retry. A real session took **2 min 56 s**, the last capture→result
+was ~1.3 s and the device write ~0.34 s. The vendor solve is per-view PnP
+(Ceres, no robust loss) followed by a joint refinement; the distortion is
+preserved and all three CCF records are regenerated. The result **overwrites
+the factory CCF files in place and the device block at `tagDevData+0x39B`**,
+with no backup.
+
+The vendor's own 25-image corpus recovers an **8×5 plate, 27.72 mm pitch, four
+large markers**. A free re-optimisation reaches 0.367 px and reproduces the IR
+baseline to **0.014 mm**, the relative rotation to **0.20°**, and the IR
+epipolar geometry to 0.138 px median (CCF 0.181 px). The shipped colour record
+is **not co-registered** with the IR pair (17 mm y offset) and must be
+re-estimated on the user's unit. `calib/` is a Linux-native replacement with
+detection, joint robust BA, NEES-calibrated covariance, Fisher-information
+view selection, per-view gating and versioned host profiles; it never writes
+the scanner implicitly.
+
+**Caveat:** the physical plate variant (8×5 vs the 8×7 drawn in the manual), the
+absolute scale, and any sub-millimetre accuracy claim still require a board
+measurement, a known length standard, and a calibration run on the user's unit.
+The roadmap's calibration track lists those gates.
+
 ## 2. What is incomplete
 
 | Gap | Why it matters | What closes it |
