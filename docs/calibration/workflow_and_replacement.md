@@ -617,8 +617,9 @@ tests remain green (see `scripts/verify_all.sh` if present).
 
 The RMS includes the 2 % gross outliers (8 px); the robust loss keeps the
 parameter errors low. Without outliers the RMS is 0.27 px and the fx error is
-0.20–0.61 px. After the sandwich correction the covariance is calibrated
-(NEES/n 0.91–1.02); the earlier 1.06 figure used a different estimator and is
+0.20–0.61 px. After the sandwich correction the covariance is calibrated with fixed kc
+(NEES/n 0.91–1.02); with free kc the 60-trial audit gives 1.17–1.32 (mildly
+optimistic). The earlier 1.06 figure used a different estimator and is
 superseded.
 
 ### 10.2 Vendor corpus (real images, CCF reference)
