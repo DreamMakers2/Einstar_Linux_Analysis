@@ -110,11 +110,28 @@ DepthResult compute_depth(const FrameSet& frames, const CalibrationProfile& prof
   } else if (profile.color_status != "ok") {
     out.color_status = "profile-inconsistent (" + profile.color_status + ")";
   } else {
-    cv::Mat color_img = calibration_image(frames, Camera::Color);
-    if (color_img.empty()) {
-      out.color_status = "missing-color-frame";
+    cv::Mat color_img;
+    const Frame& cf = frames.streams[kStreamColor];
+    if (cf.color_bayer && !cf.mono.empty()) {
+      // The probe/capture tools store the colour sensor's raw 8-bit Bayer
+      // mosaic in stream orientation.  libeinstar uses COLOR_BayerRG2BGR; debayer first,
+      // then rotate to calibration orientation (the CFA pattern rotates with
+      // the image, so the order matters).
+      if (cf.mono.channels() != 1) {
+        out.color_status = "bayer-frame-not-mono";
+      } else {
+        cv::Mat bgr;
+        cv::cvtColor(cf.mono, bgr, cv::COLOR_BayerRG2BGR);
+        cv::rotate(bgr, color_img, cv::ROTATE_180);
+        out.color_bayer = true;
+      }
     } else {
+      color_img = calibration_image(frames, Camera::Color);
       if (color_img.channels() == 1) cv::cvtColor(color_img, color_img, cv::COLOR_GRAY2BGR);
+    }
+    if (color_img.empty()) {
+      if (out.color_status.empty()) out.color_status = "missing-color-frame";
+    } else {
       const auto& cc = profile.camera(Camera::Color);
       const cv::Matx33d R_lc = relative_rotation(profile, Camera::IrLeft, Camera::Color);
       const cv::Vec3d T_lc = relative_translation(profile, Camera::IrLeft, Camera::Color);

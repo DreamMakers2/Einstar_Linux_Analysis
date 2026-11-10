@@ -351,7 +351,43 @@ changes.
 
 ---
 
-## 14. Reproduce
+## 14. RGB registration
+
+The canonical reconstruction above is **uncoloured on purpose**: the shipped
+factory Tex CCF is the known stale record, so the factory profile is marked
+`stale` and `compute_depth()` skips colour with an explicit status.  This is not
+a missing code path.
+
+**Raw stream format.** Stream 2 is an 8-bit **Bayer mosaic**, not BGR (the 2x2
+parity means are 24.4/33.1/32.9/25.4 and the diagonal correlation is 0.989).
+`compute_depth()` now debayers it with OpenCV `COLOR_BayerRG2BGR` (the same code
+libeinstar uses) **before** the 180 deg rotation, then projects each 3-D point
+into the colour camera and samples it.  No white balance or colour-correction
+matrix is applied; the result is raw sensor RGB.
+
+**Synthetic validation.** Two tests in `recon/tests/test_pipeline.cpp`:
+an already-BGR split pattern and the same pattern re-mosaiced to raw Bayer.
+Both recover the expected blue/red halves for >90 % of valid points, including
+the 180 deg stream rotation; a `color_status != "ok"` profile yields
+`color_used=false` and no colour image.  Suite total: **5 002 checks**.
+
+**Genuine-frame diagnostic (not a calibrated colour result).** Overriding the
+colour status explicitly and using the replacement profile fitted by the
+one-session recorder (21 accepted views, colour included) produces:
+
+| profile | points | colour used | projected fraction | depth median |
+|---|---:|---|---:|---:|
+| factory (stale) | 56 600 | yes* | 93.1 % | 349.5 mm |
+| replacement (fitted) | 56 995 | yes* | 100.0 % | 352.0 mm |
+
+\* diagnostic override only; the canonical factory run skips colour.  The
+replacement profile has a 160.10 mm baseline, so its depth is 0.7 % larger.
+The colour frame is underexposed (mean 29) and green-dominant; the cloud is
+coloured but the **colour values are not photometrically calibrated**, and the
+real colour-to-geometry alignment is not independently validated.  The
+geometric registration path itself is validated synthetically.
+
+## 15. Reproduce
 
 ```bash
 cd <repo>

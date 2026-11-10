@@ -131,6 +131,7 @@ FrameSet load_frame_set(const std::string& directory, std::uint32_t id) {
     f.frame_id = id;
     f.source_path = path;
     f.mono = read_image_any(path);
+    f.color_bayer = (s == kStreamColor && fs::path(path).extension() == ".pgm");
     f.height = f.mono.rows;
     f.width = f.mono.cols;
     out.streams[s] = std::move(f);
@@ -178,6 +179,7 @@ FrameSet load_frame_set_manifest(const std::string& path) {
     f.frame_id = out.group;
     f.source_path = p;
     f.mono = read_image_any(p);
+    f.color_bayer = (s == kStreamColor && fs::path(p).extension() == ".pgm");
     f.height = f.mono.rows;
     f.width = f.mono.cols;
     out.streams[s] = std::move(f);

@@ -124,6 +124,7 @@ void write_report_json(const ReconResult& r, const std::string& path) {
      << "sigma_p50_mm" << r.depth.stats.sigma_p50_mm
      << "sigma_p95_mm" << r.depth.stats.sigma_p95_mm
      << "color_used" << r.depth.color_used
+     << "color_bayer" << r.depth.color_bayer
      << "color_status" << r.depth.color_status
      << "color_fraction" << r.depth.stats.color_fraction
      << "seconds" << r.depth.stats.seconds;

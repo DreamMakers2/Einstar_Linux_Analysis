@@ -42,6 +42,7 @@ struct DepthResult {
   cv::Mat xyz_mm;      // CV_32FC3, left IR camera frame
   cv::Mat bgr;         // CV_8UC3, colour sampled (empty when disabled/invalid)
   bool color_used = false;
+  bool color_bayer = false;   // raw RGGB was debayered (stream 2)
   std::string color_status;  // "ok" | "disabled" | "profile-inconsistent" | ...
   DepthStats stats;
   bool ok = false;

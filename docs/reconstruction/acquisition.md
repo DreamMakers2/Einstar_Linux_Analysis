@@ -360,3 +360,22 @@ as a hardware measurement.
 | replay refuses: `record CRC mismatch` / `trailer does not match` | corrupted or truncated recording | re-record; the tool writes nothing on refusal |
 | capture times out with 0 groups | trigger not started / wrong period / no frames | `--probe-only`, then `--trigger 68000`, check firmware/stream |
 | PGMs exist but colours/IR look wrong | stream-to-camera association or 180° rotation | compare with the mapping table in §2/§8 |
+
+
+## Verified no-device behaviour
+
+With no scanner attached, both a capture attempt and `--probe-only` exit **1**
+with a clear diagnostic and create **no output directory** (the output path is
+only prepared after the device opens):
+
+```
+$ ./build/driver/einstar-capture-frames --out /tmp/live --groups 1 --backend libusb
+cannot open the scanner: no Einstar device found (VID 0x3267, PID 0x0003); ...
+$ echo $?
+1
+$ test -e /tmp/live || echo "no artifacts"
+no artifacts
+```
+
+This is the safe behaviour expected before the first live bring-up; it does not
+prove the successful live path.

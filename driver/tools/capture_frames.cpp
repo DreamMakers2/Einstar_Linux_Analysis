@@ -542,6 +542,18 @@ int run_libusb_probe(const Options& options,
                      const std::optional<std::string>& directory) {
   LibUsbTransport transport{LibUsbTransport::Config{}};
   const Status open_status = transport.open();
+  std::optional<std::string> prepared_directory = directory;
+  if (open_status.ok() && !prepared_directory && !options.output_directory.empty()) {
+    auto prepared =
+        einstar::capture::prepare_output_directory(options.output_directory);
+    if (!prepared) {
+      std::fprintf(stderr, "output directory: %s\n",
+                   prepared.error().message().c_str());
+      transport.close();
+      return 1;
+    }
+    prepared_directory = *prepared;
+  }
   if (!open_status.ok()) {
     std::fprintf(stderr,
                  "cannot open the scanner: %s\n  hint: close EXStar, check the "
@@ -567,7 +579,8 @@ int run_libusb_probe(const Options& options,
   }
   print_metadata(*identity, options.show_serial);
   auto device =
-      read_device_metadata(channel, *identity, options.show_serial, directory);
+      read_device_metadata(channel, *identity, options.show_serial,
+                           prepared_directory);
   if (!device) {
     std::fprintf(stderr, "metadata read failed: %s\n",
                  device.error().message().c_str());
@@ -590,21 +603,10 @@ int run_libusb(const Options& options) {
   }
 
   std::optional<std::string> directory;
-  if (!options.output_directory.empty()) {
-    auto prepared =
-        einstar::capture::prepare_output_directory(options.output_directory);
-    if (!prepared) {
-      std::fprintf(stderr, "output directory: %s\n",
-                   prepared.error().message().c_str());
-      return 1;
-    }
-    directory = *prepared;
-  }
 
   if (options.probe_only) {
-    return run_libusb_probe(options, directory);
+    return run_libusb_probe(options, std::nullopt);
   }
-  const std::string& output_directory = *directory;
 
   auto transport = std::make_unique<LibUsbTransport>(LibUsbTransport::Config{});
   LibUsbTransport* usb = transport.get();
@@ -637,6 +639,18 @@ int run_libusb(const Options& options) {
   for (const std::string& note : usb->quirk_notes()) {
     std::printf("  descriptor     : %s\n", note.c_str());
   }
+  if (!options.output_directory.empty()) {
+    auto prepared =
+        einstar::capture::prepare_output_directory(options.output_directory);
+    if (!prepared) {
+      std::fprintf(stderr, "output directory: %s\n",
+                   prepared.error().message().c_str());
+      (void)pipeline->stop();
+      return 1;
+    }
+    directory = *prepared;
+  }
+  const std::string& output_directory = *directory;
 
   ControlConfig control_config;
   control_config.claim_interface = false;  // the pipeline already owns the claim

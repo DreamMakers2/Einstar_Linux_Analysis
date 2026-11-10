@@ -102,7 +102,10 @@ pitch only".
    occlusion mask, confidence.
 5. **Depth** — `Z = f·B/(d-offset)`, `X=(u-cx)Z/f`, `Y=(v-cy)Z/f`, rotate by
    `R1^T`; per-pixel `σ_random` and `σ_total`; optional colour sampling through
-   the colour camera with distortion.
+   the colour camera with distortion.  Stream 2 is raw Bayer: it is debayered
+   with `COLOR_BayerRG2BGR` before the 180 deg rotation, matching libeinstar;
+   no white balance or colour-correction matrix is applied, and the shipped
+   factory colour record is not trusted.
 6. **Cloud + outputs** — confidence-filtered points; PLY (ASCII/binary LE) with
    calibration id/kind, source, frame, units and plate pitch; rectified pair,
    disparity/depth/confidence PNGs and float TIFFs, invalid mask, z-buffered

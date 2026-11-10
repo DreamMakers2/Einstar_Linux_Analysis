@@ -88,7 +88,7 @@ calibration id/kind, source and plate pitch), `_rectified_{left,right}.png`,
 | rectification | implemented, offline-tested + real-data |
 | SGBM + subpixel + LR consistency + confidence | implemented (`stereo.cpp`), see the stereo report |
 | metric depth, uncertainty, point cloud, PLY | implemented, offline-tested + real-data |
-| colour registration | implemented, gated on `color_status == "ok"`; the factory profile is stale → skipped |
+| colour registration | implemented: raw Bayer (BayerRG) debayer, 180° colour stream, colour-camera projection; synthetically validated; gated on `color_status == "ok"`; factory profile stale → skipped; no white balance/CCM |
 | live capture | pending hardware; replay/simulator path only |
 | absolute accuracy | **unverified** (no artefact) |
 

@@ -31,3 +31,8 @@ target_link_libraries(recon_cli PRIVATE einstar_recon)
 
 enable_testing()
 add_subdirectory(tests)
+
+# Optional OpenCL/CPU micro-benchmark (GPU preprocessing vs CPU; the SGBM
+# matcher has no OpenCL kernel in this OpenCV build).
+add_executable(recon_ocl_bench tools/ocl_bench.cpp)
+target_link_libraries(recon_ocl_bench PRIVATE ${OpenCV_LIBS})

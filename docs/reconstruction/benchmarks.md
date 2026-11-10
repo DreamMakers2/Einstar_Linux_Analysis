@@ -12,7 +12,8 @@ P1/P2 factors 8/96, CLAHE on, LR tolerance 1 px.
 |---|---:|---:|
 | rectify (maps cached per profile) | 5 ms | 5 ms |
 | SGBM + LR + confidence | 102 ms | 1 229 ms |
-| depth + uncertainty + cloud | 3 ms | 14 ms |
+| depth + uncertainty + cloud (uncoloured) | 3 ms | 14 ms |
+| colour debayer + projection + sampling | 2 ms | 5 ms |
 | **pipeline total** | **122 ms** | **1 262 ms** |
 | process wall time (incl. load/write) | 245 ms | 1 411 ms |
 | peak RSS | 160 MB | 266 MB |
@@ -22,8 +23,12 @@ P1/P2 factors 8/96, CLAHE on, LR tolerance 1 px.
 | median sigma (random part) | 0.252 mm | 0.127 mm |
 
 Matching dominates (>80 %).  Half resolution is the live-preview setting; full
-resolution is an offline/quality setting.  A CUDA SGBM/WLS path is a later
-optimisation and is not needed to meet the current 3-camera preview budget.
+resolution is an offline/quality setting.  The available GPU paths are
+benchmarked in [`gpu_benchmark.md`](gpu_benchmark.md): OpenCL remap is 4x faster
+but saves only ~0.1 ms; the matcher has no OpenCL kernel and the installed
+OpenCV has no CUDA modules.  No GPU acceleration of this matcher is claimed; a
+CUDA SGM/BM port is future work and is not needed for the current preview
+budget.
 
 ## Repeatability and consistency (half resolution)
 

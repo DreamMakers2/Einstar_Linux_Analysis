@@ -12,6 +12,7 @@
 | [`synthetic_validation.md`](synthetic_validation.md) | Synthetic ground-truth results (250/350/600 mm) and the automated test matrix. |
 | [`real_data_report.md`](real_data_report.md) | Real genuine-frame reconstruction: metrics, ablations, consistency (filled by the real-data evaluation). |
 | [`benchmarks.md`](benchmarks.md) | CPU stage timings, memory, determinism and repeatability. |
+| [`gpu_benchmark.md`](gpu_benchmark.md) | Measured OpenCL preprocessing vs CPU, and why no CUDA matcher number is claimed. |
 | [`acquisition.md`](acquisition.md) | Live acquisition runbook (pending hardware). |
 
 > **Implemented vs proposed.** `modern_pipeline_design.md` is the broader target design

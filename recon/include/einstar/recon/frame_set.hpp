@@ -25,6 +25,9 @@ struct Frame {
   std::int64_t host_time_ns = 0;
   std::uint32_t frame_id = 0;       // device frame id, valid on the group frame
   std::string source_path;
+  // Stream 2 only: the probe/capture tools write the colour sensor's raw
+  // 8-bit Bayer mosaic (RGGB); false when the frame is already BGR.
+  bool color_bayer = true;
 };
 
 struct FrameSet {
