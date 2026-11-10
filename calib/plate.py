@@ -1,64 +1,203 @@
-"""Recovered Einstar marker-plate specification.
+"""Recovered Einstar calibration-target specification (EXStar 1.2.2.0).
 
-Evidence
---------
-The physical target shipped with the Einstar ("calibration board") is a white
-plate with a rectangular grid of circular holes.  In the vendor's own 25-pose
-calibration corpus (``res/Einscan-E10/calibrate_image_read_rapid``) the grid is
-**8 columns x 5 rows = 40 lattice nodes**, of which **3 are large holes**, plus
-**one off-lattice large hole**: 37 small + 4 large = **41 holes**.  The four
-large holes form an orientation code:
+This module is the single source of truth for the board geometry used by the
+Linux-native calibration engine.  The numbers below are **recovered from the
+vendor software**, not measured on a physical plate: the complete evidence
+chain, addresses and decompiled fragments are in
+``docs/calibration/plate_spec_recovered.md``.
 
-    (u, v) = (2, 1), (4, 1), (5, 1)   # three collinear, spacing ratio 2:1
-    (u, v) = (3.5, 3)                 # midway between u=3 and u=4, two rows below
+Board topology (proven)
+-----------------------
+The Einstar "calibration board" is a white plate with dark circular markers
+(``Sn3DEACalibrateController`` / vendor video / 25-pose IR corpus):
 
-``u`` runs along the long (200 mm) side, ``v`` along the short (150 mm) side.
-The half-integer coordinate of the fourth large marker is deliberate: it makes
-the pattern chiral, so a single view fixes the board frame without ambiguity
-(no 180-degree or mirror ambiguity).  The pattern was measured independently
-in all 25 left-camera images; the same coordinates appear in every image
-(see ``analysis/calibration/plate_geometry.md``).
+* **8 columns x 5 rows = 40 small-marker lattice nodes**;
+* **4 large markers**, three on the lattice at ``(u, v) = (2,1), (4,1), (5,1)``
+  and one **off-lattice** at ``(u, v) = (3.5, 3)`` -- mid-way between columns 3
+  and 4, two rows away from the large-marker row;
+* total **41 markers** (37 small + 4 large).
 
-The metric pitch is *not* independent of the CCF stereo baseline when it is
-estimated from the vendor images and that same rig.  Two hypotheses are open:
-27.72 mm (baseline-consistent triangulation/BA) and ~25.0 mm (if the
-"200x150" profile name is the plate size).  Treat the pitch as a parameter
-until calipers or an independently calibrated length settle it.  All geometry
-below is expressed in board units so that a wrong pitch cannot silently change
-the topology.
+The half-integer coordinate makes the pattern chiral, so one view fixes the
+board frame with no 180-degree/mirror ambiguity.
+
+Board frame and metric geometry (proven)
+----------------------------------------
+The vendor builds a **17 x 14 marker lattice at ``iSpace = 14 mm``** and only
+every second node in each direction carries a physical marker:
+
+    x_c = (c - 8) * 14          c = 0 .. 16
+    y_r = (6 - r) * 14          r = 0 .. 13
+    marker at c = 2u + 1, r = 2v + 2
+
+Substituting gives the marker positions in the **vendor board frame** (origin
+at the centre of the 8x5 marker field, x along the 8-marker axis, y towards
+row 0, z = 0):
+
+    x(u) = 28 * (u - 3.5)       y(v) = 28 * (2 - v)      [mm]
+    pitch = 2 * iSpace = **28.0 mm**
+
+so the markers span 196 mm x 112 mm.  The plate outline is **8 x 6 marker
+pitches = 224 x 168 mm** (0.5-pitch margins left/right, 1-pitch margins
+top/bottom), which reproduces the measured corpus outline (7.97 x 6.02
+pitches, aspect 1.321 vs 224/168 = 1.333).  Note: the ``8``/``6`` fields of
+``CalibrationTableParam`` are the *template origin* lattice index (col,row),
+not the plate dimensions; the 8 x 6 outline comes from the images.
+
+Large markers in the vendor frame (mm):
+
+    (u,v) (2,1)  -> (-42, +28)
+    (u,v) (4,1)  -> (+14, +28)
+    (u,v) (5,1)  -> (+42, +28)
+    (u,v) (3.5,3)-> (  0, -28)
+
+Evidence for the 28.0 mm pitch (independent of any physical measurement)
+------------------------------------------------------------------------
+1. ``CalibrateBoard3DAlg::generate`` (Sn3DCalibrateAlgorithmWrapper.dll,
+   0x18004BA90) builds exactly the lattice above from ``iX, iY, iSpace``;
+   the live EXStar session used ``iX=17, iY=14, iSpace=14``.
+2. The recognition output is a 17 x 14 array
+   (``Sn3D_one_calibTable_fast_recognition``, Sn3DCalibrationJR.dll
+   0x18014B880 sizes it to ``param[0x18] * param[0x14]``), and the four large
+   markers are read at flat indices **73, 77, 79, 144**
+   (``FUN_180015850``), i.e. (c,r) = (5,4),(9,4),(11,4),(8,8), which is
+   exactly ``c = 2u+1, r = 2v+2`` for the observed large-marker pattern.
+3. The per-board distance constraints shipped in the ``.ple`` file
+   (``AA``/``BB``) are true metric distances between two 3-D points of the
+   calibration array (``DistanceRef`` = {int32 A, int32 B, double d}, used as
+   a soft scale residual in ``global_optimize_landMark``, JR 0x18024E790).
+   For this unit they are the pairs (71,149) and (79,139):
+
+       71=(c3,r4) -> 149=(c13,r8):  Delta=(10,4) -> 14*sqrt(116) = 150.784 mm
+       79=(c11,r4)-> 139=(c3,r8):   Delta=(-8,4) -> 14*sqrt(80)  = 125.219 mm
+
+   The EA model defaults (``aa=151.030, bb=124.857``) and this unit's PLE
+   (``AA=150.804, BB=125.071``) both agree with those values to 0.02-0.3 %,
+   pinning the **lattice pitch to 14.00 mm** (13.983-14.002 mm).  The markers
+   occupy every second lattice node, hence the **28.0 mm marker pitch**.  The
+   per-board PLE values differ from the model defaults, i.e. they are measured
+   on the physical board, not copied from the nominal model.
+
+The vendor's **CCF-effective** pitch is 27.72 mm: a free 3-camera bundle
+adjustment of the same 25-pose corpus reproduces the factory CCF baseline
+(158.557 mm) only when the model pitch is 27.72 mm.  The 1.0 % difference from
+28.0 mm is the difference between our estimator (41 markers per view, fixed
+factory distortion) and the vendor's (238-cell lattice, distance constraints,
+free distortion); it is reported, not hidden.  ``27.72`` therefore remains
+available as a scale option for reproducing the shipped CCF, while the
+**nominal vendor geometry is 28.0 mm**.
+
+Retired hypothesis
+------------------
+``200x150`` is a profile/directory name (``res/Einscan-E10/200x150``) shared
+with other devices (``5M/200x150``, ``EinScan-S/200x150``); it is not a plate
+measurement.  The earlier 25.0 mm hypothesis was based on that name; it is now
+**rejected** (it would require a physical AA distance of 134.6 mm instead of
+the measured 150.8 mm).
+
+The 8 x 7 drawing in ``CalibrationPage_EA.dll``/manual is a shared
+cross-product illustration (the same PNG is byte-identical in the EXStar Hub
+2.0.0-44 DLL) and does **not** describe the Einstar board; the official
+vendor calibration video shows the physical 8 x 5 board.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Iterable
 
 import numpy as np
 
-#: active plate variant.  The vendor corpus is 8 x 5; the shipped manual's
-#: figure is 8 x 7, so the variant MUST be confirmed against the physical board
-#: (count the holes and measure the pitch).  ``use_spec`` switches all helpers.
+# ---------------------------------------------------------------------------
+# recovered vendor constants
+# ---------------------------------------------------------------------------
+
+#: marker-lattice columns/rows on the physical board
 GRID_COLS = 8
 GRID_ROWS = 5
 
-#: large-marker coordinates in board units (u, v), centred pattern:
-#: three collinear one row above the middle, and one at the midpoint two rows
-#: below.  For an 8x5 board this is the recovered set; for 8x7 the same
-#: centre-relative rule gives (2,2),(4,2),(5,2),(3.5,4).
+#: full recognition lattice (17 x 14) used by EXStar, and its pitch (mm)
+RECOGNITION_GRID = (17, 14)
+RECOGNITION_LATTICE_PITCH_MM = 14.0
+#: flat indices (row-major, 17 columns) of the four large markers
+RECOGNITION_BIG_INDICES = (73, 77, 79, 144)
+
+#: plate outline in pitches: 8 wide x 6 tall (marker field 8 x 5 + margins)
+PLATE_PITCHES = (8, 6)
+
+#: nominal marker pitch = 2 * recognition lattice pitch
+VENDOR_PITCH_MM = 28.0
+
+#: large-marker coordinates in board units (u, v); canonical vendor pattern
 BIG_MARKERS = np.array([[2.0, 1.0], [4.0, 1.0], [5.0, 1.0], [3.5, 3.0]])
 
-#: board centre in the same units (used to centre metric coordinates)
+#: centre of the marker field in the same units (the vendor frame origin)
 BOARD_CENTRE_UV = np.array([3.5, 2.0])
 
+#: nominal plate outline in millimetres (8 x 6 pitches of 28 mm)
+PLATE_SIZE_MM = (PLATE_PITCHES[0] * VENDOR_PITCH_MM,
+                 PLATE_PITCHES[1] * VENDOR_PITCH_MM)
+
+#: pitch provenance.  ``vendor_model`` is the authoritative nominal geometry;
+#: ``ccf_effective`` reproduces the shipped factory CCF; the last entry is the
+#: retired "200x150 profile name = plate size" hypothesis.
+PITCH_SOURCES_MM = {
+    "vendor_model": VENDOR_PITCH_MM,
+    "ccf_effective": 27.72,
+    "profile_name_hypothesis_rejected": 25.0,
+}
+
+#: vendor constant table recovered from Sn3DCalibrateAlgorithmWrapper.dll,
+#: global ``CalibrationTableParam`` at 0x180087748.  ``pitch_x_mm``/
+#: ``pitch_y_mm`` are the raw table fields; see the docs for their use (the
+#: marker pitch used by the generator is ``2 * iSpace``).
+VENDOR_CONSTANTS = {
+    "recognition_cols": 17,            # +0x14  row stride of the 238-cell array
+    "recognition_rows": 14,            # +0x18
+    "template_scale_0x20": 25.0,       # +0x20  template units per lattice step
+    "template_scale_0x28": 25.0,       # +0x28  (NOT a metric pitch)
+    "template_origin_col": 8,          # +0x30  lattice (col,row) that maps to (0,0)
+    "template_origin_row": 6,          # +0x34
+    "big_circle_num": 4,               # +0x04
+    "large_marker_cols": (8, 5, 7, 11),          # +0x38,+0x40,+0x48,+0x50
+    "large_marker_rows": (4, 8, 8, 8),           # +0x58..+0x70
+    "large_marker_indices": (76, 141, 143, 147),  # 17*row + col (canonical)
+    "large_marker_indices_e7": (73, 77, 79, 144),  # 180-degree rotation used by FUN_180015850
+    "session_iX": 17,
+    "session_iY": 14,
+    "session_iSpace_mm": 14,
+}
+
+#: default pitch used by the engine: the recovered nominal vendor geometry
+DEFAULT_PITCH_MM = VENDOR_PITCH_MM
+DEFAULT_PITCH_SOURCE = "vendor_model"
+
+#: compatibility alias used by reports
+PITCH_CANDIDATES_MM = {
+    "vendor_model_28.0": VENDOR_PITCH_MM,
+    "ccf_effective_27.72": 27.72,
+    "profile_size_hypothesis_25.0_rejected": 25.0,
+}
+
+
+# ---------------------------------------------------------------------------
+# plate specification
+# ---------------------------------------------------------------------------
 
 @dataclass
 class PlateSpec:
-    """A complete plate variant (grid topology, big-marker code, pitch)."""
-    cols: int = 8
-    rows: int = 5
+    """A complete plate variant (grid topology, big-marker code, pitch).
+
+    ``pitch_mm`` is the marker pitch (centre-to-centre of adjacent small
+    markers).  The recognition lattice pitch is ``pitch_mm / 2``.
+    """
+
+    cols: int = GRID_COLS
+    rows: int = GRID_ROWS
     big_markers: np.ndarray = None
-    pitch_mm: float = 27.72
-    pitch_source: str = "unresolved (baseline-consistent default)"
+    pitch_mm: float = DEFAULT_PITCH_MM
+    pitch_source: str = DEFAULT_PITCH_SOURCE
+    plate_pitches: tuple = PLATE_PITCHES
+    provenance: dict = field(default_factory=dict)
 
     def __post_init__(self):
         if self.big_markers is None:
@@ -66,7 +205,15 @@ class PlateSpec:
             self.big_markers = np.array([[2.0, cy - 1.0], [4.0, cy - 1.0],
                                          [5.0, cy - 1.0], [3.5, cy + 1.0]])
         self.big_markers = np.asarray(self.big_markers, float)
+        if not self.provenance:
+            self.provenance = {
+                "source": "EXStar 1.2.2.0 binaries",
+                "generator": "CalibrateBoard3DAlg::generate 0x18004BA90",
+                "lattice": "17x14 @ 14 mm, markers on every second node",
+                "pitch": self.pitch_source,
+            }
 
+    # -- topology ---------------------------------------------------------
     @property
     def n_lattice(self) -> int:
         return self.cols * self.rows
@@ -89,7 +236,19 @@ class PlateSpec:
         return np.array([(self.cols - 1) / 2.0, (self.rows - 1) / 2.0])
 
     @property
+    def lattice_pitch_mm(self) -> float:
+        """Pitch of the vendor 17x14 recognition lattice (half the marker pitch)."""
+        return self.pitch_mm / 2.0
+
+    @property
+    def plate_size_mm(self) -> tuple:
+        return (self.plate_pitches[0] * self.pitch_mm,
+                self.plate_pitches[1] * self.pitch_mm)
+
+    # -- metric geometry --------------------------------------------------
+    @property
     def points_mm(self) -> np.ndarray:
+        """40 lattice markers, engine frame (x right, y = +v, z = 0)."""
         uv = np.array([[u, v] for v in range(self.rows) for u in range(self.cols)], float)
         return np.column_stack([(uv - self.centre) * self.pitch_mm, np.zeros(len(uv))])
 
@@ -98,73 +257,121 @@ class PlateSpec:
         return np.column_stack([(self.big_markers - self.centre) * self.pitch_mm,
                                 np.zeros(len(self.big_markers))])
 
+    def vendor_points_mm(self) -> np.ndarray:
+        """40 lattice markers in the **vendor** frame (y = pitch*(2-v), z = 0)."""
+        uv = np.array([[u, v] for v in range(self.rows) for u in range(self.cols)], float)
+        x = (uv[:, 0] - self.centre[0]) * self.pitch_mm
+        y = (self.centre[1] - uv[:, 1]) * self.pitch_mm
+        return np.column_stack([x, y, np.zeros(len(uv))])
+
+    def vendor_big_mm(self) -> np.ndarray:
+        x = (self.big_markers[:, 0] - self.centre[0]) * self.pitch_mm
+        y = (self.centre[1] - self.big_markers[:, 1]) * self.pitch_mm
+        return np.column_stack([x, y, np.zeros(len(self.big_markers))])
+
+    def recognition_index(self, u: float, v: float) -> int:
+        """Flat index (row-major, 17 columns) of board coordinate (u, v)."""
+        c = int(round(2.0 * u + 1.0))
+        r = int(round(2.0 * v + 2.0))
+        return r * RECOGNITION_GRID[0] + c
+
+    def recognition_mm(self, index: int) -> np.ndarray:
+        """3-D point (vendor frame) of a flat recognition-lattice index."""
+        cols = RECOGNITION_GRID[0]
+        c, r = index % cols, index // cols
+        x = (c - cols // 2) * self.lattice_pitch_mm
+        y = ((RECOGNITION_GRID[1] - 1) // 2 - r) * self.lattice_pitch_mm
+        return np.array([x, y, 0.0])
+
+    def distance_refs_mm(self) -> dict:
+        """Vendor ``DistanceRef`` pairs -> their nominal model distances (mm).
+
+        These are the pairs whose measured values the per-board ``.ple`` file
+        stores as ``AA`` and ``BB``.
+        """
+        pairs = {"AA": (71, 149), "BB": (79, 139)}
+        out = {}
+        for key, (i, j) in pairs.items():
+            pi = self.recognition_mm(i)
+            pj = self.recognition_mm(j)
+            out[key] = {
+                "indices": (i, j),
+                "model_distance_mm": float(np.linalg.norm(pi - pj)),
+                "implied_pitch_mm": float(2.0 * np.linalg.norm(pi - pj)
+                                          / np.sqrt(((i % 17 - j % 17) ** 2 +
+                                                     (i // 17 - j // 17) ** 2))),
+                "unit_ple_value_mm": 150.804 if key == "AA" else 125.071,
+                "ea_model_default_mm": 151.030 if key == "AA" else 124.857,
+            }
+        return out
+
+
+# ---------------------------------------------------------------------------
+# module-level active spec (kept API-compatible with the original module)
+# ---------------------------------------------------------------------------
+
+ACTIVE_SPEC = PlateSpec()
+
 
 def use_spec(spec: PlateSpec) -> PlateSpec:
     """Switch the module-level active plate variant (CLI convenience)."""
-    global GRID_COLS, GRID_ROWS, BIG_MARKERS, BOARD_CENTRE_UV, DEFAULT_PITCH_MM
+    global ACTIVE_SPEC, GRID_COLS, GRID_ROWS, BIG_MARKERS, BOARD_CENTRE_UV
+    global DEFAULT_PITCH_MM, DEFAULT_PITCH_SOURCE
+    ACTIVE_SPEC = spec
     GRID_COLS = int(spec.cols)
     GRID_ROWS = int(spec.rows)
     BIG_MARKERS = np.asarray(spec.big_markers, float)
     BOARD_CENTRE_UV = spec.centre
     DEFAULT_PITCH_MM = float(spec.pitch_mm)
+    DEFAULT_PITCH_SOURCE = spec.pitch_source
     return spec
 
 
 def current_spec() -> PlateSpec:
-    return PlateSpec(GRID_COLS, GRID_ROWS, BIG_MARKERS.copy(), DEFAULT_PITCH_MM,
-                     "unresolved (baseline-consistent default)")
-
-#: nominal plate size in millimetres (vendor directory name ``200x150``).
-#: NOTE: this may be the scanner's scan volume, not the plate outline; the
-#: measured plate is ~8.0 x 6.0 pitches, which is 222 x 166 mm at 27.72 mm
-#: pitch or 200 x 150 mm at 25.0 mm.  The conflict is unresolved.
-PLATE_SIZE_MM = (200.0, 150.0)
-
-#: competing pitch hypotheses; neither is a physical measurement yet
-PITCH_CANDIDATES_MM = {"baseline_consistent": 27.72, "profile_size_hypothesis": 25.0}
-
-#: Pitch estimated from the vendor's 25-pose corpus and the CCF stereo rig.
-#: Two independent estimators agree: point-distance triangulation gives
-#: 27.735 mm (sd 0.022 over 22 poses) and a joint bundle adjustment scaled to
-#: the CCF baseline gives 27.72 mm.  The 0.05 % spread is statistical; the
-#: systematic uncertainty is the CCF baseline (~0.1 %).  The design value is
-#: probably 27.7 mm, so this is stored as the measured default and the engine
-#: can also anchor the scale to the factory baseline explicitly.
-DEFAULT_PITCH_MM = 27.72
+    return ACTIVE_SPEC
 
 
 def lattice_uv() -> np.ndarray:
     """All small-hole coordinates as (u, v), row-major."""
-    return np.array([[u, v] for v in range(GRID_ROWS) for u in range(GRID_COLS)], float)
+    s = current_spec()
+    return np.array([[u, v] for v in range(s.rows) for u in range(s.cols)], float)
 
 
 def board_points_mm(pitch: float | None = None,
                     centre: Iterable[float] | None = None) -> np.ndarray:
-    """Metric 3-D coordinates of the 40 lattice nodes, Z=0 (mm).
+    """Metric 3-D coordinates of the 40 lattice markers, Z=0 (mm).
 
-    The three on-lattice large markers are included: their centres are valid
-    calibration observations.  The off-lattice large marker is in
-    :func:`big_points_mm`.
+    The three on-lattice large markers are included (their centres are valid
+    calibration observations).  The off-lattice large marker is in
+    :func:`big_points_mm`.  The frame is the engine frame (x right, y = +v);
+    use :meth:`PlateSpec.vendor_points_mm` for the vendor's y-up frame.
     """
+    s = current_spec()
     uv = lattice_uv()
-    pitch = DEFAULT_PITCH_MM if pitch is None else pitch
-    centre = BOARD_CENTRE_UV if centre is None else centre
+    pitch = s.pitch_mm if pitch is None else pitch
+    centre = s.centre if centre is None else centre
     c = np.asarray(centre, float)
     xy = (uv - c) * float(pitch)
     return np.column_stack([xy, np.zeros(len(uv))])
 
 
 def big_points_uv() -> np.ndarray:
-    return BIG_MARKERS.copy()
+    return current_spec().big_markers.copy()
 
 
 def big_points_mm(pitch: float | None = None,
                   centre: Iterable[float] | None = None) -> np.ndarray:
-    pitch = DEFAULT_PITCH_MM if pitch is None else pitch
-    centre = BOARD_CENTRE_UV if centre is None else centre
+    s = current_spec()
+    pitch = s.pitch_mm if pitch is None else pitch
+    centre = s.centre if centre is None else centre
     c = np.asarray(centre, float)
-    xy = (BIG_MARKERS - c) * float(pitch)
-    return np.column_stack([xy, np.zeros(len(BIG_MARKERS))])
+    xy = (s.big_markers - c) * float(pitch)
+    return np.column_stack([xy, np.zeros(len(s.big_markers))])
+
+
+def all_points_mm(pitch: float | None = None) -> np.ndarray:
+    """All 41 marker centres (40 lattice + 1 off-lattice), engine frame."""
+    return np.vstack([board_points_mm(pitch), big_points_mm(pitch)])
 
 
 def plate_summary(spec: PlateSpec | None = None) -> dict:
@@ -175,8 +382,16 @@ def plate_summary(spec: PlateSpec | None = None) -> dict:
             "big_markers_uv": s.big_markers.tolist(),
             "pitch_mm": s.pitch_mm,
             "pitch_source": s.pitch_source,
+            "lattice_pitch_mm": s.lattice_pitch_mm,
+            "recognition_grid": RECOGNITION_GRID,
+            "recognition_big_indices": RECOGNITION_BIG_INDICES,
+            "plate_pitches": s.plate_pitches,
+            "plate_size_mm": s.plate_size_mm,
+            "plate_size_nominal_mm": PLATE_SIZE_MM,
             "pitch_candidates_mm": PITCH_CANDIDATES_MM,
-            "plate_size_nominal_mm": PLATE_SIZE_MM}
+            "vendor_constants": VENDOR_CONSTANTS,
+            "distance_refs_mm": s.distance_refs_mm(),
+            "provenance": s.provenance}
 
 
 def uv_index() -> dict[tuple[float, float], int]:
@@ -184,10 +399,6 @@ def uv_index() -> dict[tuple[float, float], int]:
 
 
 def canonicalise_uv(uv: np.ndarray) -> np.ndarray:
-    """Map detected (u,v) onto the canonical 8x5 frame.
-
-    The detector assigns coordinates from the large-marker pattern; this
-    helper only checks the range and rounds half-integer large markers.
-    """
+    """Map detected (u,v) onto the canonical 8x5 frame (range check only)."""
     uv = np.asarray(uv, float).copy()
     return uv

@@ -19,11 +19,21 @@ from .profiles import ProfileStore
 from .workflow import exstar_sequence, parse_rapid_config
 
 
+def _pitch_source(pitch: float) -> str:
+    """Human-readable provenance for a pitch value (see calib/plate.py)."""
+    for name, value in plate.PITCH_SOURCES_MM.items():
+        if abs(float(pitch) - float(value)) < 1e-9:
+            return name
+    return "cli (unvalidated)"
+
+
 def _apply_plate(args):
-    if (getattr(args, "cols", 8) != 8 or getattr(args, "rows", 5) != 5
-            or abs(getattr(args, "pitch", plate.DEFAULT_PITCH_MM) - 27.72) > 1e-9):
-        plate.use_spec(plate.PlateSpec(args.cols, args.rows, pitch_mm=args.pitch,
-                                       pitch_source="cli (unvalidated)"))
+    cols = int(getattr(args, "cols", plate.GRID_COLS))
+    rows = int(getattr(args, "rows", plate.GRID_ROWS))
+    pitch = float(getattr(args, "pitch", plate.VENDOR_PITCH_MM))
+    spec = plate.PlateSpec(cols, rows, pitch_mm=pitch,
+                           pitch_source=_pitch_source(pitch))
+    plate.use_spec(spec)
     return plate.current_spec()
 
 

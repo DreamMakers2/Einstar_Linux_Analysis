@@ -14,6 +14,34 @@ directory; they read the vendor corpus read-only).
 
 ---
 
+---
+
+> **RESOLUTION (2026-11-10, later investigation).** The open questions below
+> (grid variant, metric pitch, `200x150`) have since been settled from the
+> vendor binaries and the official video — see
+> `docs/calibration/plate_spec_recovered.md`.
+>
+> * The Einstar board is **8 × 5 with 41 markers** (37 small + 4 large at
+>   (2,1),(4,1),(5,1),(3.5,3)); the official SHINING 3D calibration video shows
+>   the physical board and the 8 × 7 DLL/manual drawing is a shared
+>   cross-product illustration (byte-identical PNG in EXStar Hub 2.0.0-44).
+> * EXStar's calibration lattice is **17 × 14 at 14.00 mm**, with markers on
+>   every second node ⇒ **marker pitch 28.0 mm**. The per-board `AA`/`BB`
+>   distances (150.804/√116 = 14.002, 125.071/√80 = 13.983) pin the lattice.
+> * `200x150` is a profile/directory name, not a plate dimension, so the
+>   25.0 mm hypothesis in §0.3/§6 is **retracted**.
+> * The 27.72 mm figure is the **CCF-effective** scale (our solve reproduces the
+>   vendor CCF's 158.557 mm baseline at that pitch); it is 1.0 % below the
+>   nominal 28.0 mm model. The CCF in the captured install was written by
+>   EXStar on the same corpus (2026-02-09 21:34:58), so this is a solver-scale
+>   difference, not a board property.
+> * Plate outline: 8 × 6 marker pitches = **224 × 168 mm** (measured
+>   7.97 × 6.02 pitches).
+>
+> The measurements in this file (topology, outline, diameters, margins) remain
+> valid; only the pitch interpretation and the variant question changed.
+
+
 ## 0. TL;DR
 
 1. **The device corpus is 8 × 5, not 8 × 7.** All 25 left images form an 8-column,

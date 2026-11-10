@@ -216,7 +216,9 @@ The audit found three failure modes that a single-fit covariance cannot see:
   `bootstrap_sigma()` measures it; `--bootstrap` is available and should be
   used for a production profile.
 * **Plate pitch.** +0.1 % true pitch gives baseline z≈4.7, +1 % z≈42; the
-  baseline is a scale gauge. Anchor with a measured length or pass a pitch
+  baseline is a scale gauge. The nominal pitch is now recovered from the
+  vendor binaries (28.0 mm; `docs/calibration/plate_spec_recovered.md`).
+  Anchor with a measured length or pass a pitch
   sigma; the pixel covariance cannot see it.
 * **Board bow / fixed distortion.** 1 mm bow gives fx z≈6, rotation z≈8; a 10 %
   biased fixed `kc` gives fx z≈4–5, cx≈12. Check plate flatness and do not fix

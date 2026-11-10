@@ -128,7 +128,7 @@ What is done:
 
 * the EXStar workflow is recovered end-to-end (5×5×3, acceptance gates,
   state machine, real-session timings, compute/write-back);
-* the plate geometry and 27.72 mm pitch are recovered from the vendor corpus;
+* the plate geometry is recovered from the vendor binaries: 8×5 markers at **28.0 mm** pitch (17×14 lattice at 14.00 mm), plate 224×168 mm;
 * the vendor numerical core is mapped (`Sn3D_E10_camera_calibration` →
   `FUN_1802dca70` → `FUN_1800e0180` → `TribleCCF`), including the camera model,
   the Ceres PnP stage and the fixed-distortion behaviour;
@@ -175,7 +175,7 @@ The published engine's covariance/stopping was audited and corrected:
   protocol.
 * The colour CCF is proved stale/mixed-generation (17.66 mm, 46.6 px); the
   plate is 41 holes (8×5) with a 57-hole 8×7 drawing variant, and the metric
-  pitch (27.72 vs 25.0) is unresolved pending calipers.
+  pitch is resolved to 28.0 mm by the vendor constants and AA/BB; the 1.0 % CCF solver-scale difference is documented.
 
 Next gates: physical hole count/pitch/outline; user-unit calibration with
 held-out validation; colour re-calibration with texture enabled; known-artefact

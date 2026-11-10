@@ -6,7 +6,7 @@ with a robust, uncertainty-aware and adaptive pipeline.
 
 Public modules
 --------------
-plate       recovered plate specification (8x5 hole grid + 4 large markers)
+plate       recovered plate specification (8x5 marker grid, 28.0 mm pitch, 4 large markers)
 detect      marker detection, sub-pixel refinement and grid assignment
 geometry    homographies, poses, triangulation, epipolar checks
 calibrate   intrinsic/extrinsic estimation, bundle adjustment, covariance

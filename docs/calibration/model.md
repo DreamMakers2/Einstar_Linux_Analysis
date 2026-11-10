@@ -188,13 +188,15 @@ regenerates those numbers. The full derivation is in
   and the same 3873-byte block is written to the device at `tagDevData+0x39B`.
   No backup is kept. `calib/profiles.py` implements the safe host-side
   alternative (immutable factory snapshot + versioned revisions + rollback).
-* **Plate**: the device corpus is 8 × 5 with **41 holes** (37 small + 4 large;
+* **Plate**: the device corpus is 8 × 5 with **41 markers** (37 small + 4 large;
   three large on-lattice at (2,1),(4,1),(5,1) and one off-lattice at (3.5,3)).
-  The DLL/manual drawing is 8 × 7 with 57 holes (large at (2,2),(4,2),(5,2),
-  (3.5,4)). The metric pitch is **unresolved**: 27.72 mm is baseline-consistent
-  but not independent; 25.00 mm follows if the vendor `200x150` profile is the
-  plate outline. Calipers/hole count decide it (`calib.plate.PlateSpec` supports
-  both; record `pitch_source`).
+  The geometry is recovered from the vendor binaries: a 17 × 14 recognition
+  lattice at **14.00 mm** with markers on every second node ⇒ **28.0 mm marker
+  pitch**; per-board `AA`/`BB` distances pin the lattice to 13.983–14.002 mm.
+  Plate outline 8 × 6 marker pitches = 224 × 168 mm. The DLL/manual 8 × 7
+  drawing is a shared cross-product illustration, not the Einstar board. The
+  vendor CCF written on this corpus corresponds to a 27.72 mm effective scale
+  (1.0 % solver difference); `calib.plate.PlateSpec` records `pitch_source`.
 * **Reproduction**: a free re-optimisation of the 75 vendor images reaches
   0.367 px RMS, reproduces the IR baseline to 0.014 mm (158.543 vs 158.557)
   and the IR relative rotation to 0.20°. The shipped CCF's colour record is

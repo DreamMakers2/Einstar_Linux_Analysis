@@ -345,6 +345,7 @@ def _initial_intrinsics(obs: list[Observation], init: dict[str, CameraIntrinsics
     if not free_kc:
         return {c: init[c] for c in CAMERAS}
     out = {}
+    uv_index = _uv_index()
     for c in CAMERAS:
         views = [o for o in obs if o.camera == c]
         if len(views) < 3:
@@ -352,11 +353,11 @@ def _initial_intrinsics(obs: list[Observation], init: dict[str, CameraIntrinsics
             continue
         op, ip = [], []
         for o in sorted(views, key=lambda z: z.view):
-            idx = [k for k in o.uv if k in _UV_INDEX]
+            idx = [k for k in o.uv if k in uv_index]
             # OpenCV 5 requires float32 object points; float64 silently
             # raised and the except-fallback returned the factory K, turning
             # the per-camera initialisation into a no-op.
-            op.append(obj[[_UV_INDEX[k] for k in idx]].astype(np.float32))
+            op.append(obj[[uv_index[k] for k in idx]].astype(np.float32))
             ip.append(np.array([o.uv[k] for k in idx], np.float32))
         K0 = init[c].K.copy()
         K0[0, 1] = 0.0
@@ -381,7 +382,9 @@ def cv2_flags(free_kc: bool):
     return flags
 
 
-_UV_INDEX = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
+def _uv_index():
+    """(u,v) -> row-major object-point index for the active plate spec."""
+    return {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
 
 
 def _initial_poses(obs: list[Observation], cams: dict[str, CameraIntrinsics],
@@ -393,11 +396,12 @@ def _initial_poses(obs: list[Observation], cams: dict[str, CameraIntrinsics],
     """
     n_views = 1 + max((o.view for o in obs), default=0)
     per_cam = {c: {} for c in CAMERAS}
+    uv_index = _uv_index()
     for o in obs:
-        keys = [k for k in o.uv if k in _UV_INDEX]
+        keys = [k for k in o.uv if k in uv_index]
         if len(keys) < 6:
             continue
-        idx = [_UV_INDEX[k] for k in keys]
+        idx = [uv_index[k] for k in keys]
         img = np.array([o.uv[k] for k in keys], np.float32)
         pose = solve_pnp(obj[idx], img, cams[o.camera].K, cams[o.camera].kc)
         if pose is not None:
@@ -474,8 +478,9 @@ class _Problem:
         self._build_rows()
 
     def _build_rows(self):
+        uv_index = _uv_index()
         for oi, o in enumerate(self.obs):
-            idx = [_UV_INDEX[k] for k in o.uv if k in _UV_INDEX]
+            idx = [uv_index[k] for k in o.uv if k in uv_index]
             if not idx:
                 continue
             uv = np.array([o.uv[tuple(plate.lattice_uv()[i])] for i in idx], float)

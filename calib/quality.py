@@ -388,15 +388,27 @@ def quality_report(result: CalibrationResult,
     if pitch_source is None:
         pitch_source = plate.current_spec().pitch_source
     src = str(pitch_source).lower()
-    pitch_validated = any(k in src for k in ("caliper", "measured", "certified", "calibrated length")) \
+    # A pitch can be validated by an artefact measurement ("caliper"/"measured")
+    # or by the vendor's own specification recovered from the binaries
+    # ("vendor_model", see docs/calibration/plate_spec_recovered.md).  The two
+    # are kept distinct: the vendor model is the authority for reconstructing
+    # EXStar's geometry, not a measurement of the physical plate.
+    artefact_validated = any(k in src for k in ("caliper", "measured", "certified",
+                                                "calibrated length")) \
         and "unvalidated" not in src and "unresolved" not in src
+    vendor_validated = ("vendor_model" in src or "vendor model" in src) \
+        and "unvalidated" not in src and "unresolved" not in src
+    pitch_validated = bool(artefact_validated or vendor_validated)
     physical_scale = {
         "pitch_mm": pitch,
         "pitch_source": pitch_source,
         "validated": bool(pitch_validated),
-        "note": ("metric scale is anchored to the factory baseline / plate pitch; "
+        "artefact_validated": bool(artefact_validated),
+        "vendor_geometry": bool(vendor_validated),
+        "note": ("" if pitch_validated else
+                 "metric scale is anchored to the factory baseline / plate pitch; "
                  "an unresolved pitch is a scale-gauge uncertainty that the pixel "
-                 "covariance cannot see") if not pitch_validated else "",
+                 "covariance cannot see"),
     }
     warnings = list(stop.get("reasons_failed", []))
     if not pitch_validated:

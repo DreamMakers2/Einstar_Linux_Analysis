@@ -46,20 +46,20 @@ check, **B** = one interpretation step, **C** = hypothesis, **U** = unresolved.
    device write **~0.34 s**. Stages 0–4 took 7.7 / 11.2 / 58.0 / 78.3 / 35.9 s;
    the tilted stages dominate. **[A]** (session log, §4.5)
 
-5. The plate recovered from the vendor's own corpus is an **8 × 5 grid of small
-   holes plus 4 large holes** at board coordinates (2,1), (4,1), (5,1) and the
-   off-lattice (3.5,3). Its pitch, recovered independently from the stereo rig
-   and from a joint bundle adjustment, is **27.72 mm** (triangulation
-   27.735 ± 0.022 mm over 22 poses; BA-implied 27.722 mm). That number is
-   **not independent** of the CCF baseline: it is the pitch that makes the
-   board consistent with 158.557 mm. A calibration-free measurement of the
-   plate outline (7.97 × 6.02 pitches) gives **25.00 ± 0.13 mm** if the vendor
-   `200x150` profile is the plate outline, implying a 199 × 151 mm plate; the
-   baseline-consistent pitch would require 221 × 167 mm. **The pitch is
-   unresolved; 27.72 is baseline-consistent, 25.0 is plate-size-consistent.**
-   Use `--pitch` and record the source. **[A]** for the corpus topology,
-   **U** for the metric pitch and for whether the physical board is 8×5 or the
-   8×7 drawn in the manual (see §12.1).
+5. The plate is an **8 × 5 grid of markers plus 4 large markers** at board
+   coordinates (2,1), (4,1), (5,1) and the off-lattice (3.5,3). The metric
+   geometry is **recovered from the vendor binaries** (2026-11-10): EXStar
+   builds a 17 × 14 recognition lattice at **14.00 mm** per step and places the
+   physical markers on every second node ⇒ **marker pitch 28.0 mm**; the
+   per-board `AA`/`BB` distance constraints independently pin the lattice to
+   14.002/13.983 mm. The plate outline is 8 × 6 marker pitches = 224 × 168 mm.
+   The `200x150` profile name is **not** a plate dimension (it is shared with
+   other devices; EinScan Pro's spec is a 210 × 150 mm single-scan range), and
+   the earlier 25.0 mm hypothesis is **retracted**. The vendor CCF written on
+   this same corpus is 1.0 % below the nominal model (effective 27.72 mm) — a
+   solver scale difference, not a plate property. See
+   `docs/calibration/plate_spec_recovered.md`. **[A]** for topology and pitch,
+   **[B]** for the 1 % interpretation.
 
 6. The vendor's numerical core is `Sn3D_E10_camera_calibration` →
    `FUN_1802dca70` → `FUN_1800e0180` (3-camera driver) → `Sn3D_Quar_CCF`
@@ -169,27 +169,38 @@ board frame without a 180°/mirror ambiguity. The large holes are used only for
 orientation; the 40 small-hole centres are the calibration observations.
 **[A]** (detected in all images; the same coordinates recur)
 
-The manual's figure instead draws **8 × 7 = 56** small holes, and the factory
-config exposes `iX=17, iY=14` (logged in `initComputeAlg`), which is consistent
-with an 8×7 board (2·8+1, 2·7) but also with unrelated detection-window
-parameters. The corpus is 8×5. **The physical variant must be confirmed by
-counting the holes on the actual board.** The engine is plate-configurable
-(`calib.plate.PlateSpec`, `--cols/--rows`) for this reason. **U**
+The **8 × 7** drawing in `CalibrationPage_EA.dll` and on manual p.35 is **not a
+board photograph and not Einstar-specific**: the same PNG is byte-identical
+inside `EXStar_Hub_v2.0.0-44/CalibrationPage_EA.dll`, a hub that also serves
+Einstar 2 / Rockit / EXScan Rigil. The official SHINING 3D calibration video
+(frame 525, t = 21 s, subtitle “please note the four large dots on it”) shows
+the physical **8 × 5** board, matching the 25-image corpus. The engine remains
+plate-configurable (`calib.plate.PlateSpec`, `--cols/--rows`) but defaults to
+the recovered 8 × 5 geometry. **[A]**
 
-### 3.3 Metric pitch
+### 3.3 Metric pitch — recovered
 
-Two independent estimators using the shipped CCF's IR baseline (158.557 mm):
+The pitch is **28.0 mm**, recovered from the vendor code rather than from a
+physical measurement (`docs/calibration/plate_spec_recovered.md`):
 
-* point-distance triangulation over 22 poses: **27.735 mm**, sd 0.022 mm,
-  distance residuals 0.1–0.15 mm, plane deviation 0.02–0.07 mm;
-* joint bundle adjustment, scaled until the IR baseline matches the CCF:
-  **27.722 mm**.
+* `CalibrateBoard3DAlg::generate` (wrapper `0x18004BA90`) builds a 17 × 14
+  lattice at `iSpace = 14 mm`; the live session used `iX=17, iY=14, iSpace=14`
+  (`initComputeAlg` in the recorded log);
+* the recognition array is 17 × 14 = 238 cells (`idx = 17·row + col`) and the
+  physical markers occupy every second node (`c = 2u+1, r = 2v+2`), so the
+  marker pitch is `2 × 14.0 = 28.0 mm`;
+* the per-board `AA`/`BB` constraints are true distances between lattice points
+  (71→149 and 79→139): 150.804/√116 = 14.002 mm and 125.071/√80 = 13.983 mm,
+  confirming the 14.0 mm lattice independently.
 
-The 0.05 % agreement is statistical; the systematic uncertainty is the CCF
-baseline itself (~0.1 %, i.e. ±0.03 mm in pitch). The engine default is
-`27.72 mm` and it can instead **anchor the scale to the factory baseline**,
-which is the physically meaningful choice. A caliper measurement of the hole
-pitch (or of the board outline) would settle the last 0.1 %. **[A]/[B]**
+The earlier two estimators (27.735 mm triangulation, 27.722 mm BA) are **not**
+independent of the shipped CCF: they are the model pitch that makes our solve
+reproduce the vendor CCF's 158.557 mm baseline. Because the CCF in the captured
+install was written by EXStar **on this same corpus** (2026-02-09 21:34:58),
+the 27.72 figure is the vendor's realised solver scale; it is 1.0 % below the
+28.0 mm nominal model (a solver/estimator difference, not a board property).
+The engine defaults to 28.0 mm (nominal geometry) and accepts `--pitch 27.72`
+to reproduce the shipped CCF exactly. **[A] geometry, [B] 1 % interpretation**
 
 ### 3.4 Hole sizes and appearance
 
@@ -772,42 +783,41 @@ validation is in §12.
 
 ## 12. Limitations and the evidence still needed
 
-### 12.1 Plate variant and hole inventory
+### 12.1 Plate variant and hole inventory — resolved
 
-The device corpus is **8 × 5 with 41 holes**: 40 lattice nodes (37 small +
-3 large at (2,1),(4,1),(5,1)) plus one off-lattice large at (3.5,3). The DLL
-board drawing and the manual UI panel are **8 × 7 with 57 holes**: 56 lattice
-nodes (53 small + 3 large at (2,2),(4,2),(5,2)) plus one off-lattice large at
-(3.5,4). The video is 8 × 5. The two variants are the same design with rows 0
-and 6 added/removed; `calib.plate` supports both.
+The device corpus is **8 × 5 with 41 markers**: 40 lattice nodes (37 small +
+3 large at (2,1),(4,1),(5,1)) plus one off-lattice large at (3.5,3). This is
+confirmed photographically by the official SHINING 3D calibration video (frame
+525, t = 21 s) and by the 25-pose IR corpus. The **8 × 7** drawing in
+`CalibrationPage_EA.dll` and on manual p.35 is a shared cross-product
+illustration (byte-identical in the EXStar Hub 2.0.0-44 DLL that also serves
+other products), not the Einstar board; `calib.plate` can still represent it
+for other products but no longer treats it as an open question for the Einstar.
 
-A physical count decides it:
+Marker geometry (vendor frame, mm): `x = 28(u−3.5)`, `y = 28(2−v)`, `z = 0`;
+large markers at (−42,+28), (+14,+28), (+42,+28), (0,−28). The plate outline is
+8 × 6 marker pitches = 224 × 168 mm (measured 7.97 × 6.02, aspect 1.321 vs
+1.333). Manufacturing tolerance of the physical board is bounded by the AA/BB
+spread (≈0.1–0.3 %).
 
-1. Count the holes (41 or 57) and check whether the three large on-lattice
-   markers are on the second row (8×5) or the third row (8×7).
-2. Measure 10 pitches with calipers and the plate outline (the measured outline
-   is 7.97 × 6.02 pitches, aspect 4:3).
-3. Record hole diameters (small 0.130 pitch, large 0.255 pitch, ratio 1.96) and
-   the four large-marker coordinates.
+### 12.2 Metric pitch — resolved
 
-### 12.2 Metric pitch
+The nominal pitch is **28.0 mm** (`2 × iSpace`, `iSpace = 14 mm`), pinned by the
+per-board `AA`/`BB` distances to 13.983–14.002 mm for the lattice. See
+`docs/calibration/plate_spec_recovered.md` §2.
 
-The pitch is **unresolved**:
-
-* **27.72 mm** is what triangulation (27.735 ± 0.022) and BA (27.722) give when
-  the CCF baseline is assumed correct. It is **not independent**: the baseline
-  and the pitch are two ends of the same scale.
-* **25.00 ± 0.13 mm** follows from the calibration-free plate outline
-  (7.97 × 6.02 pitches) if the vendor `200x150` profile is the plate outline;
-  it implies a 199 × 151 mm plate.
-* 27.72 mm implies a 221 × 167 mm plate. The folder name may be the scanner's
-  scan volume rather than the plate size, so the 25.0 hypothesis is not proved.
+The retired 25.0 mm hypothesis came from reading the `200x150` profile name as
+the plate outline; that name is shared across devices and is not a dimension.
+The 27.72 mm figure is the CCF-effective scale: our solve reproduces the vendor
+CCF baseline (158.557 mm) at that pitch, 1.0 % below the nominal model. Both
+scales are retained (`--pitch`), because the difference is a solver property,
+not a plate property.
 
 Pitch is a pure scale for this planar target: with the baseline anchored to the
 CCF, the intrinsics, relative rotation and reprojection residual are identical
-for 25.0, 27.72 and 30.0 (measured: fx changes <1e-6 px, RMS identical). The
-choice only changes the raw metric baseline (142.99 / 158.54 / 171.58 mm) and
-the physical interpretation. Calipers on 10 pitches, or an independently
+for different pitches (measured: fx changes <1e-6 px, RMS identical). The
+choice only changes the raw metric baseline (e.g. 160.14 mm at 28.0,
+158.54 mm at 27.72). An independent
 calibrated length, are required.
 
 ### 12.3 Colour camera

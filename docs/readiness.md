@@ -61,7 +61,7 @@ Each gate is a concrete check with a pass condition. All must pass on the physic
 | G4 | Framing | a 60 s capture yields zero parse errors, three camera streams, monotonic per-camera frame ids, no size mismatches |
 | G5 | Cadence | **done offline (2026-11-07)**: measured 45.2 MB/s ceiling, 86.2 ms three-frame group floor, (1,1)@90–100 ms sustainable with zero loss, (3,1) = 3 × period with 7 frames/trigger. Remaining: multi-hour soak and the vendor's exact production mode |
 | G6 | Recovery | induced `clear_halt`/cable event: stream resumes < 100 ms, no corrupted or short frames delivered, loss events counted |
-| G7 | Calibration plate truth | hole count 41 vs 57; caliper 10 pitches; outline 200×150; large-marker coordinates; `PlateSpec` matches | physical board |
+| G7 | Calibration plate truth | ~~hole count / pitch / outline~~ **resolved from vendor binaries 2026-11-10**: 8×5 markers, 28.0 mm pitch (17×14 lattice @14.00 mm), 224×168 mm outline, large markers (2,1),(4,1),(5,1),(3.5,3); official video confirms 8×5. Residual: manufacturing tolerance only | `docs/calibration/plate_spec_recovered.md`; optional caliper for tolerance |
 | G8 | Calibration physical accuracy | run a 12–25-view calibration on the unit, held-out ≤0.5 px and standard target pass; scan a known artefact at 300/400/500 mm | hardware + artefact |
 | G7 | Recording | record 60 s, replay offline, byte-exact digest, then decode both paths and compare frames |
 | G8 | Calibration | rectified IR pair shows vertical disparity residual < 0.5 px (median) on real captures; depth of a flat target within the vendor's own spread |
