@@ -190,10 +190,12 @@ Implemented and evaluated the replacement for the fixed 25-shot workflow:
   independent verification.  Research review, detector benchmark, solver
   benchmark and strategy Monte Carlo are published under
   `docs/calibration/`.
-* **result**: the task-space planner reaches 0.193 mm model-induced 3-D error at
-  25 views vs 0.380 mm for the vendor plan (10/10 paired trials); the vendor
-  plan is not improved by adding its own redundant views (0.314 mm at 8,
-  0.380 mm at 25) because 5-term distortion absorbs noise on clustered poses.
+* **result**: under the common 5-term configuration the task-space planner
+  reaches 0.193 mm model-induced 3-D error at 25 views vs 0.380 mm for the
+  vendor plan (10/10 paired); against EXStar's actual kc-fixed plan the fair
+  comparison is 0.205 vs 0.238 mm (6/10, not significant at n=10).  The
+  distortion model dominates: k1k2 with adaptive selection is 0.600 mm, while
+  the 5-term model on the vendor plan is 0.380 mm (0.238 with kc fixed).
 * **engine**: `calib/objective.py` (3-D volume covariance, A/D/E), `guidance.py`
   (quality gates, instructions, acceptance), `session.py` (adaptive session,
   modes, stopping), `localize.py` (7 localisers, two-stage), `solvers.py`

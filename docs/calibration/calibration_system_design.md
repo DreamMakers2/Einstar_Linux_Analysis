@@ -179,9 +179,10 @@ invariant to that global rotation, pose-space guidance is not).
 ### 4.5 Solver and covariance
 
 The batch problem is solved with the internal LM backend
-(`calib/solvers.py`): analytic Jacobian, Huber δ=1, 0.23 s on the 25-view vendor
-problem (27x the engine's finite-difference SciPy path), identical optimum to
-SciPy (≤1.5e-4 px).  SciPy+analytic is the verification path; a native C++
+(`calib/solvers.py`): analytic Jacobian, Huber δ=1, 0.23 s on the 25-view
+vendor problem with fixed distortion (27x the engine's finite-difference SciPy
+path), identical optimum to SciPy (≤1.5e-4 px); the 5-term session problem at
+23-26 views takes ~1-3 s per solve.  SciPy+analytic is the verification path; a native C++
 binary exists but has a documented 4-vs-6 tangential-distortion Jacobian defect
 and a singular covariance when distortion is held, so it is not on the critical
 path.  Covariance is the analytic Huber sandwich; Monte Carlo calibration is
@@ -241,10 +242,12 @@ step.
 Offline subset selection can only choose from frames that already exist; it
 cannot tell the operator to rotate the plate to the one pose that identifies
 the weakest direction.  The measured ranking (`strategy_evaluation.md`) shows
-the online task-space planner reaching lower 3-D error than the vendor 5x5 plan
-at the same capture budget (0.193 vs 0.380 mm at 25 views, 10/10 trials), and
-the coverage-first bootstrap guarantees that the weak directions are excited
-before any greedy choice.  The guided session adds the parts a subset selector
+the online task-space planner reaching 0.193 mm at 25 views vs 0.380 mm for the
+vendor plan under the same 5-term model (10/10 trials); against EXStar's actual
+kc-fixed procedure the median is 0.205 vs 0.238 mm (6/10, not significant at
+n=10).  The honest conclusion is that view selection gives a modest, model-
+dependent gain; the coverage-first bootstrap guarantees that the weak
+directions are excited before any greedy choice.  The guided session adds the parts a subset selector
 cannot provide: dwell/blur/sync gating, explained rejections and a stopping
 decision.  Its mode comparison is underpowered at two trials, so the modes are
 offered as operator profiles rather than as an accuracy guarantee.
@@ -258,7 +261,8 @@ offered as operator profiles rather than as an accuracy guarantee.
 | parameter-covariance-only selection | improves fx/cx but not necessarily the 3-D volume error; the task objective is the estimand |
 | effort inside the utility | at 25 views the effort-weighted strategy was 0.222 mm vs 0.193 mm for task-only (10 trials); effort belongs in the *live* tie-break, not in the accuracy objective |
 | ellipse localiser | worst split-half repeatability (0.094 px) and 8 % marker rejections |
-| 5-term distortion at ≤12 views | indistinguishable from k1k2 in RMS, but k3 is weakly identified (σ 0.30 at 5 views) and destabilises the intrinsics; keep 5 terms for CCF compatibility with a weak k3 prior |
+| 5-term distortion at ≤12 views | k3 is weakly identified (σ 0.30 at 5 views) and destabilises the intrinsics; keep 5 terms for CCF compatibility, free them only after enough views and with a weak k3 prior |
+| k1k2 distortion shortcut | with aggressive task selection k1k2 gives **0.600 mm** vs 0.205 mm for 5-term (10 trials): the missing terms are model error amplified by high-tilt views, even though k1k2 fits the vendor residuals as well |
 | Ceres | not installable here (no Eigen, no root); no measurement exists, so it is not on the critical path |
 | native C++ LM | 0.25 s vs 0.23 s for LM, with a verified Jacobian defect and a singular held-distortion covariance |
 | AprilCal's raw ERE | designed for tag corners; on circular holes the ERE and 3-D objectives differ, and its absolute numbers do not transfer |

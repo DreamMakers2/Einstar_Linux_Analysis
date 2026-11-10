@@ -47,7 +47,7 @@ MODES = {
         "stop_min_views": 8, "stop_min_gain": 0.0010,
         "stop_min_delta_sigma_mm": 0.015, "stop_min_recent_gain": 0.01,
         "stop_min_recent_sigma_mm": 0.015,
-        "free_kc": "k1k2", "robust_loss": "huber", "f_scale": 1.0,
+        "free_kc": True, "robust_loss": "huber", "f_scale": 1.0,
         "solve_every": 1, "quality": {},
     },
     "high": {
@@ -55,7 +55,7 @@ MODES = {
         "stop_min_views": 12, "stop_min_gain": 0.0003,
         "stop_min_delta_sigma_mm": 0.005, "stop_min_recent_gain": 0.003,
         "stop_min_recent_sigma_mm": 0.005,
-        "free_kc": "k1k2", "robust_loss": "huber", "f_scale": 0.8,
+        "free_kc": True, "robust_loss": "huber", "f_scale": 0.8,
         "solve_every": 1, "quality": {"min_markers": 28, "max_saturation_frac": 0.01},
     },
 }
@@ -633,7 +633,7 @@ def _default_solve(obs, pitch, cameras, free_kc, robust_loss, f_scale):
         if hasattr(solvers, "solve_joint"):
             out = solvers.solve_joint(obs, pitch_mm=pitch, init_cameras=cameras,
                                       free_kc=free_kc, robust=robust_loss,
-                                      f_scale=f_scale, backend="auto")
+                                      f_scale=f_scale, backend="lm")
             if out.get("result") is not None:
                 return out["result"]
     except Exception:
