@@ -25,10 +25,10 @@ P1/P2 factors 8/96, CLAHE on, LR tolerance 1 px.
 Matching dominates (>80 %).  Half resolution is the live-preview setting; full
 resolution is an offline/quality setting.  The available GPU paths are
 benchmarked in [`gpu_benchmark.md`](gpu_benchmark.md): OpenCL remap is 4x faster
-but saves only ~0.1 ms; the matcher has no OpenCL kernel and the installed
-OpenCV has no CUDA modules.  No GPU acceleration of this matcher is claimed; a
-CUDA SGM/BM port is future work and is not needed for the current preview
-budget.
+but saves only ~0.1 ms; the installed OpenCV has no CUDA modules, so a separate
+OpenCV+CUDA build was used to measure CUDA SGM (3.47 ms steady vs 5.73 ms CPU
+on a 128-disparity window, with lower quality and no LR/confidence).  It is not
+integrated, and no end-to-end GPU speedup is claimed.
 
 ## Repeatability and consistency (half resolution)
 

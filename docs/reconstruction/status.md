@@ -65,9 +65,11 @@ build/recon/recon_cli reconstruct --frames /tmp/replay --id 0 \
 * The recorder's `--frames` stream mapping/orientation (cam0 = right rotated,
   cam1 = left) is unit-tested on a probe-style triplet; a real probe session is
   still pending hardware.
-* **GPU accel.:** CPU and available OpenCL paths are measured (`gpu_benchmark.md`);
-  the installed OpenCV has no CUDA modules and no OpenCL SGBM kernel, so no GPU
-  matcher speedup is claimed.  A CUDA SGM/census implementation is future work.
+* **GPU accel.:** CPU and OpenCL preprocessing are measured; a separate
+  OpenCV+CUDA build was used to benchmark CUDA SGM: 3.47 ms steady vs 5.73 ms
+  CPU on a 128-disparity window, but with a longer depth tail and no LR/
+  confidence, and CUDA SGM only supports 64/128/256 disparities.  It is **not
+  integrated**; no end-to-end GPU speedup is claimed (`gpu_benchmark.md`).
 * Tracking, fusion, meshing, Qt6 and CUDA acceleration are future milestones
   (`docs/reconstruction/modern_pipeline_design.md`), not part of this result.
 

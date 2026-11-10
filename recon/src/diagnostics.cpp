@@ -62,6 +62,21 @@ cv::Mat render_preview(const PointCloud& cloud, cv::Size size, float yaw_deg, fl
   const double scale = 0.9 * std::min(size.width, size.height) / span;
   const double ox = size.width * 0.5 - 0.5 * (minx + maxx) * scale;
   const double oy = size.height * 0.5 + 0.5 * (miny + maxy) * scale;
+  // Display-only grey-world balance: the raw colour stream is underexposed
+  // and green-dominant.  The PLY keeps the measured sensor RGB.
+  double mb = 0, mg = 0, mr = 0;
+  std::size_t ncol = 0;
+  for (const auto& c : cloud.colors) {
+    if (c[0] + c[1] + c[2] == 0) continue;
+    mb += c[0]; mg += c[1]; mr += c[2]; ++ncol;
+  }
+  double gb = 1, gg = 1, gr = 1;
+  if (ncol > 0) {
+    mb /= ncol; mg /= ncol; mr /= ncol;
+    const double mean = (mb + mg + mr) / 3.0;
+    gb = mean / std::max(mb, 1.0); gg = mean / std::max(mg, 1.0);
+    gr = mean / std::max(mr, 1.0);
+  }
   std::vector<float> zbuf(size.area(), std::numeric_limits<float>::infinity());
   for (std::size_t i = 0; i < rot.size(); ++i) {
     const int u = cvRound(ox + rot[i].x * scale);
@@ -75,8 +90,18 @@ cv::Mat render_preview(const PointCloud& cloud, cv::Size size, float yaw_deg, fl
         const std::size_t k = std::size_t(vv) * size.width + uu;
         if (z >= zbuf[k]) continue;
         zbuf[k] = z;
-        if (!cloud.colors.empty())
-          img.at<cv::Vec3b>(vv, uu) = cloud.colors[i];
+        if (!cloud.colors.empty()) {
+          // Display-only gamma: the genuine colour stream is underexposed
+          // (mean ~29), so a linear preview is almost black.  The PLY keeps
+          // the raw sensor RGB; this affects the diagnostic image only.
+          const cv::Vec3b& c = cloud.colors[i];
+          auto disp = [&](int v_, double gain) {
+            const double x = std::clamp(c[v_] * gain / 255.0, 0.0, 1.0);
+            return cv::saturate_cast<uchar>(255.0 * std::pow(x, 0.45));
+          };
+          img.at<cv::Vec3b>(vv, uu) =
+              cv::Vec3b(disp(0, gb), disp(1, gg), disp(2, gr));
+        }
         else {
           const double t = std::clamp((rot[i].z - 150.0) / 650.0, 0.0, 1.0);
           img.at<cv::Vec3b>(vv, uu) =
