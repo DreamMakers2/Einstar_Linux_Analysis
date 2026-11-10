@@ -641,6 +641,54 @@ def _timestamps_for_sidecar(data: Any, index: int, cam_map: Mapping[int, str]):
     return None
 
 
+_DRIVER_CAMERA_NAMES = {"right_ir": "right", "left_ir": "left",
+                        "color": "tex", "colour": "tex"}
+
+
+def _load_frames_manifest(directory: Path) -> dict:
+    """Read the capture tool's ``frames_manifest.json`` (einstar-frames-v1).
+
+    The manifest is the strongest synchronisation evidence available offline:
+    every group is one device trigger group, so its three files were exposed
+    together even though the file has no per-camera timestamp.  It also records
+    per-camera device frame ids, payload digests and incomplete groups.
+    """
+    p = directory / "frames_manifest.json"
+    if not p.is_file():
+        return {}
+    try:
+        data = read_json(p)
+    except Exception as exc:
+        raise CalibSessionError(f"cannot parse {p}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise CalibSessionError(f"{p}: expected a JSON object")
+    if data.get("schema") != "einstar-frames-v1":
+        return {"path": str(p), "schema": data.get("schema"),
+                "supported": False, "data": data}
+    groups = {}
+    for g in data.get("groups") or []:
+        try:
+            gid = int(g["group"])
+        except Exception:
+            continue
+        groups[gid] = {
+            "device_group": g.get("device_group"),
+            "host_time_ns": g.get("host_time_ns"),
+            "frame_ids": {str(k): int(v)
+                          for k, v in (g.get("frame_ids") or {}).items()},
+            "paths": {0: g.get("stream0"), 1: g.get("stream1"),
+                      2: g.get("stream2")},
+        }
+    incomplete = {}
+    for g in data.get("incomplete_groups") or []:
+        try:
+            incomplete[int(g.get("device_group"))] = g
+        except Exception:
+            continue
+    return {"path": str(p), "schema": data.get("schema"), "supported": True,
+            "groups": groups, "incomplete": incomplete, "data": data}
+
+
 def discover_frames(directory: str | Path,
                     cam_map: Optional[str] = None) -> tuple[list[InputSet], SourceInfo]:
     d = Path(directory)
@@ -668,18 +716,50 @@ def discover_frames(directory: str | Path,
         raise CalibSessionError(
             f"no frame_%06d_cam{{0,1,2}} triplets found in {d}")
     sidecar = _sync_sidecar(d)
+    fman = _load_frames_manifest(d)
+    fgroups = fman.get("groups") or {}
+    if fman.get("supported"):
+        declared = (fman.get("data") or {}).get("camera_map") or {}
+        for stream, name in declared.items():
+            try:
+                stream_i = int(stream)
+            except ValueError:
+                continue
+            mapped = _DRIVER_CAMERA_NAMES.get(str(name).lower())
+            if mapped is not None and stream_i in cmap and \
+                    cmap[stream_i] != mapped:
+                raise CalibSessionError(
+                    f"{fman['path']}: camera_map stream {stream_i} is "
+                    f"{name!r} but --cam-map maps it to {cmap[stream_i]!r}; "
+                    "the hardware mapping must not be overridden for capture "
+                    "triplets")
     sets = []
     for seq, idx in enumerate(sorted(found)):
         ts = None
         if sidecar:
             ts = _timestamps_for_sidecar(sidecar["data"], idx, cmap)
+        meta = {}
+        sync_source = "grouped-files"
+        g = fgroups.get(idx)
+        if g is not None:
+            meta.update({"device_group": g.get("device_group"),
+                         "frame_ids": g.get("frame_ids"),
+                         "manifest_group": True})
+            if g.get("host_time_ns") is not None:
+                meta["host_time_ns"] = g.get("host_time_ns")
+            sync_source = "device-trigger-group"
+        elif fman.get("supported"):
+            meta["manifest_group"] = False
+            sync_source = "grouped-files-manifest-no-group"
         base = float(idx) if ts is None else float(min(ts.values()))
+        if ts is None and meta.get("host_time_ns") is not None:
+            base = float(meta["host_time_ns"]) * 1e-9
         sets.append(InputSet(index=idx, label=f"frame_{idx:06d}",
                              paths=dict(found[idx]), timestamp=base,
                              camera_timestamps=ts,
                              sync_source=("measured-sidecar" if ts else
-                                          "grouped-files"),
-                             dwell="sequential",
+                                          sync_source),
+                             dwell="sequential", meta=meta,
                              rotate_180={cam: True for cam in
                                          PROBE_ROTATED_CAMERAS
                                          if cam in found[idx]}))
@@ -692,7 +772,19 @@ def discover_frames(directory: str | Path,
                        "orientation_source": "probe hardware mapping "
                        "(stream 0 = right rotated 180, stream 1 = left as "
                        "calibrated, stream 2 = colour rotated 180)",
-                       "sync_sidecar": sidecar.get("path")})
+                       "sync_sidecar": sidecar.get("path"),
+                       "frames_manifest": ({
+                           "path": fman.get("path"),
+                           "schema": fman.get("schema"),
+                           "supported": fman.get("supported"),
+                           "complete": (fman.get("data") or {}).get("complete"),
+                           "groups_written": (fman.get("data") or {}).get(
+                               "groups_written"),
+                           "groups_incomplete": (fman.get("data") or {}).get(
+                               "groups_incomplete"),
+                           "declared_camera_map": (fman.get("data") or {}).get(
+                               "camera_map"),
+                       } if fman else None)})
     return sets, info
 
 
@@ -1640,7 +1732,7 @@ class SessionRecorder:
                 "detail": gate_detail,
                 "pnp": {k: v for k, v in (pnp.get("cameras") or {}).items()}}
 
-        sync_state = self._sync_state(cts, item.sync_source, q)
+        sync_state = self._sync_state(cts, item.sync_source, q, item)
         dwell_state = self._dwell_state(item, assume, q, prev_pose)
         colour = self._colour_state(loaded, grids)
 
@@ -1708,7 +1800,10 @@ class SessionRecorder:
             accepted=accepted, reasons=reasons, split=split, view_id=view_id,
             quality=q.as_dict(), pose=pose, motion=motion,
             sync={"state": sync_state[0], "source": sync_state[1],
-                  "skew_ms": sync_state[2]},
+                  "skew_ms": sync_state[2],
+                  **{k: item.meta[k] for k in
+                     ("device_group", "frame_ids", "host_time_ns")
+                     if k in item.meta}},
             dwell_state=dwell_state, colour=colour,
             predicted_gain=(float(gain) if gain is not None else None),
             holdout_rms_px=(float(holdout_rms) if holdout_rms is not None
@@ -1724,11 +1819,18 @@ class SessionRecorder:
         return record
 
     # -- per-set helpers ---------------------------------------------------
-    def _sync_state(self, cts, source: str, q) -> tuple[str, str, Optional[float]]:
+    def _sync_state(self, cts, source: str, q,
+                    item: Optional[InputSet] = None
+                    ) -> tuple[str, str, Optional[float]]:
         skew = q.metrics.get("sync_skew_ms") if q is not None else None
         if cts and len(cts) >= 2:
             return ("measured", source, float(skew) if skew is not None else None)
-        if source in ("grouped-files", "capture-index"):
+        if source == "device-trigger-group":
+            return ("declared", "one device trigger group from "
+                    "frames_manifest.json (all three streams exposed "
+                    "together; no per-camera host timestamp)", None)
+        if source in ("grouped-files", "capture-index",
+                      "grouped-files-manifest-no-group"):
             return ("declared", "grouped by capture index; no hardware "
                     "timestamps available", None)
         if source == "replay-declared":
@@ -2659,7 +2761,7 @@ def check_completeness(manifest: Mapping[str, Any],
 
 
 def _round_floats(obj: Any, nd: int = 2) -> Any:
-    """Canonicalise floats so solver round-off (1e-9) cannot change a digest."""
+    """Canonicalise floats so solver round-off cannot change a digest."""
     if isinstance(obj, dict):
         return {str(k): _round_floats(v, nd) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):

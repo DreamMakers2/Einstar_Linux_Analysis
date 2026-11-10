@@ -550,6 +550,55 @@ def test_frames_triplets_and_sequential_dwell(tmp_path):
 
 @needs_vendor
 @needs_factory
+def test_frames_manifest_gives_trigger_group_sync(tmp_path):
+    frames_dir = tmp_path / "frames"
+    _probe_triplet(frames_dir, 0, 1)
+    _probe_triplet(frames_dir, 1, 3)
+    manifest = {
+        "schema": "einstar-frames-v1",
+        "camera_map": {"0": "right_ir", "1": "left_ir", "2": "color"},
+        "complete": True, "groups_written": 2, "groups_incomplete": 0,
+        "groups": [
+            {"group": i, "device_group": 1000 + i,
+             "host_time_ns": 5_000_000_000 + i * 90_000_000,
+             "stream0": f"frame_{i:06d}_cam0.pgm",
+             "stream1": f"frame_{i:06d}_cam1.pgm",
+             "stream2": f"frame_{i:06d}_cam2.pgm",
+             "frame_ids": {"0": 10 + i, "1": 20 + i, "2": 30 + i}}
+            for i in range(2)],
+    }
+    (frames_dir / "frames_manifest.json").write_text(json.dumps(manifest))
+    sets, info = cs.discover_frames(frames_dir)
+    assert info.extra["frames_manifest"]["groups_written"] == 2
+    assert all(s.sync_source == "device-trigger-group" for s in sets)
+    assert [s.meta["device_group"] for s in sets] == [1000, 1001]
+    assert sets[1].timestamp == (5_000_000_000 + 90_000_000) * 1e-9
+    rules = dict(cs.DEFAULT_RULES)
+    rules.update({"min_accepted": 1, "min_train": 1, "min_heldout": 1,
+                  "distance_bins_min": 1, "tilt_both_signs": False,
+                  "quadrant_fraction_min": 0.0})
+    rec = cs.SessionRecorder(
+        tmp_path / "session", source_kind="frames", source_info=info,
+        rules=rules, target=12,
+        holdout=cs.HoldoutPolicy(n_holdout=1, target=12, bootstrap_views=3),
+        localize_method=None, dwell_mode="assume", factory_dir=FACTORY)
+    for item in sets:
+        rec.process(item)
+    rec.finish()
+    for r in rec.records:
+        assert r.sync["state"] == "declared"
+        assert "trigger group" in r.sync["source"]
+        assert "device_group" in r.sync
+    # an inconsistent camera map is a hard error, not a silent remap
+    bad = dict(manifest)
+    bad["camera_map"] = {"0": "left_ir", "1": "right_ir", "2": "color"}
+    (frames_dir / "frames_manifest.json").write_text(json.dumps(bad))
+    with pytest.raises(cs.CalibSessionError, match="camera_map"):
+        cs.discover_frames(frames_dir)
+
+
+@needs_vendor
+@needs_factory
 def test_missing_probe_rotation_is_detected(tmp_path):
     frames_dir = tmp_path / "probe"
     for i, pose in enumerate((1, 3, 4, 5, 7, 8)):
