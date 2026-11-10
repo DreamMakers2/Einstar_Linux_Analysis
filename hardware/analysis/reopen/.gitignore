@@ -1,0 +1,25 @@
+# agent scratch: large arrays, re-encoded images, caches
+agents/*_work/
+agents/*_geom/
+**/__pycache__/
+*.npy
+*.rgb
+*.yuv
+*.pyc
+
+# only the curated figures are tracked
+figs/*
+!figs/N1_edge_netmap.png
+!figs/N2_route_netmap.png
+!figs/N3_netmap_schematic.png
+!figs/comp_deconv.png
+!figs/col_labels.png
+!figs/edge_balls_raw.png
+!figs/edge_balls_hp.png
+!figs/diag_upper_raw.png
+!figs/diag_lower_raw.png
+!figs/strip_left_raw.png
+!figs/strip_wide_raw.png
+!figs/A_geometry_overlay.png
+!figs/B_trace_map.png
+!figs/C_forensics_*.png

@@ -35,7 +35,7 @@ Full reasoning: [`../docs/hardware/usb3_mainboard_feasibility.md`](../docs/hardw
 | `annotated/B1_escape_pair_measured.png` | the 45° coupled pair below the FX3, fitted and extrapolated to the package edge |
 | `annotated/B2_routing_channel.png` | the six through-routes in the strip below the FX3 |
 | `analysis/fx3_ballout.md` · `.json` | all 121 balls with citations; machine-readable |
-| `analysis/reopen/` | 2026-11-08 reopen: net maps (`figs/N1`, `N3`), scripts, and the independent agent reports |
+| `analysis/reopen/` | 2026-11-08 reopen: net maps (`figs/N1`, `N2`), scripts, and the four independent agent reports |
 | `analysis/fx3_ss_layout_requirements.md` | BOM, impedance/skew rules, BGA escape, SI of a wire tap |
 | `analysis/product_teardown_corroboration.md` | public teardown/connector/vendor-software evidence |
 | `analysis/fx3_docs/` | vendor PDFs used (local only, not redistributed) |
@@ -55,7 +55,7 @@ Full reasoning: [`../docs/hardware/usb3_mainboard_feasibility.md`](../docs/hardw
   on both sides, so it is **across** the pair, not in series — an unpopulated footprint or a
   differential shunt, not the AC-coupling pair. **No on-board series AC coupling is proved**; the
   daughterboard must carry it.
-* All four route left and up into the via field beside the **component-side 40-pin connector**. The
+* The four route left and up into the via field beside the **component-side 40-pin connector**. The
   final pin connection is on inner layers and is **not** optically proved.
 * The four capacitors next to the solder-side connector are a **shunt** decoupling bank, not AC
   coupling — verified by zooming (`crops/P2_acbank_zoom.png`). They are not the parts in question.

@@ -18,7 +18,7 @@ def arrow(x1,y1,x2,y2,c,lw=2.4):
 box(13.0,2.2,2.7,2.7,"FX3 row A\nA6 1356.5\nA5 1386.1\nA4 1415.7\nA3 1445.3\n(y = 954.8 px)","#e8eef7")
 box(8.3,2.0,3.1,3.1,"45° escapes\ncross edge y = 992 at\nA6 1330.9   A5 1347.4\nA4 1405.9   A3 1390.9\n(±1–2 px)","#eef7e8")
 box(4.5,2.0,3.2,3.1,"horizontal runs\nTX  y = 1029 / 1041\nRX  y = 1084 / 1096\ncontinuous x 400–1300","#eef7e8")
-box(2.3,3.6,1.9,1.4,"series parts\nTX only\n(375–465, 995–1075)","#ffe9d6")
+box(2.3,3.6,1.9,1.4,"two-pad footprint\nacross TX (not series)\n(376–470, 988–1084)","#ffe9d6")
 box(0.2,2.0,1.8,3.1,"via field\nx 240–270\nleft corridor\nx 282 / 294\nx 324 / 335","#f2e6f7")
 box(0.2,5.45,1.8,1.0,"component-side\n40-pin connector","#f7e6e6")
 box(13.0,0.55,2.7,0.95,"B3 via (1428, 1040)\n→ R_USB3 200 Ω? → GND\nUNKNOWN","#fff2cc")
