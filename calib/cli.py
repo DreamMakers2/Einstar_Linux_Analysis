@@ -167,9 +167,12 @@ def main(argv=None):
     c = sub.add_parser("calibrate", help="calibrate from a directory of images")
     c.add_argument("images")
     c.add_argument("--factory", default=None, help="directory with LeftCCF.txt/...")
-    c.add_argument("--pitch", type=float, default=plate.DEFAULT_PITCH_MM)
+    c.add_argument("--pitch", type=float, default=plate.DEFAULT_PITCH_MM,
+                   help="marker pitch in mm (default 28.0 = recovered vendor model; "
+                        "27.72 reproduces the shipped CCF)")
     c.add_argument("--free-distortion", action="store_true")
-    c.add_argument("--no-anchor", action="store_true")
+    c.add_argument("--no-anchor", action="store_true",
+                   help="do not rescale to the factory CCF baseline (keeps the nominal pitch)")
     c.add_argument("--max-nfev", type=int, default=1200)
     c.add_argument("--out", default="calibration_result.json")
     c.add_argument("--profile", default=None, help="host-side profile root")
@@ -185,7 +188,8 @@ def main(argv=None):
     p = sub.add_parser("plan", help="recommend next views from a calibration result")
     p.add_argument("result")
     p.add_argument("--n", type=int, default=8)
-    p.add_argument("--pitch", type=float, default=plate.DEFAULT_PITCH_MM)
+    p.add_argument("--pitch", type=float, default=plate.DEFAULT_PITCH_MM,
+                   help="marker pitch in mm (default 28.0, recovered vendor model)")
     p.add_argument("--profile", default=None)
     p.add_argument("--serial", default="unknown")
     p.set_defaults(func=cmd_plan)

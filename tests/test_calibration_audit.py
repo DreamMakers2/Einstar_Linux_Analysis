@@ -64,6 +64,10 @@ def test_rescaled_uses_full_jacobian():
     r3 = res.rescaled(target_baseline=200.0, anchor_sigma_mm=0.05)
     assert np.isclose(np.linalg.norm(r3.baseline()), 200.0, rtol=1e-8)
     assert baseline_sigma(r3) >= 0.05 - 1e-6
+    # rescaling rewrites the pitch provenance instead of silently keeping it
+    assert str(r3.info["pitch_source"]).startswith("ccf_anchored")
+    assert np.isclose(r3.info["pitch_mm"], res.info["pitch_mm"] * 200.0
+                      / np.linalg.norm(res.baseline()), rtol=1e-9)
     # and the intrinsics do not silently acquire the translation factor
     sd3 = np.sqrt(np.diag(r3.covariance))
     assert np.allclose(sd3[intr][:12], sd[intr][:12], rtol=1e-4, atol=1e-8)

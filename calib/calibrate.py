@@ -272,11 +272,19 @@ class CalibrationResult:
         extr = {c: (R, t * s) for c, (R, t) in self.extrinsics.items()}
         views = [(R, t * s) for R, t in self.views]
         pitch0 = float(self.info.get("pitch_mm", plate.DEFAULT_PITCH_MM))
+        src0 = self.info.get("pitch_source") or plate.current_spec().pitch_source
+        if target_baseline is not None:
+            src = f"ccf_anchored (from {src0})"
+        elif abs(s - 1.0) > 1e-12:
+            src = f"scaled {s:.6f} (from {src0})"
+        else:
+            src = src0
         return CalibrationResult(self.cameras, extr, views, C, self.residual_rms,
                                  self.residual_max, self.n_observations,
                                  self.n_parameters, self.robust_loss,
                                  dict(self.info, scale_factor=s,
                                       pitch_mm=pitch0 * s,
+                                      pitch_source=src,
                                       scale_anchor_sigma_mm=anchor_sigma_mm,
                                       factor_sigma=factor_sigma))
 

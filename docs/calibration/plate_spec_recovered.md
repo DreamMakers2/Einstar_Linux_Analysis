@@ -136,6 +136,30 @@ marker pitch = 2 × iSpace = 2 × 14.0 mm = 28.0 mm
 (**A** for the mapping and the arithmetic; the only assumption is that the physical markers are the
 markers the recognition reports, which the corpus and the vendor video confirm.)
 
+### 1.5 Where the array and the constraints go (PROVEN)
+
+`EACameraCalibAlgManagerPrivate::calcCameraCalibrate` runs two vtable calls on
+`CameraCalibrateAlg`:
+
+1. slot[5] `0x180049C70` — `CalibrateImage2DAlg::recognise` runs
+   `Sn3D_calibTable_recognition_plus` (JR `0x18013D1F0`) on every image/camera
+   (the 17×14 output with sentinels), then the board array is generated as in
+   §1.2;
+2. slot[6] `0x180048230` — `CameraCalibrateAlg::calibrate` calls
+   `Sn3D_double_camera_calibration` / `_pro` from `Sn3DCalibrationJR.dll` with
+   `K/D` (+0x70/+0x28 and +0x88/+0x40), the per-camera 2-D vectors
+   (+0x108/+0x120), the 3-D array (+0x520) and the two `DistanceRef` records
+   (+0x10).  The trailing threshold arguments are read from `.rdata`
+   (`0x180063350 = 0.9`, `0x18005c300 = 0.1`, `0x180063358 = 2.5`; the second
+   call uses 25.0 in the last slot); their exact semantics are not needed for
+   the geometry.
+
+The per-view `sn3DExtrinsicSolver` PnP (Ceres, 2 residuals per correspondence,
+`t.x += 100` initial guess) and the `QuarCCF`/`TribleCCF` output packers are
+described in `analysis/calibration/re/algorithm_report.md` §4 and §7; the
+`DistanceRef` scale constraint is handled by
+`Sn3DAlgorithm::global_optimize_landMark` (JR `0x18024E790`).
+
 ---
 
 ## 2. AA/BB: the per-board scale constraint (PROVEN)
