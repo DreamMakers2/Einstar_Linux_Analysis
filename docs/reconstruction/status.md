@@ -10,10 +10,10 @@ hardware), **unverified** (no evidence).
 | **M1 — offline integration** | `recon/` consumes the same `FrameSet` for files and replay; calibration enters only as a validated JSON profile; driver/calib/reconstruction interfaces documented in `architecture.md`; audit in `audit.md` | **implemented, offline-tested** |
 | **M2 — real-data reconstruction** | 3 genuine triplets → rectified pairs, disparity, confidence, depth, 56 600-point PLY per frame; every output records the profile id and input SHA-256 | **implemented, real-data** |
 | **M3 — geometric/numerical validation** | synthetic planes 200–700 mm recovered to ≤0.13 mm; 4 984 automated checks; real-data consistency (92 % planar, 0.34 mm plane RMS, 0.1 mm cross-frame repeatability); `validation_plan_m3.md` states the accuracy limit | **implemented, offline-tested + real-data**; physical accuracy **unverified** |
-| **M4 — acquisition/replay integration** | `einstar-capture-frames` (simulated + libusb paths) and `einstar-replay-frames` write the same `frame_%06d_cam%d.pgm` + manifest; a simulated 3-group capture records 295 transfers, replays to 9 frames, and `recon_cli` consumes the replay through the identical loader; corrupted recording refused | **implemented, offline-tested**; live libusb path **pending hardware** |
-| **M5 — one-session calibration recorder** | `tools/calibsession/calibrate_session.py` on the 25-view vendor corpus: 21 accepted, 16 train / 5 held-out, 4 rejected + 1 session-rejected, colour frames present and plate detected in 21/21, completeness pass, `--verify` re-hashes 75 files, versioned host profile + exported reconstruction profile; stop recommended | **implemented, offline-tested on the vendor corpus**; real user session **pending** |
+| **M4 — acquisition/replay integration** | `einstar-capture-frames` (simulated + libusb paths) and `einstar-replay-frames` write the same `frame_%06d_cam%d.pgm` + manifest; a simulated 3-group capture records 295 transfers, replays to 9 frames, and `recon_cli` consumes the replay through the identical loader; corrupted recording refused; **driver ctest 12/12 passes** (224 replay-frames checks) | **implemented, offline-tested**; live libusb path **pending hardware** |
+| **M5 — one-session calibration recorder** | `tools/calibsession/calibrate_session.py` on the 25-view vendor corpus: 21 accepted, 16 train / 5 held-out, 4 rejected + 1 session-rejected, colour frames present and plate detected in 21/21, completeness pass, `--verify` re-hashes 75 files (**OK**), versioned host profile + exported reconstruction profile (colour `unknown` by default); stop recommended; **18 pytest cases pass**, including the probe-style stream mapping/rotation and sequential dwell | **implemented, offline-tested on the vendor corpus + probe-style triplet**; real user session **pending** |
 | **M6 — live readiness** | runbook in `acquisition.md` (device detection, metadata, volatile exposure/gain/trigger, capture, record, replay, safety); live paths are labelled untested | **documented**; live **pending hardware** |
-| **M7 — publication** | code, tests, architecture, benchmarks, synthetic figures and non-sensitive results exported to the public repository | **done** (see commit list) |
+| **M7 — publication** | code, tests, architecture, benchmarks, synthetic figures and non-sensitive results exported to the public repository; pushed as `7e61c29` (51 files, 11 994 insertions) | **done** |
 
 ## Exact commands and results
 
@@ -57,7 +57,13 @@ build/recon/recon_cli reconstruct --frames /tmp/replay --id 0 \
   artefact has been measured.  The 28.0 mm pitch scale ambiguity remains.
 * Colour registration is implemented but gated; the shipped factory colour
   record is stale, and a replacement profile defaults to `unknown` until a
-  held-out colour check is supplied.
+  held-out colour check is supplied.  The recorder's vendor-corpus fit did
+  include the colour camera (plate detected in 21/21 sets) but its exported
+  reconstruction profile is intentionally not marked `ok` without an
+  independent colour check.
+* The recorder's `--frames` stream mapping/orientation (cam0 = right rotated,
+  cam1 = left) is unit-tested on a probe-style triplet; a real probe session is
+  still pending hardware.
 * Tracking, fusion, meshing, Qt6 and CUDA acceleration are future milestones
   (`docs/reconstruction/modern_pipeline_design.md`), not part of this result.
 

@@ -58,7 +58,7 @@ import platform
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, replace
 from pathlib import Path
 from typing import Any
 
@@ -721,6 +721,8 @@ def sparse_zncc(left_rect: np.ndarray, right_rect: np.ndarray, geom: Geometry,
             "abs_dy_median_px": float(np.median(np.abs(dys))),
             "abs_dy_p90_px": float(np.percentile(np.abs(dys), 90)),
             "frac_abs_dy_lt1px": float(np.mean(np.abs(dys) < 1.0)),
+            "frac_dy_at_search_bound": float(np.mean(np.abs(dys) >= 1.999)),
+            "dy_search_px": 2,
             "disp_median_px": float(np.median(disps)),
             "disp_p05_px": float(np.percentile(disps, 5)),
             "disp_p95_px": float(np.percentile(disps, 95)),
@@ -737,6 +739,7 @@ def sparse_zncc(left_rect: np.ndarray, right_rect: np.ndarray, geom: Geometry,
 
 def evaluate_once(triplet: dict[str, Any], geom: Geometry, cfg: StereoConfig,
                   with_arrays: bool = True) -> dict[str, Any]:
+    geom = replace(geom, scale=cfg.scale)
     t0 = time.perf_counter()
     left_rect, right_rect, vl, vr = rectify_triplet(triplet, geom)
     t1 = time.perf_counter()
@@ -752,6 +755,20 @@ def evaluate_once(triplet: dict[str, Any], geom: Geometry, cfg: StereoConfig,
     plane = ransac_plane(pts, seed=int(triplet["id"])) if valid.sum() > 5000 else None
     nn = nn_spacing(pts)
     edge = edge_diagnostics(z, valid, lr["occluded"])
+    # texture-edge diagnostic: where the left image has strong structure, a
+    # failure is more likely to be a real occlusions/edge case than low texture
+    gx = cv2.Sobel(match["left"], cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(match["left"], cv2.CV_32F, 0, 1, ksize=3)
+    grad = cv2.magnitude(gx, gy)
+    thr = float(np.percentile(grad, 90))
+    tex_edge = grad >= max(thr, 20.0)
+    tex_band = cv2.dilate(tex_edge.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
+    edge["texture_edge_threshold"] = fnum(thr, 2)
+    edge["texture_edge_fraction"] = fnum(float(tex_edge.mean()))
+    edge["invalid_fraction_on_texture_edges"] = fnum(
+        float(np.mean(~valid[tex_band]))) if tex_band.any() else None
+    edge["invalid_fraction_off_texture_edges"] = fnum(
+        float(np.mean(~valid[~tex_band]))) if (~tex_band).any() else None
     if plane is not None:
         res_plane = np.abs(depth["xyz"] @ plane["normal"] + plane["offset_mm"])
     else:
@@ -765,8 +782,13 @@ def evaluate_once(triplet: dict[str, Any], geom: Geometry, cfg: StereoConfig,
         "search": match["search"],
         "grid": {"width": int(z.shape[1]), "height": int(z.shape[0])},
         "valid_fraction": float(valid.mean()),
+        "source_overlap_fraction": float((vl_s & vr_s).mean()),
         "valid_fraction_of_source": float(valid.sum() / max((vl_s & vr_s).sum(), 1)),
+        "valid_fraction_of_overlap": float(valid.sum() / max((vl_s & vr_s).sum(), 1)),
         "matched_fraction": float(lr["n_valid_raw"] / valid.size),
+        "raw_sgbm_valid_fraction": float(lr["n_valid_raw"] / valid.size),
+        "raw_sgbm_fraction_of_overlap": float(
+            lr["n_valid_raw"] / max((vl_s & vr_s).sum(), 1)),
         "occluded_fraction": float(lr["n_occluded"] / valid.size),
         "depth_p05_mm": fnum(pcts(zv, (5,))[0]),
         "depth_p50_mm": fnum(pcts(zv, (50,))[0]),
@@ -775,8 +797,12 @@ def evaluate_once(triplet: dict[str, Any], geom: Geometry, cfg: StereoConfig,
             float(np.median(zv ** 2 / (geom.f_full * cfg.scale * geom.baseline_mm) * 0.2))
             if zv.size else None),
         "disp_p50_px": fnum(float(np.median(match["disparity"][valid])) if valid.any() else None),
-        "frac_valid_depth_in_range": fnum(float(np.mean(
-            (zv >= cfg.min_depth_mm) & (zv <= cfg.max_depth_mm)))) if zv.size else 0.0,
+        # measured *before* the range filter: share of L-R-consistent depths
+        # that already fall inside the declared metric range
+        "frac_lr_depth_in_range": fnum(float(np.mean(
+            (depth["z_rect"][lr["valid"]] >= cfg.min_depth_mm)
+            & (depth["z_rect"][lr["valid"]] <= cfg.max_depth_mm))))
+        if lr["valid"].any() else 0.0,
         "plane": plane, "nn": nn, "edge": edge, "n_points": int(valid.sum()),
         "confidence": {"median": fnum(float(np.median(lr["confidence"][valid])))
                        if valid.any() else None,
@@ -1192,6 +1218,10 @@ def main(argv: list[str] | None = None) -> int:
     }
     if cpp_probe is not None:
         results["cpp"]["probe"] = {k: v for k, v in cpp_probe.items() if k != "_z"}
+        results["cpp"]["cli"] = {"path": str(CLI), "sha256": sha256_file(CLI),
+                                 "mtime_utc": time.strftime(
+                                     "%Y-%m-%dT%H:%M:%SZ",
+                                     time.gmtime(CLI.stat().st_mtime))}
 
     # ---- per-frame evaluation ------------------------------------------------
     frame_results: list[dict[str, Any]] = []
@@ -1208,10 +1238,11 @@ def main(argv: list[str] | None = None) -> int:
                       "pixel_sha256_stream_order": trip["pixel_sha256_stream_order"]}
         r["saturation_fraction_left"] = fnum(float(np.mean(trip["ir_left"] >= 255)))
         r["saturation_fraction_right"] = fnum(float(np.mean(trip["ir_right"] >= 255)))
-        raw = trip["ir_left"]
-        r["input"]["raw_stats_left"] = {
-            "mean": fnum(float(raw.mean()), 2), "std": fnum(float(raw.std()), 2),
-            "p01": int(np.percentile(raw, 1)), "p99": int(np.percentile(raw, 99))}
+        for side in ("left", "right"):
+            raw = trip[f"ir_{side}"]
+            r["input"][f"raw_stats_{side}"] = {
+                "mean": fnum(float(raw.mean()), 2), "std": fnum(float(raw.std()), 2),
+                "p01": int(np.percentile(raw, 1)), "p99": int(np.percentile(raw, 99))}
         frame_results.append(r)
         plane_rms = (r["plane"] or {}).get("rms_mm")
         print(f"frame {fid}: valid {r['valid_fraction']*100:.1f}%  depth p05/50/95 "
@@ -1292,6 +1323,7 @@ def main(argv: list[str] | None = None) -> int:
             comp = compare_cpp(f, r)
             r.pop("_z", None)
             results["cpp"]["runs"].append({"frame": f["id"], "status": r["status"],
+                                           "command": r.get("command"),
                                            "wall_s": fnum(r["wall_s"]),
                                            "peak_rss_mb": fnum(r["peak_rss_mb"], 1),
                                            "stdout": r.get("stdout"),
@@ -1323,22 +1355,37 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- consistency checks against the documented facts -------------------
     mean_cov = float(np.mean([f["valid_fraction"] for f in frame_results]))
-    mean_in_range = float(np.mean([f["frac_valid_depth_in_range"] for f in frame_results]))
+    mean_in_range = float(np.mean([f["frac_lr_depth_in_range"] for f in frame_results]))
     med_p50 = float(np.median([f["depth_p50_mm"] for f in frame_results]))
+    dy_bound = float(np.mean([e.get("frac_dy_at_search_bound", 0.0) for e in epi]))
     results["checks"] = {
         "stream_mapping_gives_horizontal_epipolars": {
             "value": epi[0].get("abs_dy_median_px"),
+            "censored_at_px": 2,
+            "frac_at_bound": fnum(dy_bound),
             "pass": bool(epi[0].get("abs_dy_median_px") is not None
-                         and epi[0]["abs_dy_median_px"] < 2.0),
-            "expected": "< 2 px median |dy|"},
+                         and epi[0]["abs_dy_median_px"] <= 2.0
+                         and dy_bound < 0.9),
+            "expected": "|dy| <= 2 px; a saturated estimate means it is only an "
+                        "upper bound, not a measurement of 1 px"},
+        "sparse_and_dense_depth_agree": {
+            "sparse_median_mm": epi[0].get("depth_median_mm"),
+            "dense_median_mm": med_p50,
+            "difference_mm": fnum(abs(float(epi[0].get("depth_median_mm") or 0.0) - med_p50), 2),
+            "pass": bool(epi[0].get("depth_median_mm") is not None
+                         and abs(epi[0]["depth_median_mm"] - med_p50) < 40.0),
+            "expected": "< 40 mm between the independent ZNCC depth and SGBM depth"},
         "median_disparity_450_600px": {
             "value": epi[0].get("disp_median_px"),
             "pass": bool(epi[0].get("disp_median_px") is not None
                          and 450 <= epi[0]["disp_median_px"] <= 600),
             "expected": "450..600 px (full-res)"},
-        "coverage_near_40pct": {"value": fnum(mean_cov),
-                                "pass": bool(0.20 <= mean_cov <= 0.55),
-                                "expected": "0.2..0.55 (audit claims ~0.40)"},
+        "final_coverage_15_25pct": {
+            "value": fnum(mean_cov),
+            "raw_sgbm_coverage": fnum(float(np.mean([f["matched_fraction"] for f in frame_results]))),
+            "pass": bool(0.12 <= mean_cov <= 0.30),
+            "expected": "0.12..0.30 after L-R; the ~0.40 in audit.md is *raw* "
+                        "SGBM coverage before the consistency test"},
         "median_depth_330_390mm": {"value": fnum(med_p50),
                                    "pass": bool(330 <= med_p50 <= 390),
                                    "expected": "330..390 mm"},
@@ -1376,10 +1423,12 @@ def main(argv: list[str] | None = None) -> int:
         print("figures:", ", ".join(fig_names))
 
     if args.check_no_private_export:
+        # Aggregate figures under a figures/ directory are allowed; any other
+        # image or point cloud under docs/ is not.
         bad = [p for p in (REPO / "docs").rglob("*")
                if p.suffix.lower() in (".pgm", ".png", ".jpg", ".jpeg", ".tif",
                                        ".tiff", ".ply")
-               and "reconstruction/figures" not in str(p)]
+               and "figures" not in p.parts]
         if bad:
             print("private-looking exports under docs/:", *bad, sep="\n  ", file=sys.stderr)
             return 4

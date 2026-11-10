@@ -585,7 +585,10 @@ Status GroupWriter::flush() {
   return Status::success();
 }
 
-void GroupWriter::discard_pending() noexcept { pending_.clear(); }
+void GroupWriter::discard_pending() noexcept {
+  pending_.clear();
+  update_absent_groups();
+}
 
 void GroupWriter::update_absent_groups() {
   std::vector<std::uint64_t> ids = seen_device_groups_;

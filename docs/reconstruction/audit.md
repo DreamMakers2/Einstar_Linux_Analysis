@@ -52,8 +52,11 @@ had to reconcile, including two wrong assumptions found in the existing tools.
   stream 2 = colour rotated 180 deg.  With the old assumption the real pair
   produced 2/400 feature matches and ~2 % dense coverage.  With the correct
   mapping, ZNCC feature matching gives 292/300 matches, median |dy| 1 px and
-  median disparity 523 px (Z ~ 350 mm), and a padded SGBM reaches ~40 % valid
-  pixels with a median depth of ~350 mm.  This was the single largest blocker to
+  median disparity 523 px (Z ~ 350 mm).  Raw SGBM validity is 33–35 % of the
+  full image, and 17 % survives left-right/mask filtering (the common rectified
+  wedge is only ~58 %); the resulting cloud has a median depth of ~350 mm.
+  The earlier "~40 %" figure in this audit was raw SGBM coverage and is *not*
+  usable depth coverage.  This was the single largest blocker to
   real-data reconstruction and is now encoded in `recon/src/frame_set.cpp`.
 * **OpenCV version.** The system OpenCV is 5.0 (`calib3d` split into
   `opencv_calib`, all modules exposed via `find_package(OpenCV 5)`); the old

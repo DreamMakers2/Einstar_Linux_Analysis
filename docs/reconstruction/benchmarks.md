@@ -33,9 +33,11 @@ optimisation and is not needed to meet the current 3-camera preview budget.
 | 1 | 56 198 | 331.8 / 349.5 / 368.4 | 93.0 % | 0.344 |
 | 2 | 56 195 | 331.7 / 349.5 / 368.4 | 92.9 % | 0.345 |
 
-The three frames are different instants of a static scene.  Median depth and
-the 5/95 percentiles agree to **0.1 mm**, the plane RMS to 0.01 mm, and the
-point counts to 0.7 %.  This is repeatability, not accuracy.
+The three frames are nominally different instants of a static scene, but frames
+1 and 2 are near-duplicates (mean absolute grey-level difference 1.7), so the
+repeatability evidence really rests on **two distinct instants**.  Even so,
+median depth and the 5/95 percentiles agree to **0.1 mm**, the plane RMS to
+0.01 mm, and the point counts to 0.7 %.  This is repeatability, not accuracy.
 
 ## Determinism
 

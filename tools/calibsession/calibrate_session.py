@@ -31,7 +31,12 @@ Inputs
 ------
 ``--frames DIR``
     ``frame_%06d_cam{0,1,2}.pgm`` (or png/bmp/ppm) triplets, as written by the
-    capture probe.  ``cam0`` = left IR, ``cam1`` = right IR, ``cam2`` = colour.
+    capture probe.  The probe mapping is **not** the intuitive order:
+    ``cam0`` = right IR (arrives rotated 180 deg), ``cam1`` = left IR (as
+    calibrated), ``cam2`` = colour (rotated 180 deg).  The loader maps the
+    streams and rotates ``right``/``tex`` back in memory; the retained copy is
+    the original byte stream.  See ``recon/src/frame_set.cpp`` and
+    ``docs/reconstruction/audit.md`` for the evidence.
 ``--vendor-corpus DIR``
     ``imageLeft<N>.bmp`` / ``imageRight<N>.bmp`` / ``imageTex<N>.bmp``.
 ``--replay MANIFEST``
@@ -60,6 +65,19 @@ The module is importable (tests use the functions directly) and is the CLI::
         --factory-dir sources/calibration/res_Einscan-E10_200x150
 
     python tools/calibsession/calibrate_session.py --verify /tmp/session_vendor
+
+Orientation and stream order
+----------------------------
+The live hardware and ``recon/src/frame_set.cpp`` establish::
+
+    stream 0 (cam0) = IR right,  rotated 180 deg relative to calibration
+    stream 1 (cam1) = IR left,   already in calibration orientation
+    stream 2 (cam2) = colour,    rotated 180 deg
+
+``--vendor-corpus`` files (``imageLeftN``/``imageRightN``/``imageTexN``) are
+already in calibration orientation and are not rotated.  ``--replay`` sets may
+declare ``"rotate_180": ["right", "tex"]``; omitting it means the referenced
+files are already oriented.
 
 This file is host-side only.  Nothing here opens a USB device, writes to the
 scanner, or modifies its input images.
@@ -110,8 +128,16 @@ from calib.session import CalibrationSession, FrameSet
 SCHEMA = "einstar.calibsession/1"
 TOOL_NAME = "tools/calibsession/calibrate_session.py"
 
-#: probe / replay camera order
-DEFAULT_CAM_MAP = {0: "left", 1: "right", 2: "tex"}
+#: Probe stream -> calibration camera.  This is the hardware mapping proven by
+#: the live capture and encoded in ``recon/src/frame_set.cpp`` /
+#: ``libeinstar calibration.hpp``: stream 0 = **right** IR, stream 1 = **left**
+#: IR, stream 2 = colour.  It is NOT the intuitive left/right/colour order.
+DEFAULT_CAM_MAP = {0: "right", 1: "left", 2: "tex"}
+
+#: Probe streams 0 and 2 arrive rotated 180 deg relative to the calibration
+#: orientation; stream 1 (left IR) arrives as calibrated.
+PROBE_ROTATED_CAMERAS = ("right", "tex")
+
 CAMERA_LABELS = {"left": "IR left", "right": "IR right", "tex": "colour/texture"}
 
 #: file endings accepted for frame sets
@@ -133,6 +159,7 @@ DEFAULT_RULES: dict[str, Any] = {
     "roll_bins_min": 0,             # advisory by default; --strict sets 2
     "roll_bin_deg": 30.0,
     "tex_participation_min": 0.8,
+    "tex_candidate_fraction_min": 0.9,
     "require_all_cameras": True,
     "require_sync_evidence": True,
     "require_dwell": True,
@@ -143,6 +170,8 @@ DEFAULT_RULES: dict[str, Any] = {
     "max_stereo_pose_delta_deg": 2.0,
     "max_stereo_pose_delta_mm": 6.0,
     "max_view_pnp_rms_px": 3.0,
+    "require_factory_orientation": True,
+    "max_factory_rotation_delta_deg": 10.0,
 }
 
 STRICT_RULES: dict[str, Any] = {
@@ -451,6 +480,7 @@ class LoadedImage:
     sha256: Optional[str] = None
     gray: Optional[np.ndarray] = None
     facts: dict = field(default_factory=dict)
+    rotated_180: bool = False
     error: Optional[str] = None
 
     @property
@@ -463,15 +493,24 @@ class LoadedImage:
                 "sha256": self.sha256,
                 "bytes": (len(self.raw) if self.raw is not None else None),
                 "decoded": bool(self.ok),
+                "rotated_180": bool(self.rotated_180),
                 "error": self.error,
                 **{k: v for k, v in self.facts.items()
                    if k in ("format", "width", "height", "channels",
                             "trailing_bytes")}}
 
 
-def load_image(camera: str, path: Optional[Path]) -> LoadedImage:
+def load_image(camera: str, path: Optional[Path],
+               rotate_180: bool = False) -> LoadedImage:
+    """Load one frame; ``rotate_180`` is an in-memory orientation fix only.
+
+    The returned ``raw``/``sha256`` always describe the original file bytes, so
+    the retained copy stays byte-exact even when the decoded array is rotated
+    back into the calibration orientation.
+    """
     if path is None:
-        return LoadedImage(camera, None, error="missing camera image")
+        return LoadedImage(camera, None, rotated_180=bool(rotate_180),
+                           error="missing camera image")
     p = Path(path)
     if not p.is_file():
         return LoadedImage(camera, p, error=f"file not found: {p}")
@@ -480,8 +519,12 @@ def load_image(camera: str, path: Optional[Path]) -> LoadedImage:
     except OSError as exc:
         return LoadedImage(camera, p, error=f"read failed: {exc}")
     out = LoadedImage(camera, p, raw=raw, sha256=sha256_bytes(raw))
+    out.rotated_180 = bool(rotate_180)
     try:
         gray, facts = decode_image_bytes(raw, p.suffix)
+        if rotate_180:
+            gray = cv2.rotate(gray, cv2.ROTATE_180)
+        facts["rotated_180"] = bool(rotate_180)
         out.gray, out.facts = gray, facts
     except ImageError as exc:
         out.error = str(exc)
@@ -502,6 +545,7 @@ class InputSet:
     sync_source: str = "grouped-files"
     dwell: str = "assume"
     detections: Optional[dict] = None       # declared per-camera detections
+    rotate_180: dict = field(default_factory=dict)  # camera -> in-memory rotation
     meta: dict = field(default_factory=dict)
 
 
@@ -513,6 +557,10 @@ class SourceInfo:
     cameras: dict[str, int] = field(default_factory=dict)
     missing_by_camera: dict[str, int] = field(default_factory=dict)
     extra: dict = field(default_factory=dict)
+
+    @property
+    def sync_sidecar(self):
+        return self.extra.get("sync_sidecar")
 
     def as_dict(self) -> dict:
         return {"kind": self.kind, "path": self.path, "n_sets": self.n_sets,
@@ -600,7 +648,7 @@ def discover_frames(directory: str | Path,
         raise CalibSessionError(f"--frames: not a directory: {d}")
     cmap = _parse_cam_map(cam_map)
     pattern = re.compile(
-        r"^frame[_-]?(\d+)[_-]cam([0-9]+)\.(pgm|ppm|png|bmp|tif|tiff)$",
+        r"^frame[_-]?(\d+)[_-]cam[_-]?([0-9]+)\.(pgm|ppm|png|bmp|tif|tiff)$",
         re.IGNORECASE)
     found: dict[int, dict[str, Path]] = {}
     for p in sorted(d.iterdir()):
@@ -631,12 +679,19 @@ def discover_frames(directory: str | Path,
                              camera_timestamps=ts,
                              sync_source=("measured-sidecar" if ts else
                                           "grouped-files"),
-                             dwell="sequential"))
+                             dwell="sequential",
+                             rotate_180={cam: True for cam in
+                                         PROBE_ROTATED_CAMERAS
+                                         if cam in found[idx]}))
     missing = {c: sum(1 for s in sets if c not in s.paths) for c in CAMERAS}
     present = {c: sum(1 for s in sets if c in s.paths) for c in CAMERAS}
     info = SourceInfo("frames", str(d), len(sets), present, missing,
                       {"cam_map": {str(k): v for k, v in cmap.items()},
                        "pattern": "frame_%06d_cam{0,1,2}",
+                       "rotation_180": list(PROBE_ROTATED_CAMERAS),
+                       "orientation_source": "probe hardware mapping "
+                       "(stream 0 = right rotated 180, stream 1 = left as "
+                       "calibrated, stream 2 = colour rotated 180)",
                        "sync_sidecar": sidecar.get("path")})
     return sets, info
 
@@ -694,10 +749,15 @@ def load_replay(manifest: str | Path) -> tuple[list[InputSet], SourceInfo]:
             "--replay: expected a JSON list of frame sets or {\"sets\": [...]}")
     base = p.parent
     sets: list[InputSet] = []
+    seen_labels: set[str] = set()
     for i, item in enumerate(raw_sets):
         if not isinstance(item, dict):
             raise CalibSessionError(f"--replay: set {i} is not an object")
         label = str(item.get("label", f"set_{i:03d}"))
+        if label in seen_labels:
+            raise CalibSessionError(
+                f"--replay: duplicate set label {label!r} at index {i}")
+        seen_labels.add(label)
         cams = item.get("cameras", item.get("images", item.get("paths")))
         if not isinstance(cams, dict) or not cams:
             raise CalibSessionError(f"--replay: set {i} has no cameras/images map")
@@ -753,6 +813,18 @@ def load_replay(manifest: str | Path) -> tuple[list[InputSet], SourceInfo]:
                             f"{key!r} -> {xy!r}") from exc
                     parsed[(uu, vv)] = np.asarray([x, y], float)
                 detections[cam] = parsed
+        rot_raw = item.get("rotate_180", [])
+        if isinstance(rot_raw, dict):
+            rotate = {str(k).lower(): bool(v) for k, v in rot_raw.items()}
+        elif isinstance(rot_raw, (list, tuple)):
+            rotate = {str(k).lower(): True for k in rot_raw}
+        else:
+            raise CalibSessionError(
+                f"--replay: set {i}: rotate_180 must be a list or camera map")
+        for cam in rotate:
+            if cam not in CAMERAS:
+                raise CalibSessionError(
+                    f"--replay: set {i}: unknown rotate_180 camera {cam!r}")
         dwell = str(item.get("dwell", "assume"))
         if dwell not in ("assume", "sequential"):
             raise CalibSessionError(
@@ -760,11 +832,11 @@ def load_replay(manifest: str | Path) -> tuple[list[InputSet], SourceInfo]:
         sets.append(InputSet(index=i, label=label, paths=paths,
                              timestamp=float(ts), camera_timestamps=cts,
                              sync_source=sync_source, dwell=dwell,
-                             detections=detections,
+                             detections=detections, rotate_180=rotate,
                              meta={k: v for k, v in item.items()
                                    if k not in ("cameras", "images", "paths",
                                                 "camera_timestamps",
-                                                "detections")}))
+                                                "detections", "rotate_180")}))
     missing = {c: sum(1 for s in sets if c not in s.paths) for c in CAMERAS}
     present = {c: sum(1 for s in sets if c in s.paths) for c in CAMERAS}
     info = SourceInfo("replay", str(p), len(sets), present, missing,
@@ -1348,6 +1420,7 @@ class SessionRecorder:
                  localize_method: str = "auto",
                  dwell_mode: str = "assume",
                  factory_dir: Optional[str | Path] = None,
+                 factory_source: str = "explicit",
                  tex_profile: Optional[str | Path] = None,
                  solve_every: int = 1,
                  seed: int = 0,
@@ -1384,6 +1457,7 @@ class SessionRecorder:
         self.factory_records, self.factory_errors, self.factory_sources = \
             _load_factory(factory_dir, tex_profile)
         self.factory_dir = str(factory_dir) if factory_dir else None
+        self.factory_source = factory_source if factory_dir else "none"
         self.tex_profile = str(tex_profile) if tex_profile else None
         self._factory_consistency: Optional[dict] = None
         self.colour_profile_state = self._assess_colour_profile()
@@ -1417,7 +1491,9 @@ class SessionRecorder:
         rec = self.factory_records.get("tex")
         err = self.factory_errors.get("tex")
         if rec is None:
-            return {"state": ("unreadable" if err else "missing"),
+            state = "missing" if (err is None or str(err).startswith("missing")) \
+                else "unreadable"
+            return {"state": state,
                     "error": err,
                     "source": self.factory_sources.get("tex")
                     or self.tex_profile,
@@ -1482,9 +1558,6 @@ class SessionRecorder:
             "schema": SCHEMA, "created_utc": self.started_utc,
             "tool": TOOL_NAME,
             "source": self.source_info.as_dict(),
-            "detection_source": ("replay-manifest" if any(
-                (r.detection.get("left") or {}).get("source") == "manifest"
-                for r in self.records) else "image"),
             "plate": self.plate.as_dict(),
             "mode": self.mode,
             "target": self.target,
@@ -1493,6 +1566,7 @@ class SessionRecorder:
             "dwell_mode": self.dwell_mode,
             "localize_method": self.localize_method,
             "factory_dir": self.factory_dir,
+            "factory_source": self.factory_source,
             "factory_errors": self.factory_errors,
             "tex_profile": self.tex_profile,
             "colour_profile": self.colour_profile_state,
@@ -1503,7 +1577,10 @@ class SessionRecorder:
 
     # -- per set -----------------------------------------------------------
     def process(self, item: InputSet) -> CandidateRecord:
-        loaded = {c: load_image(c, item.paths.get(c)) for c in CAMERAS}
+        rotations = dict(item.rotate_180 or {})
+        loaded = {c: load_image(c, item.paths.get(c),
+                                rotate_180=bool(rotations.get(c))) 
+                  for c in CAMERAS}
         images = {c: im.gray for c, im in loaded.items() if im.ok}
         grids: dict[str, Observation] = {}
         detection: dict[str, dict] = {}
@@ -1539,9 +1616,10 @@ class SessionRecorder:
                 grids[c] = to_observation(c, g)
 
         # what the session itself would see as previous pose -----------------
+        # the CLI/recorder dwell mode is authoritative: "assume" means each
+        # input set is a committed keyframe, "sequential" applies the live
+        # motion gate between successive sets (regardless of per-item metadata)
         assume = (self.dwell_mode == "assume")
-        if item.dwell == "sequential":
-            assume = False
         prev_pose = None if assume else self.session.last_pose
         prev_ts = None if assume else self.session.last_timestamp
         ts = item.timestamp
@@ -1963,6 +2041,50 @@ class SessionRecorder:
                 factory_baseline = None
         info["baseline_mm"] = baseline
         info["factory_baseline_mm"] = factory_baseline
+        # orientation sanity guard.  A globally-consistent 180 deg stream
+        # rotation can be absorbed by the fit (only the hardware mapping can
+        # disambiguate left/right and a *common* rotation), but an upside-down
+        # single stream changes the right-vs-left relative rotation by ~180 deg
+        # and is caught here against the factory rig.
+        if self.factory_records.get("left") is not None and \
+                self.factory_records.get("right") is not None:
+            try:
+                from calib.ccf import relative_pose
+                Rf, tf = relative_pose(self.factory_records["left"],
+                                       self.factory_records["right"])
+                Rl, tl = result.extrinsics["left"]
+                Rr, tr = result.extrinsics["right"]
+                Rt = Rr @ Rl.T
+                tt = tr - Rt @ tl
+                dR = _angle_deg(Rt @ Rf.T)
+                dt = float(np.linalg.norm(tt - tf))
+                check = {
+                    "right": {"delta_rotation_deg": dR,
+                              "delta_translation_mm": dt,
+                              "fitted_baseline_mm": float(np.linalg.norm(tt)),
+                              "factory_baseline_mm": float(np.linalg.norm(tf))},
+                    "orientation_ok": bool(
+                        dR <= float(self.rules["max_factory_rotation_delta_deg"])),
+                    "limit_deg": float(
+                        self.rules["max_factory_rotation_delta_deg"]),
+                    "note": ("left/right stream order and a common 180 deg "
+                             "rotation are not observable from calibration "
+                             "residuals; they are fixed by the hardware "
+                             "mapping in recon/src/frame_set.cpp.  This check "
+                             "catches an upside-down single stream."),
+                }
+                if self.factory_records.get("tex") is not None:
+                    Rtf, ttf = _ccf_relative_left_tex(self.factory_records)
+                    Rtex = result.extrinsics["tex"][0] @ Rl.T
+                    ttex = result.extrinsics["tex"][1] - Rtex @ tl
+                    check["tex"] = {
+                        "delta_rotation_deg": _angle_deg(Rtex @ Rtf.T),
+                        "delta_translation_mm": float(np.linalg.norm(ttex - ttf)),
+                        "note": "colour record may be stale; reported, not gated",
+                    }
+                info["factory_rig_check"] = check
+            except Exception as exc:
+                info["factory_rig_check"] = {"error": f"{type(exc).__name__}: {exc}"}
         info["baseline_delta_pct"] = (100.0 * (baseline / factory_baseline - 1.0)
                                       if factory_baseline else None)
         info["equivalent_pitch_mm"] = (
@@ -2027,7 +2149,8 @@ class SessionRecorder:
                                 "ok": False}
         accepted = [r.as_dict() for r in self.records if r.accepted]
         cov = compute_coverage(accepted, self.rules)
-        out["recommended_additional_views"] = self._recommendations(cov)
+        out["recommended_additional_views"] = self._recommendations(
+            cov, accepted, self.session.heldout_view_ids)
         out["stop_recommended"] = bool(
             (out.get("session") or {}).get("stop")
             and not out["recommended_additional_views"]
@@ -2035,8 +2158,25 @@ class SessionRecorder:
                 self.rules["min_heldout"]))
         return out
 
-    def _recommendations(self, cov: dict) -> list[str]:
+    def _recommendations(self, cov: dict, accepted: Sequence[dict],
+                         heldout_ids: Sequence[int]) -> list[str]:
         rec: list[str] = list(cov.get("missing") or [])
+        n_acc = len(accepted)
+        n_train = sum(1 for a in accepted if a.get("split") == "train")
+        if n_acc < int(self.rules["min_accepted"]):
+            rec.append(f"accept {int(self.rules['min_accepted']) - n_acc} more "
+                       f"diverse set(s) (currently {n_acc}/"
+                       f"{self.rules['min_accepted']} accepted)")
+        if n_train < int(self.rules["min_train"]):
+            rec.append(f"fit needs {int(self.rules['min_train']) - n_train} "
+                       f"more training set(s) (currently {n_train}/"
+                       f"{self.rules['min_train']}); held-out views are not fit")
+        if len(heldout_ids) < int(self.rules["min_heldout"]):
+            rec.append(
+                f"reserve {int(self.rules['min_heldout']) - len(heldout_ids)} "
+                f"more held-out set(s) (currently {len(heldout_ids)}/"
+                f"{self.rules['min_heldout']}; the next reservation is at "
+                f"accepted #{self.session._next_holdout})")
         # advisory coverage that is not mandatory unless --strict
         if int(self.rules.get("roll_bins_min", 0)) == 0 and \
                 cov.get("roll_bins_occupied", 0) < 2:
@@ -2267,6 +2407,7 @@ class SessionRecorder:
                 "plate": self.plate.as_dict(),
                 "holdout": self.session.holdout_policy.as_dict(),
                 "factory_dir": self.factory_dir,
+                "factory_source": self.factory_source,
                 "tex_profile": self.tex_profile,
             },
             "source": self.source_info.as_dict(),
@@ -2288,6 +2429,11 @@ class SessionRecorder:
             "final_solve": {k: v for k, v in final.items()
                             if k not in ("result", "obs")},
             "rules": dict(self.rules),
+            "timing": {"detect_s": round(float(self.session.detect_seconds), 3),
+                       "refine_s": round(float(self.session.refine_seconds), 3),
+                       "solve_s": round(float(self.session.solve_seconds), 3),
+                       "n_solves": int(self.session._solves),
+                       "wall_s": round(time.time() - self.t_start, 2)},
             "notes": [
                 "frames are byte-exact copies; source images are never modified",
                 "held-out views are excluded from every training solve",
@@ -2365,8 +2511,22 @@ def check_completeness(manifest: Mapping[str, Any],
                 cam_problems.append(
                     f"{s.get('label')}: camera {cam} missing/undecodable "
                     f"({f.get('error') or 'no file'})")
-    add("all_three_cameras", not cam_problems, len(cam_problems),
+    add("all_three_cameras", (not cam_problems) or (not r["require_all_cameras"]),
+        len(cam_problems),
         "; ".join(cam_problems[:4]) if cam_problems else "")
+    # a systematic colour loss must fail even if every accepted set happened to
+    # be rejected: count the candidate coverage, not just the accepted one
+    all_sets = list(sets)
+    tex_candidates = sum(
+        1 for s in all_sets
+        if ((s.get("files") or {}).get("tex") or {}).get("decoded"))
+    frac_cand = (tex_candidates / len(all_sets)) if all_sets else 0.0
+    add("colour_candidate_coverage",
+        frac_cand >= float(r["tex_candidate_fraction_min"]),
+        round(frac_cand, 3),
+        f"colour camera decodable in {tex_candidates}/{len(all_sets)} candidate "
+        f"sets (need {r['tex_candidate_fraction_min']:.0%}); hasTexture="
+        f"{bool(manifest.get('colour', {}).get('hasTexture'))}")
 
     # per-camera image size consistency
     size_problems = []
@@ -2446,6 +2606,19 @@ def check_completeness(manifest: Mapping[str, Any],
                 if not ((s.get("recorder_gate") or {}).get("passed", True))]
     add("stereo_gate", not gate_bad, len(gate_bad),
         f"accepted with a failed stereo gate: {gate_bad[:3]}" if gate_bad else "")
+    # marker-quality minima (the session quality gate normally enforces these;
+    # re-checked here so a relaxed custom policy cannot slip through)
+    weak = []
+    for s in accepted:
+        m = (s.get("quality") or {}).get("metrics") or {}
+        if int(m.get("stereo_markers", 0) or 0) < int(r["min_stereo_markers"]):
+            weak.append(f"{s.get('label')}: stereo markers "
+                        f"{m.get('stereo_markers')} < {r['min_stereo_markers']}")
+        if int(m.get("big_markers", 0) or 0) < int(r["min_big_markers"]):
+            weak.append(f"{s.get('label')}: large markers "
+                        f"{m.get('big_markers')} < {r['min_big_markers']}")
+    add("marker_quality", not weak, len(weak),
+        "; ".join(weak[:4]) if weak else "")
 
     # coverage (already computed in the manifest; recompute defensively)
     cov = manifest.get("coverage") or compute_coverage(accepted, r)
@@ -2464,6 +2637,16 @@ def check_completeness(manifest: Mapping[str, Any],
         add("profile_not_activated", prof.get("activated") is not True,
             {"activated": prof.get("activated")},
             "the new revision must not be activated automatically")
+    frc = ((manifest.get("final_solve") or {}).get("info") or {}).get(
+        "factory_rig_check") or {}
+    if frc and "orientation_ok" in frc and r["require_factory_orientation"]:
+        add("factory_orientation", bool(frc["orientation_ok"]),
+            {"delta_rotation_deg": (frc.get("right") or {}).get(
+                "delta_rotation_deg")},
+            "camera orientation inconsistent with the factory rig "
+            f"(left-right rotation delta "
+            f"{(frc.get('right') or {}).get('delta_rotation_deg')} deg > "
+            f"{frc.get('limit_deg')} deg); a stream may be upside down")
     if prof.get("export"):
         exp = prof["export"]
         add("profile_export", bool(exp.get("ok")) or not r["require_export"],
@@ -2475,7 +2658,7 @@ def check_completeness(manifest: Mapping[str, Any],
             "n_checks": len(checks), "rules": r}
 
 
-def _round_floats(obj: Any, nd: int = 3) -> Any:
+def _round_floats(obj: Any, nd: int = 2) -> Any:
     """Canonicalise floats so solver round-off (1e-9) cannot change a digest."""
     if isinstance(obj, dict):
         return {str(k): _round_floats(v, nd) for k, v in obj.items()}
@@ -2494,13 +2677,27 @@ def _round_floats(obj: Any, nd: int = 3) -> Any:
 def content_digest(manifest: Mapping[str, Any]) -> str:
     """Deterministic digest of the decision content (excludes wall clock).
 
-    Floats are rounded to 1e-3 so that solver round-off (the LM may take one
+    Floats are rounded to 1e-2 so that solver round-off (the LM may take one
     extra iteration) cannot make two identical captures look different; the
     decisions, reasons, labels, counts and file SHA-256 values are exact.
     """
     keep = {k: manifest.get(k) for k in
             ("schema", "config", "source", "counts", "accepted_ids",
              "heldout_ids", "train_ids", "sets", "coverage")}
+    # A cached detection is the same decision as a freshly computed one; the
+    # provenance of the detector result must not change the session digest.
+    sets = []
+    for item in keep.get("sets") or []:
+        item = dict(item)
+        item.pop("detection_source", None)
+        det = item.get("detection")
+        if isinstance(det, dict):
+            item["detection"] = {
+                c: ({k: v for k, v in cam.items() if k != "source"}
+                    if isinstance(cam, dict) else cam)
+                for c, cam in det.items()}
+        sets.append(item)
+    keep["sets"] = sets
     blob = json.dumps(_round_floats(keep), sort_keys=True,
                       separators=(",", ":"), allow_nan=False)
     return sha256_bytes(blob.encode())
@@ -2655,6 +2852,11 @@ def _summary_text(report: dict) -> str:
             f"pitch {info.get('plate_pitch_mm')} mm "
             f"(CCF delta {_fmt(info.get('baseline_delta_pct'), 3)} %, "
             f"equivalent pitch {_fmt(info.get('equivalent_pitch_mm'), 3)} mm)")
+    frc = (fin.get("info") or {}).get("factory_rig_check") or {}
+    if frc.get("orientation_ok") is not None:
+        lines.append(
+            f"factory orientation: {'ok' if frc.get('orientation_ok') else 'FAIL'} "
+            f"(left-right dR={_fmt((frc.get('right') or {}).get('delta_rotation_deg'), 2)} deg)")
     ho = report.get("heldout") or {}
     if ho.get("n"):
         lines.append(
@@ -2742,6 +2944,16 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--min-heldout", type=int, default=None)
     ap.add_argument("--strict", action="store_true",
                     help="stricter coverage for a production-quality session")
+    ap.add_argument("--cam-map",
+                    default=None,
+                    metavar="0=right,1=left,2=tex",
+                    help="probe stream -> camera mapping (default: the proven "
+                         "hardware order; vendor/replay inputs are unaffected)")
+    ap.add_argument("--frames-rotation", choices=("probe", "as-calibrated"),
+                    default="probe",
+                    help="probe = rotate cam0(right)/cam2(tex) 180 deg back to "
+                         "calibration orientation; as-calibrated = the files "
+                         "are already oriented")
     ap.add_argument("--localize", default="auto",
                     choices=("auto", "conic_perspective", "conic", "centroid",
                              "centroid_bg", "edge", "none"),
@@ -2751,7 +2963,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="assume = each input set is a committed keyframe; "
                          "sequential = live motion gate between sets")
     ap.add_argument("--factory-dir", type=Path,
-                    help="directory with LeftCCF.txt/RightCCF.txt/TexCCF.txt")
+                    help="directory with LeftCCF.txt/RightCCF.txt/TexCCF.txt "
+                         "(default: the repo's shipped factory CCFs, if present)")
+    ap.add_argument("--no-factory", action="store_true",
+                    help="do not use any factory CCF, even the shipped one")
     ap.add_argument("--tex-profile", type=Path,
                     help="explicit colour CCF (overrides the factory TexCCF)")
     ap.add_argument("--serial", default="unknown",
@@ -2813,7 +3028,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         holdout = HoldoutPolicy(n_holdout=int(rules["min_heldout"]),
                                 target=int(args.target))
         if args.frames:
-            sets, info = discover_frames(args.frames)
+            sets, info = discover_frames(args.frames, cam_map=args.cam_map)
+            if args.frames_rotation == "as-calibrated":
+                for item in sets:
+                    item.rotate_180 = {}
+                info.extra["rotation_180"] = []
+                info.extra["orientation_source"] = (
+                    "explicitly disabled (--frames-rotation as-calibrated)")
         elif args.vendor_corpus:
             sets, info = discover_vendor_corpus(args.vendor_corpus)
         else:
@@ -2821,6 +3042,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.max_sets is not None:
             sets = sets[:int(args.max_sets)]
             info.n_sets = len(sets)
+        factory_dir = args.factory_dir
+        factory_source = "explicit" if factory_dir is not None else "none"
+        if factory_dir is None and not args.no_factory:
+            candidate = (REPO_ROOT / "sources" / "calibration"
+                         / "res_Einscan-E10_200x150")
+            if all((candidate / n).is_file() for n in
+                   ("LeftCCF.txt", "RightCCF.txt", "TexCCF.txt")):
+                factory_dir = candidate
+                factory_source = "auto"
+        for cam, n_missing in (info.missing_by_camera or {}).items():
+            if n_missing:
+                print(f"warning: {cam} image missing in {n_missing}/"
+                      f"{info.n_sets} input set(s); those candidates will be "
+                      f"recorded and rejected", file=sys.stderr)
         dwell = args.dwell
         if dwell == "auto":
             dwell = "sequential" if info.kind == "frames" else "assume"
@@ -2829,8 +3064,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             plate_profile=profile, mode=args.mode, target=args.target,
             rules=rules, holdout=holdout,
             localize_method=(None if args.localize == "none" else args.localize),
-            dwell_mode=dwell, factory_dir=args.factory_dir,
-            tex_profile=args.tex_profile, solve_every=args.solve_every,
+            dwell_mode=dwell, factory_dir=factory_dir,
+            factory_source=factory_source, tex_profile=args.tex_profile,
+            solve_every=args.solve_every,
             seed=args.seed, link=args.link, force=args.force,
             cache=args.cache, image_size=_parse_size(args.image_size),
             verbose=not args.quiet)

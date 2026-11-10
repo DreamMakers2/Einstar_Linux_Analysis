@@ -36,10 +36,9 @@
 
 namespace {
 
-using einstar::capture::CadenceStats;
 using einstar::ErrorCode;
-using einstar::fail;
 using einstar::Result;
+using einstar::capture::CadenceStats;
 using einstar::capture::DeviceInfo;
 using einstar::capture::GroupingStats;
 using einstar::capture::GroupWriter;
@@ -95,8 +94,8 @@ bool parse_u32(std::string_view text, std::uint32_t& value) {
 
 /// Accepts "VALUE" (camera = 3, meaning all cameras) or "CAM:VALUE".
 [[maybe_unused]] bool parse_camera_value(std::string_view text,
-                                          std::uint32_t& camera,
-                                          std::uint32_t& value) {
+                                         std::uint32_t& camera,
+                                         std::uint32_t& value) {
   const std::size_t colon = text.find(':');
   if (colon == std::string_view::npos) {
     camera = 3;
@@ -164,16 +163,18 @@ int usage_error(const char* message) {
          serial.substr(serial.size() - 4);
 }
 
-[[maybe_unused]] double megabytes_per_second(std::uint64_t bytes, double seconds) {
+[[maybe_unused]] double megabytes_per_second(std::uint64_t bytes,
+                                             double seconds) {
   return seconds > 0.0 ? static_cast<double>(bytes) / seconds / 1e6 : 0.0;
 }
 
-std::uint64_t string_digest(std::string_view text) {
+[[maybe_unused]] std::uint64_t string_digest(std::string_view text) {
   return einstar::capture::fnv1a64(std::span<const std::uint8_t>(
       reinterpret_cast<const std::uint8_t*>(text.data()), text.size()));
 }
 
-[[maybe_unused]] std::string join_path(const std::string& directory, std::string_view name) {
+[[maybe_unused]] std::string join_path(const std::string& directory,
+                                       std::string_view name) {
   if (!directory.empty() && directory.back() == '/') {
     return directory + std::string(name);
   }
@@ -181,7 +182,8 @@ std::uint64_t string_digest(std::string_view text) {
 }
 
 void print_grouping(const ManifestInfo& manifest, const GroupingStats& grouping,
-                    const CadenceStats& cadence, const std::string& manifest_path) {
+                    const CadenceStats& cadence,
+                    const std::string& manifest_path) {
   std::printf("  groups         : %llu requested, %llu written\n",
               static_cast<unsigned long long>(manifest.requested_groups),
               static_cast<unsigned long long>(grouping.groups_written));
@@ -194,7 +196,8 @@ void print_grouping(const ManifestInfo& manifest, const GroupingStats& grouping,
   std::printf("  duplicates     : %llu duplicate frame(s), %llu late frame(s)\n",
               static_cast<unsigned long long>(grouping.duplicate_frames),
               static_cast<unsigned long long>(grouping.late_frames));
-  std::printf("  frames         : %llu written, %llu completed, %llu dropped, %llu invalid\n",
+  std::printf("  frames         : %llu written, %llu completed, %llu dropped, "
+              "%llu invalid\n",
               static_cast<unsigned long long>(grouping.frames_written),
               static_cast<unsigned long long>(manifest.metrics.frames_completed),
               static_cast<unsigned long long>(manifest.metrics.frames_dropped),
@@ -211,7 +214,8 @@ void print_grouping(const ManifestInfo& manifest, const GroupingStats& grouping,
   }
   std::printf("  throughput     : %.1f MB/s wall, %.1f MB/s virtual\n",
               manifest.throughput_mbps, manifest.virtual_throughput_mbps);
-  std::printf("  cadence        : %.2f fps, %.3f ms mean (%.3f..%.3f ms), %llu interval(s)\n",
+  std::printf("  cadence        : %.2f fps, %.3f ms mean (%.3f..%.3f ms), "
+              "%llu interval(s)\n",
               cadence.fps, static_cast<double>(cadence.mean_ns) / 1e6,
               static_cast<double>(cadence.min_ns) / 1e6,
               static_cast<double>(cadence.max_ns) / 1e6,
@@ -225,7 +229,8 @@ void print_grouping(const ManifestInfo& manifest, const GroupingStats& grouping,
               einstar::capture::grouping_complete(grouping) ? "complete" : "LOSSY");
   std::printf("  manifest       : %s\n", manifest_path.c_str());
   if (!manifest.recorded_path.empty()) {
-    std::printf("  recording      : %s (%llu bytes, %llu transfers, digest 0x%016llX)\n",
+    std::printf("  recording      : %s (%llu bytes, %llu transfers, "
+                "digest 0x%016llX)\n",
                 manifest.recorded_path.c_str(),
                 static_cast<unsigned long long>(manifest.recorded_bytes),
                 static_cast<unsigned long long>(manifest.recorded_transfers),
@@ -245,7 +250,8 @@ void print_json_summary(const ManifestInfo& manifest, const GroupingStats& group
   std::printf("\"backend\": %s, ", quote(manifest.backend).c_str());
   std::printf("\"simulated\": %s, ", manifest.simulated ? "true" : "false");
   std::printf("\"live\": %s, ", manifest.live ? "true" : "false");
-  std::printf("\"output_directory\": %s, ", quote(manifest.output_directory).c_str());
+  std::printf("\"output_directory\": %s, ",
+              quote(manifest.output_directory).c_str());
   std::printf("\"requested_groups\": %u, ", manifest.requested_groups);
   std::printf("\"groups_written\": %llu, ",
               static_cast<unsigned long long>(grouping.groups_written));
@@ -264,7 +270,8 @@ void print_json_summary(const ManifestInfo& manifest, const GroupingStats& group
   std::printf("\"bytes_written\": %llu, ",
               static_cast<unsigned long long>(grouping.bytes_written));
   std::printf("\"duration_s\": %.6f, ", manifest.metrics.wall_seconds);
-  std::printf("\"virtual_duration_s\": %.6f, ", manifest.metrics.virtual_seconds);
+  std::printf("\"virtual_duration_s\": %.6f, ",
+              manifest.metrics.virtual_seconds);
   std::printf("\"throughput_mbps\": %.3f, ", manifest.throughput_mbps);
   std::printf("\"virtual_throughput_mbps\": %.3f, ",
               manifest.virtual_throughput_mbps);
@@ -276,8 +283,7 @@ void print_json_summary(const ManifestInfo& manifest, const GroupingStats& group
               manifest.recorded_path.empty()
                   ? "\"\""
                   : quote(manifest.recorded_path).c_str());
-  std::printf("\"device_serial\": %s, ",
-              quote(manifest.device.serial).c_str());
+  std::printf("\"device_serial\": %s, ", quote(manifest.device.serial).c_str());
   std::printf("\"serial_redacted\": %s, ",
               manifest.device.serial_redacted ? "true" : "false");
   std::printf("\"firmware\": %s, ", quote(manifest.device.firmware).c_str());
@@ -359,19 +365,10 @@ int run_simulated(const Options& options) {
 }
 
 // ---------------------------------------------------------------------------
-// libusb backend
+// libusb backend (compiled but untested: no scanner is attached)
 // ---------------------------------------------------------------------------
 
 #if defined(EINSTAR_WITH_LIBUSB)
-
-struct LiveResult {
-  ManifestInfo manifest;
-  GroupingStats grouping;
-  CadenceStats cadence;
-  std::string manifest_path;
-  bool timed_out = false;
-  bool probe_only = false;
-};
 
 using einstar::AcquisitionPipeline;
 using einstar::ControlChannel;
@@ -381,6 +378,14 @@ using einstar::Frame;
 using einstar::LibUsbTransport;
 using einstar::PipelineConfig;
 using einstar::Status;
+
+struct LiveResult {
+  ManifestInfo manifest;
+  GroupingStats grouping;
+  CadenceStats cadence;
+  std::string manifest_path;
+  bool timed_out = false;
+};
 
 void print_metadata(const einstar::DeviceIdentity& identity, bool show_serial) {
   std::printf("device\n");
@@ -415,7 +420,8 @@ Result<std::vector<std::uint8_t>> read_calibration_blob(ControlChannel& channel)
                       " (the scanner may be held by EXStar or not answering "
                       "page reads)");
     }
-    const std::size_t offset = static_cast<std::size_t>(index) * kCalibrationPageSize;
+    const std::size_t offset =
+        static_cast<std::size_t>(index) * kCalibrationPageSize;
     const std::size_t take = std::min<std::size_t>(
         kCalibrationPageSize, kCalibrationBlobSize - offset);
     std::memcpy(blob.data() + offset, page.data(), take);
@@ -440,13 +446,211 @@ Status write_calibration_file(const std::string& directory,
   return Status::success();
 }
 
-/// Reads everything the capture tools need from a live device: identity
+/// Reads everything the capture tools need from a live device: the identity
 /// (already read by open()), the informational getters, and the factory
 /// calibration blob.  Read-only apart from optionally writing the local copy
 /// of the blob into the output directory.
 Result<DeviceInfo> read_device_metadata(
     ControlChannel& channel, const einstar::DeviceIdentity& identity,
     bool show_serial, const std::optional<std::string>& directory) {
+  DeviceInfo device;
+  device.simulated = false;
+  device.identified = true;
+  device.vendor_id = "3267";
+  device.product_id = "0003";
+  device.serial = show_serial ? identity.serial : redact_serial(identity.serial);
+  device.serial_redacted = !show_serial;
+  device.serial_fnv1a64 = string_digest(identity.serial);
+  device.firmware = identity.firmware.raw;
+  device.fx3_version = identity.firmware.fx3_version;
+  device.fpga_version = identity.firmware.fpga_version;
+  device.locale = identity.firmware.locale;
+  device.sensor_count = identity.sensor_count;
+
+  // Informational getters: failures are reported, never fatal.
+  for (unsigned camera = 0; camera < 3; ++camera) {
+    if (auto exposure = channel.exposure_us(camera)) {
+      device.exposure_us[camera] = *exposure;
+    }
+    if (auto gain = channel.gain(camera)) {
+      device.gain[camera] = *gain;
+    }
+  }
+  if (auto counts = channel.trigger_counts()) {
+    device.trigger_mono = counts->mono;
+    device.trigger_rgb = counts->rgb;
+  }
+  if (auto period = channel.trigger_period_us()) {
+    device.trigger_period_us = *period;
+  }
+
+  auto blob = read_calibration_blob(channel);
+  if (!blob) {
+    return fail(blob.error());
+  }
+  device.calibration_bytes = blob->size();
+  device.calibration_fnv1a64 = einstar::capture::fnv1a64(*blob);
+  if (directory) {
+    if (Status status = write_calibration_file(*directory, *blob);
+        !status.ok()) {
+      return fail(status);
+    }
+    device.calibration_file = "calibration.bin";
+  }
+  std::printf("  calibration    : %zu bytes (read-only pages 0..%u), "
+              "fnv1a64 0x%016llX%s\n",
+              blob->size(),
+              static_cast<unsigned>((kCalibrationBlobSize - 1) /
+                                    kCalibrationPageSize),
+              static_cast<unsigned long long>(device.calibration_fnv1a64),
+              device.calibration_file.empty()
+                  ? ""
+                  : (", written to " + device.calibration_file).c_str());
+  return device;
+}
+
+/// Applies one volatile exposure value, validating it against the device's
+/// reported range when that query is supported.
+Status apply_exposure(ControlChannel& channel, unsigned camera, std::uint32_t us) {
+  auto range = channel.exposure_range(camera);
+  if (range && (us < range->minimum_us || us > range->maximum_us)) {
+    return Status::error(
+        ErrorCode::InvalidArgument,
+        "exposure " + std::to_string(us) + " us for camera " +
+            std::to_string(camera) + " is outside the device range " +
+            std::to_string(range->minimum_us) + ".." +
+            std::to_string(range->maximum_us) + " us");
+  }
+  return channel.set_exposure_us(camera, us);
+}
+
+Status apply_gain(ControlChannel& channel, unsigned camera, std::uint16_t value) {
+  auto range = channel.gain_range(camera);
+  if (range && (value < range->minimum || value > range->maximum)) {
+    return Status::error(
+        ErrorCode::InvalidArgument,
+        "gain " + std::to_string(value) + " for camera " +
+            std::to_string(camera) + " is outside the device range " +
+            std::to_string(range->minimum) + ".." +
+            std::to_string(range->maximum));
+  }
+  return channel.set_gain(camera, value);
+}
+
+/// Read-only probe: open, identify, read metadata and calibration, close.
+int run_libusb_probe(const Options& options,
+                     const std::optional<std::string>& directory) {
+  LibUsbTransport transport{LibUsbTransport::Config{}};
+  const Status open_status = transport.open();
+  if (!open_status.ok()) {
+    std::fprintf(stderr,
+                 "cannot open the scanner: %s\n  hint: close EXStar, check the "
+                 "cable/power and the udev rule (see "
+                 "docs/reconstruction/acquisition.md)\n",
+                 open_status.message().c_str());
+    return 1;
+  }
+  std::printf("device\n");
+  std::printf("  opened         : 3267:0003 via libusb\n");
+  for (const std::string& note : transport.quirk_notes()) {
+    std::printf("  descriptor     : %s\n", note.c_str());
+  }
+  ControlConfig probe_config;
+  ControlChannel channel(transport, probe_config);
+  auto identity = channel.open();
+  if (!identity) {
+    std::fprintf(stderr, "control channel failed: %s\n",
+                 identity.error().message().c_str());
+    channel.close();
+    transport.close();
+    return 1;
+  }
+  print_metadata(*identity, options.show_serial);
+  auto device =
+      read_device_metadata(channel, *identity, options.show_serial, directory);
+  if (!device) {
+    std::fprintf(stderr, "metadata read failed: %s\n",
+                 device.error().message().c_str());
+    channel.close();
+    transport.close();
+    return 1;
+  }
+  std::printf("  probe-only     : no streaming, no volatile settings changed\n");
+  channel.close();
+  transport.close();
+  return 0;
+}
+
+int run_libusb(const Options& options) {
+  if (!options.probe_only && options.groups == 0) {
+    return usage_error("--groups must be at least 1");
+  }
+  if (!options.probe_only && options.output_directory.empty()) {
+    return usage_error("--out is required");
+  }
+
+  std::optional<std::string> directory;
+  if (!options.output_directory.empty()) {
+    auto prepared =
+        einstar::capture::prepare_output_directory(options.output_directory);
+    if (!prepared) {
+      std::fprintf(stderr, "output directory: %s\n",
+                   prepared.error().message().c_str());
+      return 1;
+    }
+    directory = *prepared;
+  }
+
+  if (options.probe_only) {
+    return run_libusb_probe(options, directory);
+  }
+  const std::string& output_directory = *directory;
+
+  auto transport = std::make_unique<LibUsbTransport>(LibUsbTransport::Config{});
+  LibUsbTransport* usb = transport.get();
+
+  PipelineConfig config;
+  config.queue_depth = options.queue_depth == 0 ? 8 : options.queue_depth;
+  config.copy_mode = CopyMode::Copy;
+  config.frame_queue_capacity = 32;
+  config.partial_frame_timeout_ns = 500'000'000;
+  if (!options.record_path.empty()) {
+    config.enable_recording = true;
+    config.recording_path = options.record_path;
+    config.recording_metadata =
+        "backend=libusb;groups=" + std::to_string(options.groups);
+  }
+  auto pipeline =
+      std::make_unique<AcquisitionPipeline>(std::move(transport), config);
+  const Status start_status = pipeline->start();
+  if (!start_status.ok()) {
+    std::fprintf(stderr,
+                 "cannot open the scanner: %s\n  hint: close EXStar, check the "
+                 "cable/power and the udev rule (see "
+                 "docs/reconstruction/acquisition.md)\n",
+                 start_status.message().c_str());
+    return 1;
+  }
+
+  std::printf("device\n");
+  std::printf("  opened         : 3267:0003 via libusb\n");
+  for (const std::string& note : usb->quirk_notes()) {
+    std::printf("  descriptor     : %s\n", note.c_str());
+  }
+
+  ControlConfig control_config;
+  control_config.claim_interface = false;  // the pipeline already owns the claim
+  auto channel = std::make_unique<ControlChannel>(*usb, control_config);
+  auto identity = channel->open();
+  if (!identity) {
+    std::fprintf(stderr, "control channel failed: %s\n",
+                 identity.error().message().c_str());
+    channel->close();
+    (void)pipeline->stop();
+    return 1;
+  }
+  print_metadata(*identity, options.show_serial);
+
   auto device_result = read_device_metadata(*channel, *identity,
                                             options.show_serial, directory);
   if (!device_result) {
@@ -457,13 +661,6 @@ Result<DeviceInfo> read_device_metadata(
     return 1;
   }
   DeviceInfo device = *device_result;
-
-  if (options.probe_only) {
-    std::printf("  probe-only     : no streaming, no volatile settings changed\n");
-    channel->close();
-    (void)pipeline->stop();
-    return 0;
-  }
 
   // ---- volatile settings ---------------------------------------------------
   bool applied = false;
@@ -525,8 +722,9 @@ Result<DeviceInfo> read_device_metadata(
     }
     const Status status = apply_gain(*channel, camera, *gains[camera]);
     if (!status.ok()) {
-      std::fprintf(stderr, "volatile gain for camera %u was refused: %s\n"
-                           "aborting without changing anything else\n",
+      std::fprintf(stderr,
+                   "volatile gain for camera %u was refused: %s\n"
+                   "aborting without changing anything else\n",
                    camera, status.message().c_str());
       channel->close();
       (void)pipeline->stop();
@@ -543,16 +741,11 @@ Result<DeviceInfo> read_device_metadata(
                                                   : 68'000;
   bool streaming = false;
   if (options.trigger_mode != TriggerMode::Off) {
-    if (trigger_period == 0) {
-      std::fprintf(stderr, "--trigger period must be non-zero\n");
-      channel->close();
-      (void)pipeline->stop();
-      return 2;
-    }
     const Status status = channel->start_streaming(trigger_period);
     if (!status.ok()) {
-      std::fprintf(stderr, "volatile start_streaming(%u us) was refused: %s\n"
-                           "aborting; the trigger was not left running\n",
+      std::fprintf(stderr,
+                   "volatile start_streaming(%u us) was refused: %s\n"
+                   "aborting; the trigger was not left running\n",
                    trigger_period, status.message().c_str());
       channel->close();
       (void)pipeline->stop();
@@ -564,7 +757,8 @@ Result<DeviceInfo> read_device_metadata(
     device.trigger_mono = 1;
     device.trigger_rgb = 1;
     std::printf("  trigger        : %u us, 1 IR + 1 colour per trigger "
-                "(volatile)\n", trigger_period);
+                "(volatile)\n",
+                trigger_period);
     if (options.trigger_counts_set) {
       const Status counts = channel->set_trigger_counts(options.trigger_mono,
                                                         options.trigger_rgb);
@@ -588,7 +782,7 @@ Result<DeviceInfo> read_device_metadata(
   device.settings_applied = applied;
 
   // ---- capture -------------------------------------------------------------
-  GroupWriter writer(*directory);
+  GroupWriter writer(output_directory);
   if (Status status = writer.prepare(); !status.ok()) {
     std::fprintf(stderr, "%s\n", status.message().c_str());
     if (streaming) {
@@ -658,7 +852,7 @@ Result<DeviceInfo> read_device_metadata(
   result.manifest.backend = "libusb";
   result.manifest.simulated = false;
   result.manifest.live = true;
-  result.manifest.output_directory = *directory;
+  result.manifest.output_directory = output_directory;
   result.manifest.requested_groups = options.groups;
   result.manifest.stopped_early = false;
   result.manifest.device = device;
@@ -690,9 +884,9 @@ Result<DeviceInfo> read_device_metadata(
   }
 
   const std::string manifest_path =
-      join_path(*directory, "frames_manifest.json");
-  auto written =
-      einstar::capture::write_frames_manifest(manifest_path, result.manifest, writer);
+      join_path(output_directory, "frames_manifest.json");
+  auto written = einstar::capture::write_frames_manifest(
+      manifest_path, result.manifest, writer);
   if (!written) {
     std::fprintf(stderr, "manifest: %s\n", written.error().message().c_str());
     return 1;
@@ -700,7 +894,8 @@ Result<DeviceInfo> read_device_metadata(
   result.manifest_path = written->path;
 
   std::printf("capture (libusb) - UNTESTED PATH, no scanner was attached\n");
-  std::printf("  out dir        : %s\n", result.manifest.output_directory.c_str());
+  std::printf("  out dir        : %s\n",
+              result.manifest.output_directory.c_str());
   print_grouping(result.manifest, result.grouping, result.cadence,
                  result.manifest_path);
   if (options.json) {
@@ -811,13 +1006,6 @@ int main(int argc, char** argv) {
   if (show_help) {
     print_usage();
     return 0;
-  }
-  if (options.trigger_mode == TriggerMode::Period &&
-      options.backend == Backend::Simulated && options.trigger_period_us == 0) {
-    return usage_error("--trigger period must be positive");
-  }
-  if (options.probe_only && options.backend == Backend::Simulated) {
-    return run_simulated(options);
   }
   switch (options.backend) {
     case Backend::Simulated:
