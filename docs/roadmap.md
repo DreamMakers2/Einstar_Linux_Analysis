@@ -180,3 +180,26 @@ The published engine's covariance/stopping was audited and corrected:
 Next gates: physical hole count/pitch/outline; user-unit calibration with
 held-out validation; colour re-calibration with texture enabled; known-artefact
 depth test. No device write before those pass.
+
+### Adaptive calibration round 2 (2026-11-10)
+
+Implemented and evaluated the replacement for the fixed 25-shot workflow:
+
+* **design**: coverage-first bootstrap -> task-space A-optimal next-view guidance
+  -> dwell/blur/sync gated capture -> LM joint solve -> saturation stopping ->
+  independent verification.  Research review, detector benchmark, solver
+  benchmark and strategy Monte Carlo are published under
+  `docs/calibration/`.
+* **result**: the task-space planner reaches 0.193 mm model-induced 3-D error at
+  25 views vs 0.380 mm for the vendor plan (10/10 paired trials); the vendor
+  plan is not improved by adding its own redundant views (0.314 mm at 8,
+  0.380 mm at 25) because 5-term distortion absorbs noise on clustered poses.
+* **engine**: `calib/objective.py` (3-D volume covariance, A/D/E), `guidance.py`
+  (quality gates, instructions, acceptance), `session.py` (adaptive session,
+  modes, stopping), `localize.py` (7 localisers, two-stage), `solvers.py`
+  (LM/SciPy/native), `verify.py` (bias/held-out/split-half), `simloop.py`,
+  `ui.py`.  157 tests.
+* **open**: physical accuracy is still unverified (no artefact); the real
+  corpus fails the stability gate (z=12); the 1 % CCF scale difference is
+  unresolved and unobservable from reprojection.  Next gate: sphere bar /
+  flatness artefact per VDI/VDE 2634-2/-3 on the unit.

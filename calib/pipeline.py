@@ -62,21 +62,62 @@ def find_images(directory: str | Path) -> dict[tuple[str, int], str]:
 
 
 def detect_directory(directory: str | Path, auto_polarity: bool = True,
-                     refine_mode: str = "centroid") -> DetectionSet:
+                     refine_mode: str = "centroid",
+                     localize_method: Optional[str] = None,
+                     cameras: Optional[dict[str, CameraIntrinsics]] = None,
+                     min_lattice: int = 19) -> DetectionSet:
     files = find_images(directory)
     grids = {}
     failures = []
+    if localize_method and localize_method != "none":
+        from .localize import refine_grid
     for key, path in files.items():
         img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             failures.append(path)
             continue
         obs = detect_grid_auto(img, refine_mode=refine_mode)
-        if obs is None or obs.n_lattice < 25:
+        if obs is None or obs.n_lattice < min_lattice:
             failures.append(path)
             continue
+        if localize_method and localize_method != "none":
+            cam = (cameras or {}).get(SIDE_TO_CAM[key[0]])
+            try:
+                ref = refine_grid(img, obs.points, method=localize_method,
+                                  K=cam.K if cam is not None else None,
+                                  kc=cam.kc if cam is not None else None)
+                if len(ref.points) >= min_lattice:
+                    obs = GridObservation(
+                        points={tuple(float(x) for x in k): np.asarray(v, float)
+                                for k, v in ref.points.items()},
+                        homography=ref.homography, n_lattice=len(ref.points),
+                        rms=float(ref.rms), max_residual=float(ref.max_residual),
+                        big_markers=obs.big_markers, detector=f"refined:{ref.method}")
+            except Exception as exc:  # keep the blob result, record why
+                failures.append(f"{path}: refine failed: {exc}")
         grids[key] = obs
     return DetectionSet(grids, failures)
+
+
+def solve_observations(obs: list[Observation], pitch_mm: float,
+                       init: dict[str, CameraIntrinsics], free_kc: bool,
+                       backend: str = "auto", robust_loss: str = "huber",
+                       f_scale: float = 1.0, max_nfev: int = 1200) -> CalibrationResult:
+    """Solve with the fast LM backend, falling back to the engine."""
+    if backend and backend != "scipy":
+        try:
+            from . import solvers
+            prob = solvers.make_problem(obs, pitch_mm=pitch_mm, init_cameras=init)
+            out = solvers.solve_joint(prob, backend=("lm" if backend == "auto" else backend),
+                                      robust=robust_loss, f_scale=f_scale,
+                                      free_kc=free_kc, covariance=True)
+            if out.get("result") is not None:
+                return out["result"]
+        except Exception:
+            pass
+    return calibrate(obs, pitch_mm, init, free_kc=free_kc,
+                     robust_loss=robust_loss, f_scale=f_scale,
+                     free_intrinsics=True, max_nfev=max_nfev)
 
 
 def calibrate_directory(directory: str | Path,
@@ -87,11 +128,9 @@ def calibrate_directory(directory: str | Path,
                         max_nfev: int = 1200,
                         refine_mode: str = "centroid",
                         heldout: bool = True,
-                        anchor_sigma_mm: float = 0.05) -> tuple[CalibrationResult, DetectionSet, dict]:
-    det = detect_directory(directory, refine_mode=refine_mode)
-    obs = det.observations()
-    if not obs:
-        raise RuntimeError("no usable calibration grids found")
+                        anchor_sigma_mm: float = 0.05,
+                        backend: str = "auto",
+                        localize_method: Optional[str] = None) -> tuple[CalibrationResult, DetectionSet, dict]:
     factory = {}
     init = None
     if factory_ccf_dir is not None:
@@ -103,14 +142,19 @@ def calibrate_directory(directory: str | Path,
                 factory[cam] = load_ccf(p)
         if factory:
             init = {c: CameraIntrinsics.from_ccf(r) for c, r in factory.items()}
+    det = detect_directory(directory, refine_mode=refine_mode,
+                           localize_method=localize_method, cameras=init)
+    obs = det.observations()
+    if not obs:
+        raise RuntimeError("no usable calibration grids found")
     if init is None:
         init = {c: CameraIntrinsics(1150.0, 1150.0, 640.0, 512.0, np.zeros(5))
                 for c in CAMERAS}
         for c in CAMERAS:
             if c not in init:
                 init[c] = CameraIntrinsics(1150.0, 1150.0, 640.0, 512.0, np.zeros(5))
-    res = calibrate(obs, pitch_mm, init, free_kc=free_kc,
-                    free_intrinsics=True, max_nfev=max_nfev)
+    res = solve_observations(obs, pitch_mm, init, free_kc=free_kc,
+                             backend=backend, max_nfev=max_nfev)
     # reject whole views whose detections are grossly inconsistent with the
     # fitted rig; a single bad grid can otherwise dominate the covariance
     from .evaluate import per_view_errors
@@ -122,10 +166,13 @@ def calibrate_directory(directory: str | Path,
         bad = set()
     if bad:
         obs = [o for o in obs if o.view not in bad]
-        res = calibrate(obs, pitch_mm, init, free_kc=free_kc,
-                        free_intrinsics=True, max_nfev=max_nfev)
+        res = solve_observations(obs, pitch_mm, init, free_kc=free_kc,
+                                 backend=backend, max_nfev=max_nfev)
     info = {"summary": result_summary(res), "detections": det.summary(),
             "pitch_mm": pitch_mm, "anchored": False,
+            "solver_backend": (res.info.get("solver") or res.info.get("backend")
+                               or backend),
+            "localize_method": localize_method,
             "plate": plate.plate_summary(),
             "rejected_views": sorted(int(v) for v in bad)}
     if anchor_baseline and factory and "left" in factory and "right" in factory:
@@ -173,8 +220,8 @@ def calibrate_directory(directory: str | Path,
         if len(candidates) > 4:
             hv = candidates[-1]
             tr = [o for o in obs if int(o.view) != hv]
-            rt = calibrate(tr, pitch_mm, init, free_kc=free_kc,
-                           free_intrinsics=True, max_nfev=max_nfev)
+            rt = solve_observations(tr, pitch_mm, init, free_kc=free_kc,
+                                    backend=backend, max_nfev=max_nfev)
             h = heldout_reprojection(obs, rt, pitch_mm, hv)
             info["heldout_rms_px"] = h.get("rms_px")
             info["heldout_view"] = hv

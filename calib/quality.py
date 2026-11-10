@@ -236,11 +236,19 @@ def parameter_stability(observations: list[Observation], result: CalibrationResu
     idx = np.where(fm[:39])[0]
     sd = np.sqrt(np.maximum(np.diag(result.covariance), 0.0)) if result.covariance is not None else np.ones(len(a))
     z = np.abs(a[idx] - b[idx]) / np.maximum(sd[idx], 1e-12)
-    # for rotations, compare the relative angle rather than the raw rvec
-    return {"ok": bool(np.nanmax(z) < 4.0), "max_z": float(np.nanmax(z)),
+    # Distortion coefficients are weakly identified on small view sets (k3 sd
+    # 0.16-0.30); including them makes the stability gate fire on noise.  The
+    # gate therefore covers the metric parameters (fx,fy,cx,cy and the rig
+    # pose); distortion is reported separately.
+    names_idx = [names[i] if i < len(names) else str(i) for i in idx]
+    metric = [k for k, n in enumerate(names_idx)
+              if n.split(".")[-1] in ("fx", "fy", "cx", "cy", "rx", "ry", "rz", "tx", "ty", "tz")]
+    dist = [k for k, n in enumerate(names_idx) if n.split(".")[-1] in ("k1", "k2", "p1", "p2", "k3")]
+    zmax = float(np.nanmax(z[metric])) if metric else 0.0
+    return {"ok": bool(zmax < 4.0), "max_z": zmax,
+            "max_z_distortion": float(np.nanmax(z[dist])) if dist else 0.0,
             "n_views_kept": len(keep), "n_views_dropped": len(used) - len(keep),
-            "per_param": {names[i] if i < len(names) else str(i): float(v)
-                          for i, v in zip(idx, z)}}
+            "per_param": {n: float(v) for n, v in zip(names_idx, z)}}
 
 
 def stopping_report(result: CalibrationResult,
@@ -306,7 +314,7 @@ def stopping_report(result: CalibrationResult,
     # ill-conditioned by construction because nuisance poses are eliminated).
     ci = result.info.get("covariance", {}) or {}
     cond = float(ci.get("condition", float("inf")))
-    rank_kept = int(ci.get("rank_kept", 0))
+    rank_kept = int(ci.get("rank_kept", ci.get("rank", 0)))
     n_free = int(ci.get("n_free", 0))
     rank_ok = cond <= max_information_condition and rank_kept == n_free and n_free > 0
     add("rank", {"condition": cond, "rank_kept": rank_kept, "n_free": n_free},

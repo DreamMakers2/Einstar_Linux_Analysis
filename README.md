@@ -35,6 +35,7 @@ calibration records or user data (see [Scope and exclusions](#scope-and-exclusio
 | Calibration model | operational CCF model + rectification/triangulation; intrinsic key **bounded** to ≤1 px (depth effect 0.26 mm at 300 mm vs 2.9 mm from the baseline spread); 42/42 invariants; synthetic round trip at 1e-12 mm; real captures rectify with ≈1 px median vertical residual | **Validated for consistency**; physical accuracy unmeasured | [docs/calibration/model.md](docs/calibration/model.md) |
 | Calibration workflow | EXStar's physical calibration = **5 groups × 5 distance bands (240/320/400/480/560 mm ±40) × 3 cameras = 75 images**; only the vertical group enforces ±8°; no per-step retry; measured session **2 min 56 s**, last capture→result ~1.3 s, device write ~0.34 s; the result overwrites the CCF files **and** the device block at `tagDevData+0x39B` with no backup | **Verified** (XML + code + real session log) | [docs/calibration/workflow_and_replacement.md](docs/calibration/workflow_and_replacement.md) |
 | Calibration replacement | `calib/`: marker detection, joint robust bundle adjustment, **marginal** covariance (NEES 0.91–1.02 n fixed kc; 1.17–1.32 free kc), Fisher-information view selection, conservative coverage/held-out stopping, versioned host-side profiles; 0.367 px on the vendor corpus, IR baseline 0.014 mm, 0.20° relative rotation | **Offline-validated**; physical accuracy requires a board measurement and a known artefact | [calib/](calib/), [docs/calibration/covariance_and_stopping.md](docs/calibration/covariance_and_stopping.md) |
+| Adaptive calibration | Task-space A-optimal guidance over the 3-D volume, dwell/blur/sync gating, two-stage localisation, LM solve (0.23 s), saturation stopping, verification. 10-trial Monte Carlo: **0.193 mm** 3-D error at 25 views vs **0.380 mm** for the vendor 5×5 (10/10 paired wins) | **Offline-validated** (synthetic truth + real consistency); physical accuracy unverified | [design](docs/calibration/calibration_system_design.md), [strategy](docs/calibration/strategy_evaluation.md) |
 | Acquisition backend | C++23 transport/pipeline/FFI + deterministic simulator; framing repaired, golden-vector conformance, fuzzing, 10 k-frame stress; ASan/UBSan/TSan clean | **Offline-validated**; no hardware run | [driver/](driver/), [docs/readiness.md](docs/readiness.md) |
 | Command channel | serial, firmware string, sensor count, resolution, exposure/gain (+ranges), trigger mode/period, temperature, read-only page read; 5 attempts, echo/status validation, per-pipe recovery | **Offline-validated** (22 cases / 4,379 checks against a byte-accurate fake FX3) | [driver/CONTROL_CHANNEL.md](driver/CONTROL_CHANNEL.md) |
 | Windows architecture | `EXStar.exe → SnSyncService.exe → einscan10 plugin → CommunicateLayer → SH3DU3Driver/cyusb3`; 741 PE modules mapped | **Verified** (import graph + strings) | [docs/windows/architecture.md](docs/windows/architecture.md) |
@@ -128,37 +129,55 @@ skipping.
 
 ## Calibration workflow and replacement engine
 
-The physical scanner calibration was reverse-engineered end-to-end: the 5×5
-capture state machine, the distance/angle gates, the vendor's per-view PnP +
-joint refinement, the CCF/device write-back, and the plate geometry. The vendor
-corpus recovers an **8×5 plate with 41 holes** (37 small + 4 large) and a
-second **8×7 / 57-hole** drawing variant. The metric pitch is **unresolved**:
-27.72 mm is baseline-consistent but not independent; 25.0 mm follows if the
-vendor `200x150` profile is the plate outline. The shipped colour record is
-**17.66 mm** from the fit and from the factory record (1.17 mm), so it is stale/
-mixed-generation and moves the projected plate by 46.6 px; re-estimate it on the
-user's unit.
+The physical scanner calibration was reverse-engineered end-to-end: the 5×5 capture state
+machine, the distance/angle gates, the vendor's per-view PnP + joint refinement, the
+CCF/device write-back, and the plate geometry. **The plate is resolved**
+([docs/calibration/plate_spec_recovered.md](docs/calibration/plate_spec_recovered.md)):
+8×5 markers plus one off-lattice marker = **41 holes (37 small + 4 large)**, built on a
+17×14 recognition lattice at **14.00 mm** with markers on every second node, so the
+**marker pitch is 28.0 mm**; the board frame origin is the marker-field centre and the
+plate outline is 8×6 marker pitches = **224×168 mm**. `200x150` is a profile/directory
+name, not a plate dimension; the manual's 8×7 drawing is a shared cross-product
+illustration, and the official SHINING 3D video shows the physical 8×5 board. The vendor
+CCF written on the same corpus implies an effective **27.72 mm** — a 1 % solver-scale
+difference that remains **visible and unresolved**. Pitch is a pure scale gauge: a 1 %
+error leaves the reprojection RMS at the noise floor while moving the baseline by 1.58 mm,
+so no residual or covariance test can settle it.
 
-`calib/` is a Linux-native replacement: sub-pixel marker detection, joint
-robust bundle adjustment over three cameras, marginal robust covariance
-(synthetic NEES 0.91–1.02 × n), Fisher-information view selection and
-conservative coverage/held-out stopping, and versioned host-side profiles that preserve the factory snapshot
-and never write the scanner implicitly. Ablations show the original 25-step
-sequence is redundant for metric scale (3 views already recover the baseline to
-0.03 mm) but not for intrinsics (≥20 views to approach the vendor parameters).
-The earlier 8-view 1.8×–6.4× adaptive claim used a conditional covariance and
-is **superseded**. Held-out views reproject at **0.378 px** vs 0.368 px
-training, and IR epipolar consistency is **0.138 px** median (CCF: 0.181 px).
-Real EXStar-prefix k=8 has marginal fx σ ≈4 px and is not a defensible
-calibration. The held-out audit gives: 8–12 only for a ~1 px fx target with
-good selection; 12–20 for the standard 0.75 px target; 20–25 for 0.5 px mean,
-and no non-oracle method reaches the 0.5 px UCB95 target at 25. The minimum is
-target- and selection-dependent; see `analysis/calibration/audit/viewcount_report.md`.
+`calib/` is a Linux-native replacement: sub-pixel marker detection, joint robust bundle
+adjustment over three cameras, marginal robust covariance (synthetic NEES 0.91–1.02 × n),
+Fisher-information view selection and conservative coverage/held-out stopping, and
+versioned host-side profiles that preserve the factory snapshot and never write the
+scanner implicitly. The original 25-step sequence is redundant for metric scale (3 views
+already recover the baseline to 0.03 mm) but not for intrinsics (≥20 views to approach the
+vendor parameters).
 
-**Not claimed:** physical sub-millimetre accuracy or superiority over the
-vendor. That needs the actual board variant (8×5 vs the 8×7 drawn in the
-manual), a measured length standard, a calibration run on the user's unit and a
-known artefact. The roadmap's calibration track lists the gates.
+Round 2 replaces the fixed procedure with an adaptive, operator-guided one
+([design](docs/calibration/calibration_system_design.md)): coverage-first bootstrap →
+**task-space A-optimal** next-view guidance (3-D covariance over the 200–600 mm volume,
+not parameter covariance) → dwell/blur/sync-gated capture with two-stage localisation
+(`centroid_bg` live, `auto`/conic on the committed dwell frame) → LM joint solve
+(**0.23 s** vs 6.1 s for the old engine, identical optimum) → saturation stopping →
+independent verification (held-out, split-half, epipolar, tilt-slope). In a 10-trial Monte
+Carlo the task-space planner reaches **0.193 mm** model-induced 3-D error at 25 views vs
+**0.380 mm** for the vendor 5×5 plan (10/10 paired wins); the vendor plan is *worse* at 25
+than at 8 because 5-term distortion absorbs noise on its clustered poses
+([strategy evaluation](docs/calibration/strategy_evaluation.md)). The localiser benchmark
+([report](docs/calibration/localization_evaluation.md)) selects `auto`/`conic_perspective`
+(0.247 px leave-one-out vs 0.281 px for the centroid) and finds the measured marker radius
+is 1.77 mm, so perspective eccentricity on this plate is only 0.004–0.016 px. The solver
+benchmark ([report](docs/calibration/solver_evaluation.md)) documents the backend choice,
+covariance calibration (fx/baseline/3-D calibrated; cx and relative rotation mildly
+optimistic) and the native-C++/Ceres findings. On the real corpus the fit is 0.329 px RMS,
+0.392 px held-out, 0.14 px median epipolar; the same corpus **fails** a one-view-drop
+stability gate (z = 12) while synthetic data passes it (z = 0.44) — a model/data bias the
+covariance cannot reveal.
+
+**Not claimed:** physical sub-millimetre accuracy, ISO/VDI conformity, or the plate's true
+pitch. All accuracy numbers are synthetic or CCF-relative; scale is traceable to the plate
+pitch only. A physical validation needs a calibrated sphere bar and flatness artefact
+(VDI/VDE 2634-2/-3, ISO 10360-13) and a calibration run on the user's unit
+([roadmap](docs/roadmap.md)).
 
 ## Scope and exclusions
 

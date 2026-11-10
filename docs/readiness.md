@@ -90,3 +90,16 @@ replacement. It has been hardened where it was provably wrong (framing, `bInterv
 ordering) and the remaining risk is dominated by unobserved device behaviour rather than by
 known defects. The first hardware session should follow gates G1–G7 in order; G8–G9 require the
 calibration and reconstruction work to be finished.
+
+### Adaptive calibration readiness (2026-11-10)
+
+| item | state |
+|---|---|
+| plate spec | recovered (28.0 mm, 8x5) |
+| detector | selected (`auto` offline, `centroid_bg` live), benchmarked |
+| solver | LM 0.23 s, covariance calibrated for fx/baseline/3-D; cx caveat |
+| guidance | implemented + headless dashboard; closed-loop simulation |
+| stopping | multi-gate + mm saturation; vendor corpus fails stability (honest) |
+| strategy evidence | 10-trial Monte Carlo, task-space best (10/10 vs vendor) |
+| real-corpus accuracy | unverified; scale traceable to plate pitch only |
+| hardware validation | blocked on a calibrated artefact (B15) |

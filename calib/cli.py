@@ -49,7 +49,8 @@ def cmd_calibrate(args):
     res, det, info = calibrate_directory(
         args.images, args.factory, pitch_mm=args.pitch,
         free_kc=args.free_distortion, anchor_baseline=not args.no_anchor,
-        max_nfev=args.max_nfev, refine_mode=args.refine_mode)
+        max_nfev=args.max_nfev, refine_mode=args.refine_mode,
+        backend=args.solver, localize_method=args.localize)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     obs = det.observations()
@@ -178,6 +179,12 @@ def main(argv=None):
     c.add_argument("--profile", default=None, help="host-side profile root")
     c.add_argument("--serial", default="unknown")
     c.add_argument("--refine-mode", choices=("centroid", "ellipse", "edge"), default="centroid")
+    c.add_argument("--solver", choices=("auto", "lm", "scipy", "native"), default="auto",
+                   help="joint solver backend (auto = LM with SciPy fallback)")
+    c.add_argument("--localize", default="auto",
+                   choices=("auto", "conic_perspective", "conic", "gradient",
+                            "ellipse", "centroid_bg", "centroid", "none"),
+                   help="sub-pixel localiser applied to every detected grid")
     c.add_argument("--target", choices=("fast", "standard", "high"), default="standard")
     c.add_argument("--bootstrap", action="store_true",
                    help="6-fit view-bootstrap sigma check (slower, conservative)")
