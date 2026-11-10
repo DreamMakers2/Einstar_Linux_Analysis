@@ -40,6 +40,7 @@ calibration records or user data (see [Scope and exclusions](#scope-and-exclusio
 | Command channel | serial, firmware string, sensor count, resolution, exposure/gain (+ranges), trigger mode/period, temperature, read-only page read; 5 attempts, echo/status validation, per-pipe recovery | **Offline-validated** (22 cases / 4,379 checks against a byte-accurate fake FX3) | [driver/CONTROL_CHANNEL.md](driver/CONTROL_CHANNEL.md) |
 | Windows architecture | `EXStar.exe → SnSyncService.exe → einscan10 plugin → CommunicateLayer → SH3DU3Driver/cyusb3`; 741 PE modules mapped | **Verified** (import graph + strings) | [docs/windows/architecture.md](docs/windows/architecture.md) |
 | Vendor reconstruction | dense 4-path SGM (census 5/7/9, ZNCC, subpixel, LR), speckle branch, CUDA 10.2/PTX 6.5 (251/230/134 kernels), ICP + particle filter, TSDF, marching cubes, SfM/SLAM | **High** (static evidence) | [docs/reconstruction/vendor_pipeline_analysis.md](docs/reconstruction/vendor_pipeline_analysis.md) |
+| **Linux reconstruction (new)** | `recon/` (C++23/OpenCV 5): validated 3-camera profile → IR rectification → padded SGBM + sub-pixel + left-right consistency + confidence → metric depth with uncertainty → PLY/maps/report. Genuine Einstar frames: **56 600 points**, 92 % on one plane at **0.34 mm RMS**, 0.12 s/frame at half resolution, byte-identical reruns; synthetic 200–700 mm planes recovered to **≤0.13 mm**. Colour registration is gated on a profile marked `ok`. | **Offline-validated + real-data consistency**; absolute accuracy **unverified** | [engine](recon/), [real-data report](docs/reconstruction/real_data_report.md), [benchmarks](docs/reconstruction/benchmarks.md) |
 
 A numbered list of every finding with confidence and evidence is in
 **[docs/FINDINGS.md](docs/FINDINGS.md)**. Corrections to earlier assumptions are listed there
@@ -104,6 +105,7 @@ driver/                   C++23 asynchronous acquisition backend + simulator + t
 tests/                    fixture-free synthetic suite + evidence-backed suites (skip without fixtures)
 analysis/                 derived metadata (PE classifications, FX3 symbol map, summaries)
 hardware/                 USB 3.0 feasibility: board photos, annotated figures, 121-ball map, analysis
+recon/                    C++23/OpenCV 5 reconstruction engine (stereo -> depth -> PLY)
 scripts/verify_all.sh     one-command verification
 ```
 
@@ -118,7 +120,13 @@ cmake -S driver -B build && cmake --build build -j"$(nproc)"
 ctest --test-dir build --output-on-failure
 ./build/einstar-bench --out bench_results.json
 
-# 3) Everything at once
+# 3) 3D reconstruction engine (needs OpenCV 5; no scanner)
+cmake -S recon -B build/recon -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build/recon -j"$(nproc)"
+ctest --test-dir build/recon --output-on-failure
+./build/recon/recon_cli synthetic --profile <profile.json> --out /tmp/synth --depth 350
+
+# 4) Everything at once
 scripts/verify_all.sh
 ```
 

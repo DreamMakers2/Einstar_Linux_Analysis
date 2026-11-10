@@ -103,6 +103,16 @@ if(EINSTAR_SANITIZE)
   target_link_options(einstar_ffi PRIVATE -fsanitize=address,undefined)
 endif()
 
+if(EINSTAR_BUILD_TOOLS OR EINSTAR_BUILD_TESTS)
+  # Shared capture/replay tooling: PGM triplet + manifest output, recording
+  # verification, simulated capture and replay.  Used by both new tools and by
+  # test_replay_frames, so the tested code is exactly the code the tools run.
+  add_library(einstar_capture_core STATIC tools/capture_core.cpp)
+  target_link_libraries(einstar_capture_core PUBLIC einstar_core)
+  target_include_directories(einstar_capture_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tools)
+  target_compile_options(einstar_capture_core PRIVATE ${EINSTAR_WARNING_FLAGS})
+endif()
+
 if(EINSTAR_BUILD_TOOLS)
   add_executable(einstar-record-replay tools/record_replay.cpp)
   target_link_libraries(einstar-record-replay PRIVATE einstar_core)
@@ -111,6 +121,14 @@ if(EINSTAR_BUILD_TOOLS)
   add_executable(einstar-bench tools/bench_acq.cpp)
   target_link_libraries(einstar-bench PRIVATE einstar_core)
   target_compile_options(einstar-bench PRIVATE ${EINSTAR_WARNING_FLAGS})
+
+  add_executable(einstar-replay-frames tools/replay_frames.cpp)
+  target_link_libraries(einstar-replay-frames PRIVATE einstar_capture_core)
+  target_compile_options(einstar-replay-frames PRIVATE ${EINSTAR_WARNING_FLAGS})
+
+  add_executable(einstar-capture-frames tools/capture_frames.cpp)
+  target_link_libraries(einstar-capture-frames PRIVATE einstar_capture_core)
+  target_compile_options(einstar-capture-frames PRIVATE ${EINSTAR_WARNING_FLAGS})
 endif()
 
 if(EINSTAR_BUILD_TESTS)
@@ -127,6 +145,7 @@ if(EINSTAR_BUILD_TESTS)
     test_record_replay
     test_descriptor_ffi
     test_control_channel
+    test_replay_frames
     test_stress
   )
 
@@ -144,6 +163,7 @@ if(EINSTAR_BUILD_TESTS)
   endforeach()
 
   target_link_libraries(test_descriptor_ffi PRIVATE einstar_ffi)
+  target_link_libraries(test_replay_frames PRIVATE einstar_capture_core)
 endif()
 
 include(GNUInstallDirs)
