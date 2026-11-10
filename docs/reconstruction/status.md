@@ -14,7 +14,7 @@ hardware), **unverified** (no evidence).
 | **M4 — acquisition/replay integration** | `einstar-capture-frames` (simulated + libusb paths) and `einstar-replay-frames` write the same `frame_%06d_cam%d.pgm` + manifest; a simulated 3-group capture records 295 transfers, replays to 9 frames, and `recon_cli` consumes the replay through the identical loader; corrupted recording refused; **driver ctest 12/12 passes** (224 replay-frames checks) | **implemented, offline-tested**; live libusb path **pending hardware** |
 | **M5 — one-session calibration recorder** | `tools/calibsession/calibrate_session.py` on the 25-view vendor corpus: 21 accepted, 16 train / 5 held-out, 4 rejected + 1 session-rejected, colour frames present and plate detected in 21/21, completeness pass, `--verify` re-hashes 75 files (**OK**), versioned host profile + exported reconstruction profile (colour `unknown` by default); stop recommended; held-out median **0.336 px**; factory-orientation guard rejects an upside-down stream (ΔR 179.86°); **19 recorder tests and 176 repo tests pass**, including the probe-style stream mapping/rotation and sequential dwell | **implemented, offline-tested on the vendor corpus + probe-style triplet**; real user session **pending** |
 | **M6 — live readiness** | runbook in `acquisition.md` (device detection, metadata, volatile exposure/gain/trigger, capture, record, replay, safety); no-device failure verified: exit 1, clear hint, **no output directory created**; live paths labelled untested | **documented + offline safety test**; live **pending hardware** |
-| **M7 — publication** | code, tests, architecture, benchmarks, synthetic figures and non-sensitive results exported to the public repository; pushed as `7e61c29` (51 files, 11 994 insertions) | **done** |
+| **M7 — publication** | code, tests, architecture, benchmarks, synthetic figures, real-data consistency, Bayer RGB and CUDA benchmark exported; public commits `7e61c29`, `1b0d546`, `5c5da10`; private history holds the corresponding commits | **done** |
 
 ## Exact commands and results
 
@@ -77,8 +77,10 @@ build/recon/recon_cli reconstruct --frames /tmp/replay --id 0 \
 
 * **Can claim:** a working Linux-native path from genuine Einstar IR/RGB
   streams to a repeatable metric point cloud; correct stream/coordinate
-  handling; sub-0.13 mm agreement on synthetic planes; 0.34 mm planar RMS and
-  0.1 mm repeatability on the real capture; deterministic replay→reconstruction.
-* **Cannot claim:** physical sub-millimetre accuracy, ISO/VDI conformity, or
-  that the absolute scale is correct.  Those require the artefact protocol in
+  handling (including raw-Bayer colour); sub-0.13 mm agreement on synthetic
+  planes; 0.34 mm planar RMS and 0.1 mm repeatability on the real capture;
+  deterministic replay→reconstruction; a measured CUDA SGM baseline.
+* **Cannot claim:** physical sub-millimetre accuracy, ISO/VDI conformity, that
+  the absolute scale is correct, calibrated RGB photometry, or end-to-end GPU
+  acceleration (the CUDA SGM benchmark is not integrated).  Those require the artefact protocol in
   `validation_plan_m3.md` on a real unit.
