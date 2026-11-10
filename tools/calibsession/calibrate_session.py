@@ -1573,6 +1573,7 @@ class SessionRecorder:
             self.session.policy["solve_every"] = int(solve_every)
         self.mode = mode
         self.records: list[CandidateRecord] = []
+        self.detect_seconds = 0.0
         self._previous_candidate_pose: Optional[tuple] = None
         self._previous_candidate_timestamp: Optional[float] = None
         self._profile_info: dict = {}
@@ -1674,6 +1675,7 @@ class SessionRecorder:
                                 rotate_180=bool(rotations.get(c))) 
                   for c in CAMERAS}
         images = {c: im.gray for c, im in loaded.items() if im.ok}
+        t_detect = time.time()
         grids: dict[str, Observation] = {}
         detection: dict[str, dict] = {}
         declared = item.detections is not None
@@ -1706,6 +1708,7 @@ class SessionRecorder:
                              "error": "grid not assigned", "source": "image"})
             if g is not None:
                 grids[c] = to_observation(c, g)
+        self.detect_seconds += time.time() - t_detect
 
         # what the session itself would see as previous pose -----------------
         # the CLI/recorder dwell mode is authoritative: "assume" means each
@@ -2076,9 +2079,13 @@ class SessionRecorder:
             free_kc = bool(len({o.view for o in obs}) >= int(policy["kc_views"]))
         robust_loss = robust_loss or policy.get("robust_loss", "huber")
         f_scale = float(policy.get("f_scale", 1.0) if f_scale is None else f_scale)
+        # fixed initialisation (factory CCF or the declared/advanced override),
+        # not the session's last online fit: the profile then depends only on
+        # the training observations and the declared init, so a rerun does not
+        # inherit online solver round-off (values reproduce to ~1e-9).
         init = {c: CameraIntrinsics(cam.fx, cam.fy, cam.cx, cam.cy, cam.kc.copy(),
                                     cam.skew)
-                for c, cam in self.session.cameras.items()}
+                for c, cam in self.init_cameras.items()}
         backend = "auto"
         t0 = time.time()
         result = solve_observations(obs, self.plate.pitch_mm, init,
@@ -2251,8 +2258,10 @@ class SessionRecorder:
                                 "ok": False}
         accepted = [r.as_dict() for r in self.records if r.accepted]
         cov = compute_coverage(accepted, self.rules)
+        session_stop = bool((out.get("session") or {}).get("stop"))
         out["recommended_additional_views"] = self._recommendations(
-            cov, accepted, self.session.heldout_view_ids)
+            cov, accepted, self.session.heldout_view_ids,
+            session_stop=session_stop)
         out["stop_recommended"] = bool(
             (out.get("session") or {}).get("stop")
             and not out["recommended_additional_views"]
@@ -2261,7 +2270,8 @@ class SessionRecorder:
         return out
 
     def _recommendations(self, cov: dict, accepted: Sequence[dict],
-                         heldout_ids: Sequence[int]) -> list[str]:
+                         heldout_ids: Sequence[int],
+                         session_stop: bool = True) -> list[str]:
         rec: list[str] = list(cov.get("missing") or [])
         n_acc = len(accepted)
         n_train = sum(1 for a in accepted if a.get("split") == "train")
@@ -2285,15 +2295,19 @@ class SessionRecorder:
             rec.append("roll variety: all accepted views are near the same "
                        "in-plane rotation; rotate the plate ~30-45 deg for "
                        "one or two views (advisory unless --strict)")
-        if not rec:
-            return rec
-        # add the session's own next target when it has one
-        try:
-            g = self.session.recommend(top=1)
-            if g.get("ready") and g.get("text"):
-                rec.append("session next target: " + str(g["text"]))
-        except Exception:
-            pass
+        # add the session's own next target: always when it has not stopped,
+        # otherwise only to explain a concrete coverage/count gap
+        if rec or not session_stop:
+            try:
+                g = self.session.recommend(top=1)
+                if g.get("ready") and g.get("text"):
+                    rec.append("session next target: " + str(g["text"]))
+                elif not session_stop:
+                    rec.append("session reports that informative views remain; "
+                               "move the plate to a new distance/tilt/roll "
+                               "combination while keeping all 41 markers visible")
+            except Exception:
+                pass
         return rec
 
     # -- colour / effort ---------------------------------------------------
@@ -2380,7 +2394,8 @@ class SessionRecorder:
                       export: bool) -> dict:
         result = final["result"]
         info = final["info"]
-        root = Path(profile_root) if profile_root else (self.dir / "profiles")
+        root = (Path(profile_root).expanduser().resolve() if profile_root
+                else (self.dir / "profiles").resolve())
         root.mkdir(parents=True, exist_ok=True)
         out: dict = {"profile_root": str(root), "serial": serial,
                      "activated": False, "saved": False,
@@ -2531,7 +2546,8 @@ class SessionRecorder:
             "final_solve": {k: v for k, v in final.items()
                             if k not in ("result", "obs")},
             "rules": dict(self.rules),
-            "timing": {"detect_s": round(float(self.session.detect_seconds), 3),
+            "timing": {"detect_s": round(float(self.detect_seconds
+                                                + self.session.detect_seconds), 3),
                        "refine_s": round(float(self.session.refine_seconds), 3),
                        "solve_s": round(float(self.session.solve_seconds), 3),
                        "n_solves": int(self.session._solves),
@@ -2977,6 +2993,12 @@ def _summary_text(report: dict) -> str:
         f"stopping: session_stop={ss.get('stop')} "
         f"(n={ss.get('n_views')}); final_ok="
         f"{(stop.get('final') or {}).get('ok')}")
+    eff = man.get("effort") or {}
+    if eff.get("n_views"):
+        lines.append(
+            f"operator effort: {eff.get('total_effort_units')} units, "
+            f"{eff.get('n_moves')} moves, estimated "
+            f"{eff.get('estimated_seconds')} s (INFERRED time model)")
     if stop.get("recommended_additional_views"):
         lines.append("recommended additional views:")
         for rec in stop["recommended_additional_views"]:

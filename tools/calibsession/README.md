@@ -106,7 +106,7 @@ oriented.
 Measured with this build: 25 candidates → **21 accepted** (16 train + 5
 held-out) and 4 rejected (1 duplicate, 3 stereo-inconsistent); complete
 manifest, `--verify` OK, stop recommended at 21 views. With `--localize auto`
-the run takes ~10 s; with a warm detection cache and `--localize none`,
+the run takes ~10–17 s; with a warm detection cache and `--localize none`,
 ~3.5 s. The result is a 160.10 mm baseline at the nominal 28.0 mm pitch
 (factory CCF 158.557 mm; equivalent pitch 27.73 mm, 0.975 % difference) — the
 difference is reported, not hidden. Held-out median reprojection is 0.34 px
@@ -134,11 +134,17 @@ per-camera timestamps:
  "1": [12.401, 12.4013, 12.4010]}
 ```
 
-Camera names, `cam0/1/2`, or a 3-element list are accepted. Without the sidecar
-the sets are still grouped by capture index (declared synchronisation); the
-manifest records `sync.state = "declared"`, not `"measured"`. `--dwell auto`
-uses the live motion gate for `--frames`; `--dwell assume` treats every set as
-an already-committed keyframe.
+Camera names, `cam0/1/2`, or a 3-element list are accepted. If the capture
+tool's `frames_manifest.json` (`einstar-frames-v1`) is present, its groups are
+used as the synchronisation evidence: every group is one device trigger group,
+so the three files were exposed together even without per-camera host
+timestamps. The manifest's `camera_map` is checked against the hardware mapping
+(a mismatch is a hard error), and `device_group`, per-camera `frame_ids` and
+`host_time_ns` are recorded per set. Without either sidecar the sets are still
+grouped by capture index (declared synchronisation); the manifest records
+`sync.state = "declared"`, not `"measured"`. `--dwell auto` uses the live
+motion gate for `--frames`; `--dwell assume` treats every set as an
+already-committed keyframe.
 
 ### `--vendor-corpus DIR`
 `imageLeftN.bmp`, `imageRightN.bmp`, `imageTexN.bmp`, grouped by `N` into
@@ -396,7 +402,9 @@ rounded to 1e-2 because the LM may take one extra iteration (`nit` 9 vs 10) and
 change poses at the 1e-6 level. The digest excludes wall-clock fields, profile
 paths and detection-cache provenance. Full numeric values remain in the
 manifest and `result.json`; use those, not the digest, for numerical
-comparisons.
+comparisons. The final profile values reproduce to ~1e-9 relative, but
+`result.json` is not guaranteed byte-identical across processes (BLAS/LAPACK
+reduction order).
 
 ---
 
@@ -428,7 +436,9 @@ No test opens a scanner, writes to a device, or modifies a private image.
 * A new profile is a **revision** and is not activated; the factory snapshot is
   immutable.
 * Input images are never modified; every retained file is byte-identical to its
-  source and SHA-256-verified.
+  source and SHA-256-verified. `--link` is opt-in: it hard-links instead of
+  copying, so the session then shares inodes with the source; do not use it if
+  the source directory may change.
 * One unit/language variant only. No absolute accuracy claim; the 28.0 mm pitch
   scale ambiguity is reported, not hidden. Unobservable from residuals: a
   global left/right stream swap or a common 180° rotation (fixed by the
