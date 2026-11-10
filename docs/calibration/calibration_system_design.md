@@ -212,8 +212,11 @@ the weakly identified distortion coefficients from the pass/fail decision
 
 `calib/profiles.py` writes versioned profiles with an immutable factory
 snapshot; `integration.to_ccf_records` produces the 33-double CCF layout with
-the factory IR trailer preserved.  Nothing is written to the scanner; a device
-write would require an explicit, separately audited step.
+the factory IR trailer preserved.  `CalibrationSession.finish(profile_root,
+serial)` persists the final solve as a new revision (CCF files plus the
+covariance and parameter names) and activates it host-side.  Nothing is written
+to the scanner; a device write would require an explicit, separately audited
+step.
 
 ## 5. Component map
 
@@ -277,7 +280,7 @@ offered as operator profiles rather than as an accuracy guarantee.
 ## 9. Reproduce
 
 ```bash
-# tests (156+)
+# tests (157)
 HOME=/tmp OPENBLAS_NUM_THREADS=1 .venv/bin/python -m pytest -q
 
 # real corpus, fast path + best localiser
@@ -285,6 +288,9 @@ REPO=<repo>
 .venv/bin/python -m calib.cli calibrate <private-inputs>/vendor-calib-rapid \
   --factory sources/calibration/res_Einscan-E10_200x150 --no-anchor \
   --solver lm --localize auto --out /tmp/calib_lm.json
+
+# guided session demo (closed-loop synthetic operator, writes a dashboard)
+.venv/bin/python -m calib.cli guide --mode standard --max-views 20 --out /tmp/session_demo
 
 # strategy Monte Carlo and session modes
 cd analysis/experiments

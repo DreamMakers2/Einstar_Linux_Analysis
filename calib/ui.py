@@ -1,9 +1,11 @@
 """Visual feedback prototype for the guided calibration session.
 
 The live product would draw these panels over the camera stream.  This module
-renders the same information without a display (matplotlib Agg), so it can be
-used in headless tests and embedded in reports, and it can optionally show a
-window when a display is available.
+is the **headless** prototype: it renders the same information with matplotlib
+Agg so it can run in tests and be embedded in reports.  A live viewer is a thin
+wrapper over the same panels (show each saved figure in a GUI, or blit the four
+axes into an OpenCV window); that wrapper is intentionally not part of this
+offline phase, which has no display or camera stream.
 
 Panels
 ------

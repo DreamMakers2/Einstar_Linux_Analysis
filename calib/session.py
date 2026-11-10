@@ -588,7 +588,13 @@ class CalibrationSession:
                            if ok else "not yet sufficient")}
 
     # -- result -------------------------------------------------------------
-    def finish(self) -> dict:
+    def finish(self, profile_root: Optional[str] = None,
+               serial: str = "unknown") -> dict:
+        """Final solve; optionally persist a versioned host-side profile.
+
+        The factory snapshot and every revision stay host-side; nothing is
+        written to the scanner.
+        """
         if self.result is None and self.obs:
             self.solve_now()
         if self.result is None:
@@ -597,10 +603,28 @@ class CalibrationSession:
         from .pipeline import profile_from_result
         from .integration import result_summary
         prof = profile_from_result(self.result, factory=self.factory or None)
-        return {"ok": bool(stop["stop"]),
-                "result": self.result, "summary": result_summary(self.result),
-                "quality": stop, "profile": prof,
-                "session": self.status()}
+        out = {"ok": bool(stop["stop"]),
+               "result": self.result, "summary": result_summary(self.result),
+               "quality": stop, "profile": prof,
+               "session": self.status()}
+        if profile_root:
+            try:
+                from .profiles import ProfileStore
+                store = ProfileStore(profile_root)
+                rev = store.save_revision(
+                    serial, prof,
+                    meta={"mode": self.mode, "n_views": len(self.accepted),
+                          "pitch_mm": self.pitch_mm,
+                          "stopping_ok": bool(stop["stop"]),
+                          "created_by": "calib.session",
+                          "note": "host-side only; factory snapshot is immutable"},
+                    covariance=self.result.covariance,
+                    param_names=self.result.info.get("param_names"))
+                out["revision"] = str(rev.root)
+                out["profile_root"] = str(profile_root)
+            except Exception as exc:
+                out["profile_error"] = f"{type(exc).__name__}: {exc}"
+        return out
 
 
 def _default_solve(obs, pitch, cameras, free_kc, robust_loss, f_scale):

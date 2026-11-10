@@ -44,6 +44,33 @@ def cmd_detect(args):
     return 0
 
 
+def cmd_guide(args):
+    """Run the guided session in closed-loop simulation and write dashboards."""
+    from . import ui
+    from .simloop import run_closed_loop
+    from .synth import make_scene
+    import numpy as _np
+    import os as _os
+    _os.makedirs(args.out, exist_ok=True)
+    scene = make_scene(n_views=25, noise_px=0.2, outlier_frac=0.01, seed=args.seed)
+    out = run_closed_loop(scene, mode=args.mode, max_views=args.max_views,
+                          seed=args.seed, render=True, verbose=True)
+    sess = out["session"]
+    paths = []
+    # render the final dashboard from the last accepted frame
+    if sess.result is not None:
+        p = _os.path.join(args.out, "dashboard_final.png")
+        ui.dashboard(sess, p)
+        paths.append(p)
+    stop = sess.stop_decision()
+    print(f"accepted {out['n_accepted']} of {out['n_captures']} captures; "
+          f"stop={stop['stop']} ({stop.get('reason', '')})")
+    print(f"seconds: solve {sess.solve_seconds:.2f}, detect {sess.detect_seconds:.2f}, "
+          f"refine {sess.refine_seconds:.2f}")
+    if paths:
+        print("dashboard:", paths[0])
+
+
 def cmd_calibrate(args):
     _apply_plate(args)
     res, det, info = calibrate_directory(
@@ -200,6 +227,15 @@ def main(argv=None):
     p.add_argument("--profile", default=None)
     p.add_argument("--serial", default="unknown")
     p.set_defaults(func=cmd_plan)
+
+    g = sub.add_parser("guide", help="guided adaptive calibration demo/interactive prototype")
+    g.add_argument("--demo", action="store_true", default=True,
+                   help="closed-loop synthetic operator (no hardware required)")
+    g.add_argument("--mode", choices=("quick", "standard", "high"), default="standard")
+    g.add_argument("--max-views", type=int, default=20)
+    g.add_argument("--seed", type=int, default=4)
+    g.add_argument("--out", default="calibration_session")
+    g.set_defaults(func=cmd_guide)
 
     w = sub.add_parser("workflow", help="parse the EXStar workflow XML")
     w.add_argument("xml")
