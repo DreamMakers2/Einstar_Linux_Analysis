@@ -480,13 +480,18 @@ class WizardController:
             self.controller.continuous = bool(self.continuous)
 
     def _source_continuity(self) -> bool:
-        """Whether consecutive groups are a continuous stream (motion gate)."""
-        info = self.source_info
-        if info is not None and self._continuous_override is None:
-            return bool(getattr(info, "continuous", True))
+        """Whether consecutive groups are a continuous stream (motion gate).
+
+        The source's declared ``SourceInfo.continuous`` is authoritative; a
+        group may only *downgrade* it (``FrameGroup.continuous=False``), never
+        re-enable the motion gate the source disabled.
+        """
         if self._continuous_override is not None:
             return bool(self._continuous_override)
-        return True
+        info = self.source_info
+        if info is not None:
+            return bool(getattr(info, "continuous", self.continuous))
+        return bool(self.continuous)
 
     # ------------------------------------------------------------------
     # lifecycle
@@ -797,10 +802,11 @@ class WizardController:
         # cadence).  Adopt it before the first decision so the motion gate never
         # rejects an independent view.
         cont = getattr(group, "continuous", None)
-        if cont is not None and self._continuous_override is None:
-            if bool(cont) != bool(self.continuous):
-                self.continuous = bool(cont)
-                self.controller.continuous = self.continuous
+        if cont is False and self._continuous_override is None:
+            # a still group may only disable the motion gate, never re-enable
+            # it against a source that declared a continuous cadence
+            self.continuous = False
+            self.controller.continuous = False
         """The only decision path.  Returns the session's ``Decision``."""
         from calib.session import Decision, FrameSet
 
@@ -971,8 +977,9 @@ class WizardController:
             "image_points": _jsonable(self._last_detections),
             # still collections have no cadence: a timestamp would make the
             # inter-view "speed" meaningless and block guidance/stationarity
-            "timestamp": (float(group.timestamp_s) if self.continuous else None),
-            "stationary": (True if not self.continuous else None),
+            "timestamp": (float(group.timestamp_s)
+                          if self._source_continuity() else None),
+            "stationary": (None if self._source_continuity() else True),
             "distance_mm": pose["distance_mm"] if pose else None,
             "tilt_deg": pose["tilt_deg"] if pose else None,
             "yaw_deg": pose["yaw_deg"] if pose else None,

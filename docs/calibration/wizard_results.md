@@ -25,12 +25,17 @@ tools/wizard/gui/app.py --source replay --frames <private-data>/sweep-b/frames
                       --pace 20 --mode quick --headless --duration 20
 ```
 
-* 350 groups ingested, **16 accepted**, 334 rejected as redundant, 14 solves.
+* 350 groups ingested, **19 accepted**, 331 rejected (329 redundant + 4 motion,
+  2 decisions carried both reasons), 17 solves, 119.8 s ingest / 129.9 s wall.
+  Accepted groups 0,1,2 (seeds), 4,21,36,50,65,67,82,134,150,194,210,225,240,
+  255,271,287 — one view per ~15 frames (≈1.5 s, ≈0.7 mm of actual travel).
 * Accepted subsample: roughly one view per 8–15 mm of plate motion along the
   1-D path — the expected behaviour, not a failure.
-* Coverage: **4 / 8** dimensions.  Missing (verbatim): distance bands; tilt
-  about the x axis (positive and negative); tilt about the second axis (y);
-  tilt quadrants; in-plane roll sectors; image-plane 3×3 regions; image corners.
+* Coverage: **2 / 8** dimensions (stereo overlap and colour only; the engine's
+  stricter count also lists stationarity because the platform moves at
+  6.9 mm/s).  Missing (verbatim): distance bands; tilt about the x axis; tilt
+  about the second axis (y); tilt quadrants; in-plane roll sectors;
+  image-plane 3×3 regions; image corners; stationarity/quality.
 * Observability: condition number ≈1e6, `left.fx` 1-σ ≈ 9 px, verdict
   **unobservable**; stereo rotation partly constrained; gates FAIL
   `stereo_rotation`, `baseline`, `colour`.
@@ -42,12 +47,14 @@ tools/wizard/gui/app.py --source replay --frames <private-data>/sweep-b/frames
 tools/wizard/vendor_source.py  (25 still triplets, continuous=False)
 ```
 
-* **17 accepted**, 8 rejected with a specific reason (mirrored geometry in the
-  known view 9, ambiguous/partial witnesses elsewhere).  The corpus is stored
+* **17 accepted**, 8 rejected — all `assignment` (right: 5 ambiguous, left: 2
+  mirrored, left: 1 ambiguous; the strict 4/4 off-lattice witness).  The known
+  mirrored view 9 is among them, so the rejections are correct behaviour.  The corpus is stored
   already in calibration orientation (verified: rotating the right frame breaks
   stereo consistency from 164 mm / 22.8° to 785 mm / 164°).
-* Coverage: distance bands satisfied (264–610 mm), stereo overlap and colour
-  satisfied; tilt-two-axes, roll sectors and image regions still missing.
+* Coverage **5 / 8**: distance bands (264–610 mm), stereo overlap, colour,
+  quality and stationarity satisfied; two-axis tilt, roll sectors and image
+  regions missing.  Readiness: NOT READY (D2, D3, D4).
 * Final solve: rms 0.36 px; candidate written with `validation: pending`.
 * Phase-7 gates (independent implementation in `lifecycle.validate`):
 
@@ -61,7 +68,7 @@ tools/wizard/vendor_source.py  (25 still triplets, continuous=False)
 | pose_diversity | FAIL | 17 views, 305 mm, 74°, 3 of 4 roll bins |
 | observability | FAIL | 3 constrained / 19 weak / 17 unobservable; right.ry 0.231° vs 0.20 |
 | model_sensitivity | FAIL | freeing distortion makes held-out **worse by 4.1 %** (0.391 → 0.407 px) |
-| overall | **REJECTED** | activation refused; profile store byte-identical |
+| overall | **REJECTED** | `would_activate: False`; profile store byte-identical; factory SHA-256 re-checked |
 
 This is the intended behaviour: the vendor data genuinely cannot support a
 full three-camera recalibration, and the wizard says so instead of shipping it.
@@ -112,25 +119,40 @@ NOT READY), `demo_layout.png` (layout reference).
 5. **Fixed ≠ constrained (reporting).** Parameters that are not estimated are
    labelled `fixed`, not `constrained`.
 
-## 6. LIMIT — the synthetic renderer cannot yet rehearse a full session
+## 6. Synthetic rehearsal — what it reaches and what blocks it
 
-The synthetic scene generator (`sources.SyntheticSource`) renders the plate by
-projection and is deterministic, but at several poses the *right* camera view is
-rejected by the orientation witness (`det(H) < 0`, "mirrored marker geometry"),
-and wide lateral offsets push the plate out of frame.  The best observed
-rehearsal was 12/16 accepted with 5/8 coverage.
+The synthetic scene generator is deterministic and its failure modes are
+first-class, but it does **not** reach 8/8.  Measured on `diverse` (24 poses,
+seed 7, standard mode): **20 accepted / 4 rejected**, coverage **6 / 8**
+(tilt magnitudes and roll now pass; `tilt quadrants` and `image corners` fail),
+candidate written with `validation: pending`, `would_activate: False`.
+An earlier run with seed 11 reached 7/8.  Two distinct causes were found:
 
-Consequences:
+1. **Axis convention (fixed).** `calib.adaptive.board_pose(d, tx, ty, roll)` and
+   `coverage.tilt_deg(R)` use *swapped* tilt axes: requesting `(tx=10, ty=0)`
+   measures `(0.1, 10.1)`, and `(0, 18)` measures `(−18.0, 0.1)` — verified by
+   rendering, detecting and re-solving the pose.  The synthetic generator used
+   `board_pose`, so a scene described as two-axis tilt measured as one axis and
+   could never satisfy the two-axis dimension.  It now uses
+   `coverage.family_pose`, whose round trip is exact
+   (`(10,0) → (10.0,−0.1)`, `(0,18) → (−0.1,18.1)`, `(18,−18) → (18.0,−18.1)`).
+   The live wizard's *guidance* was never affected: it derives targets from the
+   same module that measures them.
+2. **The orientation witness has a 4/4-vs-3/4 margin (open).** The four
+   rejected synthetic views are all `right: ambiguous/mirrored marker geometry`
+   — the mirror variant scores 3 of 4 witnesses where the true identity scores
+   4, and an occluded or edge-anchored synthetic marker can drop identity to 3.
+   The wizard is deliberately strict (a 3/4 acceptance would also admit the
+   *mirrored* assignment), so it rejects them.  Real data is not affected in
+   the same way: the live capture verified 700/700 camera-frames at 4/4.
+   **Consequence:** a synthetic end-to-end success (session → READY → validated
+   profile) is still not demonstrated; the vendor corpus exercises the full
+   pipeline only up to an honest validation failure.
 
-* the readiness gate is verified in **both** directions at unit level
-  (`tests/test_wizard_coverage.py` asserts `ready=True` for a constructed
-  full-coverage view set and `ready=False` for the sweep), but
-* a synthetic *end-to-end success* (session → READY → validated candidate) is
-  **not demonstrated**; the vendor corpus exercises the full pipeline only up
-  to an honest validation failure.
-
-This is a rehearsal-instrument limitation, not a gate limitation, and it is the
-main reason the next step is a real session rather than more synthetic work.
+The readiness gate itself is verified in both directions: the synthetic run
+reaches 6–7 of 8 dimensions, the sweep reaches 2 of 8, and
+`tests/test_wizard_coverage.py` asserts `ready=True` for a constructed
+full-coverage view set.
 
 ## 7. Performance (measured)
 
@@ -151,8 +173,10 @@ main reason the next step is a real session rather than more synthetic work.
   134 checks for control file, ring eviction, status schema and signal flags).
 * `tests/test_wizard_*`: coverage 18, observability 15, lifecycle 13,
   session_io 11, GUI 6 — all pass.
-* Full Python suite: see the final report; the two bootstrap-sensitive tests
-  were updated when the deadlocking rule was removed.
+* Full Python suite: **283 passed** at the published commit, plus the 40
+  controller/source/capture tests re-run after the final merge.  Two
+  bootstrap-sensitive `calib` tests were updated when the deadlocking rule was
+  removed (the new rule rejects genuine duplicates and seeds the rest).
 
 ## 9. What is still required before the real session
 

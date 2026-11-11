@@ -378,6 +378,7 @@ class ReplayDirSource:
             timestamp_s=self._timestamp(file_index), images=images,
             colour_bgr=bgr, source=types.SOURCE_REPLAY,
             slot_ids=self._manifest.slot_ids.get(file_index),
+            continuous=bool(self.continuous),
         )
 
     def _group_ids(self) -> list[int]:
@@ -687,7 +688,8 @@ class LiveSource:
                     device_group=self._manifest.device_group.get(gid),
                     timestamp_s=ts, images=images, colour_bgr=bgr,
                     source=types.SOURCE_LIVE,
-                    slot_ids=self._manifest.slot_ids.get(gid))
+                    slot_ids=self._manifest.slot_ids.get(gid),
+                    continuous=True)
                 self._next_index += 1
                 yield group
             status = self.capture.status()
@@ -707,7 +709,7 @@ class LiveSource:
                         device_group=self._manifest.device_group.get(gid),
                         timestamp_s=self._manifest.host_time_ns.get(gid, 0) / 1e9,
                         images=images, colour_bgr=bgr,
-                        source=types.SOURCE_LIVE)
+                        source=types.SOURCE_LIVE, continuous=True)
                     self._next_index += 1
                 return
             if self._stop_requested:
@@ -808,19 +810,22 @@ def _default_poses(spec: SyntheticSpec) -> list[tuple[float, float, float, float
     n = int(spec.n_views)
     # phase A (first 12): distance bands x the four out-of-plane tilt
     # quadrants, roll 0 so the measured signs stay the intended ones.
+    tilt = max(20.0, float(getattr(spec, "tilt_min_deg", 20.0)))
     for i in range(min(n, 12)):
         d = distances[i % len(distances)]
         sx, sy = quadrant[(i // 3) % 4]
-        out.append((d, sx * 10.0, sy * 10.0, 0.0))
+        out.append((d, sx * tilt, sy * tilt, 0.0))
     # phase B (4): in-plane roll sectors, fronto-parallel at mid distance.
     for i in range(12, min(n, 16)):
         out.append((420.0, 0.0, 0.0, float((90 * (i - 12)) % 360)))
-    # phase C (rest): image-plane corners via lateral offsets, moderate tilt.
+    # phase C (rest): image-plane corners and edges via lateral offsets.  The
+    # offsets move the plate centre into the 3x3 regions; the plate stays fully
+    # visible so the orientation witness remains verifiable.
     for i in range(16, n):
         d = distances[i % len(distances)]
         sx = 1.0 if i % 2 else -1.0
         sy = 1.0 if (i // 2) % 2 else -1.0
-        out.append((d, sx * 10.0, sy * 10.0, float((90 * i) % 360)))
+        out.append((d, sx * 12.0, sy * 10.0, float((90 * i) % 360)))
     return out
 
 
@@ -1071,7 +1076,17 @@ class SyntheticSource:
 
     # -- scene -----------------------------------------------------------
     def _poses(self) -> list[tuple[np.ndarray, np.ndarray]]:
-        from calib.adaptive import board_pose
+        # Use the *coverage* module's inverse so a scene described as
+        # (distance, tilt_x, tilt_y, roll) measures back with the same tilt axes
+        # the wizard reports.  `calib.adaptive.board_pose` uses a different
+        # axis convention (its tilt_x shows up as coverage tilt_y, verified by
+        # round-tripping a rendered pose through PnP: request (10,0) -> measured
+        # (0.1, 10.1); request (0,18) -> measured (-18.0, 0.1)), which made a
+        # synthetic scene unable to satisfy the two-axis tilt dimension.
+        try:
+            from .coverage import family_pose as _pose
+        except Exception:  # pragma: no cover - coverage is optional
+            from calib.adaptive import board_pose as _pose
         spec = self.spec
         if spec.poses is not None:
             out = []
@@ -1080,15 +1095,20 @@ class SyntheticSource:
                     out.append((np.asarray(entry[0], float),
                                 np.asarray(entry[1], float)))
                 else:
-                    d, tx, ty, roll = (list(entry) + [0.0, 0.0, 0.0, 0.0])[:4]
-                    out.append(board_pose(float(d), float(tx), float(ty),
-                                          float(roll)))
+                    vals = list(entry) + [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                    d, tx, ty, roll, lx, ly = vals[:6]
+                    try:
+                        out.append(_pose(float(d), float(tx), float(ty),
+                                         float(roll), lateral_mm=(float(lx), float(ly))))
+                    except TypeError:  # board_pose has no lateral argument
+                        out.append(_pose(float(d), float(tx), float(ty), float(roll)))
             return out
         base = _default_poses(spec)
         out = []
         patterns = ((1, 1), (-1, 1), (1, -1), (-1, -1),
                     (0, 1), (0, -1), (1, 0), (-1, 0))
-        for i, (d, tx, ty, roll) in enumerate(base):
+        for i, entry in enumerate(base):
+            d, tx, ty, roll = (list(entry) + [0.0, 0.0, 0.0, 0.0])[:4]
             if spec.lateral_mm != (0.0, 0.0):
                 lateral = tuple(spec.lateral_mm)
             elif i < 16:
@@ -1197,6 +1217,7 @@ class SyntheticSource:
                         index=self._next_index, file_index=i, device_group=None,
                         timestamp_s=0.1 * self._next_index, images=images,
                         colour_bgr=None, source=types.SOURCE_SYNTHETIC,
+                        continuous=bool(self.continuous),
                         label=(f"synthetic {self.spec.pattern} view {i}"
                                + (f" dwell {repeat}" if repeats > 1 else "")))
                     self._next_index += 1

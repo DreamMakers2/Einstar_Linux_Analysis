@@ -54,6 +54,7 @@ normal (markers circled, not saturated).  Then follow **NEXT MOVE**:
 | "Put the plate centre in the <corner/edge>" | move so the plate sits in that part of the image |
 | "Good viewpoint captured — keep moving" | the view was accepted; move on |
 | "This viewpoint is redundant" | you are too close to a pose you already have; make a bigger change |
+| "ambiguous marker assignment" | the wizard cannot prove which corner of the plate is which; rotate it slightly (or bring the whole plate into both IR views) — it will not guess |
 | "READY TO FINISH" | every dimension is covered; press **Finish** |
 
 You never need to count images, measure the plate, or calculate angles.  The
@@ -139,6 +140,12 @@ state when none exists).
   explicitly.
 * **Colour stays gated** until an independent colour check passes; the shipped
   factory colour extrinsic is ~18 mm off (≈49 px).
+* **Tilt is measured, not assumed.** The wizard reports the plate's actual
+  out-of-plane tilt from the pose, and the two tilt axes come from
+  `coverage.tilt_deg`.  Note for developers: `calib.adaptive.board_pose` uses
+  the opposite axis convention (requesting `tx` shows up as measured `ty`); the
+  wizard and the synthetic generator use `coverage.family_pose`, which is the
+  exact inverse.  Verified by round-tripping a rendered pose through PnP.
 * **Do not expect a 25-view session to fix distortion.** Measured on the vendor
   corpus: freeing distortion made held-out prediction *worse* by 4.1 %; the
   wizard refuses that release unless held-out improves by ≥10 %.
