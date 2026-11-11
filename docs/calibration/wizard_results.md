@@ -87,6 +87,11 @@ tools/wizard/gui/app.py --source live --session-dir <private-data>/live-wizard2 
   (`stop_reason: error` at 30 s); fixed by not passing the fixed timeout when a
   control file governs the session.
 
+Screenshots of the three states are in `figures/wizard/`:
+`live_session.png` (physical scanner, 40/40 markers, guidance, observability),
+`sweep_not_ready.png` (replay of the 350-group sweep, coverage map populated,
+NOT READY), `demo_layout.png` (layout reference).
+
 ## 5. Behavioural findings that shaped the code
 
 1. **Bootstrap deadlock (fixed).** Requiring bootstrap views to be mutually

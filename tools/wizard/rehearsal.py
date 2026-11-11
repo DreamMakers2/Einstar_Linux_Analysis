@@ -350,6 +350,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {count:>4}  {name[:110]}")
 
     finish = ctl.finish()
+    # refresh after finish(): the full observability gate suite runs there
+    snapshot = ctl.snapshot()
     coverage = snapshot.get("coverage") or {}
     readiness = snapshot.get("readiness") or {}
     observability = snapshot.get("observability") or {}
