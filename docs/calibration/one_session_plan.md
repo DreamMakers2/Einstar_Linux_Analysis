@@ -23,9 +23,19 @@ Measured on 600 live groups (60 s) and 350 groups (35 s), same settings:
 The parameter study (`tools/calib_study`, 72 training views, held-out legs and
 an independent session) puts numbers on this: 1-σ = 4.7–7.8 px on `fx/fy`,
 1.6–2.3 px on the principal point, 0.003–0.05 on the radial terms, and
-`corr(fx, depth)` = 0.9991, with a condition number of 8.4e5.  Only the stereo
-rotation `rx`/`rz` is genuinely constrained; the baseline is weak (0.58 mm) and
-the stereo translation is unobservable.
+`corr(fx, depth)` = 0.9991, with a scaled condition number of 1.06e6.  Only the
+stereo rotation `rx`/`rz` is genuinely constrained; the baseline is weak
+(0.58 mm) and the stereo translation is unobservable.
+
+The study also measured the vendor's own 25-view corpus, which *is* the kind of
+diversity this plan is asking for, and the result calibrates the expectations:
+those views improve the conditioning of the perspective-dependent block by
+**5–9x** (condition number 1.06e6 → 1.24e5, σ on `right.fx` 36 → 4.9 px, on
+`right.tz` 10.6 → 1.7 px) and make the stereo rotation constrained — but every
+distortion coefficient stays unobservable (σ_k1 unchanged, σ_k2 and σ_skew
+slightly *worse*).  Twenty-five diverse views are therefore necessary but not
+sufficient: D4 (corner/edge coverage) is what buys distortion, and D1/D2 are
+what buy the focal length.  Do not expect a 25-view session to fix everything.
 
 Consequences, measured rather than assumed:
 

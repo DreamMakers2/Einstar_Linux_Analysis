@@ -208,6 +208,11 @@ def detection_stats(det: dict, cameras=("left", "right", "tex")) -> dict:
     return out
 
 
+def _nanmedian(values):
+    v = [float(x) for x in values if x is not None and np.isfinite(float(x))]
+    return float(np.median(v)) if v else None
+
+
 def assignment_stats(det: dict, cameras=("left", "right", "tex")) -> dict:
     out = {}
     for c in cameras:
@@ -215,10 +220,6 @@ def assignment_stats(det: dict, cameras=("left", "right", "tex")) -> dict:
         verdicts: dict[str, int] = {}
         for a in audits:
             verdicts[a["verdict"]] = verdicts.get(a["verdict"], 0) + 1
-        # how many views would a *wrong* hypothesis have passed?
-        hyp = {}
-        for h in F.DIHEDRAL:
-            hyp[h] = {"n_area_signature_ok": 0}
         # the residual is invariant, so report the spread of the homography RMS
         rms = np.array([a["hypotheses"]["id"]["homography_rms"] for a in audits], float)
         spread = np.array([max(a["hypotheses"][h]["homography_rms"]
@@ -234,7 +235,7 @@ def assignment_stats(det: dict, cameras=("left", "right", "tex")) -> dict:
                                          "max": float(np.nanmax(spread)) if len(spread) else None},
             "homography_rms_median": float(np.median(rms)) if len(rms) else None,
             "big_marker_area_ratio_median": float(np.nanmedian(ratios)) if len(ratios) else None,
-            "off_lattice_dist_px_median": float(np.nanmedian(
-                [a.get("off_lattice_dist_px", np.nan) for a in audits])) if audits else None,
+            "off_lattice_dist_px_median": _nanmedian(
+                [a.get("off_lattice_dist_px") for a in audits]),
         }
     return out

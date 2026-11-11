@@ -470,7 +470,7 @@ def stage_profile_f(args, data, geo, log):
             "right": {"cx", "cy", "skew_px", "k1", "k2", "p1", "p2", "k3"}}
     spec = M.ModelSpec(dict(base), {"right": set(M.EXTR_NAMES)}, True, "fixed-f")
     scales = [0.90, 0.94, 0.97, 0.99, 1.00, 1.01, 1.03, 1.06, 1.10]
-    rms, zmean, wall = [], [], []
+    rms, zmean, wall, nfevs = [], [], [], []
     for s in scales:
         ini = {c: CameraIntrinsics(cams[c].fx * s, cams[c].fy * s, cams[c].cx,
                                   cams[c].cy, np.asarray(cams[c].kc, float).copy(),
@@ -481,15 +481,55 @@ def stage_profile_f(args, data, geo, log):
         rms.append(fit.rms)
         zmean.append(float(np.mean([v[1][2] for v in fit.views])))
         wall.append(time.time() - t)
+        nfevs.append(fit.info.get("nfev"))
         log(f"    f scale {s:.2f}: RMS {fit.rms:.5f}  mean depth {zmean[-1]:.2f} mm")
-    k = int(np.argmin(rms))
+    # a fixed-focal fit can diverge; flag points far above the median as failed
+    med = float(np.median(rms))
+    failed = [bool(r > 3.0 * med) for r in rms]
+    for i, f_ in enumerate(failed):
+        if f_:
+            log(f"    f scale {scales[i]:.2f}: RMS {rms[i]:.3f} px -> FIT FAILED, excluded")
+    rms_fit = [float("nan") if f_ else float(r) for r, f_ in zip(rms, failed)]
+    k = int(np.nanargmin(rms_fit))
     # residual scale for the chi-square profile: the achieved RMS at the minimum
     sigma = float(np.asarray(rms)[k])
-    tab = ID.profile_table(scales, rms, zmean, len(obs) * 40 * 2, max(sigma, 1e-3))
+    tab = ID.profile_table(scales, rms_fit, zmean, len(obs) * 40 * 2, max(sigma, 1e-3))
+    tab["rms_all_px"] = [float(x) for x in rms]
+    tab["failed"] = failed
+    tab["nfev"] = nfevs
     tab["wall_s"] = wall
     tab["note"] = ("both IR focal lengths are scaled together; everything else "
                    "(kc, skew, rig, poses) is refitted at each scale")
+    tab["pitch_gauge"] = stage_pitch_gauge(args, data, obs, spec, log)
     return tab
+
+
+def stage_pitch_gauge(args, data, obs, spec, log):
+    """Metric-scale gauge: the plate pitch is an input, not a measurement.
+
+    Scaling every board point and every translation by ``s`` leaves the
+    reprojection *identically* unchanged, so two calibrations fitted with
+    different pitches must differ only by that scale.
+    """
+    pitch_default = float(data["profile"].get("plate_pitch_mm", 28.0))
+    out = {}
+    for pitch in (28.0, 27.72):
+        fit = M.fit(obs, spec, data["cams"], init_extr=data["extr"], pitch_mm=pitch,
+                    max_nfev=args.max_nfev, compute_covariance=False)
+        out[f"{pitch:.2f}"] = {
+            "rms_px": fit.rms,
+            "mean_depth_mm": float(np.mean([v[1][2] for v in fit.views])),
+            "baseline_mm": float(np.linalg.norm(fit.extr["right"][1])),
+            "fx_left": fit.cams["left"].fx}
+        log(f"    pitch {pitch:.2f}: RMS {fit.rms:.6f} depth "
+            f"{out[f'{pitch:.2f}']['mean_depth_mm']:.3f} mm")
+    a, b = out["28.00"], out["27.72"]
+    out["depth_ratio"] = b["mean_depth_mm"] / a["mean_depth_mm"]
+    out["rms_ratio"] = b["rms_px"] / a["rms_px"]
+    out["expected_ratio"] = 27.72 / 28.0
+    out["note"] = ("the plate pitch is a pure scale gauge: the reprojection is "
+                   "invariant, every translation scales with it")
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -519,12 +559,25 @@ def stage_vendor(args, data, log) -> dict:
                 det[c].append(None); continue
             det[c].append(F.detect_view(raw, c))
     log(f"  vendor corpus: {len(ids)} view sets detected in {time.time() - t:.1f}s")
+    # a view whose (u,v) assignment is ambiguous in any camera is dropped: a
+    # mirrored label map is a rigid rotation of the planar board, so it is
+    # invisible in that view's own residual but corrupts the shared rig
+    verdicts = {c: [F.audit_assignment(d)["verdict"] if d is not None else "missing"
+                    for d in det[c]] for c in CAMERAS}
+    keep = [k for k in range(len(ids))
+            if all(verdicts[c][k] == "unambiguous" for c in CAMERAS)]
+    dropped = [ids[k] for k in range(len(ids)) if k not in keep]
+    # IR only, exactly like the live ladder: M2/M5 do not free the colour
+    # extrinsic and the factory colour record is known stale, so including the
+    # colour camera would poison the residual (it did, before this filter)
     obs = []
-    for k, i in enumerate(ids):
-        for c in CAMERAS:
+    for k in keep:
+        for c in ("left", "right"):
             if det[c][k] is not None:
                 obs.append(Observation(c, k, dict(det[c][k].points)))
-    out = {"root": str(root.resolve()), "n_views": len(ids), "view_ids": ids,
+    out = {"root": str(root.resolve()), "n_views": len(keep), "view_ids": [ids[k] for k in keep],
+           "n_detected_views": len(ids), "dropped_ambiguous_views": dropped,
+           "assignment_verdicts": verdicts,
            "detection": MOT.detection_stats(det),
            "assignment_audit": MOT.assignment_stats(det),
            "obs_count": len(obs)}
@@ -533,8 +586,10 @@ def stage_vendor(args, data, log) -> dict:
     out["trajectory"] = traj.summary()
     out["legs"] = [[int(a), int(b)] for a, b in traj.legs()]
     out["image_coverage_left"] = MOT.image_coverage(det, "left", list(range(len(ids))))
-    spec_all = M.ModelSpec({c: set(M.INTR_NAMES) for c in CAMERAS},
-                           {"right": set(M.EXTR_NAMES), "tex": set(M.EXTR_NAMES)},
+    present = [c for c in CAMERAS if any(o.camera == c for o in obs)]
+    spec_all = M.ModelSpec({c: set(M.INTR_NAMES) for c in present},
+                           {c: set(M.EXTR_NAMES) for c in ("right", "tex")
+                            if c in present},
                            True, "vendor-linearisation")
     pitch = float(data["profile"].get("plate_pitch_mm", 28.0))
     lin = M.linearise(obs, spec_all, data["cams"], data["extr"], pitch_mm=pitch)
@@ -594,7 +649,7 @@ def stage_downstream(args, data, geo, ladder, log) -> dict:
 
     candidates = {}
     plan = [("factory", None, "M0")]
-    for name in args.candidate_models:
+    for name in [x.strip() for x in str(args.candidate_models).split(",") if x.strip()]:
         if name in ladder["fits"]:
             plan.append((name, ladder["fits"][name], name))
     for label, fit, model in plan:
@@ -760,7 +815,8 @@ def main(argv=None) -> int:
     data = stage_data(args, log) if (allst or "data" in only or "geometry" in only
                                      or "factory" in only or "ladder" in only
                                      or "bootstrap" in only or "path" in only
-                                     or "profile" in only or "downstream" in only) else None
+                                     or "profile" in only or "downstream" in only
+                                     or "vendor" in only) else None
     if data is not None:
         report["data"] = data["info"]
     geo = None
@@ -771,11 +827,13 @@ def main(argv=None) -> int:
         log("stage: geometry")
         g = stage_geometry(args, data, log)
         report["geometry"] = g["report"]
+        write_json(report_path, report)
         geo = g
     if data is not None and geo is not None and (allst or "factory" in only):
         log("stage: factory information")
         f = stage_factory_information(args, data, geo, log)
         report["factory_information"] = f["report"]
+        write_json(report_path, report)
     ladder = None
     if data is not None and geo is not None and (allst or "ladder" in only
                                                  or "bootstrap" in only
@@ -783,40 +841,50 @@ def main(argv=None) -> int:
         log("stage: model ladder")
         ladder = stage_ladder(args, data, geo, log)
         report["model_ladder"] = ladder["report"]
+        write_json(report_path, report)
     if data is not None and geo is not None and ladder is not None and (allst or "bootstrap" in only):
         log("stage: bootstrap")
         report["bootstrap"] = stage_bootstrap(args, data, geo, ladder, log)
+        write_json(report_path, report)
     if data is not None and geo is not None and (allst or "path" in only):
         log("stage: path dependence")
         report["path_dependence"] = stage_path_dependence(args, data, geo, log)
+        write_json(report_path, report)
     if data is not None and geo is not None and (allst or "profile" in only):
         log("stage: fixed-focal profile")
         report["profile_likelihood"] = stage_profile_f(args, data, geo, log)
+        write_json(report_path, report)
     if data is not None and geo is not None and (allst or "design" in only):
         log("stage: design sensitivity")
         report["design_sensitivity"] = stage_design(args, data, geo, log)
+        write_json(report_path, report)
     if data is not None and geo is not None and (allst or "verify" in only):
         log("stage: wrapper verification")
         report["wrapper_verification"] = stage_wrapper_verification(args, data, geo, log)
+        write_json(report_path, report)
     if data is not None and (allst or "vendor" in only):
         log("stage: vendor corpus")
         report["vendor_corpus"] = stage_vendor(args, data, log)
+        write_json(report_path, report)
     if data is not None and geo is not None and ladder is not None and (allst or "downstream" in only):
         log("stage: downstream")
         report["downstream"] = stage_downstream(args, data, geo, ladder, log)
+        write_json(report_path, report)
     report["study"]["wall_s_total"] = time.time() - t_start
     write_json(report_path, report)
     log(f"wrote {report_path}")
 
     if allst or "report" in only:
-        from tools.calib_study import report as REP
-        REP.write_all(report, out, log)
-        log(f"wrote {out / 'REPORT.md'} and figures")
+        try:
+            from tools.calib_study import report as REP
+            REP.write_all(report, out, log)
+            log(f"wrote {out / 'REPORT.md'} and figures")
+        except Exception as exc:
+            import traceback
+            traceback.print_exc()
+            log(f"REPORT.md generation failed: {exc} (JSON is still valid)")
     return 0
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
 
 
 # --------------------------------------------------------------------------
@@ -995,3 +1063,7 @@ def stage_wrapper_verification(args, data, geo, log) -> dict:
     log(f"  wrapper verification: ΔRMS {out['delta']['rms_px']:.2e} px, "
         f"Δfx {out['delta']['max_fx_px']:.2e} px")
     return out
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

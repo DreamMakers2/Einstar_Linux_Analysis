@@ -583,11 +583,20 @@ def _ladder_section(rep):
       "absorbs a rig error into a camera model, which is exactly the trade-off "
       "this study is about.")
     A("")
+    A("**What the held-out numbers do and do not test.**  The legs cover the "
+      "*same* 1-D path, so a leg split removes temporal near-duplicates but does "
+      "not introduce new viewpoints: the near-equality of train and held-out RMS "
+      "shows that the calibration is stable across time and across the second "
+      "session, not that it extrapolates to poses the sweep never visited.  The "
+      "sweep-b column is a genuine independent-session test; nothing here is an "
+      "extrapolation test, because the data contains nothing to extrapolate to.")
+    A("")
     A("`rig-pred` is the stricter held-out number: the board pose of each held-out "
       "view is estimated from the **left camera only** and the right camera is "
       "predicted through the fitted rig.  The evaluated camera therefore does not "
       "influence its own pose, so this tests intrinsics *and* stereo extrinsics.")
     A("")
+    _rig_tradeoff(rep, A)
     A("### 2.1 Parameter deltas vs the factory profile")
     A("")
     rows = []
@@ -632,6 +641,41 @@ def _ladder_section(rep):
     return L
 
 
+def _rig_tradeoff(rep, A):
+    ladder = rep.get("model_ladder") or {}
+    geo = rep.get("geometry") or {}
+    z = ((geo.get("sweep_c") or {}).get("trajectory") or {}).get("z", {}).get("median")
+    if "M1" not in ladder or z is None:
+        return
+    m1 = ladder["M1"]
+    m5 = ladder.get("M5")
+    f0 = 1159.11
+    dcx = m1["delta_vs_factory"]["left"]["dcx"]
+    shift = abs(dcx) * z / f0
+    A(f"**M0 → M1 is not a camera-model improvement.**  Freeing only the left "
+      f"camera's linear intrinsics drops the joint RMS from "
+      f"{_f(ladder['M0']['train']['rms'],3)} px to {_f(m1['train']['rms'],3)} px, "
+      f"and it does so by moving the **principal point** {_f(dcx,2)} px together "
+      f"with the focal length {_f(m1['delta_vs_factory']['left']['dfx'],2)} px "
+      f"({_f(100*m1['delta_vs_factory']['left']['dfx']/f0,2)} %).  "
+      f"At the median working distance of {_f(z,1)} mm that principal-point shift is "
+      f"a lateral board displacement of **{_f(shift,2)} mm** — the same size as the "
+      f"factory rig's own rotation error.  The fit is trading a stereo-extrinsic "
+      f"error against a camera intrinsic, which is precisely the degeneracy this "
+      f"study has to expose; it is not evidence that the factory `cx` is wrong.")
+    A("")
+    if m5:
+        A(f"For reference: freeing everything (M5) changes the left `cx` by "
+          f"{_f(m5['delta_vs_factory']['left']['dcx'],2)} px and the right by "
+          f"{_f(m5['delta_vs_factory']['right']['dcx'],2)} px, in *opposite* "
+          f"directions, and the relative rotation between the IR cameras by "
+          f"{_f(m5['delta_vs_factory']['right_extr']['d_rotation_deg'],3)}° "
+          f"(baseline {_f(m5['delta_vs_factory']['right_extr']['d_baseline_mm'],3)} mm).  "
+          f"An opposite-signed pair of principal-point shifts is the signature of a "
+          f"rig error, not of two mis-calibrated cameras.")
+        A("")
+
+
 def _identifiability_section(rep):
     L = []
     A = L.append
@@ -651,8 +695,10 @@ def _identifiability_section(rep):
         sp = fi["spectrum"]
         A(f"### 3.1 At the factory solution (no parameter fitted)")
         A("")
-        A(f"{fi['n_residuals']} residuals, {fi['n_free']} free (42 rig + poses), "
-          f"Jacobian rank {fi['jacobian_rank']}, "
+        A(f"{fi['n_residuals']} residuals; {sp['n_free_rig']} free rig parameters "
+          f"(IR cameras only — the colour camera is excluded because its factory "
+          f"extrinsic is inconsistent) plus the board poses; Jacobian rank "
+          f"**{fi['jacobian_rank']}** of {fi['n_free']}, "
           f"scaled condition number **{_f(sp['condition_number_scaled'],3)}**.")
         A("")
         rows = []
@@ -766,6 +812,40 @@ def _scale_section(rep):
               f"{_f(abs(prof['delta_rms_per_percent'][np.argmin(np.abs(np.array(prof['scales'])-1.0))]),6) if prof.get('delta_rms_per_percent') else '—'} px of RMS, "
               f"which is far below any plausible systematic.")
     A("")
+    pg = prof.get("pitch_gauge") if prof else None
+    if pg and "28.00" in pg and "27.72" in pg:
+        A("### 4.1 The pitch is a pure scale gauge (measured)")
+        A("")
+        A(_table(["plate pitch mm", "train RMS px", "mean plate depth mm",
+                  "IR baseline mm", "fx left px"],
+                 [[k, _f(pg[k]["rms_px"], 7), _f(pg[k]["mean_depth_mm"], 3),
+                   _f(pg[k]["baseline_mm"], 3), _f(pg[k]["fx_left"], 3)]
+                  for k in ("28.00", "27.72")],
+                 ["---:", "---:", "---:", "---:", "---:"]))
+        A("")
+        A(f"Depth ratio {_f(pg['depth_ratio'],7)} (expected {_f(pg['expected_ratio'],7)} "
+          f"= 27.72/28), RMS ratio {_f(pg['rms_ratio'],7)}.  Changing the assumed "
+          f"plate pitch rescales every translation by exactly that factor and leaves "
+          f"the reprojection unchanged: the pitch is a **gauge**, not a measurement, "
+          f"and no amount of data can prefer 28.0 mm over 27.72 mm.")
+        A("")
+    pd = rep.get("path_dependence") or {}
+    if pd.get("M4", {}).get("rms_px"):
+        A("### 4.2 The focal length is not unique (path dependence, measured)")
+        A("")
+        A(f"Starting the same M4 model from OpenCV's per-camera initialisation on the "
+          f"same views (which gives fx = {_f(pd['opencv_per_camera_init']['left']['fx'],1)} "
+          f"and {_f(pd['opencv_per_camera_init']['right']['fx'],1)} px for the two IR "
+          f"cameras — a {_f(100*pd['ir_focal_spread_fraction'],1)} % spread between two "
+          f"identical cameras) reaches **RMS {_f(pd['M4']['rms_px'],4)} px**, "
+          f"*lower* than the factory-started M4 "
+          f"({_f(((rep.get('model_ladder') or {}).get('M4') or {}).get('train', {}).get('rms'),4)} px), "
+          f"at fx = {_f(pd['M4']['fx']['left'],1)} / {_f(pd['M4']['fx']['right'],1)} px "
+          f"(left {_f(100*(pd['M4']['fx']['left']/pd['opencv_per_camera_init']['left']['fx']-1),1)} % "
+          f"from its start, factory 1159.1/1158.1).  A lower residual therefore does "
+          f"**not** select a focal length; the two solutions differ by more than the "
+          f"effect any downstream metric would show.")
+        A("")
     A("**A better reprojection residual does not prove a better absolute scale.**  "
       "The 28.0 mm plate pitch is an input, not a measurement: scaling every board "
       "point and every translation by `s` leaves every reprojection *identically* "

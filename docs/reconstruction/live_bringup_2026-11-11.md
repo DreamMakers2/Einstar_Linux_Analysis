@@ -318,43 +318,93 @@ views from `sweep-c` legs 0+2 and validates on geometrically held-out legs
   **not** extrapolation to unseen poses.  `sweep-b` is the genuine independent
   session test, and it improves the same way.
 
-**Identifiability.** 26 free IR rig parameters, Jacobian rank 26 of 42, scaled
-condition number **8.4e5**, scaled marginal-information eigenvalues spanning
-7 decades (6.57 … 0, 0, 0).  The weakest direction is dominated by
+**Identifiability.** 26 free IR rig parameters, Jacobian rank 242 of 242, and
+a scaled condition number of **1.057e6** at the factory linearisation
+(marginalised over board poses) or **8.6e5** at the best fit — the eigenvalues
+span seven decades (6.57 … 0, 0, 0).  The weakest direction is dominated by
 `right.fy`, `right.tz`, `right.k3`, `right.k2`.  The strongest parameter
 correlations are `right.fx↔right.fy` 0.992, `right.fy↔right.tz` 0.988,
 `right.cy↔right.rz` 0.997 and `left.k2↔left.k3` −0.984 — exactly the
 focal/depth and distortion/skew trade-offs.
 
 **Per-parameter verdicts** (1-σ at the M5 fit, marginalised over all board
-poses):
+poses; the more permissive M6 roughly doubles them):
 
 | group | 1-σ | verdict |
 |---|---|---|
-| IR `fx`, `fy` | 4.7–5.8 px (5.8–7.8 px in the more permissive M6) | **unobservable** |
+| IR `fx`, `fy` | 4.7–5.8 px (6.8–7.8 px in M6) | **unobservable** |
 | IR `cx`, `cy` | 1.6–2.3 px | **unobservable** |
 | IR `k1` | 0.0032 (≈0.3 px corner displacement) | **unobservable** |
 | IR `k2`, `k3`, `skew` | 0.02–0.05, 0.2 px | **unobservable** |
 | `p1`, `p2` (tangential) | 0.15–0.5 px | weak |
-| stereo `rx`, `rz` | 0.0005°–0.04° | **constrained** |
+| stereo `rx`, `rz` | 0.025°–0.041° | **constrained** |
 | stereo `ry` | ≈0.17° | weak |
 | stereo baseline | 0.58 mm | weak |
 | colour | — | not fitted (stale record) |
 
+Two caveats on these numbers.  The design-sensitivity table in the study
+recomputes the information matrix on view subsets and its *absolute* σ at the
+factory solution (e.g. 22 px on `fx`) is larger than the fitted-model σ because
+the factory solution sits at 1.86 px residual where the robust weights
+down-weight everything; use it for **ratios**, not absolutes.  And a
+6-resample view-level bootstrap gives σ *smaller* than the covariance in every
+parameter (ratio 0.16–0.84), i.e. resampling this design cannot expose the
+design's own deficiency — the covariance is the conservative number.
+
 **The focal-length question, settled by experiment.** `corr(fx, mean plate
 depth)` = **0.9991**.  A fixed-focal sweep (both IR focals scaled together,
-everything else refitted) has its RMS minimum at scale 1.000 and costs only
-0.005 px RMS for a ±5 % focal error, while the recovered depth tracks the
-focal exactly (354.5 → 393.3 mm for scale 0.95 → 1.05).  Starting the fit from
-OpenCV's per-camera initialisation gives **fx = 1271.6 / 957.5 px for two
-identical cameras** and a *lower* training RMS (0.346 vs 0.359) at different
-focal values — a direct demonstration that a better residual does not select a
-focal length at the ~2.6 % level.
+everything else refitted) has its RMS minimum at scale 1.000 and the recovered
+depth tracks the focal exactly — 0.95 → 354.5 mm, 1.00 → 373.8, 1.05 → 393.3 —
+at a cost of only 0.0035 px RMS per 5 % of focal error.  Curvature would
+suggest a 0.13 % statistical σ, but starting the fit from OpenCV's per-camera
+initialisation returns **fx = 1271.6 / 957.5 px for two identical cameras** at a
+*lower* training RMS (0.346 vs 0.359): a better residual does not select a
+focal length at the ~2.6 % level.  Likewise the M1 "improvement" from 1.86 to
+0.41 px is not a better camera model — it moves `cx` by +4.0 px and `fx` by
+−0.34 %, and opposite-signed `cx` shifts between the two cameras (left +0.09,
+right −4.41 px) are the signature of the *rig* error being absorbed into the
+intrinsics.
 
-**Absolute scale cannot be resolved this way.** Scaling every board point and
-every translation by *s* leaves every reprojection *identical*, so no residual
-can prefer 28.0 mm over the vendor's CCF-effective 27.72 mm.  §7b's 27.69 mm
-implied pitch is therefore reported as a gauge, not a correction.
+**What 25 diverse views buy — measured, not assumed.** The vendor 25-view
+corpus (19 views kept, IR-only, colour excluded because its extrinsic is
+inconsistent) gives, with the identical detector and model:
+
+| | live 1-D sweep | vendor 25-view | gain |
+|---|---:|---:|---:|
+| scaled condition number | 1.057e6 | **1.238e5** | 8.5x |
+| σ `right.fx` | 36.1 px | 4.9 px | 7.4x |
+| σ `right.tz` | 10.6 px | 1.7 px | 6.1x |
+| σ `left.fx` | 22.4 px | 4.2 px | 5.3x |
+| σ `k1` | 0.0075 | 0.0079 | **none** |
+| σ `k2` | — | — | **worse** |
+| σ `skew` | 0.74 | 0.82 | **worse** |
+| verdicts | 0 constrained / 4 weak / 22 unobservable | 1 constrained / 3 weak / 22 unobservable | — |
+
+So the vendor's own 25 diverse views constrain the *perspective-dependent*
+block (focal length, transverse translation, stereo rotation) 5–9x better, and
+they still leave every distortion coefficient unobservable.  **Diversity of
+poses is not the same as diversity of excitation**: 25 views spread over three
+dimensions do not substitute for corner coverage, which is exactly what the
+one-session plan adds.
+
+**Downstream comparison (no selection).** Three candidate profiles — factory,
+M2 (intrinsics only) and M3 (+radial) — were exported with `validation:
+pending` and run through `recon_cli` on four held-out groups.  They are
+**indistinguishable** on plane RMS (0.213–0.240 mm), valid-depth fraction
+(0.334–0.527) and pose-normalised repeatability (1.33–1.38 mm median), yet M2
+and M3 place the plate consistently **+4.5…+5.3 mm (+1.2…1.4 %) further away**
+even though their focal length changed by only +0.04 %: the shift comes from
+`cx`/`cy` moving the rectification.  A 0.02 px residual change maps to a
+millimetre-level depth change, and none of these downstream metrics can select
+a calibration.  **No profile was activated.**
+
+**The pitch gauge, confirmed numerically.** Refitting with the assumed pitch at
+27.72 mm instead of 28.00 mm rescales the plate depth from 385.93 mm to
+382.19 mm — a ratio of **0.99031** against the expected 0.99000 — and rescales
+every translation by the same factor while leaving the reprojection unchanged.
+The calibration is a pure rescale of the assumed pitch, which is why §7b's
+27.69 mm implied pitch is reported as a gauge and not as a correction.
+
 ## 8. What remains open
 
 * Absolute scale: the ~1 % discrepancy between the 28.0 mm plate model and the

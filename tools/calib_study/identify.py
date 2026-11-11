@@ -322,7 +322,10 @@ def profile_table(scales, rms, z_mean, n_residuals, sigma_px) -> dict:
     """Turn a fixed-focal sweep into a profile-likelihood table."""
     rms = np.asarray(rms, float)
     z = np.asarray(z_mean, float)
-    k = int(np.argmin(rms))
+    ok = np.isfinite(rms)
+    if not ok.any():
+        return {"note": "all fixed-focal fits failed"}
+    k = int(np.nanargmin(rms))
     out = {"scales": [float(s) for s in scales],
            "rms_px": [float(x) for x in rms],
            "mean_depth_mm": [float(x) for x in z],
@@ -339,10 +342,10 @@ def profile_table(scales, rms, z_mean, n_residuals, sigma_px) -> dict:
         out["chi2_per_percent"].append(float(chi2 / max(abs(s0[i] - s0[k]) * 100.0, 1e-12)))
     # curvature-based 1-sigma on the common focal scale: chi2 = chi2_min + 1
     try:
-        p = np.polyfit(s0, rms ** 2, 2)
+        p = np.polyfit(s0[ok], (rms ** 2)[ok], 2)
         # rms^2(s) = a s^2 + b s + c ; chi2(s) = N (rms^2 - rms_min^2)/sigma^2
         a = p[0]
-        chi2 = n_residuals * (np.polyval(p, s0) - np.min(np.polyval(p, s0))) / sigma_px ** 2
+        chi2 = n_residuals * (np.polyval(p, s0) - np.min(np.polyval(p, s0[ok]))) / sigma_px ** 2
         # sigma_s = 1/sqrt(a * N / sigma^2) for a parabola chi2 = aN/sigma^2 (s-s0)^2
         out["sigma_scale_from_curvature"] = float(1.0 / np.sqrt(max(a * n_residuals / sigma_px ** 2, 1e-30)))
         out["sigma_scale_statistical_percent"] = float(100 * out["sigma_scale_from_curvature"])
