@@ -28,6 +28,31 @@ reports it in the frame status and in the report, and the model does not absorb
 the pose.  That is the failure mode that silently corrupts a scan, so it is
 tested explicitly.
 
+## Live scanning (physical device)
+
+`--live` starts the capture supervisor (the same single process the calibration
+wizard uses), follows the frame files it writes, and scans each new complete
+group.  The application never talks to USB directly; `stop()` sends the control
+file stop, waits for the process and verifies the safe final state.
+
+Measured on the physical Einstar, 4 frames, scale 0.25, 5 mm voxels:
+
+```
+frames 4   rejected 0   vertices 20 725   faces 37 795   elapsed 2.93 s
+tracking steps 1.60 / 0.49 / 0.58 mm     rms 1.16 / 1.15 / 1.00 mm
+inliers 78 %   condition 81-88           depth p50 409.4 mm  sigma 0.69 mm
+capture: stopped, stop_reason control:stop, 17 groups written
+after exit: trigger counts 0/0, illuminator 0 %
+```
+
+The depth-coloured preview shows the real captured scene: the calibration plate
+(blue) and the platform/background (orange) fused into one 100 776-voxel volume.
+
+On the *simulated* backend the plumbing is exercised without a device and the
+run reports 1 integrated / 3 rejected: the simulator's frames reconstruct to
+fewer points than tracking needs, so they are correctly refused rather than
+silently fused.  That case is covered by a test.
+
 ## Measured
 
 Scan of 8 recorded frames (`~/einstar-private/sweep-b/frames`, factory profile):
@@ -64,10 +89,8 @@ background (orange) in the same cloud, which is what the fusion integrates.
 
 ## Limits (stated, not hidden)
 
-1. It scans a **frames directory**, not the USB device directly.  Live scanning
-   uses the existing capture tool writing into a session directory, exactly as
-   the calibration wizard does; wiring the capture supervisor into this window
-   is the next increment.
+1. ~~It scans a frames directory, not the USB device directly.~~  **Done**:
+   `--live` owns the capture supervisor; the device path is verified above.
 2. The preview is a QPainter projection, not a rendered 3-D view: no shading, no
    normals, no camera orbit.
 3. There is no project save/load yet — a scan leaves `scan.obj` and

@@ -31,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--voxel-mm", type=float, default=5.0)
     ap.add_argument("--input-voxel-mm", type=float, default=8.0)
     ap.add_argument("--scale", type=float, default=0.5)
+    ap.add_argument("--live", action="store_true",
+                    help="start the capture tool and scan live frames")
+    ap.add_argument("--capture-binary",
+                    default=str(_HERE.parents[2] / "build" / "driver" / "einstar-capture-frames"))
+    ap.add_argument("--backend", default="libusb", choices=("libusb", "simulated"))
+    ap.add_argument("--ring", type=int, default=120)
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--snapshot-out", default=None)
     return ap
@@ -42,12 +48,21 @@ def main(argv: list[str] | None = None) -> int:
     from tools.scan.session import ScanConfig
     from PySide6 import QtWidgets
 
-    config = ScanConfig(frames_dir=Path(args.frames), profile=Path(args.profile),
+    source = None
+    frames = Path(args.frames)
+    if args.live:
+        from tools.scan.live import CaptureSource
+        capture_dir = Path(args.out) / "capture"
+        source = CaptureSource(session_dir=capture_dir,
+                               capture_binary=Path(args.capture_binary),
+                               backend=args.backend, ring=args.ring)
+        frames = capture_dir / "frames"
+    config = ScanConfig(frames_dir=frames, profile=Path(args.profile),
                         out_dir=Path(args.out), recon_binary=Path(args.recon),
                         voxel_mm=args.voxel_mm,
                         input_voxel_mm=args.input_voxel_mm, scale=args.scale)
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-    window = ScanWindow(config, count=args.count)
+    window = ScanWindow(config, count=args.count, source=source)
     window.show()
 
     if not args.headless:

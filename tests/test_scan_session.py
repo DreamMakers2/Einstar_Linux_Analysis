@@ -151,3 +151,62 @@ def test_qt_scan_window_headless(tmp_path):
     assert proc.returncode == 0, proc.stderr[-1500:]
     assert "frames=3" in proc.stdout, proc.stdout[-400:]
     assert shot.is_file() and shot.stat().st_size > 10_000
+
+
+def test_live_capture_source_plumbing(tmp_path):
+    """Capture start/follow/stop on the simulated backend (no device needed)."""
+    from tools.scan.live import CaptureSource
+    binary = REPO / "build" / "driver" / "einstar-capture-frames"
+    if not binary.is_file():
+        pytest.skip("capture binary missing")
+    source = CaptureSource(session_dir=tmp_path / "live", capture_binary=binary,
+                           backend="simulated", ring=20,
+                           extra_args=("--max-seconds", "30"))
+    started = source.start()
+    if not started.get("started"):
+        pytest.skip(f"simulated capture did not start: {started.get('error')}")
+    ids = []
+    try:
+        for frame_id in source.ids(max_frames=3, timeout_s=25, poll_s=0.1):
+            ids.append(frame_id)
+    finally:
+        stopped = source.stop()
+    assert ids, "no frames were seen"
+    assert ids == sorted(ids)
+    assert stopped.get("stopped") is True
+    safe = stopped.get("safe") or {}
+    assert safe.get("ok") is True, safe
+    snap = source.snapshot()
+    assert snap["frames_seen"] == len(ids)
+    assert snap["stop_reason"] in {"control:stop", "max_seconds"}
+    # frames really landed on disk with all three cameras
+    for frame_id in ids[:1]:
+        for cam in (0, 1, 2):
+            assert (source.frames_dir / f"frame_{frame_id:06d}_cam{cam}.pgm").is_file()
+
+
+def test_live_scan_app_reports_and_stops(tmp_path):
+    """The scan app in --live mode must run, stop the capture and write a report."""
+    import subprocess
+    binary = REPO / "build" / "driver" / "einstar-capture-frames"
+    if not binary.is_file():
+        pytest.skip("capture binary missing")
+    app = REPO / "tools" / "scan" / "app.py"
+    python = REPO / ".venv" / "bin" / "python"
+    env = dict(os.environ)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    env["OMP_NUM_THREADS"] = "2"
+    env.pop("DISPLAY", None)
+    out = tmp_path / "live-scan"
+    proc = subprocess.run(
+        [str(python), str(app), "--live", "--backend", "simulated",
+         "--capture-binary", str(binary), "--frames", str(tmp_path),
+         "--profile", str(FACTORY), "--out", str(out), "--recon", str(RECON),
+         "--count", "2", "--scale", "0.25", "--headless"],
+        cwd=str(REPO), env=env, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stderr[-1500:]
+    report = json.loads((out / "scan_report.json").read_text())
+    assert report["frames"] >= 1
+    capture_status = json.loads((out / "capture" / "status.json").read_text())
+    assert capture_status["state"] == "stopped"
+    assert capture_status["stop_reason"] in {"control:stop", "max_seconds"}

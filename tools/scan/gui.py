@@ -83,7 +83,8 @@ class ScanWorker(QtCore.QThread):
     finished_scan = QtCore.Signal(dict)
     failed = QtCore.Signal(str)
 
-    def __init__(self, config: ScanConfig, start: int, count: int, parent=None) -> None:
+    def __init__(self, config: ScanConfig, start: int, count: int, parent=None,
+                 source=None) -> None:
         super().__init__(parent)
         self.config = config
         # NB: do not shadow QThread.start()/stop() with attributes
@@ -92,6 +93,8 @@ class ScanWorker(QtCore.QThread):
         self._stop = False
         self._pause = False
         self.session: ScanSession | None = None
+        #: optional live CaptureSource; when set the worker owns the capture
+        self.source = source
 
     def stop(self) -> None:
         self._stop = True
@@ -102,13 +105,32 @@ class ScanWorker(QtCore.QThread):
     def run(self) -> None:  # noqa: D401 - QThread API
         try:
             self.session = ScanSession(self.config)
-            for i in range(self.first_index, self.first_index + self.frame_count):
-                if self._stop:
-                    break
-                while self._pause and not self._stop:
-                    QtCore.QThread.msleep(50)
-                self.session.process(i)
-                self.progress.emit(self.session.snapshot())
+            if self.source is not None:
+                started = self.source.start()
+                if not started.get("started"):
+                    self.failed.emit(f"capture failed to start: "
+                                     f"{started.get('error', 'unknown')}")
+                    return
+                try:
+                    for frame_id in self.source.ids(max_frames=self.frame_count):
+                        if self._stop:
+                            break
+                        while self._pause and not self._stop:
+                            QtCore.QThread.msleep(50)
+                        self.session.process(int(frame_id))
+                        snap = self.session.snapshot()
+                        snap["capture"] = self.source.snapshot()
+                        self.progress.emit(snap)
+                finally:
+                    self.source.stop()
+            else:
+                for i in range(self.first_index, self.first_index + self.frame_count):
+                    if self._stop:
+                        break
+                    while self._pause and not self._stop:
+                        QtCore.QThread.msleep(50)
+                    self.session.process(i)
+                    self.progress.emit(self.session.snapshot())
             report = self.session.finish()
             self.finished_scan.emit(report)
         except Exception as exc:  # pragma: no cover - surfaced in the UI
@@ -119,10 +141,12 @@ class ScanWorker(QtCore.QThread):
 
 
 class ScanWindow(QtWidgets.QMainWindow):
-    def __init__(self, config: ScanConfig, *, count: int = 8) -> None:
+    def __init__(self, config: ScanConfig, *, count: int = 8,
+                 source=None) -> None:
         super().__init__()
         self.config = config
         self.count = int(count)
+        self.source = source
         self.worker: ScanWorker | None = None
         self.last_snapshot: dict = {}
         self.setWindowTitle("Einstar — scan")
@@ -176,9 +200,10 @@ class ScanWindow(QtWidgets.QMainWindow):
     def start_scan(self) -> None:
         if self.worker is not None and self.worker.isRunning():
             return
-        self.log.appendPlainText(f"scan: frames {self.config.frames_dir} "
+        mode = "live capture" if self.source is not None else "recorded frames"
+        self.log.appendPlainText(f"scan: {mode} {self.config.frames_dir} "
                                  f"count={self.count} voxel={self.config.voxel_mm} mm")
-        self.worker = ScanWorker(self.config, 0, self.count)
+        self.worker = ScanWorker(self.config, 0, self.count, source=self.source)
         self.worker.progress.connect(self.on_progress)
         self.worker.finished_scan.connect(self.on_finished)
         self.worker.failed.connect(self.on_failed)
