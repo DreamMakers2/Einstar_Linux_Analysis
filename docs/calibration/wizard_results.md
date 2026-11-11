@@ -21,7 +21,7 @@ scanner) and **LIMIT** (known weakness).
 ## 2. OFFLINE — replay of the real 350-group sweep
 
 ```
-tools/wizard/gui/app.py --source replay --frames ~/einstar-private/sweep-b/frames
+tools/wizard/gui/app.py --source replay --frames <private-data>/sweep-b/frames
                       --pace 20 --mode quick --headless --duration 20
 ```
 
@@ -69,7 +69,7 @@ full three-camera recalibration, and the wizard says so instead of shipping it.
 ## 4. LIVE — physical scanner, 25 s
 
 ```
-tools/wizard/gui/app.py --source live --session-dir ~/einstar-private/live-wizard2 \
+tools/wizard/gui/app.py --source live --session-dir <private-data>/live-wizard2 \
                       --mode standard --headless --duration 25
 ```
 

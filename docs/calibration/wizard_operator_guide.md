@@ -113,7 +113,7 @@ To activate a validated profile (CLI, after reviewing the report):
 ```sh
 .venv/bin/python tools/wizard/observability_cli.py activate \
     --candidate SESSION/candidate/profile.json \
-    --store ~/einstar-private/calib-profiles --serial <redacted>
+    --store <private-data>/calib-profiles --serial <redacted>
 ```
 
 Rollback is a single call and restores the previous revision (or the factory

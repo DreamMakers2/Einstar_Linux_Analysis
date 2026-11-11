@@ -1,6 +1,6 @@
 """Candidate-profile export and the downstream reconstruction comparison.
 
-Nothing here writes to ``~/einstar-private/einstar-profiles/`` or to any sweep
+Nothing here writes to ``<private-profile-dir>/`` or to any sweep
 directory: every file produced lives under the study output directory and every
 candidate profile carries ``validation: pending`` plus full provenance.
 
