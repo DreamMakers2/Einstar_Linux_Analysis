@@ -38,6 +38,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from tools.fuse import tsdf
+from tools.scan import export as scan_export
 from tools.track import baseline as track
 
 __all__ = ["ScanConfig", "ScanSession", "FrameStatus"]
@@ -114,6 +115,7 @@ class ScanSession:
         self._started = time.time()
         self._last_cloud = None
         self._last_cloud_for_track = None
+        self._mesh = None
         self._finished: dict | None = None
 
     # -- properties -------------------------------------------------------
@@ -274,16 +276,25 @@ class ScanSession:
             nrm = np.vstack([np.asarray(c.normals, float) for c in self._frames]) \
                 if self._frames else None
             verts, faces = tsdf.extract_mesh(self._volume, points=pts, normals=nrm)
-            obj = self.config.out_dir / "scan.obj"
-            tsdf.write_obj(obj, verts, faces, comment="einstar scan")
-            result = {"obj": str(obj), "vertices": int(len(verts)),
-                      "faces": int(len(faces))}
+            written = scan_export.export_mesh(
+                self.config.out_dir, verts, faces, stem="scan",
+                comment="einstar scan")
+            result = {"obj": written.get("obj"), "ply": written.get("ply"),
+                      "stl": written.get("stl"),
+                      "vertices": int(len(verts)), "faces": int(len(faces))}
+            self._mesh = (verts, faces)
         out.update(result)
         out["poses"] = [[[float(x) for x in row] for row in p] for p in self._poses]
         out["frames_status"] = [s.as_dict() for s in self._statuses]
         report = self.config.out_dir / "scan_report.json"
         report.write_text(json.dumps(out, indent=1))
         out["report"] = str(report)
+        project = scan_export.save_project(
+            self.config.out_dir / "scan_project.json", config=self.config,
+            report=out, mesh={k: out.get(k) for k in ("obj", "ply", "stl")},
+            extra={"voxel_mm": self.config.voxel_mm,
+                   "frames": len(self._frames)})
+        out["project"] = str(project)
         self._finished = out
         return dict(out)
 

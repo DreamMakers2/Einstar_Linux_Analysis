@@ -210,3 +210,35 @@ def test_live_scan_app_reports_and_stops(tmp_path):
     capture_status = json.loads((out / "capture" / "status.json").read_text())
     assert capture_status["state"] == "stopped"
     assert capture_status["stop_reason"] in {"control:stop", "max_seconds"}
+
+
+def test_export_formats_and_project_round_trip(tmp_path):
+    from tools.scan import export as scan_export
+    session = scan_session.ScanSession(_config(tmp_path))
+    try:
+        for i in range(3):
+            assert session.process(i).ok
+        report = session.finish()
+    finally:
+        session.close()
+    for key in ("obj", "ply", "stl", "project"):
+        assert report.get(key) and Path(report[key]).is_file(), key
+    # PLY header and counts must match the report
+    ply = Path(report["ply"]).read_text().splitlines()
+    assert ply[0] == "ply" and "format ascii 1.0" in ply
+    n_vertex = int(next(ln for ln in ply if ln.startswith("element vertex")).split()[-1])
+    n_face = int(next(ln for ln in ply if ln.startswith("element face")).split()[-1])
+    assert n_vertex == report["vertices"]
+    assert n_face == report["faces"]
+    # STL: one facet normal + three vertices per face
+    stl = Path(report["stl"]).read_text()
+    assert stl.startswith("solid einstar")
+    assert stl.count("facet normal") == report["faces"]
+    assert stl.count("vertex ") == 3 * report["faces"]
+    # project round trip
+    doc = scan_export.load_project(report["project"])
+    assert doc["schema"] == scan_export.PROJECT_SCHEMA
+    assert doc["report"]["frames"] == 3
+    assert len(doc["report"]["poses"]) == 3
+    assert Path(doc["config"]["frames_dir"]).is_dir()
+    assert scan_export.project_clouds_available(doc) is True

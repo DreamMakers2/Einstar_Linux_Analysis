@@ -74,6 +74,26 @@ elapsed 1.47 s                          mesh 17 520 vertices / 32 022 faces
 The depth-coloured preview shows the calibration plate (blue) and the platform
 background (orange) in the same cloud, which is what the fusion integrates.
 
+## Output formats and projects
+
+Every scan writes, in the output directory:
+
+| file | content |
+|---|---|
+| `scan.obj` | mesh, Wavefront OBJ, millimetres |
+| `scan.ply` | mesh, ASCII PLY with vertex/face elements |
+| `scan.stl` | mesh, ASCII STL with computed facet normals |
+| `scan_report.json` | per-frame status, poses, tracking quality, counters |
+| `scan_project.json` | schema `einstar.scan.project/1`: configuration, poses, statuses, mesh paths |
+
+The project is a reopenable record of the scan; `load_project` validates the
+schema and `project_clouds_available` says whether the source frames are still
+on disk, so a scan can be re-fused at another resolution later without
+re-recording.
+
+Measured on a 4-frame run: OBJ 1.07 MB, PLY 1.03 MB, STL 7.9 MB, project
+4.8 kB, 17 133 vertices / 31 376 faces in 1.5 s.
+
 ## Tests
 
 `tests/test_scan_session.py` — 6 tests, 4 s:
@@ -93,8 +113,8 @@ background (orange) in the same cloud, which is what the fusion integrates.
    `--live` owns the capture supervisor; the device path is verified above.
 2. The preview is a QPainter projection, not a rendered 3-D view: no shading, no
    normals, no camera orbit.
-3. There is no project save/load yet — a scan leaves `scan.obj` and
-   `scan_report.json` in the output directory.
+3. ~~No project save/load.~~  **Done** — `scan_project.json` plus OBJ/PLY/STL
+   export and a validated loader.
 4. Meshing is a single final pass; there is no incremental meshing, smoothing,
    decimation or normal estimation.
 5. The reconstruction is a subprocess per frame (`recon_cli`), which costs a
