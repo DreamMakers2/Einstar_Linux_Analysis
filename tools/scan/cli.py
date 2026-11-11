@@ -35,13 +35,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--trunc-mm", type=float, default=None)
     ap.add_argument("--input-voxel-mm", type=float, default=8.0)
     ap.add_argument("--scale", type=float, default=0.5)
+    ap.add_argument("--min-confidence", type=float, default=0.0,
+                    help="drop depth below this stereo confidence; 0.4 improves "
+                         "single-frame plane RMS 0.30->0.27 mm but starves a "
+                         "fused mesh, so it is off for scanning")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
     cfg = ScanConfig(frames_dir=Path(args.frames), profile=Path(args.profile),
                      out_dir=Path(args.out), recon_binary=Path(args.recon),
                      voxel_mm=args.voxel_mm, trunc_mm=args.trunc_mm,
-                     input_voxel_mm=args.input_voxel_mm, scale=args.scale)
+                     input_voxel_mm=args.input_voxel_mm, scale=args.scale,
+                     min_confidence=args.min_confidence)
     session = ScanSession(cfg)
     t0 = time.time()
     statuses = []

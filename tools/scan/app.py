@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--voxel-mm", type=float, default=5.0)
     ap.add_argument("--input-voxel-mm", type=float, default=8.0)
     ap.add_argument("--scale", type=float, default=0.5)
+    ap.add_argument("--min-confidence", type=float, default=0.0)
     ap.add_argument("--live", action="store_true",
                     help="start the capture tool and scan live frames")
     ap.add_argument("--capture-binary",
@@ -60,7 +61,8 @@ def main(argv: list[str] | None = None) -> int:
     config = ScanConfig(frames_dir=frames, profile=Path(args.profile),
                         out_dir=Path(args.out), recon_binary=Path(args.recon),
                         voxel_mm=args.voxel_mm,
-                        input_voxel_mm=args.input_voxel_mm, scale=args.scale)
+                        input_voxel_mm=args.input_voxel_mm, scale=args.scale,
+                        min_confidence=args.min_confidence)
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = ScanWindow(config, count=args.count, source=source)
     window.show()

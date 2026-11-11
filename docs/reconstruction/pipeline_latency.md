@@ -44,6 +44,29 @@ Two cheap wins were implemented and measured:
 2. **Coarser input points for the live view**: 8 mm input gives 60 ms/frame at
    the same 5 mm volume (4.8k points instead of 10.9k).
 
+## Confidence filtering: measured, and why it is off by default
+
+The stereo engine already carries a per-pixel confidence map into the point
+cloud (the PLY has `confidence` and `sigma_mm` vertex properties).  Filtering by
+it was measured on four real frames, plane fitted to the plate:
+
+| threshold | points kept | plate points kept | plane RMS |
+|---|---|---|---|
+| 0.0 | 100 % | 100 % | 0.293–0.300 mm |
+| 0.4 | 61 % | 96 % | **0.259–0.272 mm** |
+| 0.5 | 55 % | 95 % | 0.257–0.270 mm |
+| 0.6 | 55 % | 95 % | 0.257–0.269 mm |
+
+So a 0.4 threshold buys ~12 % lower single-frame noise for almost no loss of
+plate coverage — the discarded points are background and weak matches.
+
+**But it hurts fusion.**  In the scanning application at scale 0.25 a 4-frame
+mesh fell from **17 133 to 2 233 vertices** with the filter on, because the
+fused surface needs the points and voxel averaging already suppresses
+low-confidence contributions.  The flag therefore exists
+(`--min-confidence`, exposed by `recon_cli`, the scan CLI and the GUI) and is
+**off by default**; 0.4 is documented as the value for single-frame analysis.
+
 ## GPU: not the first lever
 
 The CUDA SGM path exists (`recon/tools/cuda_sgm_bench.cpp`) and the vendor
@@ -63,5 +86,9 @@ pipeline, including transfers, before adopting CUDA SGM.
   measured here is ~8 fps, and the default quality settings give ~4 fps.
 * No GPU measurement is claimed here; the CUDA bench tool has not been run in
   this round.
+* Saturation is negligible on the recorded frames (0.10–0.15 % of pixels
+  ≥ 250), so saturation masking is not implemented — it would change nothing
+  measurable on this data and would be speculative until a scene with
+  highlights is recorded.
 * These numbers are for *this* implementation, on recorded frames, one process.
   They are not a claim about the vendor's performance.

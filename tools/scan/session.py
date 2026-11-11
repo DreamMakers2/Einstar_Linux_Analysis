@@ -54,6 +54,13 @@ class ScanConfig:
     trunc_mm: float | None = None
     input_voxel_mm: float = 8.0
     scale: float = 0.5
+    #: Measured on real frames: a 0.4 threshold improves a *single frame's*
+    #: plane RMS from 0.293-0.300 mm to 0.259-0.272 mm while keeping ~96 % of
+    #: the plate points.  In the fusion path it is counter-productive - at
+    #: scale 0.25 a 4-frame mesh fell from 17 133 to 2 233 vertices because the
+    #: fused surface needs the points, and averaging already suppresses the
+    #: low-confidence ones.  So the default is off here and the flag is exposed
+    #: for single-frame analysis.
     min_confidence: float = 0.0
     max_frames: int | None = None
     keep_frames: bool = True
@@ -175,7 +182,8 @@ class ScanSession:
         cmd = [str(self.config.recon_binary), "reconstruct",
                "--frames", str(self.config.frames_dir), "--id", str(index),
                "--profile", str(self.config.profile), "--out", str(out),
-               "--scale", f"{self.config.scale:g}"]
+               "--scale", f"{self.config.scale:g}",
+               "--min-confidence", f"{self.config.min_confidence:g}"]
         if self.config.ascii_ply:
             cmd.append("--ascii-ply")
         proc = subprocess.run(cmd, capture_output=True, text=True)

@@ -28,6 +28,7 @@ void usage() {
       "  reconstruct --frames DIR --id N --profile FILE --out DIR\n"
       "              [--scale 0.5] [--min-depth 150] [--max-depth 800]\n"
       "              [--block 5] [--equalize] [--no-color] [--ascii-ply]\n"
+      "              [--min-confidence 0..1]\n"
       "              [--prefix recon]\n"
       "  synthetic --profile FILE --out DIR [--depth 350] [--seed 1]\n"
       "  bench     --frames DIR --ids 0,1,2 --profile FILE [--repeat 3]\n";
@@ -101,6 +102,14 @@ int main(int argc, char** argv) {
       o.stereo.max_depth_mm = std::stod(arg(argc, argv, "--max-depth", "800"));
       o.stereo.block_size = std::stoi(arg(argc, argv, "--block", "5"));
       o.stereo.equalize = flag(argc, argv, "--equalize");
+      {
+        // one flag, both consumers: the depth validity mask and the cloud
+        // builder keep their own thresholds, so set them together
+        const float min_conf = static_cast<float>(
+            std::stod(arg(argc, argv, "--min-confidence", "0")));
+        o.depth.min_confidence = min_conf;
+        o.cloud.min_confidence = min_conf;
+      }
       o.depth.color = !flag(argc, argv, "--no-color");
       fs::create_directories(out);
       if (cmd == "rectify") {
