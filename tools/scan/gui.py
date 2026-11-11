@@ -22,6 +22,7 @@ sys.path.insert(0, str(_HERE.parents[2]))
 sys.path.insert(0, str(_HERE.parents[1]))
 
 from tools.scan.session import ScanConfig, ScanSession  # noqa: E402
+from tools.scan.view3d import MeshView  # noqa: E402
 from wizard.gui import theme  # noqa: E402
 
 
@@ -165,8 +166,8 @@ class ScanWindow(QtWidgets.QMainWindow):
 
         body = QtWidgets.QHBoxLayout()
         left = QtWidgets.QVBoxLayout()
-        self.cloud = CloudView()
-        left.addWidget(self.cloud, 1)
+        self.view = MeshView()
+        left.addWidget(self.view, 1)
         self.status = QtWidgets.QPlainTextEdit()
         self.status.setReadOnly(True)
         self.status.setMaximumHeight(150)
@@ -228,11 +229,12 @@ class ScanWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(dict)
     def on_progress(self, snap: dict) -> None:
         self.last_snapshot = snap
-        self.cloud.set_cloud(snap.get("cloud"))
+        if snap.get("cloud"):
+            self.view.set_points(snap.get("cloud"))
         vol = snap.get("volume") or {}
         caption = (f"frames {snap['frames_integrated']}  rejected {snap['frames_rejected']}"
-                   f"  voxels {vol.get('observed', 0):,}")
-        self.cloud.set_caption(caption)
+                   f"  voxels {vol.get('observed', 0):,}   drag to orbit, wheel to zoom")
+        self.view.set_caption(caption)
         last = snap.get("last") or {}
         self.status.setPlainText(
             f"frames      {snap['frames_processed']} (integrated {snap['frames_integrated']}, "
@@ -251,9 +253,40 @@ class ScanWindow(QtWidgets.QMainWindow):
             f"done: frames {report.get('frames')} rejected {report.get('rejected')} "
             f"vertices {report.get('vertices')} faces {report.get('faces')}")
         self.log.appendPlainText(f"mesh: {report.get('obj')}")
+        self.load_mesh_file(report.get("ply") or report.get("obj"))
         self.btn_start.setEnabled(True)
         self.btn_pause.setEnabled(False)
         self.btn_stop.setEnabled(False)
+
+    def load_mesh_file(self, path) -> bool:
+        """Show a mesh (our ASCII PLY) in the 3-D view."""
+        if not path:
+            return False
+        try:
+            from tools.scan.export import read_ply_mesh
+            verts, faces = read_ply_mesh(path)
+        except Exception as exc:
+            self.log.appendPlainText(f"mesh load failed: {exc}")
+            return False
+        self.view.set_mesh(verts, faces)
+        self.view.set_caption(f"{len(verts):,} vertices  {len(faces):,} faces")
+        return True
+
+    def load_project(self, path) -> bool:
+        """Open a saved scan project and display its mesh."""
+        try:
+            from tools.scan.export import load_project
+            doc = load_project(path)
+        except Exception as exc:
+            self.log.appendPlainText(f"project load failed: {exc}")
+            return False
+        mesh = (doc.get("mesh") or {})
+        self.log.appendPlainText(f"project: {path}")
+        report = doc.get("report") or {}
+        self.log.appendPlainText(
+            f"  frames {report.get('frames')} rejected {report.get('rejected')} "
+            f"vertices {report.get('vertices')} faces {report.get('faces')}")
+        return self.load_mesh_file(mesh.get("ply") or mesh.get("obj"))
 
     @QtCore.Slot(str)
     def on_failed(self, message: str) -> None:

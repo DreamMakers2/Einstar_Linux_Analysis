@@ -74,6 +74,22 @@ elapsed 1.47 s                          mesh 17 520 vertices / 32 022 faces
 The depth-coloured preview shows the calibration plate (blue) and the platform
 background (orange) in the same cloud, which is what the fusion integrates.
 
+## 3-D view and project browser
+
+`tools/scan/view3d.py` renders the mesh or the live preview cloud with orbit
+(drag), zoom (wheel) and reset (double click), depth-coloured and shaded by
+facet normal.  It is a QPainter rasteriser with a painter's algorithm rather
+than OpenGL, deliberately: it must run in the offscreen tests with no GPU
+context, it has no driver dependency, and a scan mesh is redrawn only when the
+camera moves or the mesh changes — not per video frame.
+
+Opening a project (`--project scan_project.json`, or after a scan finishes)
+loads `scan.ply` into the same view.  A view-only headless run renders a project
+without starting a scan, which is what the test exercises.
+
+Measured: a 4-frame scan project (17 133 vertices / 31 376 faces) opens and
+renders in the window; orbit and zoom change the view matrix.
+
 ## Output formats and projects
 
 Every scan writes, in the output directory:
@@ -111,8 +127,8 @@ Measured on a 4-frame run: OBJ 1.07 MB, PLY 1.03 MB, STL 7.9 MB, project
 
 1. ~~It scans a frames directory, not the USB device directly.~~  **Done**:
    `--live` owns the capture supervisor; the device path is verified above.
-2. The preview is a QPainter projection, not a rendered 3-D view: no shading, no
-   normals, no camera orbit.
+2. ~~The preview is a QPainter projection with no orbit.~~  **Done**: a shaded,
+   orbitable 3-D view for both the live preview and the mesh.
 3. ~~No project save/load.~~  **Done** — `scan_project.json` plus OBJ/PLY/STL
    export and a validated loader.
 4. Meshing is a single final pass; there is no incremental meshing, smoothing,

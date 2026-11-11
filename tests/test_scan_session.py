@@ -242,3 +242,44 @@ def test_export_formats_and_project_round_trip(tmp_path):
     assert len(doc["report"]["poses"]) == 3
     assert Path(doc["config"]["frames_dir"]).is_dir()
     assert scan_export.project_clouds_available(doc) is True
+
+
+def test_project_opens_in_the_3d_view(tmp_path):
+    """A saved project must reopen and render its mesh without scanning."""
+    import subprocess
+    app = REPO / "tools" / "scan" / "app.py"
+    python = REPO / ".venv" / "bin" / "python"
+    env = dict(os.environ)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    env["OMP_NUM_THREADS"] = "2"
+    env.pop("DISPLAY", None)
+    # make a small scan to get a project
+    out = tmp_path / "scan3d"
+    made = subprocess.run(
+        [str(python), "-m", "tools.scan.cli", "--frames", str(SWEEP),
+         "--profile", str(FACTORY), "--out", str(out), "--recon", str(RECON),
+         "--count", "3", "--scale", "0.25"],
+        cwd=str(REPO), env=env, capture_output=True, text=True, timeout=300)
+    assert made.returncode == 0, made.stderr[-800:]
+    project = out / "scan_project.json"
+    assert project.is_file()
+    shot = tmp_path / "view.png"
+    proc = subprocess.run(
+        [str(python), str(app), "--frames", str(tmp_path),
+         "--profile", str(FACTORY), "--out", str(tmp_path / "view-out"),
+         "--project", str(project), "--headless", "--snapshot-out", str(shot)],
+        cwd=str(REPO), env=env, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stderr[-1200:]
+    assert f"project={project}" in proc.stdout
+    assert shot.is_file() and shot.stat().st_size > 10_000
+
+
+def test_ply_mesh_reader_round_trip(tmp_path):
+    from tools.scan import export as scan_export
+    verts = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
+                      [0.0, 0.0, 1.0]])
+    faces = np.array([[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]])
+    path = scan_export.write_ply(tmp_path / "tetra.ply", verts, faces)
+    back_v, back_f = scan_export.read_ply_mesh(path)
+    assert back_v.shape == verts.shape and np.allclose(back_v, verts)
+    assert back_f.shape == faces.shape and np.array_equal(back_f, faces)

@@ -38,6 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
                     default=str(_HERE.parents[2] / "build" / "driver" / "einstar-capture-frames"))
     ap.add_argument("--backend", default="libusb", choices=("libusb", "simulated"))
     ap.add_argument("--ring", type=int, default=120)
+    ap.add_argument("--project", default=None,
+                    help="open a saved scan_project.json and show its mesh")
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--snapshot-out", default=None)
     return ap
@@ -66,6 +68,21 @@ def main(argv: list[str] | None = None) -> int:
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     window = ScanWindow(config, count=args.count, source=source)
     window.show()
+    loaded = False
+    if args.project:
+        loaded = window.load_project(args.project)
+        if not loaded:
+            print(f"scan: could not load project {args.project}", file=sys.stderr)
+        elif args.headless:
+            # view-only run: render the project, do not start a scan
+            app.processEvents()
+            shot = None
+            if args.snapshot_out:
+                window.snapshot_png(args.snapshot_out)
+                shot = args.snapshot_out
+            window.shutdown()
+            print(f"scan: project={args.project} snapshot={shot or '-'}")
+            return 0
 
     if not args.headless:
         return int(app.exec())

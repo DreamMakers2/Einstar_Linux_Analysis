@@ -20,7 +20,7 @@ from typing import Mapping
 import numpy as np
 
 __all__ = ["write_ply", "write_stl", "export_mesh", "save_project",
-           "load_project", "PROJECT_SCHEMA"]
+           "load_project", "read_ply_mesh", "PROJECT_SCHEMA"]
 
 PROJECT_SCHEMA = "einstar.scan.project/1"
 
@@ -94,6 +94,30 @@ def export_mesh(directory: str | Path, vertices: np.ndarray, faces: np.ndarray,
         else:
             raise ValueError(f"unknown export format {fmt!r}")
     return written
+
+
+def read_ply_mesh(path: str | Path) -> tuple[np.ndarray, np.ndarray]:
+    """Read the vertices and triangle faces of an ASCII PLY written here."""
+    path = Path(path)
+    with path.open("r", encoding="utf-8") as fh:
+        header = []
+        for line in fh:
+            header.append(line.strip())
+            if header[-1] == "end_header":
+                break
+        n_vertex = next((int(h.split()[-1]) for h in header
+                         if h.startswith("element vertex")), 0)
+        n_face = next((int(h.split()[-1]) for h in header
+                       if h.startswith("element face")), 0)
+        verts = np.empty((n_vertex, 3), float)
+        for i in range(n_vertex):
+            parts = fh.readline().split()
+            verts[i] = [float(parts[0]), float(parts[1]), float(parts[2])]
+        faces = np.empty((n_face, 3), np.int64)
+        for i in range(n_face):
+            parts = fh.readline().split()
+            faces[i] = [int(parts[1]), int(parts[2]), int(parts[3])]
+    return verts, faces
 
 
 # ---------------------------------------------------------------------------
