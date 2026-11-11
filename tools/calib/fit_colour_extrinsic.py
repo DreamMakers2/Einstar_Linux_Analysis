@@ -167,6 +167,20 @@ VALIDATION_MAX_HELDOUT_PX = 1.0
 VALIDATION_MIN_HELDOUT_VIEWS = 10
 
 
+def evaluate_on(views, fit: dict, profile) -> dict:
+    """Reprojection error of a fitted extrinsic on a *different* view set."""
+    record = profile.camera("color")
+    intr = record.intrinsics()
+    params = np.concatenate([cv2.Rodrigues(np.asarray(fit["rotation"], float))[0].ravel(),
+                             np.asarray(fit["translation"], float)])
+    stored = np.concatenate([
+        cv2.Rodrigues(np.asarray(record.R, float).reshape(3, 3))[0].ravel(),
+        np.asarray(record.T, float).reshape(3)])
+    return {"n_views": len(views),
+            "fitted_rms_px": _rms(params, views, intr),
+            "stored_rms_px": _rms(stored, views, intr)}
+
+
 def write_profile(profile_path: Path, fit: dict, out_path: Path,
                   *, validated_status: bool = False) -> Path:
     """Copy the profile with the corrected colour record (not activated).
@@ -219,6 +233,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="mark color_status=ok, but only if the held-out "
                          f"measurement is <= {VALIDATION_MAX_HELDOUT_PX:g} px "
                          f"on >= {VALIDATION_MIN_HELDOUT_VIEWS} views")
+    ap.add_argument("--eval-frames", default=None,
+                    help="independent frames directory to evaluate the fit on")
+    ap.add_argument("--eval-max-views", type=int, default=120)
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
@@ -229,6 +246,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"only {len(views)} usable views; need at least 8", file=sys.stderr)
         return 2
     fit = fit_colour_extrinsic(views, profile, holdout=args.holdout)
+    if args.eval_frames:
+        eval_views = collect_views(Path(args.eval_frames), profile,
+                                   max_views=args.eval_max_views)
+        fit["cross_session"] = evaluate_on(eval_views, fit, profile) \
+            if eval_views else {"n_views": 0}
     if args.write_profile:
         path = write_profile(Path(args.profile), fit, Path(args.write_profile),
                              validated_status=bool(args.validated_status))
@@ -248,6 +270,11 @@ def main(argv: list[str] | None = None) -> int:
               f"({fit['improvement']:.0f}x better)")
         print(f"delta: {fit['translation_delta_mm']:.1f} mm / "
               f"{fit['rotation_delta_deg']:.1f} deg")
+        cross = fit.get("cross_session") or {}
+        if cross.get("n_views"):
+            print(f"cross-session: {cross['n_views']} views, fitted "
+                  f"{cross['fitted_rms_px']:.2f} px vs stored "
+                  f"{cross['stored_rms_px']:.1f} px")
     return 0
 
 

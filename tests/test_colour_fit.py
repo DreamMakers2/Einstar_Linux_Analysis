@@ -149,3 +149,20 @@ def test_profile_status_is_earned_by_the_heldout_measurement(tmp_path):
     refused2 = fitmod.write_profile(FACTORY, bad_views, tmp_path / "bad2.json",
                                     validated_status=True)
     assert json.loads(refused2.read_text())["color_status"] == "fitted"
+
+
+def test_fit_generalises_to_an_independent_recording():
+    """The colour pose must hold on a *different* session, not just held-out views."""
+    sweep_c = Path(os.path.expanduser("~/einstar-private/sweep-c/frames"))
+    if not (FACTORY.is_file() and SWEEP.is_dir() and sweep_c.is_dir()):
+        pytest.skip("second recording not available")
+    profile = _factory()
+    train = fitmod.collect_views(SWEEP, profile, max_views=40, stride=3)
+    evalv = fitmod.collect_views(sweep_c, profile, max_views=40, stride=7)
+    if len(train) < 20 or len(evalv) < 10:
+        pytest.skip(f"not enough views ({len(train)} train, {len(evalv)} eval)")
+    fit = fitmod.fit_colour_extrinsic(train, profile, holdout=0.4)
+    result = fitmod.evaluate_on(evalv, fit, profile)
+    assert result["n_views"] >= 10
+    assert result["stored_rms_px"] > 50.0, result
+    assert result["fitted_rms_px"] < 2.0, result

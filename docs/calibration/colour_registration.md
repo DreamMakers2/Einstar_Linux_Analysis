@@ -35,6 +35,19 @@ engine's convention is the rotated frame.
 That is a **1502×** improvement on views the fit never saw.  The corrected
 transform differs from the shipped one by 247.0 mm and 179.9°.
 
+**Cross-session check.**  Held-out views come from the same recording, so the
+fit was also evaluated on an *independent* recording (`sweep-c`, 600 groups,
+never used in the fit), 120 views:
+
+| on sweep-c (independent session) | reprojection RMS |
+|---|---|
+| shipped colour record | 463.1 px |
+| fitted on sweep-b | **0.32 px** |
+
+The colour pose holds across sessions to a third of a pixel — the geometry is
+right, not fitted to one session's quirks.  A regression test asserts this
+(stored > 50 px, cross-session < 2 px).
+
 Consequences in the engine:
 
 ```
@@ -66,6 +79,7 @@ even if the flag is passed — that is tested.
 * **Does**: the colour camera's pose is now correct relative to the IR pair, to
   sub-pixel reprojection on held-out data.  Colour sampling is enabled and
   populated.
+* **Does**: generalise to an independent recording (0.32 px on sweep-c).
 * **Does not**: validate colour *photometry*.  The colour frames in this
   recording are dim (the illuminator is the IR one), so this establishes
   geometry only.  Correct colour reproduction needs a session lit for the colour
@@ -87,4 +101,5 @@ even if the flag is passed — that is tested.
 
 Tests: `tests/test_colour_fit.py` — synthetic recovery of a known transform
 (recovered to < 0.5 mm / 0.05°), the real sweep (shipped > 50 px, held-out
-< 2 px), and the status-promotion rule including both refusal cases.
+< 2 px), the status-promotion rule including both refusal cases, and the
+cross-session check on the second recording.
