@@ -38,6 +38,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from tools.fuse import tsdf
+from tools.scan import color as scan_color
 from tools.scan import export as scan_export
 from tools.track import baseline as track
 
@@ -62,6 +63,8 @@ class ScanConfig:
     #: low-confidence ones.  So the default is off here and the flag is exposed
     #: for single-frame analysis.
     min_confidence: float = 0.0
+    #: grey-world white balance on the highlight set (measured cast 29 % -> 2.5 %)
+    white_balance: bool = True
     max_frames: int | None = None
     keep_frames: bool = True
     ascii_ply: bool = True
@@ -122,6 +125,7 @@ class ScanSession:
         self._started = time.time()
         self._last_cloud = None
         self._last_cloud_for_track = None
+        self._colour: dict | None = None
         self._mesh = None
         self._finished: dict | None = None
 
@@ -304,7 +308,23 @@ class ScanSession:
                     crgb = np.vstack([np.asarray(c.colors, np.uint8) for c in coloured])
                     from scipy.spatial import cKDTree
                     _, near = cKDTree(cpts).query(verts, k=1)
-                    colours = crgb[near]
+                    colours = crgb[near].astype(float)
+                    if self.config.white_balance and len(colours) >= 64:
+                        try:
+                            wb = scan_color.estimate_white_balance(colours)
+                            before = scan_color.neutrality(colours)
+                            colours = scan_color.apply_white_balance(colours, wb)
+                            after = scan_color.neutrality(colours)
+                            self._colour = {
+                                "white_balance": wb.as_dict(),
+                                "neutrality_before": before,
+                                "neutrality_after": after,
+                                "clipped_fraction": float(np.mean(
+                                    np.any(colours >= 254.5, axis=1))),
+                            }
+                        except Exception as exc:
+                            self._colour = {"white_balance_error": str(exc)}
+                    colours = np.clip(np.rint(colours), 0, 255).astype(np.uint8)
             except Exception:
                 colours = None
             written = scan_export.export_mesh(
@@ -315,6 +335,8 @@ class ScanSession:
                       "vertices": int(len(verts)), "faces": int(len(faces))}
             self._mesh = (verts, faces)
         out.update(result)
+        if self._colour is not None:
+            out["colour"] = self._colour
         out["poses"] = [[[float(x) for x in row] for row in p] for p in self._poses]
         out["frames_status"] = [s.as_dict() for s in self._statuses]
         report = self.config.out_dir / "scan_report.json"

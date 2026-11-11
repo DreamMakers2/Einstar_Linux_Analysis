@@ -59,6 +59,38 @@ Every valid point now receives a colour sample; before, none did.  A point cloud
 written with the corrected profile has plausible colours (plate brighter than
 background, no black points).
 
+## Colour processing: white balance
+
+With the geometry fixed, the raw colour still carries a strong **green cast**:
+the brightest 5 % of pixels (the white plate background) measure
+**R/G 0.72, B/G 0.65** on the recorded sessions, stable across frames and
+sessions.  That is the sensor's raw Bayer output used without white-balance
+gains, not the scene.
+
+`tools/scan/color.py` applies a grey-world gain on the highlight set and reports
+what it did.  Measured on a real colour-capable reconstruction:
+
+| | R/G | B/G | max cast |
+|---|---|---|---|
+| before | 0.757 | 0.708 | 29.2 % |
+| after | 0.985 | 0.975 | **2.5 %** |
+
+Gains `[1.085, 0.822, 1.161]`, with 0.32 % of pixels clipping — the cast is
+removed without blowing the highlights.  The scan session records the gains,
+the neutrality before/after and the clipped fraction in `scan_report.json`, so
+the operation is auditable rather than silent.
+
+**What this is not.**  It is a cast removal relative to an assumed-neutral
+highlight.  Without a colour chart or a measured white reference it is **not**
+colorimetric calibration and no absolute colour accuracy is claimed.
+
+**Lighting.**  A dedicated ambient-light capture at the colour camera's maximum
+exposure (10 ms, gain 255, IR illuminator off) still reaches only p99 luminance
+37/255 — the colour camera has no illumination of its own and the room is dim.
+Correct colour *reproduction* therefore needs a lit scene, which is a recording
+decision rather than a software one.  (The capture tool correctly refused a
+20 ms request: the colour camera's limit is 10 ms.)
+
 ## The status is earned, not asserted
 
 The reconstruction engine samples colour only when `color_status == "ok"`.  The
