@@ -243,9 +243,10 @@ def stage_factory_information(args, data, geo, log) -> dict:
     train = geo["splits"]["train"]
     obs = MOT.make_obs(dets["sweep_c"], train, ("left", "right"))
     pitch = float(data["profile"].get("plate_pitch_mm", 28.0))
+    present = [c for c in CAMERAS if any(o.camera == c for o in obs)]
     spec_all = M.ModelSpec(
-        {c: set(M.INTR_NAMES) for c in CAMERAS},
-        {"right": set(M.EXTR_NAMES), "tex": set(M.EXTR_NAMES)}, False,
+        {c: set(M.INTR_NAMES) for c in present},
+        {c: set(M.EXTR_NAMES) for c in ("right", "tex") if c in present}, True,
         "factory-linearisation")
     t = time.time()
     lin = M.linearise(obs, spec_all, cams, extr, pitch_mm=pitch)
@@ -534,7 +535,7 @@ def stage_vendor(args, data, log) -> dict:
     out["image_coverage_left"] = MOT.image_coverage(det, "left", list(range(len(ids))))
     spec_all = M.ModelSpec({c: set(M.INTR_NAMES) for c in CAMERAS},
                            {"right": set(M.EXTR_NAMES), "tex": set(M.EXTR_NAMES)},
-                           False, "vendor-linearisation")
+                           True, "vendor-linearisation")
     pitch = float(data["profile"].get("plate_pitch_mm", 28.0))
     lin = M.linearise(obs, spec_all, data["cams"], data["extr"], pitch_mm=pitch)
     free = np.asarray(lin.info["free_mask"], bool)[:M.N_RIG]
@@ -855,9 +856,9 @@ def stage_design(args, data, geo, log) -> dict:
         "image_right": list(np.where(ucen > med["u"])[0]),
         "central_50pct": list(np.where((np.abs(ucen - med["u"]) < 0.25 * (ucen.max() - ucen.min())))[0]),
     }
-    spec_all = M.ModelSpec({c: set(M.INTR_NAMES) for c in CAMERAS},
-                           {"right": set(M.EXTR_NAMES), "tex": set(M.EXTR_NAMES)},
-                           False, "design-sensitivity")
+    spec_all = M.ModelSpec({c: set(M.INTR_NAMES) for c in ("left", "right")},
+                           {"right": set(M.EXTR_NAMES)}, True,
+                           "design-sensitivity")
     n_full = len(sel["all_train_views"])
     out = {"definitions": {
         "median_tilt_deg": med["tilt"], "median_depth_mm": med["z"],

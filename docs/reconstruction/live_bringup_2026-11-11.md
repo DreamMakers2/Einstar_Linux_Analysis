@@ -295,36 +295,66 @@ frame-to-frame.
 
 ## 7c. Which calibration parameters does the sweep constrain? (MEASURED)
 
-`tools/calib_study/observability.py` fits a ladder of models (factory only →
-IR intrinsics → radial → full kc5 → stereo rig → colour) on geometrically
-held-out legs and on the *other session*, and reports 1-σ marginal
-uncertainties from the joint covariance at the factory solution.
+`tools/calib_study/observability.py` fits a ladder of models on 72 training
+views from `sweep-c` legs 0+2 and validates on geometrically held-out legs
+(36 views) and on the whole independent session `sweep-b` (36 views).
 
-* The motion is formally 1-D: the translation singular values are
-  [958.8, 43.2, 0.4], i.e. the second axis carries 4.5 % of the motion and the
-  third 0.04 %.
-* The scaled marginal information has condition number **8.4e5**.  The weakest
-  direction is dominated by `right.fy`, `right.tz`, `right.k2`, `right.k3`.
-* **Every intrinsic is unobservable from this data**: 1-σ ≈ 6.8 px on `fx`/`fy`,
-  2.7–3.6 px on the principal point, 1.0–2.5 px equivalent on `k1`/`k2`, and
-  `skew` is degenerate with `cx`.  Tangential `p1` is merely "weak".
-* The **stereo rotation is partially observable**: `rx` 0.097°, `rz` 0.041°,
-  `ry` 0.17° (weak).  The stereo translation is not (σ 0.74–3.27 mm).
-* The model ladder reduces train RMS from 1.86 px (factory, poses only) to
-  0.34 px, and the **held-out** RMS on the *other capture session* falls the
-  same way (1.77 → 0.34 px) — so the rig correction generalises.  That is
-  consistent with the 0.24°/1.3 mm rigid offset found independently in §7a;
-  it does **not** mean the intrinsics were improved.
-* Absolute scale cannot be resolved by any reprojection-based method:
-  scaling the board and every translation by *s* leaves the reprojection cost
-  exactly invariant, so no residual can prefer 28.0 mm over 27.7 mm.  This is
-  why §7b's 27.69 mm implied pitch is reported as a gauge, not a correction.
+| model | free rig params | train RMS | held-out legs | held-out session |
+|---|---:|---:|---:|---:|
+| M0 factory, poses only | 0 | 1.859 px | 1.805 px | 1.791 px |
+| M1 left intrinsics | 4 | 0.400 | 0.408 | 0.393 |
+| M2 both IR intrinsics | 8 | 0.366 | 0.376 | 0.360 |
+| M3 + k1,k2 | 12 | 0.365 | 0.375 | 0.359 |
+| M4 + kc5 + skew | 20 | 0.359 | 0.368 | 0.353 |
+| M5 + stereo extrinsic | 26 | 0.359 | 0.368 | 0.353 |
+| M6 + colour intrinsics/extrinsic | 37 | 0.409 | 0.375 | 0.360 |
 
-The concrete additional excitation required (two-axis tilt ≥ 30°, distance
-range ≥ 80 mm, plate in all four image quadrants, corner radius coverage
-r ≥ 0.7 in ≥ 8 views) is derived from a design-sensitivity table in the study
-and carried into `docs/calibration/one_session_plan.md`.
+* The step from M0 to M1 is the *rigid offset* (§7a): most of the 1.86 px is a
+  single extrinsic disagreement, not per-camera intrinsic error.
+* **M6 is worse than M5** — fitting the stale colour record degrades the IR
+  calibration, which is why `color_status` stays `stale`.
+* The leg split removes temporal duplicates, but every leg covers the *same*
+  1-D path, so train ≈ held-out legs demonstrates temporal/session stability,
+  **not** extrapolation to unseen poses.  `sweep-b` is the genuine independent
+  session test, and it improves the same way.
 
+**Identifiability.** 26 free IR rig parameters, Jacobian rank 26 of 42, scaled
+condition number **8.4e5**, scaled marginal-information eigenvalues spanning
+7 decades (6.57 … 0, 0, 0).  The weakest direction is dominated by
+`right.fy`, `right.tz`, `right.k3`, `right.k2`.  The strongest parameter
+correlations are `right.fx↔right.fy` 0.992, `right.fy↔right.tz` 0.988,
+`right.cy↔right.rz` 0.997 and `left.k2↔left.k3` −0.984 — exactly the
+focal/depth and distortion/skew trade-offs.
+
+**Per-parameter verdicts** (1-σ at the M5 fit, marginalised over all board
+poses):
+
+| group | 1-σ | verdict |
+|---|---|---|
+| IR `fx`, `fy` | 4.7–5.8 px (5.8–7.8 px in the more permissive M6) | **unobservable** |
+| IR `cx`, `cy` | 1.6–2.3 px | **unobservable** |
+| IR `k1` | 0.0032 (≈0.3 px corner displacement) | **unobservable** |
+| IR `k2`, `k3`, `skew` | 0.02–0.05, 0.2 px | **unobservable** |
+| `p1`, `p2` (tangential) | 0.15–0.5 px | weak |
+| stereo `rx`, `rz` | 0.0005°–0.04° | **constrained** |
+| stereo `ry` | ≈0.17° | weak |
+| stereo baseline | 0.58 mm | weak |
+| colour | — | not fitted (stale record) |
+
+**The focal-length question, settled by experiment.** `corr(fx, mean plate
+depth)` = **0.9991**.  A fixed-focal sweep (both IR focals scaled together,
+everything else refitted) has its RMS minimum at scale 1.000 and costs only
+0.005 px RMS for a ±5 % focal error, while the recovered depth tracks the
+focal exactly (354.5 → 393.3 mm for scale 0.95 → 1.05).  Starting the fit from
+OpenCV's per-camera initialisation gives **fx = 1271.6 / 957.5 px for two
+identical cameras** and a *lower* training RMS (0.346 vs 0.359) at different
+focal values — a direct demonstration that a better residual does not select a
+focal length at the ~2.6 % level.
+
+**Absolute scale cannot be resolved this way.** Scaling every board point and
+every translation by *s* leaves every reprojection *identical*, so no residual
+can prefer 28.0 mm over the vendor's CCF-effective 27.72 mm.  §7b's 27.69 mm
+implied pitch is therefore reported as a gauge, not a correction.
 ## 8. What remains open
 
 * Absolute scale: the ~1 % discrepancy between the 28.0 mm plate model and the

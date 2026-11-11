@@ -20,6 +20,13 @@ Measured on 600 live groups (60 s) and 350 groups (35 s), same settings:
 | motion | 6.5 mm/s, 1.1 °/s, 2 turnarounds | — |
 | distinct poses | 33 at a 5 mm / 0.5° separation | — |
 
+The parameter study (`tools/calib_study`, 72 training views, held-out legs and
+an independent session) puts numbers on this: 1-σ = 4.7–7.8 px on `fx/fy`,
+1.6–2.3 px on the principal point, 0.003–0.05 on the radial terms, and
+`corr(fx, depth)` = 0.9991, with a condition number of 8.4e5.  Only the stereo
+rotation `rx`/`rz` is genuinely constrained; the baseline is weak (0.58 mm) and
+the stereo translation is unobservable.
+
 Consequences, measured rather than assumed:
 
 * **Focal length is unobservable.** Scaling `fx` and `fy` together by ±3 %
