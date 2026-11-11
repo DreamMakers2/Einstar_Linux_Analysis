@@ -110,7 +110,7 @@ soak, thermal behaviour, side-by-side comparisons with the vendor stack, and any
 accuracy claim are still open. Absolute scale remains unresolved and cannot be settled with the
 plate alone.
 
-### Calibration wizard readiness (2026-11-11)
+### Calibration wizard readiness (2026-11-11, updated)
 
 | item | state |
 |---|---|
@@ -122,7 +122,10 @@ plate alone.
 | observability gate | marginal σ, condition number, per-parameter verdicts; 0.3–2.5 ms |
 | profile lifecycle | factory/candidate/validated, 9 gates, activation refused on failure, store byte-identical, rollback |
 | offline rehearsal | sweep (16 accepted, NOT READY), vendor corpus (17 accepted, candidate produced, 4/9 gates fail honestly) |
-| synthetic full-coverage rehearsal | **not achieved** — the renderer's right-camera chirality fails at some poses (documented limitation) |
+| synthetic full-coverage rehearsal | **achieved**: self-validating plan, 33 accepted, coverage 8/8 |
+| validated candidate profile | **achieved** on synthetic truth: 9/9 lifecycle gates, activation → revision 1, rollback → factory |
+| partial-plate recognition | visibility-aware witness with 10 measured regression tests; detector-side partial assignment still open (documented) |
+| failure-case matrix | 17 measured cases, all refused; one real gap found (jittery timestamps disabled the motion gate) and fixed |
 | one comprehensive session | **ready to run**; operator guide in `calibration/wizard_operator_guide.md` |
 
 ### Reconstruction and calibration readiness (2026-11-11)
