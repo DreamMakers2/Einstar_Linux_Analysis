@@ -90,6 +90,25 @@ tabs: the wizard and the scanner each own a capture process, a session directory
 and worker threads, and keeping them separate windows means one cannot stomp on
 the other's lifecycle.  Closing the launcher shuts both down.
 
+## Offline reprocessing
+
+A project stores the frames directory, the reconstruction settings and every
+accepted pose, so a scan can be **re-fused at another voxel size without
+re-tracking**:
+
+```sh
+.venv/bin/python -m tools.scan.cli \
+  --project ~/einstar-private/analysis/scan-colour2/scan_project.json \
+  --out ~/einstar-private/analysis/scan-reproc --voxel-mm 2.0
+```
+
+The recorded pose is authoritative on that path and tracking is skipped
+entirely; the report marks each frame `tracking_reason: "replayed pose"` so a
+reader can tell.  Measured on a 3-frame project made at 5 mm: reprocessing at
+2 mm gives **92 281 vertices / 169 062 faces** against 16 462 / 30 083, with the
+poses byte-equal to the original scan.  This is the offline refinement path for
+a recording, and it is deterministic because the poses are inputs.
+
 ## Live mesh preview
 
 The 3-D view updates *during* the scan, not only at the end: every fifth

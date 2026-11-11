@@ -24,8 +24,11 @@ from tools.scan.session import ScanConfig, ScanSession  # noqa: E402
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--frames", required=True, help="frames directory")
-    ap.add_argument("--profile", required=True, help="recon profile JSON")
+    ap.add_argument("--project", default=None,
+                    help="reprocess a saved scan project (reuses its poses and "
+                         "skips tracking); --frames/--profile are then optional")
+    ap.add_argument("--frames", required=False, help="frames directory")
+    ap.add_argument("--profile", required=False, help="recon profile JSON")
     ap.add_argument("--out", required=True, help="output directory")
     ap.add_argument("--recon", default="build/recon/recon_cli",
                     help="reconstruction binary")
@@ -42,16 +45,31 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
 
-    cfg = ScanConfig(frames_dir=Path(args.frames), profile=Path(args.profile),
-                     out_dir=Path(args.out), recon_binary=Path(args.recon),
-                     voxel_mm=args.voxel_mm, trunc_mm=args.trunc_mm,
-                     input_voxel_mm=args.input_voxel_mm, scale=args.scale,
-                     min_confidence=args.min_confidence)
-    session = ScanSession(cfg)
+    if args.project:
+        session = ScanSession.from_project(
+            args.project, out_dir=Path(args.out), voxel_mm=args.voxel_mm,
+            trunc_mm=args.trunc_mm, input_voxel_mm=args.input_voxel_mm,
+            scale=args.scale)
+        indices = list(session.replay_order or [])
+        if not indices:
+            print("project has no integrated frames to reprocess", file=sys.stderr)
+            return 2
+    else:
+        if not (args.frames and args.profile):
+            print("--frames and --profile are required unless --project is given",
+                  file=sys.stderr)
+            return 2
+        cfg = ScanConfig(frames_dir=Path(args.frames), profile=Path(args.profile),
+                         out_dir=Path(args.out), recon_binary=Path(args.recon),
+                         voxel_mm=args.voxel_mm, trunc_mm=args.trunc_mm,
+                         input_voxel_mm=args.input_voxel_mm, scale=args.scale,
+                         min_confidence=args.min_confidence)
+        session = ScanSession(cfg)
+        indices = list(range(args.start, args.start + args.count))
     t0 = time.time()
     statuses = []
     try:
-        for i in range(args.start, args.start + args.count):
+        for i in indices:
             status = session.process(i)
             statuses.append(status.as_dict())
             if not status.ok:

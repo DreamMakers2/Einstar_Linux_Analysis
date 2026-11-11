@@ -34,7 +34,8 @@ pytestmark = pytest.mark.skipif(
 def _config(tmp_path: Path, **kwargs) -> scan_session.ScanConfig:
     cfg = dict(frames_dir=SWEEP, profile=FACTORY, out_dir=tmp_path / "scan",
                recon_binary=RECON, voxel_mm=6.0, input_voxel_mm=10.0,
-               scale=0.25, **kwargs)
+               scale=0.25)
+    cfg.update(kwargs)
     return scan_session.ScanConfig(**cfg)
 
 
@@ -348,3 +349,37 @@ def test_preview_mesh_is_decimated_and_final_mesh_is_not(tmp_path):
     finally:
         session.close()
     assert final["faces"] > len(faces), (final["faces"], len(faces))
+
+
+def test_reprocess_from_project_reuses_the_recorded_poses(tmp_path):
+    """A saved scan can be re-fused at another voxel size without tracking."""
+    base = tmp_path / "first"
+    session = scan_session.ScanSession(_config(base, voxel_mm=8.0))
+    try:
+        for i in range(3):
+            assert session.process(i).ok
+        first = session.finish()
+    finally:
+        session.close()
+
+    repro = scan_session.ScanSession.from_project(
+        first["project"], out_dir=tmp_path / "repro", voxel_mm=2.0)
+    try:
+        assert repro.replay_poses and len(repro.replay_poses) == 3
+        for idx in repro.replay_order:
+            status = repro.process(idx)
+            assert status.ok, status.reason
+            assert status.tracking_ok is True
+            assert status.tracking_reason == "replayed pose"
+        second = repro.finish()
+    finally:
+        repro.close()
+
+    # finer voxels must produce a larger mesh from the same data
+    assert second["vertices"] > first["vertices"]
+    # and the poses must be exactly the recorded ones
+    a = np.asarray(json.loads(Path(first["report"]).read_text())["poses"], float)
+    b = np.asarray(json.loads(Path(second["report"]).read_text())["poses"], float)
+    assert a.shape == b.shape
+    assert np.allclose(a, b, atol=1e-9)
+    assert (Path(second["ply"]).is_file() and Path(second["obj"]).is_file())

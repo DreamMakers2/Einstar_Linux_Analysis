@@ -112,6 +112,43 @@ class FrameStatus:
 class ScanSession:
     """A scanning run over a frames directory."""
 
+    @classmethod
+    def from_project(cls, project_path, *, out_dir=None, voxel_mm=None,
+                     trunc_mm=None, input_voxel_mm=None, scale=None,
+                     **overrides) -> "ScanSession":
+        """Re-open a saved scan for reprocessing, reusing its recorded poses.
+
+        A project stores the frames directory, the reconstruction settings and
+        every accepted pose, so a scan can be re-fused at a different voxel size
+        without re-tracking.  That is what makes an offline refinement of a
+        recorded scan possible (and it is deterministic: the poses are inputs,
+        not re-estimated).
+        """
+        from tools.scan import export as scan_export
+        doc = scan_export.load_project(project_path)
+        cfg = dict(doc.get("config") or {})
+        report = doc.get("report") or {}
+        cfg["out_dir"] = str(Path(out_dir) if out_dir else
+                             Path(cfg.get("out_dir") or ".") / "reprocessed")
+        if voxel_mm is not None:
+            cfg["voxel_mm"] = float(voxel_mm)
+        if trunc_mm is not None:
+            cfg["trunc_mm"] = float(trunc_mm)
+        if input_voxel_mm is not None:
+            cfg["input_voxel_mm"] = float(input_voxel_mm)
+        if scale is not None:
+            cfg["scale"] = float(scale)
+        cfg.update(overrides)
+        config = ScanConfig(**cfg)
+        session = cls(config)
+        poses = [np.asarray(p, float) for p in (report.get("poses") or [])]
+        session.replay_poses = poses
+        session.replay_order = [int(s.get("index")) for s in
+                                (report.get("frames_status") or [])
+                                if s.get("integrated")]
+        session.source_project = str(project_path)
+        return session
+
     def __init__(self, config: ScanConfig) -> None:
         self.config = config
         self.config.out_dir.mkdir(parents=True, exist_ok=True)
@@ -126,6 +163,10 @@ class ScanSession:
         self._last_cloud = None
         self._last_cloud_for_track = None
         self._colour: dict | None = None
+        #: when set (reprocessing), these poses are used instead of tracking
+        self.replay_poses: list[np.ndarray] | None = None
+        self.replay_order: list[int] | None = None
+        self.source_project: str | None = None
         self._mesh = None
         self._finished: dict | None = None
 
@@ -264,6 +305,19 @@ class ScanSession:
         self._last_cloud = cloud
         # -- tracking against the previous integrated frame
         pose = np.eye(4)
+        if self.replay_poses is not None:
+            # reprocessing: the recorded pose is authoritative, and tracking is
+            # skipped entirely (it was already validated when the scan was made)
+            order = self.replay_order or []
+            if len(self._poses) >= len(self.replay_poses):
+                status.reason = "no recorded pose left for this frame"
+                self._statuses.append(status)
+                return status
+            pose = np.asarray(self.replay_poses[len(self._poses)], float)
+            status.tracking_ok = True
+            status.tracking_reason = "replayed pose"
+            self._integrate(cloud, pose, status)
+            return status
         if self._last_cloud_for_track is not None:
             t1 = time.time()
             pair = track.align_point_to_plane(self._last_cloud_for_track, cloud)
@@ -284,11 +338,15 @@ class ScanSession:
                 self._rejected += 1
                 self._statuses.append(status)
                 return status
-        # -- fusion
+        self._integrate(cloud, pose, status)
+        return status
+
+    def _integrate(self, cloud, pose: np.ndarray, status: FrameStatus) -> None:
+        """Fuse one cloud at ``pose``; shared by the live and replay paths."""
+        cfg = self.config
         if cfg.min_confidence > 0:
-            conf = np.clip(1.0 - np.abs(np.asarray(cloud.points, float)[:, 2]
-                                        - np.median(np.asarray(cloud.points, float)[:, 2]))
-                           / 50.0, 0.0, 1.0)
+            z = np.asarray(cloud.points, float)[:, 2]
+            conf = np.clip(1.0 - np.abs(z - np.median(z)) / 50.0, 0.0, 1.0)
         else:
             conf = None
         world = (pose[:3, :3] @ np.asarray(cloud.points, float).T).T + pose[:3, 3]
@@ -297,17 +355,17 @@ class ScanSession:
             self._volume = tsdf.make_volume([world], voxel_mm=cfg.voxel_mm,
                                             margin_mm=25.0,
                                             max_voxels=60_000_000)
-        t2 = time.time()
+        t0 = time.time()
         tsdf.integrate(self._volume, world, world_n, trunc_mm=cfg.trunc_mm,
                        confidence=conf)
-        status.fusion_seconds = time.time() - t2
+        status.fusion_seconds = time.time() - t0
         status.integrated = True
         status.ok = True
         self._poses.append(pose)
         self._frames.append(cloud)
         self._last_cloud_for_track = cloud
+        self._last_cloud = cloud
         self._statuses.append(status)
-        return status
 
     # the first frame has nothing to align to
 
