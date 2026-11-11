@@ -97,7 +97,8 @@ def evaluate_frame(images: dict[str, np.ndarray],
                    quality: Optional[dict] = None,
                    cameras: Optional[dict[str, CameraIntrinsics]] = None,
                    rig: Optional[dict[str, tuple]] = None,
-                   require_images: bool = True) -> FrameQuality:
+                   require_images: bool = True,
+                   optional_cameras: Optional[set] = None) -> FrameQuality:
     """Assess one three-camera frame set.
 
     ``grids`` maps camera -> Observation with the ordered (u,v) markers.
@@ -114,12 +115,21 @@ def evaluate_frame(images: dict[str, np.ndarray],
     n_markers: dict = {}
     uv_by_cam: dict[str, np.ndarray] = {}
 
+    optional = set(optional_cameras or ())
     for c in CAMERAS:
         o = grids.get(c)
         if o is None or not o.uv:
             n_markers[c] = 0
+            if c in optional:
+                # this camera simply does not see the board from this pose
+                # (e.g. the colour sensor at an image corner).  The view still
+                # constrains the cameras that do see it; overall colour
+                # participation is enforced separately by the coverage gate.
+                metrics[f"{c}.active"] = 0.0
+                continue
             reasons.append(f"{c}: no markers detected")
             continue
+        metrics[f"{c}.active"] = 1.0
         uv = np.asarray(list(o.uv.values()), float)
         uv_by_cam[c] = uv
         n_markers[c] = int(len(uv))

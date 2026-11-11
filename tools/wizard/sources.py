@@ -193,18 +193,21 @@ def manifest_is_continuous(manifest: FramesManifest) -> bool:
     """Whether a frames manifest describes a continuous ~10 Hz stream.
 
     A vendor still collection has no manifest and is not continuous; a live
-    capture or a replay of one has a regular 5-15 fps cadence.  The test is
-    deliberately conservative: an irregular or slow sequence is treated as a
-    still collection, which only disables the motion gate (never the quality
-    gate).
+    capture or a replay of one has a 5-15 fps cadence.  What matters for the
+    motion gate is whether consecutive groups are *time-adjacent samples of one
+    session*, not whether the host timestamps are tidy: a jittery recording is
+    still a continuous capture and must keep the gate.  Measured with the
+    failure matrix: an irregular 10 Hz manifest was classified as a still
+    collection, which silently bypassed the motion gate entirely.  Only a
+    sequence with no usable per-group timestamps (a still collection) or a
+    genuinely slow cadence is non-continuous now.
     """
     fps = manifest.cadence_fps
     if fps is not None:
         if fps < 5.0:
             return False
-        if manifest.cadence_min_ms and manifest.cadence_max_ms:
-            ratio = manifest.cadence_max_ms / max(manifest.cadence_min_ms, 1e-9)
-            return ratio < 1.6
+        # jitter is not a reason to drop the motion gate: a 4x cadence ratio is
+        # still a live capture, only a slow one (< 5 fps) is a still collection
         return True
     stamps = sorted(manifest.host_time_ns.values())
     if len(stamps) < 10:
@@ -216,9 +219,9 @@ def manifest_is_continuous(manifest: FramesManifest) -> bool:
     median = float(np.median(deltas))
     if not 0.04 <= median <= 0.5:
         return False
-    lo = float(np.percentile(deltas, 10))
-    hi = float(np.percentile(deltas, 90))
-    return lo > 0 and (hi / lo) < 1.6
+    # timestamps exist and the median cadence is live: treat it as continuous
+    # even if the host timestamps are jittery (the gate uses the measured speed)
+    return True
 
 
 
@@ -394,6 +397,7 @@ class ReplayDirSource:
                 time.sleep(self.retry_delay_s)
         return None
 
+
     def __iter__(self) -> Iterator[types.FrameGroup]:
         while not self._closed:
             ids = self._group_ids()[self.start:]
@@ -402,7 +406,17 @@ class ReplayDirSource:
             for file_index in ids:
                 if self._closed:
                     return
-                group = self._load_with_retry(file_index)
+                try:
+                    group = self._load_with_retry(file_index)
+                except Exception as exc:
+                    # A truncated or unreadable frame must not end the replay:
+                    # record it and carry on with the next group (measured: one
+                    # corrupt PGM previously stopped iteration after it).
+                    self.skipped.append({"file_index": int(file_index),
+                                         "reason": f"load failed: "
+                                                   f"{type(exc).__name__}: {exc}",
+                                         "pass": self._pass})
+                    continue
                 if group is None:
                     self.skipped.append({"file_index": int(file_index),
                                          "reason": "incomplete or unreadable group",
@@ -810,7 +824,11 @@ def _default_poses(spec: SyntheticSpec) -> list[tuple[float, float, float, float
     n = int(spec.n_views)
     # phase A (first 12): distance bands x the four out-of-plane tilt
     # quadrants, roll 0 so the measured signs stay the intended ones.
-    tilt = max(20.0, float(getattr(spec, "tilt_min_deg", 20.0)))
+    # 16 deg clears the coverage minimum (15 deg) with a small margin.  Larger
+    # tilts (20-28 deg) foreshorten the plate so strongly for the toed-in right
+    # camera that its large-marker area ratio collapses and the orientation
+    # witness fails - measured: identity score 0/4 at (+20,+20) for 340-420 mm.
+    tilt = max(16.0, float(getattr(spec, "tilt_min_deg", 16.0)))
     for i in range(min(n, 12)):
         d = distances[i % len(distances)]
         sx, sy = quadrant[(i // 3) % 4]
@@ -1064,8 +1082,13 @@ class SyntheticSource:
         self._closed = False
         self._next_index = 0
         self._pass = 0
-        self.poses = self._poses()
+        self.poses = []
         self._build_cameras()
+        if str(getattr(self.spec, "pattern", "")) == "coverage":
+            self.poses = self._plan_coverage_poses()
+            self.plan_report = getattr(self, "_plan_report", {})
+        else:
+            self.poses = self._poses()
         self.continuous = int(spec.frames_per_pose) > 1
         self.info = types.SourceInfo(
             kind=types.SOURCE_SYNTHETIC,
@@ -1135,7 +1158,8 @@ class SyntheticSource:
                                    np.asarray(spec.extrinsics[c][1], float))
                                for c in CAMERAS}
             return
-        scene = make_scene(n_views=max(1, len(self.poses)), seed=spec.seed,
+        scene = make_scene(n_views=max(1, len(getattr(self, "poses", []) or [])),
+                           seed=spec.seed,
                            noise_px=0.0, outlier_frac=0.0,
                            pitch_mm=spec.pitch_mm)
         self.cameras = dict(scene.cameras)
@@ -1203,6 +1227,113 @@ class SyntheticSource:
         drop = int(self.spec.drop_by_camera.get(cam_key, 0))
         return render_plate_view(self.cameras[cam_key], (Rw, tw), self.spec,
                                  drop_count=drop, rng=rng)
+
+    def _plan_coverage_poses(self) -> list[tuple[np.ndarray, np.ndarray]]:
+        """Build a pose plan that provably satisfies the coverage families.
+
+        Each candidate is rendered for both IR cameras, detected and checked
+        with the *same* orientation witness the wizard uses, so the fixture
+        cannot claim coverage the detector would not actually see.  Goals are
+        explicit: every one of the nine image regions gets a pose first, then
+        every (tilt quadrant, roll sector) pair, then filler spreading across
+        the three distance bands.  A rejected candidate is jittered a few times
+        before being dropped, which mirrors an operator retrying a view.
+        """
+        from calib import detect
+        try:
+            from .coverage import family_pose
+        except Exception:  # pragma: no cover
+            from calib.adaptive import board_pose as family_pose
+        try:
+            from tools.sweep import orient
+        except Exception:  # pragma: no cover
+            orient = None
+        spec = self.spec
+        rng = np.random.default_rng(int(spec.seed) + 17)
+        width, height = types.IMAGE_WIDTH, types.IMAGE_HEIGHT
+        K = np.asarray(self.cameras["left"].K, float)
+        Kinv = np.linalg.inv(K)
+
+        def translation(distance: float, region: int) -> np.ndarray:
+            iu, iv = int(region) % 3, int(region) // 3
+            # aim inside the cell but toward the image centre for the far
+            # column/row, so a corner view keeps the plate's far edge in frame
+            # while its centre still lands in the required region
+            fu = 0.5 if iu < 2 else 0.30
+            fv = 0.5 if iv < 2 else 0.30
+            u = (iu + fu) * width / 3.0
+            v = (iv + fv) * height / 3.0
+            ray = Kinv @ np.array([u, v, 1.0])
+            return float(distance) * ray / ray[2]
+
+        def usable(R, t) -> bool:
+            for key in ("left", "right"):
+                img = self._render(key, (R, t), 0)
+                obs = detect.detect_grid_auto(np.ascontiguousarray(img))
+                if obs is None or len(obs.points) < 16:
+                    return False
+                if orient is not None:
+                    chk = orient.check_orientation(img, obs,
+                                                   image_shape=img.shape).as_dict()
+                    if not chk.get("ok"):
+                        return False
+            return True
+
+        distances = (350.0, 430.0, 470.0)
+        quadrants = ((1, 1), (-1, 1), (1, -1), (-1, -1))
+        rolls = (0.0, 90.0, 180.0, 270.0)
+        goals: list[tuple[int, tuple[int, int], float, float]] = []
+        # 1) every image region once, at a distance that keeps the plate inside
+        #    the colour camera too where possible (colour participation D6)
+        for region_index in range(9):
+            d = 350.0 if region_index in (1, 3, 4, 5, 7) else 430.0
+            goals.append((region_index, quadrants[region_index % 4],
+                          rolls[region_index % 4], d))
+        # 2) every (tilt quadrant, roll sector) pair, so D2 and D3 are covered
+        #    by construction rather than by luck
+        for qi, quadrant in enumerate(quadrants):
+            for ri, roll in enumerate(rolls):
+                goals.append(((qi * 2 + ri) % 9, quadrant, roll,
+                              distances[(qi + ri) % len(distances)]))
+        # 3) filler that spreads across all three distance bands
+        while len(goals) < max(int(spec.n_views), 28):
+            i = len(goals)
+            goals.append((i % 9, quadrants[i % 4], rolls[i % 4],
+                          distances[i % len(distances)]))
+
+        plan: list[tuple[np.ndarray, np.ndarray]] = []
+        failures: list[dict] = []
+        for i, (reg, quadrant, roll, distance) in enumerate(goals):
+            placed = False
+            for attempt in range(8):
+                # back off on retry, but stay inside the intended distance band
+                d = float(distance) * (1.0 + 0.05 * attempt)
+                r = float(roll) + (0.0 if attempt < 2 else float(rng.normal(0, 8.0)))
+                use_reg = int(reg) if (i < 9 or attempt < 5) else int(rng.integers(0, 9))
+                if i < 9:
+                    q_index = (quadrants.index(quadrant) + attempt // 2) % 4
+                    use_quadrant = quadrants[q_index]
+                else:
+                    use_quadrant = quadrant
+                R, _ = family_pose(d, use_quadrant[0] * 16.0,
+                                   use_quadrant[1] * 16.0, r)
+                t = translation(d, use_reg)
+                if usable(R, t):
+                    plan.append((R, t))
+                    placed = True
+                    break
+            if not placed:
+                failures.append({"region": int(reg), "quadrant": list(quadrant),
+                                 "roll": float(roll), "distance": float(distance)})
+        regions = []
+        for _, t in plan:
+            proj = K @ t
+            u, v = proj[0] / proj[2], proj[1] / proj[2]
+            regions.append(int(v // (height / 3.0)) * 3 + int(u // (width / 3.0)))
+        self._plan_report = {"requested": len(goals), "kept": len(plan),
+                             "rejected": failures,
+                             "regions": sorted(set(regions))}
+        return plan
 
     def __iter__(self) -> Iterator[types.FrameGroup]:
         repeats = max(1, int(self.spec.frames_per_pose))

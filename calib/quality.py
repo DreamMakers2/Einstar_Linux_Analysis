@@ -185,8 +185,12 @@ def view_diversity(result: CalibrationResult, image_size: tuple[int, int] = (128
     for R, t in result.views:
         zs.append(float(t[2]))
         n = R[:, 2]
-        tx.append(float(np.degrees(np.arctan2(n[1], max(abs(n[2]), 1e-9)))))
-        ty.append(float(np.degrees(np.arctan2(n[0], max(abs(n[2]), 1e-9)))))
+        # Same axis convention as tools.wizard.coverage.tilt_deg: tilt_x is the
+        # rotation about the camera x axis (from n[0]), tilt_y about y (n[1]).
+        # The two modules previously disagreed, so a session that covered both
+        # axes looked one-sided here while coverage reported it as complete.
+        tx.append(float(np.degrees(np.arctan2(n[0], max(abs(n[2]), 1e-9)))))
+        ty.append(float(np.degrees(np.arctan2(n[1], max(abs(n[2]), 1e-9)))))
     zs = np.array(zs); tx = np.array(tx); ty = np.array(ty)
     bins = np.floor((zs - 200.0) / 50.0).astype(int)
     txr = tx - float(np.median(tx)); tyr = ty - float(np.median(ty))

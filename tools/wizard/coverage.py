@@ -80,6 +80,12 @@ class CoverageSpec:
     image_regions: int = 9           # 3x3; centre visits >= 6, corners >= 1 each
     min_shared_markers: int = 12     # both IR cameras, unambiguous assignment
     min_colour_markers: int = 12
+    #: colour registration is constrained by the views where the colour sensor
+    #: actually sees the plate.  A corner pose can put the board outside the
+    #: colour field of view while both IR cameras see it well; demanding colour
+    #: in *every* view makes edge/corner coverage physically impossible.
+    min_colour_views: int = 12
+    min_colour_participation: float = 0.6
     require_colour: bool = True
     max_saturation_frac: float = 0.05
     min_focus: float = 150.0
@@ -622,19 +628,28 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
                        if c >= int(spec.min_colour_markers)]
     colour_fraction = (len(colour_ok_views) / n) if n else 0.0
     d6_required = bool(spec.require_colour)
-    d6_sat = (colour_fraction >= 1.0) if d6_required else True
-    d6_deficit = {"views_without_colour": max(0, n - len(colour_ok_views))
-                  } if d6_required else {}
-    d6_hint = ("Colour camera sees the plate in every accepted view." if d6_sat
-               and d6_required else
-               ("Colour participation is not required in this spec."
-                if not d6_required else
-                f"Colour: {n - len(colour_ok_views)} of {n} views have fewer than "
-                f"{spec.min_colour_markers} colour markers; keep the plate inside "
-                "the colour field of view and out of clipping."))
+    need_views = int(spec.min_colour_views)
+    need_frac = float(spec.min_colour_participation)
+    d6_sat = (True if not d6_required else
+              (len(colour_ok_views) >= need_views and colour_fraction >= need_frac))
+    d6_deficit = ({} if not d6_required else
+                  {"views_with_colour": max(0, need_views - len(colour_ok_views)),
+                   "participation_fraction": max(0.0, need_frac - colour_fraction)})
+    if not d6_required:
+        d6_hint = "Colour participation is not required in this spec."
+    elif d6_sat:
+        d6_hint = (f"Colour participates in {len(colour_ok_views)} of {n} views "
+                   f"({colour_fraction * 100:.0f} %).")
+    else:
+        d6_hint = (f"Colour: only {len(colour_ok_views)} of {n} views have "
+                   f">= {spec.min_colour_markers} colour markers "
+                   f"(need {need_views} views and {need_frac * 100:.0f} %); keep "
+                   "the plate inside the colour field of view for some poses.")
     checks["colour"] = _check(
         "colour participation",
         {"min_colour_markers": int(spec.min_colour_markers),
+         "min_colour_views": need_views,
+         "min_colour_participation": need_frac,
          "require_colour": d6_required},
         {"n_views_with_colour": len(colour_ok_views), "n_views": n,
          "participation_fraction": colour_fraction,

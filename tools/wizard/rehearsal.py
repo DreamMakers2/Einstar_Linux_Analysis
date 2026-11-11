@@ -63,6 +63,15 @@ DEFAULT_FACTORY = Path.home() / "einstar-private" / "einstar-profiles" / "factor
 
 #: Named synthetic scenes (deterministic; used by CI and the GUI demo mode).
 SCENES: dict[str, dict[str, Any]] = {
+    # self-validating plan: every image region (incl. all four corners), every
+    # tilt quadrant and two roll sectors, each pose checked by rendering,
+    # detection and the orientation witness before it is emitted
+    "coverage": dict(pattern="coverage", n_views=24),
+    # deliberately sufficient: every family, ~2.5x the minimum view count, for
+    # the end-to-end "validated profile" demonstration
+    "coverage-mid": dict(pattern="coverage", n_views=36),
+    "coverage-large": dict(pattern="coverage", n_views=60),
+    "coverage-small": dict(pattern="coverage", n_views=12),
     "diverse": dict(pattern="diverse", n_views=24),
     "diverse-small": dict(pattern="diverse", n_views=12),
     "distance-sweep": dict(pattern="distance", n_views=12),

@@ -102,7 +102,8 @@ def detect_directory(directory: str | Path, auto_polarity: bool = True,
 def solve_observations(obs: list[Observation], pitch_mm: float,
                        init: dict[str, CameraIntrinsics], free_kc: bool,
                        backend: str = "auto", robust_loss: str = "huber",
-                       f_scale: float = 1.0, max_nfev: int = 1200) -> CalibrationResult:
+                       f_scale: float = 1.0, max_nfev: int = 1200,
+                       priors: dict | None = None) -> CalibrationResult:
     """Solve with the fast LM backend, falling back to the engine."""
     if backend and backend != "scipy":
         try:
@@ -110,7 +111,8 @@ def solve_observations(obs: list[Observation], pitch_mm: float,
             prob = solvers.make_problem(obs, pitch_mm=pitch_mm, init_cameras=init)
             out = solvers.solve_joint(prob, backend=("lm" if backend == "auto" else backend),
                                       robust=robust_loss, f_scale=f_scale,
-                                      free_kc=free_kc, covariance=True)
+                                      free_kc=free_kc, covariance=True,
+                                      priors=priors)
             if out.get("result") is not None:
                 return out["result"]
         except Exception:

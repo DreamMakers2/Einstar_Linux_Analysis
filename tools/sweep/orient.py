@@ -60,6 +60,10 @@ class OrientationCheck:
     small_area_px: float
     pitch_px: float
     witness_offsets_px: list = field(default_factory=list)
+    #: how many of the four witnesses are predicted to be inside the image
+    n_visible: int = 0
+    visible_mask: list = field(default_factory=list)
+    expected_visible: int = 0
 
     def as_dict(self) -> dict:
         return {
@@ -75,6 +79,8 @@ class OrientationCheck:
             "small_area_px": _r(self.small_area_px, 2),
             "pitch_px": _r(self.pitch_px, 3),
             "witness_offsets_px": [_r(v, 3) for v in self.witness_offsets_px],
+            "n_visible": int(self.n_visible),
+            "visible_mask": [bool(x) for x in self.visible_mask],
         }
 
 
@@ -126,9 +132,45 @@ def _pick_blobs(gray: np.ndarray, obs) -> tuple[list, int]:
     return best[0] or [], best[1]
 
 
+def _hypothesis_hit(name: str, uv_item, syms, obs, P, A, small_area, pitch,
+                    large_area_ratio: float) -> bool:
+    """Does hypothesis ``name`` place a large marker at its predicted pixel?"""
+    fn = syms[name]
+    u, v = fn(float(uv_item[0]), float(uv_item[1]))
+    pix = cv2.perspectiveTransform(np.array([[[u, v]]], np.float32),
+                                   obs.homography).reshape(2)
+    d = np.linalg.norm(P - pix, axis=1)
+    j = int(np.argmin(d))
+    if d[j] >= 0.30 * pitch or not np.isfinite(small_area) or small_area <= 0:
+        return False
+    return bool(A[j] / small_area > large_area_ratio)
+
+
 def check_orientation(gray: np.ndarray, obs, big_uv: np.ndarray | None = None,
-                      large_area_ratio: float = 1.6) -> OrientationCheck:
-    """Score the four lattice label assignments against the large markers."""
+                      large_area_ratio: float = 1.6,
+                      image_shape: tuple[int, int] | None = None,
+                      margin_px: float = 10.0,
+                      min_visible_witnesses: int = 3) -> OrientationCheck:
+    """Score the four lattice label assignments against the large markers.
+
+    ``image_shape=(height, width)`` turns on the **visibility-aware** rule used
+    by the calibration wizard: a witness whose predicted pixel position lies
+    outside the image cannot be observed at all, so it must not count against a
+    partially visible plate.  With an image shape the decision is
+
+    * strict: identity must hit **every** witness that is predicted inside the
+      image, and beat every alternative hypothesis on the same subset, and
+      ``det(H) > 0``;
+    * a frame with fewer than ``min_visible_witnesses`` predicted-visible
+      witnesses is rejected as ``insufficient_witness`` (two witnesses cannot
+      separate identity from ``mirror_u``);
+    * a witness that is predicted *inside* the image but missing, small or
+      displaced still fails the frame - only genuine out-of-frame loss is
+      excused.
+
+    Without ``image_shape`` the historical strict 4/4 rule is kept, so the sweep
+    analysis and every existing caller are unchanged.
+    """
     if obs is None or len(obs.points) < 8:
         return OrientationCheck(False, "no observation", 0, {}, float("nan"),
                                 float("nan"), 0, float("nan"), float("nan"))
@@ -165,31 +207,51 @@ def check_orientation(gray: np.ndarray, obs, big_uv: np.ndarray | None = None,
         scores[name] = int(hits.sum())
         detail[name] = [float(x) for x in dn]
 
-    id_score = scores["identity"]
-    alt_best = max(v for k, v in scores.items() if k != "identity")
-    id_ratio = (A[np.linalg.norm(
-        cv2.perspectiveTransform(big_uv.reshape(-1, 1, 2).astype(np.float32),
-                                 obs.homography).reshape(-1, 2)[:, None, :] - P[None, :, :],
-        axis=2).argmin(1)] / max(small_area, 1e-9)) if np.isfinite(small_area) else np.zeros(4)
-    # only the witnesses that the identity hypothesis actually hits count
+    # physical positions of the four witnesses under the identity labels; the
+    # same physical markers are used for every hypothesis, only their *labels*
+    # differ, so visibility is judged once, on these positions.
     id_pix = cv2.perspectiveTransform(big_uv.reshape(-1, 1, 2).astype(np.float32),
                                       obs.homography).reshape(-1, 2)
     id_dn = np.linalg.norm(id_pix[:, None, :] - P[None, :, :], axis=2)
     id_near = id_dn.argmin(1)
     id_d = id_dn.min(1)
-    hits = (A[id_near] / max(small_area, 1e-9) > large_area_ratio) & (id_d < 0.30 * pitch)
-    min_ratio = float(np.min(A[id_near][hits] / max(small_area, 1e-9))) if hits.any() else 0.0
+    hit_all = (A[id_near] / max(small_area, 1e-9) > large_area_ratio) & (id_d < 0.30 * pitch)
+
+    if image_shape is None:
+        visible = np.ones(len(big_uv), bool)
+    else:
+        height, width = int(image_shape[0]), int(image_shape[1])
+        visible = ((id_pix[:, 0] >= margin_px) & (id_pix[:, 0] <= width - 1 - margin_px) &
+                   (id_pix[:, 1] >= margin_px) & (id_pix[:, 1] <= height - 1 - margin_px))
+    n_visible = int(visible.sum())
+
+    # score every hypothesis on the *visible* subset only
+    scored = {name: int(sum(1 for i, uvv in enumerate(big_uv)
+                            if visible[i] and _hypothesis_hit(name, uvv, syms, obs, P, A,
+                                                              small_area, pitch,
+                                                              large_area_ratio)))
+              for name in syms}
+    id_score = scored["identity"]
+    alt_best = max((v for k, v in scored.items() if k != "identity"), default=0)
+    min_ratio = float(np.min(A[id_near][hit_all & visible] / max(small_area, 1e-9))) \
+        if np.any(hit_all & visible) else 0.0
 
     if det_h <= 0:
         reason, ok = "mirrored_geometry", False
-    elif id_score == 4 and id_score > alt_best:
-        reason, ok = "verified", True
-    elif id_score >= 3 and id_score > alt_best:
-        reason, ok = "partial_witness", False
-    elif id_score == alt_best:
-        reason, ok = "ambiguous", False
+    elif n_visible < max(1, int(min_visible_witnesses)):
+        reason, ok = "insufficient_witness", False
+    elif id_score < n_visible:
+        reason, ok = ("ambiguous" if id_score == alt_best else "partial_witness"), False
+    elif id_score <= alt_best:
+        reason, ok = ("ambiguous" if id_score == alt_best else "flipped"), False
+    elif n_visible < len(big_uv):
+        reason, ok = "partial_verified", True
     else:
-        reason, ok = "flipped", False
-    return OrientationCheck(ok, reason, id_score, scores, min_ratio, det_h,
-                            len(blobs), small_area, pitch,
-                            [float(x) for x in id_d])
+        reason, ok = "verified", True
+    result = OrientationCheck(ok, reason, id_score, scored, min_ratio, det_h,
+                              len(blobs), small_area, pitch,
+                              [float(x) for x in id_d])
+    result.n_visible = n_visible
+    result.visible_mask = [bool(v) for v in visible]
+    result.expected_visible = n_visible
+    return result

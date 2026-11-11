@@ -227,6 +227,17 @@ class CalibrationSession:
             t0 = __import__("time").time()
             grids = self._detect(frames)
             self.detect_seconds += __import__("time").time() - t0
+        # A camera that cannot see the board from this pose (the colour sensor
+        # at an image corner, a sensor blinded by a reflection) must not veto a
+        # view the other cameras see well: its observations simply do not
+        # constrain this view.  Overall colour participation is a session-level
+        # coverage requirement, not a per-view one.
+        optional = set()
+        counts = {c: (len(o.uv) if o is not None and getattr(o, "uv", None) else 0)
+                  for c, o in (grids or {}).items()}
+        if (counts.get("left", 0) >= 16 and counts.get("right", 0) >= 16
+                and counts.get("tex", 0) == 0):
+            optional.add("tex")
         q = guidance.evaluate_frame(frames.images, grids,
                                     timestamp=frames.timestamp,
                                     previous_pose=self.last_pose,
@@ -235,7 +246,8 @@ class CalibrationSession:
                                     quality=self.policy.get("quality"),
                                     cameras=self.cameras,
                                     rig=self._rig(),
-                                    require_images=bool(self.policy.get("require_images", True)))
+                                    require_images=bool(self.policy.get("require_images", True)),
+                                    optional_cameras=optional)
         if self.result is None:
             gain = None
             dec = self._bootstrap_decision(q)

@@ -54,6 +54,7 @@ normal (markers circled, not saturated).  Then follow **NEXT MOVE**:
 | "Put the plate centre in the <corner/edge>" | move so the plate sits in that part of the image |
 | "Good viewpoint captured — keep moving" | the view was accepted; move on |
 | "This viewpoint is redundant" | you are too close to a pose you already have; make a bigger change |
+| the colour tile goes blank for a pose | the colour sensor cannot see the plate at this angle (it is offset from the IR pair) — the IR data is still used; keep going |
 | "ambiguous marker assignment" | the wizard cannot prove which corner of the plate is which; rotate it slightly (or bring the whole plate into both IR views) — it will not guess |
 | "READY TO FINISH" | every dimension is covered; press **Finish** |
 
@@ -140,6 +141,17 @@ state when none exists).
   explicitly.
 * **Colour stays gated** until an independent colour check passes; the shipped
   factory colour extrinsic is ~18 mm off (≈49 px).
+* **Partial plates are accepted only when the geometry proves them.** At an
+  image edge the wizard tolerates a marker leaving the frame, but only if the
+  missing marker is genuinely outside the usable image; a marker that is
+  inside the image and missing (occluded, blurred out, merged) is refused
+  rather than guessed.  Three of the four orientation witnesses must remain
+  visible, and the plate chirality (`det > 0`) is always checked.  Details and
+  measurements: `partial_plate_recognition.md`.
+* **Distortion is released only on evidence.** At finish the wizard refits with
+  and without freeing the lens model and keeps the factory distortion unless
+  held-out prediction improves by at least 10 %.  On the vendor corpus freeing
+  it made held-out error *worse* by 4.1 %, so the factory model is kept.
 * **Tilt is measured, not assumed.** The wizard reports the plate's actual
   out-of-plane tilt from the pose, and the two tilt axes come from
   `coverage.tilt_deg`.  Note for developers: `calib.adaptive.board_pose` uses
