@@ -136,3 +136,24 @@ def test_weighted_average_reduces_noise():
     s_spread = float(np.std(sv[:, 2]))
     m_spread = float(np.std(mv[:, 2]))
     assert m_spread <= s_spread + 0.15, (s_spread, m_spread)
+
+
+def test_coloured_export_round_trip(tmp_path):
+    """Per-vertex colour must survive into PLY and OBJ."""
+    from tools.scan import export as scan_export
+
+    verts = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+    faces = np.array([[0, 1, 2]])
+    colours = np.array([[255, 0, 0], [0, 255, 0], [0, 0, 255]], np.uint8)
+    written = scan_export.export_mesh(tmp_path, verts, faces,
+                                      formats=("obj", "ply"), colors=colours)
+    ply = Path(written["ply"]).read_text()
+    assert "property uchar red" in ply and "property uchar green" in ply
+    body = [ln for ln in ply.splitlines() if ln and ln[0].isdigit()]
+    assert body and body[0].split()[3:] == ["255", "0", "0"]
+    obj = Path(written["obj"]).read_text().splitlines()
+    v = [ln for ln in obj if ln.startswith("v ")]
+    assert len(v) == 3
+    parts = v[0].split()
+    assert len(parts) == 7, parts            # x y z r g b
+    assert abs(float(parts[4]) - 1.0) < 1e-6  # red channel = 1.0

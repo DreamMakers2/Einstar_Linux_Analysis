@@ -216,6 +216,16 @@ class ScanSession:
             return status
         try:
             cloud = track.load_clouds([ply], voxel_mm=cfg.input_voxel_mm)[0]
+            # keep the engine's per-point colour (present when the profile has a
+            # validated colour record) so the mesh can carry it
+            try:
+                raw_pts, raw_rgb = track.read_ply_coloured(ply)
+                if raw_rgb is not None and len(raw_pts):
+                    from scipy.spatial import cKDTree
+                    _, near = cKDTree(raw_pts).query(cloud.points, k=1)
+                    cloud.colors = np.asarray(raw_rgb, np.uint8)[near]
+            except Exception:
+                pass
         except Exception as exc:
             status.reason = f"cloud load failed: {exc}"
             self._statuses.append(status)
@@ -284,9 +294,22 @@ class ScanSession:
             nrm = np.vstack([np.asarray(c.normals, float) for c in self._frames]) \
                 if self._frames else None
             verts, faces = tsdf.extract_mesh(self._volume, points=pts, normals=nrm)
+            colours = None
+            try:
+                coloured = [c for c in self._frames
+                            if getattr(c, "colors", None) is not None
+                            and len(c.colors) == len(c.points)]
+                if coloured:
+                    cpts = np.vstack([np.asarray(c.points, float) for c in coloured])
+                    crgb = np.vstack([np.asarray(c.colors, np.uint8) for c in coloured])
+                    from scipy.spatial import cKDTree
+                    _, near = cKDTree(cpts).query(verts, k=1)
+                    colours = crgb[near]
+            except Exception:
+                colours = None
             written = scan_export.export_mesh(
                 self.config.out_dir, verts, faces, stem="scan",
-                comment="einstar scan")
+                comment="einstar scan", colors=colours)
             result = {"obj": written.get("obj"), "ply": written.get("ply"),
                       "stl": written.get("stl"),
                       "vertices": int(len(verts)), "faces": int(len(faces))}

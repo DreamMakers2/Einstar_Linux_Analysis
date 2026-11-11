@@ -112,8 +112,8 @@ Every scan writes, in the output directory:
 
 | file | content |
 |---|---|
-| `scan.obj` | mesh, Wavefront OBJ, millimetres |
-| `scan.ply` | mesh, ASCII PLY with vertex/face elements |
+| `scan.obj` | mesh, Wavefront OBJ, millimetres (extended per-vertex colour when available) |
+| `scan.ply` | mesh, ASCII PLY with vertex/face elements and per-vertex RGB when the profile has a validated colour record |
 | `scan.stl` | mesh, ASCII STL with computed facet normals |
 | `scan_report.json` | per-frame status, poses, tracking quality, counters |
 | `scan_project.json` | schema `einstar.scan.project/1`: configuration, poses, statuses, mesh paths |
@@ -125,6 +125,20 @@ re-recording.
 
 Measured on a 4-frame run: OBJ 1.07 MB, PLY 1.03 MB, STL 7.9 MB, project
 4.8 kB, 17 133 vertices / 31 376 faces in 1.5 s.
+
+## Colour on the mesh
+
+When the reconstruction profile has a validated colour record (see
+`docs/calibration/colour_registration.md`), the engine samples colour for every
+valid point; the scan session keeps those colours, colours every mesh vertex
+from the nearest input point, and writes them into the PLY (`red/green/blue`)
+and the OBJ (`v x y z r g b`, 0-1).  With the factory profile the mesh is
+geometry-only, because the engine refuses to sample a record it cannot trust.
+
+Measured on a 3-frame scan with the colour-fitted profile: 16 462 vertices and
+30 083 faces exported with colour in both formats.  The values are dark in this
+recording because the illuminator is the IR one — geometry is validated, colour
+photometry is not (documented in the colour note).
 
 ## Tests
 

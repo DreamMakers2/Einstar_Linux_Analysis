@@ -125,6 +125,34 @@ def read_ply(path: str | Path) -> np.ndarray:
     raise ValueError(f"{path}: unsupported PLY format {fmt!r}")
 
 
+def read_ply_coloured(path: str | Path) -> tuple[np.ndarray, np.ndarray | None]:
+    """Vertices plus optional per-vertex RGB (0..255) from an ASCII/binary PLY."""
+    path = Path(path)
+    with path.open("rb") as fh:
+        header = []
+        while True:
+            line = fh.readline()
+            if not line:
+                raise ValueError(f"{path}: truncated PLY header")
+            text = line.decode("ascii", "replace").strip()
+            header.append(text)
+            if text == "end_header":
+                break
+        props = [h.split()[-1] for h in header
+                 if h.startswith("property") and "list" not in h]
+        count = next((int(h.split()[-1]) for h in header
+                      if h.startswith("element vertex")), 0)
+        body = fh.read()
+    data = np.fromstring(body.decode("ascii", "replace"), sep=" ")
+    data = data.reshape(-1, len(props))
+    pts = np.asarray(data[:, :3], float)
+    rgb = None
+    if all(k in props for k in ("red", "green", "blue")):
+        idx = [props.index(k) for k in ("red", "green", "blue")]
+        rgb = np.asarray(data[:, idx], np.uint8)
+    return pts, rgb
+
+
 def load_clouds(paths: Iterable[str | Path], *, voxel_mm: float = 5.0,
                 normals: bool = True, max_points: int = 40000) -> list[Cloud]:
     clouds: list[Cloud] = []

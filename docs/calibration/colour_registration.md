@@ -84,11 +84,29 @@ even if the flag is passed — that is tested.
   recording are dim (the illuminator is the IR one), so this establishes
   geometry only.  Correct colour reproduction needs a session lit for the colour
   camera, and that is a different validation.
-* The corrected profile is a **host-side candidate**; it is not activated here.
-  Activation still goes through `lifecycle.activate`, which requires the full
-  gate suite on the profile being activated.
+* The corrected profile is a **host-side record**, not an activated
+  calibration.  Running the full lifecycle gate suite on it fails, and that is
+  correct: those gates judge the *IR rig against the observations*, and the
+  available recording is a one-axis sweep (60 views spanning 4 mm, 6° and one
+  roll bin).  Measured on that sweep with correctly oriented frames: factory
+  cross-camera 5.22 px (the documented factory figure), stereo consistency
+  0.291° / 0.263 mm, pose diversity FAIL (4 mm / 6° / 1 bin), observability not
+  supplied.  A colour record cannot be validated by IO gates, and an IO rig
+  cannot be validated from a one-axis sweep.
+  The colour record therefore carries its **own** validation (held-out and
+  cross-session reprojection) and is used as a profile record; promoting it to
+  an activated calibration still requires a proper session.
+
+  (Two harness mistakes were made and corrected while measuring this: feeding
+  the raw colour frame instead of the rotated one, and feeding the raw right IR
+  frame instead of its 180° rotation.  Both showed up as ~180° / hundreds of
+  pixels and both were mine, not the data's.)
 
 ## Reproduction
+
+The validated record is kept at
+`~/einstar-private/analysis/colour-fit/profile-colour-cross.json` and used by
+passing it as `--profile` to the reconstruction and scanning applications.
 
 ```sh
 .venv/bin/python tools/calib/fit_colour_extrinsic.py \
