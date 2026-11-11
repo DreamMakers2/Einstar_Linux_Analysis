@@ -118,7 +118,7 @@ plate alone.
 | depth reconstruction | 35 ms/frame at scale 0.25, 132 ms at 0.5 (C++ engine) |
 | tracking | robust point-to-plane ICP, 31 ms/pair on the sweep, degeneracy signal reported |
 | fusion + meshing | TSDF + marching cubes; sphere recovered to 0.03 mm p95; fused plate 0.60 mm thick across 12 independent poses |
-| colour registration | **geometry fixed**: shipped record 461 px reprojection error, re-fitted to 0.34 px held-out (120 views, 48 held out); engine reports `color ok`, colour_fraction 1.00. Photometry still needs a colour-lit session. |
+| colour registration | **geometry fixed**: shipped record 461 px, re-fitted to 0.34 px held-out and 0.32 px on an independent session; engine reports `color ok`, colour_fraction 1.00. **White balance** removes a measured 29.2 % cast to 2.5 % (recorded per scan). Photometry still needs a colour-lit scene: ambient-only at the 10 ms exposure limit reaches p99 luminance 37/255. |
 | export | OBJ, PLY, STL and a reopenable project document |
 | performance | live budget measured: ~8 fps best single-core configuration, ~4 fps at default quality; 10 fps not reached |
 | accuracy | **absolute dimensional accuracy still unverified** (no external artefact) |
