@@ -24,7 +24,7 @@ the design.
 | C fusion/meshing | **done** — `tools/fuse/tsdf.py`, `docs/reconstruction/fusion_and_meshing.md` |
 | D performance | **measured** — `docs/reconstruction/pipeline_latency.md` (live ~8 fps best, ~4 fps default) |
 | E scanning app | **working** — `tools/scan/`: Qt window + CLI, **live capture on the physical device** (4/4 frames, safe stop), TSDF fusion, OBJ/PLY/STL export and reopenable projects; `docs/reconstruction/scan_application.md` |
-| A reconstruction | measured only; the engine already has SGBM + sub-pixel + LR consistency.  Remaining: photometric normalisation, explicit confidence map, saturation masking |
+| A reconstruction | **measured**: SGBM + sub-pixel + LR already present; confidence thresholding measured (0.30 -> 0.27 mm single-frame, off by default for fusion); saturation negligible (0.1 %); equalise no effect.  Colour extrinsic re-fitted 461 px -> 0.34 px held-out (`docs/calibration/colour_registration.md`) |
 
 ## A. Better live stereo reconstruction
 
