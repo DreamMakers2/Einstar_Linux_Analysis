@@ -30,6 +30,9 @@ struct PipelineConfig {
   std::uint32_t frame_size = kDefaultFrameSize;
   std::uint32_t frame_width = 1280;
   std::uint32_t frame_height = 1024;
+  /// Wire framing.  Raw is the hardware-verified format (no length prefix) and
+  /// is the default; LengthPrefixed only serves legacy recordings/tests.
+  FramingMode framing = FramingMode::Raw;
 
   CopyMode copy_mode = CopyMode::Copy;
   BackpressurePolicy frame_backpressure = BackpressurePolicy::DropOldest;

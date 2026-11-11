@@ -1,6 +1,7 @@
 # Readiness assessment — can the new backend replace libeinstar?
 
-Status: 2026-11-10. The scanner is **not attached**. This document separates four states:
+Status: 2026-11-11. The scanner is **attached and has been exercised**. This
+document separates four states:
 
 | State | Meaning |
 |---|---|
@@ -13,23 +14,37 @@ Status: 2026-11-10. The scanner is **not attached**. This document separates fou
 
 | Capability | Implemented | Offline-validated | Hardware-validated | Notes |
 |---|---|---|---|---|
-| USB enumeration, descriptor parse, `bInterval=0` detection | yes | yes | **yes** — connected 2026-11-07, HS 480 Mbps | kernel repairs the interval to 7; no patch needed; the device is USB 2.0 on the wire (`protocol/usb3_capability.md`) |
-| Async bulk-IN transfers, queue depth, cancellation | yes | yes (simulator + ASan/TSan) | no | libusb path compile/link-verified only |
-| Packet framing (`[len][32B header][payload]`) | yes | **yes** — hand-written golden vectors | no | semantics: one-hot camera bits 3..5, last flag byte 8 |
-| Three-camera reassembly | yes | yes (synthetic + loss/reorder/fuzz) | no | one in-flight frame per camera by construction |
-| Frame id / timestamp semantics | yes | yes | no | id valid on last packet; timestamp latched from first |
-| Sequence-gap, incomplete-frame, overflow, stale, timeout handling | yes | yes | no | counters + loss events; no silent drops |
-| Lossless recording / replay | yes | yes (byte-exact, corruption/bomb rejection) | no | CRC-32 per record, trailer digest |
+| USB enumeration, descriptor parse, `bInterval=0` detection | yes | yes | **yes** — 2026-11-07 and 2026-11-11, HS 480 Mbps | kernel repairs the interval to 7; no patch needed; the device is USB 2.0 on the wire (`protocol/usb3_capability.md`) |
+| Async bulk-IN transfers, queue depth, cancellation | yes | yes (simulator + ASan/TSan) | **yes** — 600 groups / 2,300 MB in 60 s, 0 timeouts, 0 stalls | 8 URBs × 41,984 B |
+| Packet framing | yes | yes — golden vectors + raw/legacy modes | **yes** — **no length prefix**: `[32B header][40,960B payload]`; 9,660/9,660 transfers were 40,992 B | the documented `[u32 len]` is host-side only (`protocol/einstar_usb_protocol.md` §3) |
+| Three-camera reassembly | yes | yes (synthetic + loss/reorder/fuzz) | **yes** — 600/600 groups, 1,800 frames, 3 startup drops | one in-flight frame per camera; packet index (header 9..11) detects gaps |
+| Frame id / group semantics | yes | yes | **yes** — the slot counter is **8-bit and wraps at 256**; the u64 group counter is monotonic | ordering is modular, group key is the u64 counter |
+| Sequence-gap, incomplete-frame, overflow, stale, timeout handling | yes | yes | **yes** — per-reason drop counters; startup group identified as the only loss | counters + loss events; no silent drops |
+| Lossless recording / replay | yes | yes (byte-exact, corruption/bomb rejection) | **yes** — 1,050/1,050 PGMs byte-identical live vs replay | CRC-32 per record, trailer digest, framing stamped in metadata |
 | C ABI for a Rust control plane | yes | yes (FFI test) | no | single-stream view; camera_id exposed |
-| Command channel (serial, firmware string, exposure, gain, trigger, page read) | yes | yes — 22 cases / 4,379 checks against a byte-accurate fake FX3 | no | request/echo/status/retry/timeout paths covered; firmware update and flash writes deliberately excluded |
-| Calibration model + rectification + triangulation | yes | yes (synthetic round-trip, real-capture consistency) | no | CCF key proved; absolute scale still plate-dependent |
+| Command channel (serial, firmware, exposure, gain, trigger, page read) | yes | yes — 22 cases / 4,379 checks against a byte-accurate fake FX3 | **yes** — serial, firmware `…FX3_V2.10_FPGA_V3.7_EN`, 3 sensors, page read of the 6568-byte blob (4 reads identical) | firmware update and flash writes deliberately excluded; gain round-trips within 1 LSB |
+| Illuminator control (laser 0x67/0x68, strobe 0x6f/0x70) | yes | yes | **yes** — found at 0 %, set to 100 %/1000:300, restored to 0 on exit | volatile only; the cause of the first black IR frames |
+| Calibration model + rectification + triangulation | yes | yes (synthetic round-trip, real-capture consistency) | **yes** — factory intrinsics+distortion fit live plate at 0.38–0.41 px (IR) / 0.37 px (colour) | CCF key proved; absolute scale still plate-dependent |
 | EXStar calibration workflow (5×5×3) | documented/implemented | yes (XML, code, real session log; 2m56s) | no | no device write performed |
 | Adaptive 3-camera calibration engine | yes | yes (98 tests; synthetic NEES ≈1; vendor 0.367 px; held-out 0.455 px) | no | `calib/`; marginal covariance/stopping audit 2026-11-10 |
 | Calibration uncertainty/quality report | yes | yes (NEES, coverage, stability, held-out; 0.91–1.02 NEES/n) | no | no physical artefact validation |
-| Depth from real stereo pairs | partial (offline script) | consistency-only | no | no ground truth; needs an artefact measurement |
+| Depth from real stereo pairs | partial (offline script) | consistency-only | **yes** on live stereo pairs (see the reconstruction report) | still no calibrated artefact; absolute accuracy remains unproven |
+| Colour (RGB) registration | yes | synthetic + corpus | **diagnosed live**: colour intrinsics 0.37 px; the factory colour **extrinsic is off by ≈18 mm (≈49 px)** | `color_status` stays `stale`; a candidate correction needs an independent colour check |
 | Performance claims | — | simulated scenarios only | no | see `docs/benchmarks/offline_benchmarks.md` |
 
 ## 2. What changed in this round (and why it mattered)
+
+0. **Live bring-up (2026-11-11).** Three defects that only hardware could expose:
+   the stream has **no length prefix** (the documented `[u32 len]` is a host-side
+   field), the per-exposure **slot counter is 8 bits and wraps at 256**, and the
+   **speckle illuminator is volatile and was left at 0 %** by a previous client
+   (IR frames near-black). Fixes: `FramingMode::Raw` as the default with the
+   legacy mode preserved for old recordings, modular frame ordering with a
+   rescue from the u64 group counter, and read/set/restore of laser and strobe.
+   Also found: the reconstruction profile stores `skew` in absolute pixels while
+   `calib.CameraIntrinsics` normalizes it — mixing them costs 10 px; new
+   `calib/recon_profile.py` loads profiles correctly.  Full report:
+   `docs/reconstruction/live_bringup_2026-11-11.md`.
 
 1. **Framing defect fixed.** The first backend decoded the last-packet flag as a first-packet flag,
    read the camera from header bits 0..2 instead of 3..5, and required a frame id on every packet.
@@ -51,21 +66,19 @@ Status: 2026-11-10. The scanner is **not attached**. This document separates fou
 
 ## 3. Gates before replacing libeinstar
 
-Each gate is a concrete check with a pass condition. All must pass on the physical unit.
-
-| # | Gate | Pass condition |
-|---|---|---|
-| G1 | Enumeration + claim | device opens, interface 0 claimed, `lsusb -t` shows the negotiated speed; both interrupt endpoints schedule with interval 7 (no patch) |
-| G2 | Identity | `Serial` (sys 0x04) and `FirmwareVersion` (0x05) match the vendor string format; sensor count = 3; resolution 1280×1024 per camera |
-| G3 | Command channel | set/get exposure and gain round-trip within 1 LSB; trigger period read-back equals 68 000 µs after set; page 0 read equals the factory calibration blob byte-for-byte |
-| G4 | Framing | a 60 s capture yields zero parse errors, three camera streams, monotonic per-camera frame ids, no size mismatches |
-| G5 | Cadence | **done offline (2026-11-07)**: measured 45.2 MB/s ceiling, 86.2 ms three-frame group floor, (1,1)@90–100 ms sustainable with zero loss, (3,1) = 3 × period with 7 frames/trigger. Remaining: multi-hour soak and the vendor's exact production mode |
-| G6 | Recovery | induced `clear_halt`/cable event: stream resumes < 100 ms, no corrupted or short frames delivered, loss events counted |
-| G7 | Calibration plate truth | ~~hole count / pitch / outline~~ **resolved from vendor binaries 2026-11-10**: 8×5 markers, 28.0 mm pitch (17×14 lattice @14.00 mm), 224×168 mm outline, large markers (2,1),(4,1),(5,1),(3.5,3); official video confirms 8×5. Residual: manufacturing tolerance only | `docs/calibration/plate_spec_recovered.md`; optional caliper for tolerance |
-| G8 | Calibration physical accuracy | run a 12–25-view calibration on the unit, held-out ≤0.5 px and standard target pass; scan a known artefact at 300/400/500 mm | hardware + artefact |
-| G7 | Recording | record 60 s, replay offline, byte-exact digest, then decode both paths and compare frames |
-| G8 | Calibration | rectified IR pair shows vertical disparity residual < 0.5 px (median) on real captures; depth of a flat target within the vendor's own spread |
-| G9 | Side-by-side | the same object scanned with libeinstar and with the new backend; mesh/point-cloud deviation below the noise floor of two repeated vendor scans |
+| # | Gate | State | Evidence |
+|---|---|---|---|
+| G1 | Enumeration + claim | **PASS** | `3267:0003`, interface 0 claimed, HS 480 Mbps, next open after every run succeeds |
+| G2 | Identity | **PASS** | serial, `EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_EN`, 3 sensors, 1280×1024 per camera |
+| G3 | Command channel | **PASS (1 LSB)** | exposure read-back exact (1200 µs), gain set 105 reads 106, trigger period and counts read back as set, page 0/1 read = factory blob byte-for-byte |
+| G4 | Framing | **PASS after fix** | with the documented length prefix: 358,923,797 parse errors and 0 frames. With the raw framing: 115,168 packets, 0 parse errors, 600/600 groups |
+| G5 | Cadence | **PASS** | 100 ms trigger → 10.00 groups/s, 39.4 MB/s, 600/600 over 60 s; 68 ms is link-limited to ~80 ms (≈49 MB/s ceiling) |
+| G6 | Recovery | **PARTIAL** | a 600-group run crosses the 8-bit slot wrap with zero loss; no cable-pull/`clear_halt` injection has been performed yet |
+| G7 | Plate truth | **PASS (+ residual)** | 8×5 markers, 28.0 mm pitch; live detection 40/40 with UV-label witnesses verified in 350/350 frames; manufacturing tolerance still unmeasured |
+| G8 | Calibration physical accuracy | **BLOCKED** | needs the one-session calibration (§`calibration/one_session_plan.md`) and a calibrated artefact for scale |
+| G9 | Recording | **PASS** | 60 s recording replays byte-exactly; live-vs-replay PGMs 1,050/1,050 identical |
+| G10 | Side-by-side with libeinstar | **NOT RUN** | requires the vendor stack on a second host or a re-run |
+| G11 | Long soak (≥ 8 h) | **NOT RUN** | bounded captures only; thermal behaviour unmeasured (the temperature getter returns 0 raw) |
 
 ## 4. Known risks at bring-up
 
@@ -85,11 +98,31 @@ fixture for offline analysis.
 
 ## 6. Honest summary
 
-The backend is **ready for controlled offline-to-hardware bring-up**, not for production
-replacement. It has been hardened where it was provably wrong (framing, `bInterval`, shutdown
-ordering) and the remaining risk is dominated by unobserved device behaviour rather than by
-known defects. The first hardware session should follow gates G1–G7 in order; G8–G9 require the
-calibration and reconstruction work to be finished.
+The backend is **live-verified for acquisition**: it opens the device, reads the factory
+calibration, controls the illuminator, captures synchronised three-camera groups for minutes at
+a time, records losslessly and replays byte-exactly, and leaves the device in a safe idle state.
+The bring-up found three real defects that no offline test could have caught (missing length
+prefix, 8-bit slot-counter wrap, volatile illuminator left off) and one convention trap in the
+Python profiles (skew).
+
+It is **not yet a production replacement**: recovery under an induced cable/halt event, a long
+soak, thermal behaviour, side-by-side comparisons with the vendor stack, and any absolute
+accuracy claim are still open. Absolute scale remains unresolved and cannot be settled with the
+plate alone.
+
+### Reconstruction and calibration readiness (2026-11-11)
+
+| item | state |
+|---|---|
+| live acquisition | verified (600 groups, 10 Hz, 0 link loss) |
+| plate detection / pose on live IR | 40/40 markers, 0.38–0.41 px, UV labels witnessed in every frame |
+| factory intrinsics + distortion | fit live data at 0.38–0.41 px (IR), 0.37 px (colour) |
+| factory IR stereo extrinsic | effective correction 0.239° / 1.3 mm; cross-camera 5.18 → 0.42 px |
+| factory colour extrinsic | ≈18 mm (≈49 px) off; colour stays gated |
+| focal length from the sweep | **unobservable** (degenerate with distance, measured) |
+| distortion refinement from the sweep | **not separable** (limited image coverage) |
+| absolute scale | unresolved; needs a calibrated artefact |
+| one-session calibration | plan written, needs D1–D8 pose diversity (`calibration/one_session_plan.md`) |
 
 ### Adaptive calibration readiness (2026-11-10)
 

@@ -258,9 +258,10 @@ std::vector<std::byte> SimulatedTransport::build_packet_bytes(
   const bool last_chunk = (chunk + 1U) >= frame.chunks_total;
   std::array<std::byte, kStreamHeaderSize> header{};
   // Canonical wire header: one-hot camera in bits 3..5, sub-index in bits 0..2.
+  // Hardware-observed: byte 2 carries the one-hot camera field only; the
+  // sub-index bits 0..2 read 0 (the packet index lives in bytes 9..11).
   header[kHdrCameraByte] = static_cast<std::byte>(
-      static_cast<std::uint8_t>((camera_field_from_index(frame.camera_id) & 0x07U) << 3U) |
-      static_cast<std::uint8_t>(chunk & 0x07U));
+      static_cast<std::uint8_t>((camera_field_from_index(frame.camera_id) & 0x07U) << 3U));
   // Header byte 8 marks the LAST packet of the frame.
   header[kHdrLastFlag] = static_cast<std::byte>(last_chunk ? 1 : 0);
   // The frame id is only valid on the last packet.  Deliberately poison it on
@@ -273,21 +274,34 @@ std::vector<std::byte> SimulatedTransport::build_packet_bytes(
           config_.trigger_period_ns > 0 ? config_.trigger_period_ns : 1);
   store_be64(header.data() + kHdrTimestamp, timestamp);
 
+  // Frame-relative packet index: u24 BE in header bytes 9..11 (hardware).
+  header[kHdrPacketIndex] =
+      static_cast<std::byte>((chunk >> 16) & 0xFFU);
+  header[kHdrPacketIndex + 1] =
+      static_cast<std::byte>((chunk >> 8) & 0xFFU);
+  header[kHdrPacketIndex + 2] = static_cast<std::byte>(chunk & 0xFFU);
+
   std::uint32_t declared = kStreamHeaderSize + payload_size;
-  if (chance(config_.faults.corrupt_length_probability, frame.frame_index,
+  if (config_.framing == FramingMode::LengthPrefixed &&
+      chance(config_.faults.corrupt_length_probability, frame.frame_index,
              chunk, 0x73)) {
     static constexpr std::uint32_t kBadLengths[] = {0U, 31U, 0x00FFFFFFU,
                                                     0xA500U};
     declared = kBadLengths[hash(frame.frame_index, chunk, 0x74) % 4U];
   }
 
+  const std::size_t prefix =
+      config_.framing == FramingMode::LengthPrefixed ? kStreamLengthSize : 0;
+
   // Duplicate header-only packet in front of the real one.
   if (chance(config_.faults.duplicate_header_probability, frame.frame_index,
              chunk, 0x75)) {
     const std::size_t offset = output.size();
-    output.resize(offset + kStreamHeaderSize + kStreamLengthSize);
-    store_be32(output.data() + offset, kStreamHeaderSize);
-    std::memcpy(output.data() + offset + kStreamLengthSize, header.data(),
+    output.resize(offset + prefix + kStreamHeaderSize);
+    if (prefix != 0) {
+      store_be32(output.data() + offset, kStreamHeaderSize);
+    }
+    std::memcpy(output.data() + offset + prefix, header.data(),
                 kStreamHeaderSize);
   }
 
@@ -296,14 +310,14 @@ std::vector<std::byte> SimulatedTransport::build_packet_bytes(
     declared = kStreamHeaderSize + payload_size;
   }
   const std::size_t start = output.size();
-  output.resize(start + kStreamLengthSize + kStreamHeaderSize + payload_size);
-  store_be32(output.data() + start, declared);
-  std::memcpy(output.data() + start + kStreamLengthSize, header.data(),
-              kStreamHeaderSize);
+  output.resize(start + prefix + kStreamHeaderSize + payload_size);
+  if (prefix != 0) {
+    store_be32(output.data() + start, declared);
+  }
+  std::memcpy(output.data() + start + prefix, header.data(), kStreamHeaderSize);
   fill_simulated_payload(
       frame.frame_index, chunk,
-      std::span<std::byte>(output.data() + start + kStreamLengthSize +
-                               kStreamHeaderSize,
+      std::span<std::byte>(output.data() + start + prefix + kStreamHeaderSize,
                            payload_size));
   return output;
 }

@@ -120,7 +120,8 @@ Status AcquisitionPipeline::start() {
         std::make_unique<BufferPool>(config_.frame_size, frame_pool_buffers);
   }
 
-  framer_ = std::make_unique<PacketFramer>(config_.max_packet_bytes);
+  framer_ = std::make_unique<PacketFramer>(config_.max_packet_bytes,
+                                          config_.framing, config_.frame_size);
 
   ReassemblyConfig reassembly;
   reassembly.frame_size = config_.frame_size;
@@ -165,6 +166,15 @@ Status AcquisitionPipeline::start() {
     recorder_config.queue_capacity = config_.recording_queue_capacity;
     recorder_config.policy = config_.recording_policy;
     recorder_config.metadata = config_.recording_metadata;
+    // Every recording states its wire framing so replay reconstructs exactly
+    // the same packets without guessing.
+    if (recorder_config.metadata.find("framing=") == std::string::npos) {
+      if (!recorder_config.metadata.empty()) {
+        recorder_config.metadata += ';';
+      }
+      recorder_config.metadata +=
+          std::string("framing=") + std::string(to_string(config_.framing));
+    }
     recorder_config.start_host_ns =
         static_cast<std::uint64_t>(transport_->clock().now_ns());
     recorder_ = std::make_unique<recording::RawRecorder>(
@@ -566,6 +576,14 @@ PipelineStats AcquisitionPipeline::stats() const {
     snapshot.frames_completed = reassembly.frames_completed;
     snapshot.frames_dropped = reassembly.frames_dropped;
     snapshot.sequence_gaps = reassembly.sequence_gaps;
+  snapshot.dropped_incomplete = reassembly.dropped_incomplete;
+  snapshot.dropped_overflow = reassembly.dropped_overflow;
+  snapshot.dropped_stale = reassembly.dropped_stale;
+  snapshot.dropped_capacity = reassembly.dropped_capacity;
+  snapshot.dropped_pool = reassembly.dropped_pool;
+  snapshot.dropped_timeout = reassembly.dropped_timeout;
+  snapshot.dropped_flush = reassembly.dropped_flush;
+  snapshot.packet_index_gaps = reassembly.packet_index_gaps;
     snapshot.partial_timeouts = reassembly.partial_timeouts;
     snapshot.reassembly_errors =
         stats_.reassembly_errors + reassembly.overflow_errors;

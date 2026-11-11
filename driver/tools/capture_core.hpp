@@ -113,6 +113,10 @@ struct GroupingStats {
   std::uint64_t late_frames = 0;        // frame for an already-written group
   std::uint64_t bytes_written = 0;
   std::uint64_t missing_camera_frames = 0;  // sum over incomplete groups
+  /// The three cameras of a group did not report the same 8-bit exposure slot
+  /// id.  On the reference unit they always match; a non-zero count means the
+  /// grouping key is not trustworthy and the capture should be rejected.
+  std::uint64_t slot_id_mismatches = 0;
 };
 
 struct CadenceStats {
@@ -240,6 +244,15 @@ struct DeviceInfo {
   std::uint8_t trigger_rgb = 0;
   std::array<std::uint32_t, kStreamCount> exposure_us{};
   std::array<std::uint16_t, kStreamCount> gain{};
+  std::array<std::uint16_t, kStreamCount> max_width{};
+  std::array<std::uint16_t, kStreamCount> max_height{};
+  /// Illuminator state, read before capture and after any volatile change.
+  std::optional<std::uint32_t> laser_percent;
+  std::array<std::optional<std::uint32_t>, 2> strobe{};
+  bool laser_set = false;
+  std::array<bool, 2> strobe_set{};
+  std::uint16_t temperature_raw = 0;
+  bool temperature_read = false;
 };
 
 struct RunMetrics {
@@ -260,6 +273,14 @@ struct RunMetrics {
   std::uint64_t transfer_stalls = 0;
   std::uint64_t transfer_errors = 0;
   std::uint64_t frames_invalid = 0;
+  std::uint64_t dropped_incomplete = 0;
+  std::uint64_t dropped_overflow = 0;
+  std::uint64_t dropped_stale = 0;
+  std::uint64_t dropped_capacity = 0;
+  std::uint64_t dropped_pool = 0;
+  std::uint64_t dropped_timeout = 0;
+  std::uint64_t dropped_flush = 0;
+  std::uint64_t packet_index_gaps = 0;
   double wall_seconds = 0.0;
   double virtual_seconds = 0.0;
 };
@@ -339,6 +360,9 @@ struct ReplayOptions {
   std::uint32_t queue_depth = 8;
   std::uint32_t frame_queue_capacity = 32;
   std::int64_t partial_frame_timeout_ns = 500'000'000;
+  /// Wire framing.  std::nullopt = take it from the recording metadata, and if
+  /// the metadata does not say, detect it from the first transfer.
+  std::optional<FramingMode> framing;
 };
 
 struct ReplayReport {

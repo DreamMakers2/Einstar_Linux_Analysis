@@ -1,19 +1,19 @@
 # Milestone status (M1–M7)
 
-Status: 2026-11-11.  Legend: **implemented** (code builds), **offline-tested**
-(deterministic tests/recorded data), **real-data** (genuine private frames),
-**live** (scanner attached; nothing below is live), **pending** (blocked on
-hardware), **unverified** (no evidence).
+Status: 2026-11-11 (live bring-up completed).  Legend: **implemented** (code
+builds), **offline-tested** (deterministic tests/recorded data), **real-data**
+(genuine private frames), **live** (verified against the physical scanner),
+**pending** (blocked), **unverified** (no evidence).
 
 | gate | evidence | state |
 |---|---|---|
 | **M1 — offline integration** | `recon/` consumes the same `FrameSet` for files and replay; calibration enters only as a validated JSON profile; driver/calib/reconstruction interfaces documented in `architecture.md`; audit in `audit.md` | **implemented, offline-tested** |
-| **M2 — real-data reconstruction** | 3 genuine triplets → rectified pairs, disparity, confidence, depth, 56 600-point PLY per frame; every output records the profile id and input SHA-256 | **implemented, real-data** |
+| **M2 — real-data reconstruction** | 3 genuine triplets → rectified pairs, disparity, confidence, depth, 56 600-point PLY per frame; every output records the profile id and input SHA-256; **live-sweep extension (2026-11-11)**: 350/350 groups through the unmodified `recon_cli`, plate plane RMS 0.237 mm (0.174 mm at full resolution), 84.4 % valid on the plate, pose-normalised repeatability 0.179 mm p50, depth bias −1.11 % vs the marker-based pose (implied pitch 27.69 mm) | **implemented, real-data + live** |
 | **M3a — RGB registration** | raw Bayer (BayerRG) debayer, colour-camera projection/distortion, 180 deg stream rotation, synthetic BGR + Bayer tests (>90 % channel correctness), explicit `color_status` gate; genuine replacement-profile diagnostic (100 % projected) | **implemented, synthetically validated**; real colour photometry/white balance **unverified** |
 | **M3 — geometric/numerical validation** | synthetic planes 200–700 mm recovered to ≤0.13 mm; 5 002 automated checks; real-data consistency (92 % planar, 0.34 mm plane RMS, 0.1 mm cross-frame repeatability); `validation_plan_m3.md` states the accuracy limit | **implemented, offline-tested + real-data**; physical accuracy **unverified** |
 | **M4 — acquisition/replay integration** | `einstar-capture-frames` (simulated + libusb paths) and `einstar-replay-frames` write the same `frame_%06d_cam%d.pgm` + manifest; a simulated 3-group capture records 295 transfers, replays to 9 frames, and `recon_cli` consumes the replay through the identical loader; corrupted recording refused; **driver ctest 12/12 passes** (224 replay-frames checks) | **implemented, offline-tested**; live libusb path **pending hardware** |
 | **M5 — one-session calibration recorder** | `tools/calibsession/calibrate_session.py` on the 25-view vendor corpus: 21 accepted, 16 train / 5 held-out, 4 rejected + 1 session-rejected, colour frames present and plate detected in 21/21, completeness pass, `--verify` re-hashes 75 files (**OK**), versioned host profile + exported reconstruction profile (colour `unknown` by default); stop recommended; held-out median **0.336 px**; factory-orientation guard rejects an upside-down stream (ΔR 179.86°); **19 recorder tests and 176 repo tests pass**, including the probe-style stream mapping/rotation and sequential dwell | **implemented, offline-tested on the vendor corpus + probe-style triplet**; real user session **pending** |
-| **M6 — live readiness** | runbook in `acquisition.md` (device detection, metadata, volatile exposure/gain/trigger, capture, record, replay, safety); no-device failure verified: exit 1, clear hint, **no output directory created**; live paths labelled untested | **documented + offline safety test**; live **pending hardware** |
+| **M6 — live acquisition** | physical unit enumerated (`3267:0003`, HS 480 Mbps); read-only probe verified (serial, firmware FX3 2.10/FPGA 3.7, 3 sensors, 1280x1024, 6568-byte factory blob byte-identical over 4 reads); **two wire-format defects found and fixed** (no length prefix; 8-bit slot counter wrapping at 256); illuminator is volatile and was found at 0 % (IR frames near-black) and is now set/read/restored; 600/600 synchronised three-camera groups in 60 s at 100 ms (10.00 groups/s, 39.4 MB/s), 1,800 frames, 3 dropped (startup group only); 68 ms is link-limited to ~80 ms (~49 MB/s); **live-vs-replay: 1,050/1,050 PGMs byte-identical**; driver ctest 12/12 | **live, verified on hardware** |
 | **M7 — publication** | code, tests, architecture, benchmarks, synthetic figures, real-data consistency, Bayer RGB and CUDA benchmark exported; public commits `7e61c29`, `1b0d546`, `5c5da10`; private history holds the corresponding commits | **done** |
 
 ## Exact commands and results
@@ -49,11 +49,15 @@ build/recon/recon_cli reconstruct --frames /tmp/replay --id 0 \
 
 ## What is *not* done
 
-* Live scanner capture (device detection, exposure/trigger, triplets) is
-  implemented but **untested on hardware**; the USB3 hardware work remains on
-  hold.
-* The one real guided calibration session has not happened yet (by design: the
-  recorder is ready and tested on the corpus).
+* ~~Live scanner capture~~ **done 2026-11-11**: probe, illuminator/exposure/
+  gain/trigger, synchronised triplets, lossless recording and byte-exact replay
+  all verified on the unit; see `live_bringup_2026-11-11.md`.  Still open:
+  induced cable/halt recovery, an 8 h soak, thermal behaviour (the temperature
+  getter returns 0 raw), and a side-by-side run against the vendor stack.
+* The one real guided calibration session has not happened yet.  The live sweep
+  now *quantifies why*: every intrinsic is unobservable from this motion
+  (σ_fx ≈ 6.8 px), the stereo rotation is partly observable, and the extra
+  excitation needed is listed in `calibration/one_session_plan.md`.
 * Absolute metric accuracy is unverified: no calibrated sphere bar/flatness
   artefact has been measured.  The 28.0 mm pitch scale ambiguity remains.
 * Colour registration is implemented but gated; the shipped factory colour

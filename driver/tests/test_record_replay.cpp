@@ -121,8 +121,12 @@ EINSTAR_TEST(recording_replay_is_byte_exact) {
   sim.faults.duplicate_header_probability = 0.05;
   sim.faults.timeout_probability = 0.05;
   sim.faults.stall_probability = 0.05;
+  // The corrupt-length fault is only defined for the legacy length-prefixed
+  // format; use it here so the injected fault actually reaches the framer.
+  sim.framing = FramingMode::LengthPrefixed;
 
   PipelineConfig config;
+  config.framing = FramingMode::LengthPrefixed;
   config.queue_depth = 4;
   config.copy_mode = CopyMode::ZeroCopy;
   config.frame_queue_capacity = 8;

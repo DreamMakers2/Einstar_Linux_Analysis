@@ -93,10 +93,23 @@ Reverse engineered from `ImageStreamThread::run` (W: `FUN_18000c8f0`) and the st
 Each packet:
 
 ```
-+0x00  u32 BE  len          = 32 + payload_len          (range 33..0xA400 valid)
++0x00  u32 BE  len          = 32 + payload_len          (host-side field only)
 +0x04  u8[32] header
 +0x24  u8[len-32] payload
 ```
+
+> **LIVE CORRECTION (2026-11-11, verified on the physical unit).** The 4-byte
+> length prefix is **not present on the wire**. The FX3 delivers exactly one
+> packet per bulk-IN transfer as `[32-byte header][payload]`, and 9,660/9,660
+> transfers of a 20 s live capture were exactly **40,992 bytes = 32 + 40,960**
+> (32 packets × 40,960 = 1,310,720 = one 1280×1024 frame). `libeinstar` never
+> read a length prefix either (`libeinstar_protocol_spec.md` §7.1). The `len`
+> in the vendor DLL is a field the *host driver* fills from the transfer
+> completion size, not bytes on the wire. The Linux driver parsed the
+> documented length prefix, resynchronised on every packet and therefore
+> completed 0 frames while receiving 395,982,720 bytes; with raw framing the
+> same recording replays to 100 complete three-camera groups byte-identically.
+> Header offsets are relative to the raw transfer (header at +0x00).
 
 Header fields observed:
 
@@ -104,8 +117,9 @@ Header fields observed:
 |---|---|---|---|
 | 2 | 6 | one-hot camera id in bits 3..5 (`1`, `2`, `4`) and a sub-index in bits 0..2 | CV (W + L agree) |
 | 8 | 0x0C | `1` = **last** packet of a frame (frame is delivered on this packet) | CV — vendor `FUN_18000c8f0` and libeinstar agree |
-| 12..15 | 0x10..0x13 | u32 BE **slot counter** (valid on the last packet): +1 per mono exposure slot; both IR cameras share the slot id, the colour frame carries the last slot's id | **Measured** (2026-11-07) |
-| 16..23 | 0x14..0x1B | u64 BE **trigger-group counter**, latched from the first packet of the group: +1 per trigger group, identical for every frame in it. **Not a clock** | **Measured** (2026-11-07) |
+| 9..11 | 0x0D..0x0F | u24 BE **packet index inside the frame** (0..31). Independent of the camera; cycles 0..31 exactly once per frame. Gives a deterministic lost-packet detector, no timing heuristics needed | **Measured** (2026-11-11, 115,168 packets) |
+| 12..15 | 0x10..0x13 | u32 BE **slot counter** (valid on the last packet): +1 per mono exposure slot; both IR cameras share the slot id, the colour frame carries the last slot's id. **Only the low 8 bits are significant: it wraps 255 → 0 every 256 trigger groups** (measured over 1,200 consecutive groups). A decoder must treat it modulo 256 for ordering and must not use it as a monotonic key | **Measured** (2026-11-07/11) |
+| 16..23 | 0x14..0x1B | u64 BE **trigger-group counter**, latched from the first packet of the group: +1 per trigger group, identical for every frame in it. Monotonic across trigger start/stop (it survived 1,200+ groups and several capture sessions). **Not a clock** — it is the only sound group key | **Measured** (2026-11-07/11) |
 | others | — | not yet decoded | UNK |
 
 Framing rules (CV): a frame is 32 packets × 40,960 payload bytes (`len = 0xA020`,

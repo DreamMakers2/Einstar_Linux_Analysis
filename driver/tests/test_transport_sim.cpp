@@ -310,6 +310,9 @@ EINSTAR_TEST(sim_replay_is_byte_exact) {
 EINSTAR_TEST(sim_fault_storm_is_deterministic) {
   auto run = [] {
     SimConfig config = clean_config(11, 3);
+    // corrupt_length_probability only exists in the legacy length-prefixed
+    // wire format; a raw packet has no length field to corrupt.
+    config.framing = FramingMode::LengthPrefixed;
     config.faults.loss_probability = 0.1;
     config.faults.stall_probability = 0.05;
     config.faults.timeout_probability = 0.05;

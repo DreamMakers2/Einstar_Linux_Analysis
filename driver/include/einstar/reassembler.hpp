@@ -68,6 +68,22 @@ struct ReassemblyStats {
   std::uint64_t pool_exhausted = 0;
   std::uint64_t size_mismatch = 0;
   std::uint64_t invalid_camera = 0;
+  /// Per-reason drop counters (sum == frames_dropped).  These make a live
+  /// anomaly actionable: a burst of `dropped_incomplete` is lost packets, a
+  /// `dropped_stale` burst is duplicated/replayed device frames.
+  std::uint64_t dropped_incomplete = 0;
+  std::uint64_t dropped_overflow = 0;
+  std::uint64_t dropped_stale = 0;
+  std::uint64_t dropped_capacity = 0;
+  std::uint64_t dropped_pool = 0;
+  std::uint64_t dropped_timeout = 0;
+  std::uint64_t dropped_flush = 0;
+  std::uint64_t dropped_sequence_gap = 0;
+  std::uint64_t packet_index_gaps = 0;
+  /// The 8-bit slot counter (wire header 12..15) repeated while the u64 trigger
+  /// group advanced: the frame was accepted as the next one instead of being
+  /// rejected as stale.
+  std::uint64_t slot_id_repeats = 0;
 };
 
 struct ReassemblyConfig {
@@ -127,6 +143,9 @@ class FrameReassembler {
     std::int64_t last_host_ns = 0;
     std::size_t filled = 0;
     std::size_t chunk_count = 0;
+    /// Frame-relative index the next packet must carry (hardware header bytes
+    /// 9..11).  A mismatch means a packet was lost or duplicated.
+    std::uint32_t expected_packet_index = 0;
     BufferHandle contiguous;
     std::vector<FrameChunk> chunks;
   };
@@ -135,6 +154,10 @@ class FrameReassembler {
     bool completed_any = false;
     std::uint32_t last_completed = 0;
     std::uint32_t expected_next = 0;   // last_completed + 1 once initialised
+    /// u64 trigger-group counter of the last completed frame (hardware header
+    /// bytes 16..23).  It is monotonic on real hardware and is used only to
+    /// rescue the 8-bit slot counter if firmware ever repeats a slot id.
+    std::uint64_t last_group = 0;
     std::uint64_t packets = 0;
     std::uint64_t dropped = 0;
   };

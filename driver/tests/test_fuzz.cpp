@@ -2,10 +2,14 @@
 //
 // Deterministic fuzzing of the stream framer + reassembler.
 //
-// A fixed-seed PRNG mutates valid packets and generates random byte soup; the
-// test asserts that nothing crashes, that memory stays bounded, and that every
-// counter/limit invariant holds.  Run it under ASan/UBSan (see README) for the
-// full value; it is also a normal regression test.
+// A fixed-seed PRNG mutates valid raw packets and generates random byte soup;
+// the test asserts that nothing crashes, that memory stays bounded, and that
+// every counter/limit invariant holds.  Run it under ASan/UBSan (see README) for
+// the full value; it is also a normal regression test.
+//
+// Packets use the hardware-verified raw format [32-byte header][payload].  The
+// payload length is implied by the packet index and the frame size, so every
+// helper below derives it instead of writing a length prefix.
 #include <array>
 #include <cstdint>
 #include <vector>
@@ -32,21 +36,32 @@ struct Rng {
   }
 };
 
-std::vector<std::byte> valid_packet(std::uint8_t field, std::uint8_t sub,
-                                    bool last, std::uint32_t frame,
-                                    std::uint64_t ts, std::size_t payload,
+std::vector<std::byte> valid_packet(std::uint8_t field,
+                                    std::uint32_t packet_index, bool last,
+                                    std::uint32_t frame, std::uint64_t ts,
+                                    std::uint32_t frame_size,
                                     std::uint8_t fill) {
-  std::vector<std::byte> out(4 + kStreamHeaderSize + payload);
-  store_be32(out.data(), static_cast<std::uint32_t>(kStreamHeaderSize + payload));
-  std::byte* h = out.data() + 4;
+  const std::size_t offset =
+      static_cast<std::size_t>(packet_index) * kStreamChunkPayload;
+  const std::size_t payload =
+      offset >= frame_size
+          ? 0
+          : std::min<std::size_t>(kStreamChunkPayload, frame_size - offset);
+  std::vector<std::byte> out(kStreamHeaderSize + payload);
+  std::byte* h = out.data();
   h[kHdrCameraByte] = static_cast<std::byte>(
-      static_cast<std::uint8_t>((field & 7U) << 3U) |
-      static_cast<std::uint8_t>(sub & 7U));
+      static_cast<std::uint8_t>((field & 7U) << 3U));
   h[kHdrLastFlag] = static_cast<std::byte>(last ? 1 : 0);
+  h[kHdrPacketIndex] =
+      static_cast<std::byte>((packet_index >> 16U) & 0xFFU);
+  h[kHdrPacketIndex + 1] =
+      static_cast<std::byte>((packet_index >> 8U) & 0xFFU);
+  h[kHdrPacketIndex + 2] =
+      static_cast<std::byte>(packet_index & 0xFFU);
   store_be32(h + kHdrFrameId, last ? frame : 0xFFFFFFFFU);
   store_be64(h + kHdrTimestamp, ts);
   for (std::size_t i = 0; i < payload; ++i) {
-    out[4 + kStreamHeaderSize + i] = static_cast<std::byte>(fill);
+    out[kStreamHeaderSize + i] = static_cast<std::byte>(fill);
   }
   return out;
 }
@@ -54,18 +69,23 @@ std::vector<std::byte> valid_packet(std::uint8_t field, std::uint8_t sub,
 }  // namespace
 
 EINSTAR_TEST(fuzz_random_soup_is_safe) {
-  constexpr std::uint32_t kFrameSize = 4096;
+  // The hardware frame size is used here on purpose: every plausible packet
+  // index (0..31) then implies a 40,960-byte payload, which is also what the
+  // raw resynchronisation path sees on the wire.  A synthetic frame smaller
+  // than one chunk would make plausible-looking random indices imply a
+  // zero-length packet and is not a shape the device can produce.
+  constexpr std::uint32_t kFrameSize = kDefaultFrameSize;
   BufferPool pool(kFrameSize, 8);
   ReassemblyConfig config;
   config.frame_size = kFrameSize;
-  config.width = 32;
-  config.height = 32;
+  config.width = 1280;
+  config.height = 1024;
   config.mode = CopyMode::Copy;
   config.frame_pool = &pool;
   config.partial_frame_timeout_ns = 1'000'000;
 
   Rng rng{0x123456789ABCDEFULL};
-  PacketFramer framer;
+  PacketFramer framer(kDefaultMaxPacketBytes, FramingMode::Raw, kFrameSize);
   FrameReassembler reassembler(config);
   FramerStats stats;
   std::uint64_t completed = 0;
@@ -80,10 +100,10 @@ EINSTAR_TEST(fuzz_random_soup_is_safe) {
         b = static_cast<std::byte>(rng.next() & 0xFFU);
       }
     } else if (mode == 1) {
-      // valid packet with random single-byte corruption
+      // valid hardware packet with random single-byte corruption
       blob = valid_packet(static_cast<std::uint8_t>(1U << rng.below(3)),
-                          static_cast<std::uint8_t>(rng.below(8)), true,
-                          rng.below(1000), rng.next(), 1 + rng.below(200),
+                          /*packet_index=*/0, true, rng.below(1000),
+                          rng.next(), kFrameSize,
                           static_cast<std::uint8_t>(rng.next()));
       if (!blob.empty()) {
         blob[rng.below(static_cast<std::uint32_t>(blob.size()))] ^=
@@ -94,9 +114,8 @@ EINSTAR_TEST(fuzz_random_soup_is_safe) {
       const std::uint32_t count = 1 + rng.below(4);
       for (std::uint32_t i = 0; i < count; ++i) {
         auto one = valid_packet(static_cast<std::uint8_t>(1U << rng.below(3)),
-                                static_cast<std::uint8_t>(i & 7U),
-                                rng.below(2) == 0, rng.below(50), rng.next(),
-                                1 + rng.below(64),
+                                /*packet_index=*/0, rng.below(2) == 0,
+                                rng.below(50), rng.next(), kFrameSize,
                                 static_cast<std::uint8_t>(rng.next()));
         blob.insert(blob.end(), one.begin(), one.end());
       }
@@ -104,7 +123,7 @@ EINSTAR_TEST(fuzz_random_soup_is_safe) {
         blob.resize(1 + rng.below(static_cast<std::uint32_t>(blob.size())));
       }
     } else {
-      // oversized length prefix followed by data (resync path)
+      // random bytes led by an implausible 32-bit header prefix (resync path)
       blob.resize(4 + rng.below(64));
       store_be32(blob.data(), 0x00FFFFFFU);
       for (std::size_t i = 4; i < blob.size(); ++i) {
@@ -143,15 +162,16 @@ EINSTAR_TEST(fuzz_random_soup_is_safe) {
 EINSTAR_TEST(fuzz_valid_stream_survives_loss) {
   // Drop a random 10% of packets from a clean 3-camera stream; the reassembler
   // must never panic, never produce a short frame, and must keep memory bounded.
-  constexpr std::uint32_t kFrameSize = 2048;
-  constexpr std::uint32_t kChunk = 512;
+  // Frames are four real 40,960-byte hardware chunks.
+  constexpr std::uint32_t kFrameSize = 4U * kStreamChunkPayload;
+  constexpr std::uint32_t kChunks = kFrameSize / kStreamChunkPayload;
   BufferPool pool(kFrameSize, 8);
   ReassemblyConfig config;
   config.frame_size = kFrameSize;
   config.mode = CopyMode::Copy;
   config.frame_pool = &pool;
   FrameReassembler reassembler(config);
-  PacketFramer framer;
+  PacketFramer framer(kDefaultMaxPacketBytes, FramingMode::Raw, kFrameSize);
   FramerStats stats;
   Rng rng{0xDEADBEEF1234ULL};
 
@@ -159,14 +179,13 @@ EINSTAR_TEST(fuzz_valid_stream_survives_loss) {
   for (std::uint32_t frame = 0; frame < 200; ++frame) {
     for (std::uint8_t camera = 0; camera < 3; ++camera) {
       const std::uint8_t field = camera_field_from_index(camera);
-      const std::uint32_t chunks = kFrameSize / kChunk;
-      for (std::uint32_t chunk = 0; chunk < chunks; ++chunk) {
+      for (std::uint32_t chunk = 0; chunk < kChunks; ++chunk) {
         if (rng.below(10) == 0) {
           continue;  // loss
         }
-        const bool last = chunk + 1 == chunks;
-        auto wire = valid_packet(field, static_cast<std::uint8_t>(chunk), last,
-                                 frame, frame * 1000ULL, kChunk,
+        const bool last = chunk + 1 == kChunks;
+        auto wire = valid_packet(field, chunk, last, frame, frame * 1000ULL,
+                                 kFrameSize,
                                  static_cast<std::uint8_t>(camera * 16 + chunk));
         framer.consume(std::span<const std::byte>(wire),
                        [&](const StreamPacket& packet) {

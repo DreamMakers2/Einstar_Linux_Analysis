@@ -76,24 +76,36 @@ void FrameReassembler::record_loss(std::uint8_t camera_index,
   switch (reason) {
     case FrameLossReason::SequenceGap:
       stats_.sequence_gaps += missing_frames ? missing_frames : 1;
+      stats_.dropped_sequence_gap++;
       break;
     case FrameLossReason::PartialTimeout:
       stats_.partial_timeouts++;
+      stats_.dropped_timeout++;
       break;
     case FrameLossReason::Restart:
       stats_.frame_restarts++;
       break;
     case FrameLossReason::Capacity:
       stats_.capacity_evictions++;
+      stats_.dropped_capacity++;
       break;
     case FrameLossReason::Overflow:
       stats_.overflow_errors++;
+      stats_.dropped_overflow++;
       break;
     case FrameLossReason::PoolExhausted:
       stats_.pool_exhausted++;
+      stats_.dropped_pool++;
       break;
     case FrameLossReason::Incomplete:
       stats_.size_mismatch++;
+      stats_.dropped_incomplete++;
+      break;
+    case FrameLossReason::Stale:
+      stats_.dropped_stale++;
+      break;
+    case FrameLossReason::Flush:
+      stats_.dropped_flush++;
       break;
     default:
       break;
@@ -163,6 +175,18 @@ Result<FrameReassembler::IngestResult> FrameReassembler::ingest(
     slot = &*slots_[camera];
   }
 
+  // Deterministic packet-continuity check: the wire carries a frame-relative
+  // packet index, so a lost or duplicated packet is detected here instead of
+  // only being inferred from a size mismatch at the last packet.
+  if (slot->chunk_count == 0) {
+    if (packet.packet_index != 0) {
+      stats_.packet_index_gaps++;
+    }
+  } else if (packet.packet_index != slot->expected_packet_index) {
+    stats_.packet_index_gaps++;
+  }
+  slot->expected_packet_index = packet.packet_index + 1;
+
   if (slot->filled + packet.payload_size > config_.frame_size) {
     // More data than a frame can hold: the stream lost sync for this camera.
     drop_slot(*slot, FrameLossReason::Overflow, host_ns);
@@ -206,18 +230,40 @@ Result<FrameReassembler::IngestResult> FrameReassembler::ingest(
     return result;
   }
 
-  const std::uint32_t frame_id = packet.frame_index;  // valid on last only
+  // The slot counter in wire header 12..15 is only EIGHT bits wide and wraps
+  // 255 -> 0 every 256 trigger groups (measured on the live unit 2026-11-11
+  // over 1,200 consecutive groups).  Ordering therefore has to be modular; a
+  // plain `frame_id <= last_completed` test declares every frame stale forever
+  // once the counter wraps, which silently stops all capture after 256 groups.
+  const std::uint32_t frame_id = packet.frame_index;   // 8-bit slot, wraps
+  const std::uint64_t group = slot->device_timestamp;  // u64 trigger group
   CameraState& camera_state = cameras_[camera];
-  if (camera_state.completed_any && frame_id <= camera_state.last_completed) {
-    stats_.stale_packets++;
-    record_loss(camera, frame_id, FrameLossReason::Stale, 0, host_ns);
-    slots_[camera].reset();
-    return result;
-  }
-  if (camera_state.completed_any && frame_id > camera_state.expected_next) {
-    const std::uint32_t missing = frame_id - camera_state.expected_next;
-    record_loss(camera, camera_state.expected_next, FrameLossReason::SequenceGap,
-                missing, host_ns);
+  std::uint32_t advance = 1;
+  if (camera_state.completed_any) {
+    const std::uint32_t delta =
+        (frame_id - camera_state.last_completed) & 0xFFU;
+    if (delta == 0) {
+      // Same slot id.  If the monotonic u64 group counter moved on, the slot
+      // counter is saturating rather than the frame being a duplicate; accept
+      // it as the next frame and record the anomaly.
+      if (group != 0 && camera_state.last_group != 0 &&
+          group > camera_state.last_group) {
+        stats_.slot_id_repeats++;
+        advance = 1;
+      } else {
+        stats_.stale_packets++;
+        record_loss(camera, frame_id, FrameLossReason::Stale, 0, host_ns);
+        slots_[camera].reset();
+        return result;
+      }
+    } else {
+      advance = delta;
+    }
+    if (advance > 1) {
+      const std::uint32_t missing = advance - 1;
+      record_loss(camera, camera_state.expected_next,
+                  FrameLossReason::SequenceGap, missing, host_ns);
+    }
   }
 
   Frame frame;
@@ -239,6 +285,9 @@ Result<FrameReassembler::IngestResult> FrameReassembler::ingest(
 
   camera_state.last_completed = frame_id;
   camera_state.expected_next = frame_id + 1;
+  if (group != 0) {
+    camera_state.last_group = group;
+  }
   camera_state.completed_any = true;
   stats_.frames_completed++;
   slots_[camera].reset();

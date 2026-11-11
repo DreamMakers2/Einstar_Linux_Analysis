@@ -352,6 +352,10 @@ std::uint16_t ControlChannel::wire_size(ControlGroup group,
       return 10;
     case CameraOpcode::GetTriggerPeriod:
     case CameraOpcode::SetTriggerPeriod:
+    case CameraOpcode::GetLaserBrightness:
+    case CameraOpcode::SetLaserBrightness:
+    case CameraOpcode::GetStrobeBrightness:
+    case CameraOpcode::SetStrobeBrightness:
       return 50;
     default:
       return 16;
@@ -593,6 +597,62 @@ Result<std::uint16_t> ControlChannel::sensor_count_locked() {
     return fail(value.error());
   }
   return static_cast<std::uint16_t>(*value);
+}
+
+Result<std::uint8_t> ControlChannel::laser_brightness() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  auto value = uint_locked(ControlGroup::Camera,
+                           static_cast<std::uint8_t>(
+                               CameraOpcode::GetLaserBrightness),
+                           {}, 1, "laser brightness");
+  if (!value) {
+    return fail(value.error());
+  }
+  return static_cast<std::uint8_t>(std::min<std::uint32_t>(*value, 0xFFU));
+}
+
+Status ControlChannel::set_laser_brightness(unsigned percent) {
+  if (percent > 100U) {
+    return Status::error(ErrorCode::InvalidArgument,
+                         "laser brightness must be 0..100 percent");
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  const std::array<std::byte, 1> payload{
+      static_cast<std::byte>(percent & 0xFFU)};
+  return set_locked(ControlGroup::Camera,
+                    static_cast<std::uint8_t>(CameraOpcode::SetLaserBrightness),
+                    payload);
+}
+
+Result<std::uint16_t> ControlChannel::strobe_brightness(unsigned route) {
+  if (route > 1U) {
+    return fail(ErrorCode::InvalidArgument, "strobe route must be 0 or 1");
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  const std::array<std::byte, 1> payload{static_cast<std::byte>(route)};
+  auto value = uint_locked(
+      ControlGroup::Camera,
+      static_cast<std::uint8_t>(CameraOpcode::GetStrobeBrightness), payload, 2,
+      "strobe brightness");
+  if (!value) {
+    return fail(value.error());
+  }
+  return static_cast<std::uint16_t>(std::min<std::uint32_t>(*value, 0xFFFFU));
+}
+
+Status ControlChannel::set_strobe_brightness(unsigned route,
+                                             std::uint16_t value) {
+  if (route > 1U) {
+    return Status::error(ErrorCode::InvalidArgument,
+                         "strobe route must be 0 or 1");
+  }
+  std::lock_guard<std::mutex> lock(mutex_);
+  std::array<std::byte, 3> payload{};
+  payload[0] = static_cast<std::byte>(route);
+  ctl_store_be16(payload.data() + 1, value);
+  return set_locked(ControlGroup::Camera,
+                    static_cast<std::uint8_t>(CameraOpcode::SetStrobeBrightness),
+                    payload);
 }
 
 Status ControlChannel::set_trigger_period_locked(std::uint32_t microseconds) {

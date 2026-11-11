@@ -204,6 +204,7 @@ std::string json_quote(std::string_view text) { return json_string(text); }
 bool grouping_complete(const GroupingStats& stats) noexcept {
   return stats.groups_incomplete == 0 && stats.groups_absent == 0 &&
          stats.duplicate_frames == 0 && stats.frames_invalid == 0 &&
+         stats.slot_id_mismatches == 0 &&
          stats.late_frames == 0;
 }
 
@@ -511,6 +512,17 @@ Status GroupWriter::write_group(PendingGroup& pending) {
   std::array<std::string, kStreamCount> final_names;
   std::array<std::string, kStreamCount> temporary_names;
 
+  // Cross-camera sync check: the three frames of one trigger group must carry
+  // the same per-exposure slot id.  The u64 group counter is the grouping key;
+  // this is an independent consistency check on it.
+  const std::uint32_t reference_slot = pending.streams[0]->frame_id;
+  for (std::uint8_t camera = 1; camera < kStreamCount; ++camera) {
+    if (pending.streams[camera]->frame_id != reference_slot) {
+      stats_.slot_id_mismatches++;
+      break;
+    }
+  }
+
   for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
     const StreamFrame& stream = *pending.streams[camera];
     record.frame_ids[camera] = stream.frame_id;
@@ -718,6 +730,14 @@ void metrics_from_pipeline(RunMetrics& metrics, const PipelineStats& stats) {
   metrics.transfer_timeouts = stats.transfer_timeouts;
   metrics.transfer_stalls = stats.transfer_stalls;
   metrics.transfer_errors = stats.transfer_errors;
+  metrics.dropped_incomplete = stats.dropped_incomplete;
+  metrics.dropped_overflow = stats.dropped_overflow;
+  metrics.dropped_stale = stats.dropped_stale;
+  metrics.dropped_capacity = stats.dropped_capacity;
+  metrics.dropped_pool = stats.dropped_pool;
+  metrics.dropped_timeout = stats.dropped_timeout;
+  metrics.dropped_flush = stats.dropped_flush;
+  metrics.packet_index_gaps = stats.packet_index_gaps;
 }
 
 // ---------------------------------------------------------------------------
@@ -772,7 +792,22 @@ std::string render_device(const DeviceInfo& device) {
     out += json_string(std::to_string(camera)) + ": " +
            std::to_string(device.gain[camera]);
   }
-  out += "}\n";
+  out += "},\n";
+  out += "      \"illuminator\": {\"laser_percent\": " +
+         (device.laser_percent ? std::to_string(*device.laser_percent)
+                               : std::string("null")) +
+         ", \"laser_applied\": " + (device.laser_set ? "true" : "false") +
+         ", \"strobe\": {\"route0\": " +
+         (device.strobe[0] ? std::to_string(*device.strobe[0])
+                           : std::string("null")) +
+         ", \"route1\": " +
+         (device.strobe[1] ? std::to_string(*device.strobe[1])
+                           : std::string("null")) +
+         "}, \"applied\": " +
+         ((device.laser_set || device.strobe_set[0] || device.strobe_set[1])
+              ? "true"
+              : "false") +
+         "}\n";
   out += "    }\n";
   out += "  }";
   return out;
@@ -796,7 +831,19 @@ std::string render_reassembly(const RunMetrics& metrics) {
   out += "    " + format_u64("transfer_timeouts", metrics.transfer_timeouts, "") + ",\n";
   out += "    " + format_u64("transfer_stalls", metrics.transfer_stalls, "") + ",\n";
   out += "    " + format_u64("transfer_errors", metrics.transfer_errors, "") + ",\n";
-  out += "    " + format_u64("frames_invalid", metrics.frames_invalid, "") + "\n";
+  out += "    " + format_u64("frames_invalid", metrics.frames_invalid, "") + ",\n";
+  // Per-reason drop counters: an actionable live diagnostic rather than a
+  // single opaque `frames_dropped`.
+  out += "    \"drop_reasons\": {";
+  out += "\"incomplete\": " + std::to_string(metrics.dropped_incomplete);
+  out += ", \"overflow\": " + std::to_string(metrics.dropped_overflow);
+  out += ", \"stale\": " + std::to_string(metrics.dropped_stale);
+  out += ", \"capacity\": " + std::to_string(metrics.dropped_capacity);
+  out += ", \"pool\": " + std::to_string(metrics.dropped_pool);
+  out += ", \"timeout\": " + std::to_string(metrics.dropped_timeout);
+  out += ", \"flush\": " + std::to_string(metrics.dropped_flush);
+  out += "},\n";
+  out += "    " + format_u64("packet_index_gaps", metrics.packet_index_gaps, "") + "\n";
   out += "  }";
   return out;
 }
@@ -810,6 +857,9 @@ std::string render_source(const ManifestInfo& info) {
     out += "    " + format_u64("bytes", info.source_bytes, "") + ",\n";
     out += "    " + format_u64("digest_fnv1a64", info.source_digest, "") + ",\n";
     out += "    " + format_bool("verified", info.source_verified, "") + "\n";
+  } else if (!info.simulated) {
+    out += "    " + format_field("kind", std::string_view("live-device"), "") + ",\n";
+    out += "    " + format_field("framing", std::string_view("raw"), "") + "\n";
   } else {
     out += "    " + format_field("kind", std::string_view("simulation"), "") + ",\n";
     out += "    " + format_u64("seed", info.simulation_seed, "") + ",\n";
@@ -849,6 +899,7 @@ Result<ManifestWriteResult> write_frames_manifest(const std::string& path,
   out += "  " + format_u64("groups_incomplete", stats.groups_incomplete, "") + ",\n";
   out += "  " + format_u64("groups_absent", stats.groups_absent, "") + ",\n";
   out += "  " + format_u64("duplicate_frames", stats.duplicate_frames, "") + ",\n";
+  out += "  " + format_u64("slot_id_mismatches", stats.slot_id_mismatches, "") + ",\n";
   out += "  " + format_u64("late_frames", stats.late_frames, "") + ",\n";
   out += "  " + format_u64("frames_invalid", stats.frames_invalid, "") + ",\n";
   out += "  " + format_u64("bytes_written", stats.bytes_written, "") + ",\n";
@@ -980,6 +1031,40 @@ Result<ManifestWriteResult> write_frames_manifest(const std::string& path,
 // Replay
 // ---------------------------------------------------------------------------
 
+/// Recover the wire framing of a recording: explicit metadata first, then a
+/// structural probe on the first transfer.  The two formats are unambiguous
+/// because a length-prefixed packet starts with a plausible u32 length followed
+/// by a plausible header, while a raw packet starts with the header itself.
+FramingMode detect_recording_framing(const recording::Recording& recording) {
+  const std::string& metadata = recording.header.metadata;
+  const std::size_t key = metadata.find("framing=");
+  if (key != std::string::npos) {
+    std::string value = metadata.substr(key + 8);
+    const std::size_t end = value.find(';');
+    if (end != std::string::npos) {
+      value = value.substr(0, end);
+    }
+    return framing_mode_from_string(value);
+  }
+  for (const auto& transfer : recording.transfers) {
+    if (transfer.bytes.size() < kStreamHeaderSize) {
+      continue;
+    }
+    const auto* bytes = transfer.bytes.data();
+    if (PacketFramer::header_is_plausible(bytes)) {
+      return FramingMode::Raw;
+    }
+    if (transfer.bytes.size() >= kStreamHeaderSize + kStreamLengthSize) {
+      const std::uint32_t declared = load_be32(bytes);
+      if (declared >= kStreamHeaderSize &&
+          PacketFramer::header_is_plausible(bytes + kStreamLengthSize)) {
+        return FramingMode::LengthPrefixed;
+      }
+    }
+  }
+  return FramingMode::Raw;
+}
+
 Result<ReplayReport> replay_recording(const ReplayOptions& options) {
   if (options.input.empty()) {
     return fail(ErrorCode::InvalidArgument, "recording path is empty");
@@ -1018,6 +1103,8 @@ Result<ReplayReport> replay_recording(const ReplayOptions& options) {
   config.frame_queue_capacity =
       options.frame_queue_capacity == 0 ? 32 : options.frame_queue_capacity;
   config.partial_frame_timeout_ns = options.partial_frame_timeout_ns;
+  config.framing =
+      options.framing ? *options.framing : detect_recording_framing(*recording);
 
   auto transport = std::make_unique<SimulatedTransport>(sim);
   SimulatedTransport* replay_transport = transport.get();
@@ -1208,6 +1295,7 @@ Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options) {
   config.frame_queue_capacity =
       options.frame_queue_capacity == 0 ? 32 : options.frame_queue_capacity;
   config.partial_frame_timeout_ns = options.partial_frame_timeout_ns;
+  config.framing = sim.framing;
   if (!options.recording_path.empty()) {
     config.enable_recording = true;
     config.recording_path = options.recording_path;

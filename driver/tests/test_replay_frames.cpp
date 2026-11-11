@@ -134,7 +134,17 @@ bool group_matches_simulation(const GroupRecord& group,
 std::vector<std::byte> remove_one_camera_frame(
     const recording::Recording& source, std::uint64_t device_group,
     std::uint8_t camera) {
-  PacketFramer framer;
+  // Parse and re-emit in the recording's own framing.  Simulated captures are
+  // raw (no length prefix); re-emitting a legacy recording with a prefix keeps
+  // its metadata truthful instead of silently converting the wire format.
+  FramingMode framing = FramingMode::Raw;
+  if (source.header.metadata.find("framing=length-prefixed") !=
+      std::string::npos) {
+    framing = FramingMode::LengthPrefixed;
+  }
+  const std::size_t prefix =
+      framing == FramingMode::LengthPrefixed ? kStreamLengthSize : 0;
+  PacketFramer framer(kDefaultMaxPacketBytes, framing);
   FramerStats framer_stats;
   std::vector<std::byte> out;
   for (const recording::RecordedTransfer& transfer : source.transfers) {
@@ -150,13 +160,15 @@ std::vector<std::byte> remove_one_camera_frame(
           }
           const std::size_t start = out.size();
           const std::size_t payload = packet.payload_size;
-          out.resize(start + 4U + kStreamHeaderSize + payload);
-          store_be32(out.data() + start,
-                     static_cast<std::uint32_t>(kStreamHeaderSize + payload));
-          std::memcpy(out.data() + start + 4U, packet.header.data(),
+          out.resize(start + prefix + kStreamHeaderSize + payload);
+          if (prefix != 0) {
+            store_be32(out.data() + start,
+                       static_cast<std::uint32_t>(kStreamHeaderSize + payload));
+          }
+          std::memcpy(out.data() + start + prefix, packet.header.data(),
                       kStreamHeaderSize);
           if (payload > 0) {
-            std::memcpy(out.data() + start + 4U + kStreamHeaderSize,
+            std::memcpy(out.data() + start + prefix + kStreamHeaderSize,
                         packet.payload, payload);
           }
         },

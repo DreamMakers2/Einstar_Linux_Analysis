@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <memory>
@@ -71,6 +72,10 @@ struct Options {
   bool json = false;
   bool show_serial = false;
   bool probe_only = false;
+  std::optional<unsigned> laser_percent;
+  double progress_seconds = 0.0;
+  std::string status_file;
+  std::vector<std::pair<unsigned, unsigned>> strobe_specs;
 };
 
 bool parse_u64(std::string_view text, std::uint64_t& value) {
@@ -128,12 +133,19 @@ void print_usage() {
       "                       (repeatable; libusb only)\n"
       "  --gain SPEC          volatile gain; SPEC = VALUE or CAM:VALUE\n"
       "                       (repeatable; libusb only)\n"
+      "  --laser PERCENT      volatile speckle-projector brightness 0..100\n"
+      "                       (libusb only; 0 after a client called lights off)\n"
+      "  --strobe ROUTE:VALUE volatile strobe route 0/1 brightness\n"
+      "                       (repeatable; libusb only)\n"
       "  --trigger US         volatile trigger period in us (default 68000 libusb,\n"
       "                       40000 simulated) or 'off' to leave the trigger alone\n"
       "  --trigger-counts A:B volatile mono:rgb frames per trigger (libusb only)\n"
       "  --faults NAME        simulated fault preset: clean, lossy, hostile\n"
       "  --seed S             simulated seed (default 1)\n"
       "  --timeout-seconds S  wall-clock capture deadline (default 30)\n"
+      "  --status-file PATH   rewrite a live status JSON twice per second\n"
+      "                       (einstar-live-status-v1; consumed by tools/liveview)\n"
+      "  --progress SECONDS   print live pipeline counters to stderr\n"
       "  --json               print a machine-readable summary on stdout\n"
       "  --show-serial        do not redact the device serial in logs/manifest\n"
       "  --probe-only         libusb: read metadata + calibration, change nothing\n"
@@ -475,6 +487,12 @@ Result<DeviceInfo> read_device_metadata(
     if (auto gain = channel.gain(camera)) {
       device.gain[camera] = *gain;
     }
+    if (auto width = channel.max_width(camera)) {
+      device.max_width[camera] = *width;
+    }
+    if (auto height = channel.max_height(camera)) {
+      device.max_height[camera] = *height;
+    }
   }
   if (auto counts = channel.trigger_counts()) {
     device.trigger_mono = counts->mono;
@@ -482,6 +500,20 @@ Result<DeviceInfo> read_device_metadata(
   }
   if (auto period = channel.trigger_period_us()) {
     device.trigger_period_us = *period;
+  }
+  // Illuminator state: best effort, and the most common cause of a dark IR
+  // stream after a client that calls lights_off() was killed.
+  if (auto laser = channel.laser_brightness()) {
+    device.laser_percent = *laser;
+  }
+  for (unsigned route = 0; route < 2; ++route) {
+    if (auto strobe = channel.strobe_brightness(route)) {
+      device.strobe[route] = *strobe;
+    }
+  }
+  if (auto temperature = channel.temperature_raw()) {
+    device.temperature_raw = static_cast<std::uint16_t>(*temperature);
+    device.temperature_read = true;
   }
 
   auto blob = read_calibration_blob(channel);
@@ -588,10 +620,56 @@ int run_libusb_probe(const Options& options,
     transport.close();
     return 1;
   }
+  const DeviceInfo& probe = *device;
+  for (unsigned camera = 0; camera < 3; ++camera) {
+    std::printf("  camera %u       : %ux%u, exposure %u us, gain %u\n", camera,
+                static_cast<unsigned>(probe.max_width[camera]),
+                static_cast<unsigned>(probe.max_height[camera]),
+                probe.exposure_us[camera],
+                static_cast<unsigned>(probe.gain[camera]));
+  }
+  std::printf("  trigger        : period %u us, counts mono %u rgb %u\n",
+              probe.trigger_period_us, static_cast<unsigned>(probe.trigger_mono),
+              static_cast<unsigned>(probe.trigger_rgb));
+  std::printf("  illuminator    : laser %s, strobe route0 %s, route1 %s\n",
+              probe.laser_percent
+                  ? (std::to_string(*probe.laser_percent) + " %").c_str()
+                  : "not reported",
+              probe.strobe[0] ? std::to_string(*probe.strobe[0]).c_str()
+                              : "not reported",
+              probe.strobe[1] ? std::to_string(*probe.strobe[1]).c_str()
+                              : "not reported");
+  std::printf("  temperature    : %s\n",
+              probe.temperature_read
+                  ? (std::to_string(probe.temperature_raw) + " raw").c_str()
+                  : "not reported");
   std::printf("  probe-only     : no streaming, no volatile settings changed\n");
   channel.close();
   transport.close();
   return 0;
+}
+
+/// Leave the projector/LEDs dark.  Volatile only (no flash write), and the
+/// safe state for a device that will be left unattended: the vendor's own
+/// `lights_off()` does the same.  Failures are reported, never fatal.
+void turn_illuminator_off(ControlChannel& channel) {
+  bool ok = true;
+  if (const Status status = channel.set_laser_brightness(0); !status.ok()) {
+    ok = false;
+    std::fprintf(stderr, "warning: laser off failed: %s\n",
+                 status.message().c_str());
+  }
+  for (unsigned route = 0; route < 2; ++route) {
+    if (const Status status = channel.set_strobe_brightness(route, 0);
+        !status.ok()) {
+      ok = false;
+      std::fprintf(stderr, "warning: strobe %u off failed: %s\n", route,
+                   status.message().c_str());
+    }
+  }
+  if (ok) {
+    std::printf("  illuminator    : off (volatile)\n");
+  }
 }
 
 int run_libusb(const Options& options) {
@@ -750,6 +828,40 @@ int run_libusb(const Options& options) {
                 static_cast<unsigned>(*gains[camera]));
   }
 
+  if (options.laser_percent) {
+    const Status status = channel->set_laser_brightness(*options.laser_percent);
+    if (!status.ok()) {
+      std::fprintf(stderr,
+                   "volatile laser brightness %u%% was refused: %s\n"
+                   "aborting; the trigger was not started\n",
+                   *options.laser_percent, status.message().c_str());
+      channel->close();
+      (void)pipeline->stop();
+      return 1;
+    }
+    device.laser_percent = *options.laser_percent;
+    device.laser_set = true;
+    applied = true;
+    std::printf("  laser          : %u %% (volatile)\n", *options.laser_percent);
+  }
+  for (const auto& [route, value] : options.strobe_specs) {
+    const Status status = channel->set_strobe_brightness(
+        route, static_cast<std::uint16_t>(value));
+    if (!status.ok()) {
+      std::fprintf(stderr,
+                   "volatile strobe route %u = %u was refused: %s\n"
+                   "aborting; the trigger was not started\n",
+                   route, value, status.message().c_str());
+      channel->close();
+      (void)pipeline->stop();
+      return 1;
+    }
+    device.strobe[route] = value;
+    device.strobe_set[route] = true;
+    applied = true;
+    std::printf("  strobe route%u  : %u (volatile)\n", route, value);
+  }
+
   const std::uint32_t trigger_period =
       options.trigger_mode == TriggerMode::Period ? options.trigger_period_us
                                                   : 68'000;
@@ -815,8 +927,89 @@ int run_libusb(const Options& options) {
   bool target_reached = false;
   bool timed_out = false;
   Frame frame;
+  const double progress_seconds =
+      options.progress_seconds == 0 ? 0.0 : options.progress_seconds;
+  auto next_progress = wall_start;
+  auto next_status = wall_start;
+  constexpr auto kStatusInterval = std::chrono::milliseconds(500);
   while (!target_reached) {
     (void)pipeline->poll(5);
+    if (!options.status_file.empty() &&
+        std::chrono::steady_clock::now() >= next_status) {
+      next_status = std::chrono::steady_clock::now() + kStatusInterval;
+      const einstar::PipelineStats live = pipeline->stats();
+      const double elapsed =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                       wall_start)
+              .count();
+      std::string json = "{\"schema\":\"einstar-live-status-v1\",";
+      json += "\"elapsed_s\":" + std::to_string(elapsed);
+      json += ",\"groups_written\":" +
+              std::to_string(writer.stats().groups_written);
+      json += ",\"groups_requested\":" + std::to_string(options.groups);
+      json += ",\"latest_group\":" +
+              std::to_string(writer.stats().groups_written == 0
+                                 ? 0
+                                 : writer.stats().groups_written - 1);
+      json += ",\"frames_completed\":" + std::to_string(live.frames_completed);
+      json += ",\"frames_dropped\":" + std::to_string(live.frames_dropped);
+      json += ",\"bytes_received\":" + std::to_string(live.bytes_received);
+      json += ",\"throughput_mbps\":" +
+              std::to_string(live.bytes_received / 1.0e6 /
+                             (elapsed > 0.0 ? elapsed : 1.0));
+      json += ",\"transfer_timeouts\":" +
+              std::to_string(live.transfer_timeouts);
+      json += ",\"frames_invalid\":" +
+              std::to_string(writer.stats().frames_invalid);
+      json += ",\"output_directory\":\"" + output_directory + "\"";
+      json += ",\"trigger_period_us\":" +
+              std::to_string(device.trigger_period_us);
+      json += ",\"exposure_us\":[";
+      for (unsigned camera = 0; camera < 3; ++camera) {
+        json += (camera == 0 ? "" : ",") + std::to_string(device.exposure_us[camera]);
+      }
+      json += "],\"gain\":[";
+      for (unsigned camera = 0; camera < 3; ++camera) {
+        json += (camera == 0 ? "" : ",") + std::to_string(device.gain[camera]);
+      }
+      json += "],\"laser_percent\":";
+      json += device.laser_percent ? std::to_string(*device.laser_percent) : "null";
+      json += ",\"simulated\":false,\"live\":true}";
+      const std::string temporary = options.status_file + ".tmp";
+      std::ofstream status(temporary, std::ios::trunc);
+      if (status) {
+        status << json << "\n";
+        status.close();
+        if (std::rename(temporary.c_str(), options.status_file.c_str()) != 0) {
+          std::fprintf(stderr, "warning: cannot publish status file %s\n",
+                       options.status_file.c_str());
+        }
+      }
+    }
+    if (progress_seconds > 0.0 &&
+        std::chrono::steady_clock::now() >= next_progress) {
+      const einstar::PipelineStats live = pipeline->stats();
+      std::fprintf(
+          stderr,
+          "[progress] t=%.1fs groups=%llu completed=%llu dropped=%llu "
+          "bytes=%llu timeouts=%llu stalls=%llu pool_in_use=%zu/%zu "
+          "starved=%llu queues=%zu\n",
+          std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                       wall_start)
+              .count(),
+          static_cast<unsigned long long>(writer.stats().groups_written),
+          static_cast<unsigned long long>(live.frames_completed),
+          static_cast<unsigned long long>(live.frames_dropped),
+          static_cast<unsigned long long>(live.bytes_received),
+          static_cast<unsigned long long>(live.transfer_timeouts),
+          static_cast<unsigned long long>(live.transfer_stalls),
+          live.transfer_pool_in_use, live.transfer_pool_capacity,
+          static_cast<unsigned long long>(live.submission_starved),
+          live.frame_queue_depth);
+      next_progress = std::chrono::steady_clock::now() +
+                      std::chrono::milliseconds(
+                          static_cast<std::int64_t>(progress_seconds * 1000.0));
+    }
     while (pipeline->try_pop_frame(frame)) {
       const Status status = writer.add(frame);
       frame = Frame{};
@@ -848,6 +1041,8 @@ int run_libusb(const Options& options) {
                    status.message().c_str());
     }
   }
+  // Always leave the device dark, whatever happened above.
+  turn_illuminator_off(*channel);
   channel->close();
   const Status stop_status = pipeline->stop();
   if (!stop_status.ok()) {
@@ -960,6 +1155,35 @@ int main(int argc, char** argv) {
       options.exposure_specs.emplace_back(argv[++i]);
     } else if (argument == "--gain" && i + 1 < argc) {
       options.gain_specs.emplace_back(argv[++i]);
+    } else if (argument == "--status-file" && i + 1 < argc) {
+      options.status_file = argv[++i];
+    } else if (argument == "--progress" && i + 1 < argc) {
+      char* end = nullptr;
+      const double seconds = std::strtod(argv[++i], &end);
+      if (end == argv[i] || !(seconds > 0.0)) {
+        std::fprintf(stderr, "--progress takes a positive number of seconds\n");
+        return 2;
+      }
+      options.progress_seconds = seconds;
+    } else if (argument == "--laser" && i + 1 < argc) {
+      std::uint32_t percent = 0;
+      if (!parse_u32(argv[++i], percent) || percent > 100) {
+        std::fprintf(stderr, "--laser takes 0..100 percent\n");
+        return 2;
+      }
+      options.laser_percent = percent;
+    } else if (argument == "--strobe" && i + 1 < argc) {
+      const std::string_view value = argv[++i];
+      const std::size_t colon = value.find(':');
+      std::uint32_t route = 0;
+      std::uint32_t amount = 0;
+      if (colon == std::string_view::npos ||
+          !parse_u32(value.substr(0, colon), route) || route > 1 ||
+          !parse_u32(value.substr(colon + 1), amount) || amount > 0xFFFF) {
+        std::fprintf(stderr, "--strobe takes ROUTE:VALUE with route 0 or 1\n");
+        return 2;
+      }
+      options.strobe_specs.emplace_back(route, amount);
     } else if (argument == "--trigger" && i + 1 < argc) {
       const std::string_view value = argv[++i];
       if (value == "off") {

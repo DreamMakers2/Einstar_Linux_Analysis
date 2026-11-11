@@ -124,6 +124,62 @@ EINSTAR_TEST(pipeline_clean_capture) {
   CHECK_EQ(outcome.stats.transfer_pool_in_use, 0U);
 }
 
+EINSTAR_TEST(pipeline_length_prefixed_capture) {
+  // The legacy [u32 BE len][header][payload] format must still work end to end:
+  // simulate it, record it (metadata identifies the framing), then replay the
+  // recording through a LengthPrefixed pipeline and get identical frames.
+  const std::string path = "/tmp/einstar_pipeline_lenprefixed.bin";
+  std::error_code ignored;
+  std::filesystem::remove(path, ignored);
+
+  SimConfig sim = clean_sim(3);
+  sim.framing = FramingMode::LengthPrefixed;
+  PipelineConfig config = base_config();
+  config.framing = FramingMode::LengthPrefixed;
+  config.enable_recording = true;
+  config.recording_path = path;
+  config.recording_metadata = "legacy";
+  const RunOutcome recorded = run_until(sim, config, 3);
+  REQUIRE(recorded.frames.size() == 3U);
+  for (std::size_t i = 0; i < recorded.frames.size(); ++i) {
+    const FrameInfo& frame = recorded.frames[i];
+    CHECK_EQ(frame.index, static_cast<std::uint32_t>(i));
+    CHECK(frame.contiguous);
+    CHECK_EQ(frame.payload_size, kDefaultFrameSize);
+    CHECK_EQ(frame.digest, simulated_frame_digest(
+                               static_cast<std::uint32_t>(i), kDefaultFrameSize,
+                               kStreamChunkPayload));
+    CHECK_EQ(frame.device_timestamp,
+             static_cast<std::uint64_t>(i) * 40'000'000ULL);
+  }
+  CHECK_EQ(recorded.stats.frames_completed, 3U);
+  CHECK_EQ(recorded.stats.parse_errors, 0U);
+  CHECK(recorded.stats.packets_parsed >= 3U * 32U);
+  CHECK_EQ(recorded.stats.frames_dropped, 0U);
+  CHECK_EQ(recorded.stats.sequence_gaps, 0U);
+
+  auto recording = recording::read_recording(path);
+  REQUIRE(recording.has_value());
+  CHECK_EQ(recording->header.metadata,
+           std::string("legacy;framing=length-prefixed"));
+
+  SimConfig replay_sim = clean_sim(0);
+  replay_sim.framing = FramingMode::LengthPrefixed;
+  replay_sim.replay = recording::make_replay_source(*recording);
+  PipelineConfig replay_config = base_config();
+  replay_config.framing = FramingMode::LengthPrefixed;
+  replay_config.enable_recording = false;
+  const RunOutcome replayed = run_until(replay_sim, replay_config, 3, 200000);
+  REQUIRE(replayed.frames.size() == 3U);
+  for (std::size_t i = 0; i < 3; ++i) {
+    CHECK_EQ(replayed.frames[i].index, recorded.frames[i].index);
+    CHECK_EQ(replayed.frames[i].digest, recorded.frames[i].digest);
+    CHECK_EQ(replayed.frames[i].device_timestamp,
+             recorded.frames[i].device_timestamp);
+  }
+  std::filesystem::remove(path, ignored);
+}
+
 EINSTAR_TEST(pipeline_zero_copy_capture) {
   SimConfig sim = clean_sim(6);
   PipelineConfig config = base_config(CopyMode::ZeroCopy);
@@ -233,7 +289,10 @@ EINSTAR_TEST(pipeline_recording_and_replay) {
   REQUIRE(recording.has_value());
   CHECK(recording->has_trailer);
   CHECK(!recording->transfers.empty());
-  CHECK_EQ(recording->header.metadata, std::string("pipeline-test"));
+  // The pipeline stamps the wire framing into the metadata so replay does not
+  // have to guess; the user-supplied metadata is preserved.
+  CHECK_EQ(recording->header.metadata,
+           std::string("pipeline-test;framing=raw"));
 
   SimConfig replay_sim = clean_sim(0);
   replay_sim.replay = recording::make_replay_source(*recording);

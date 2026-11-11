@@ -74,6 +74,16 @@ struct PipelineStats {
   std::uint64_t reassembly_errors = 0;
   std::uint64_t pool_exhausted = 0;
   std::uint64_t queue_drops = 0;
+  /// Drop reasons (sum == frames_dropped) + deterministic packet-continuity
+  /// violations from the frame-relative packet index in the wire header.
+  std::uint64_t dropped_incomplete = 0;
+  std::uint64_t dropped_overflow = 0;
+  std::uint64_t dropped_stale = 0;
+  std::uint64_t dropped_capacity = 0;
+  std::uint64_t dropped_pool = 0;
+  std::uint64_t dropped_timeout = 0;
+  std::uint64_t dropped_flush = 0;
+  std::uint64_t packet_index_gaps = 0;
 
   // Occupancy
   std::size_t frame_queue_depth = 0;

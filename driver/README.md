@@ -4,10 +4,30 @@ Production-oriented, offline-testable acquisition core for the SHINING 3D
 Einstar (EinScan10 / E10, USB `3267:0003`). C++23, CMake, no Qt, no CUDA, no
 network, no hardware required to build, test or benchmark.
 
-> **Validation status.** The physical scanner is disconnected. Every result in
-> this README was produced with the deterministic `SimulatedTransport`
-> (virtual clock) and is labelled **SIMULATED**. The libusb backend compiles
-> and is linked against libusb-1.0.30, but has not been run against a device.
+> **Validation status (2026-11-11).** The libusb backend is now **verified
+> against a physical Einstar**: probe, metadata, 6568-byte factory calibration
+> read, volatile illuminator/exposure/gain/trigger writes and synchronised
+> three-camera capture all ran on hardware; 600/600 groups in 60 s at a 100 ms
+> trigger (39.4 MB/s) and 1,050/1,050 replay frames byte-identical to the live
+> capture.  Sections below marked **SIMULATED** are still simulator-only
+> numbers.  The bring-up found and fixed two real wire-format defects
+> (no length prefix on the stream; an 8-bit slot counter that wraps every 256
+> groups) — see `docs/reconstruction/acquisition.md` and
+> `docs/protocol/einstar_usb_protocol.md` §3.
+
+### Live quick start (verified)
+
+```sh
+./build/driver/einstar-capture-frames --backend libusb --probe-only --out /tmp/probe
+./build/driver/einstar-capture-frames --backend libusb \
+    --groups 600 --timeout-seconds 120 --trigger 100000 \
+    --laser 100 --strobe 0:1000 --strobe 1:300 \
+    --exposure-us 0:1200 --exposure-us 1:1200 --exposure-us 2:5000 \
+    --gain 0:105 --gain 1:105 --gain 2:180 \
+    --record /tmp/sweep.e1r --status-file /tmp/sweep/status.json \
+    --progress 10 --out /tmp/sweep/frames --show-serial --json
+./build/driver/einstar-replay-frames --in /tmp/sweep.e1r --out /tmp/replay --manifest
+```
 
 ```
 driver/

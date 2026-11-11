@@ -115,6 +115,10 @@ enum class CameraOpcode : std::uint8_t {
   Temperature = 0x50,       // no payload, value i16 BE, arithmetic >> 7
   SensorCount = 0x51,       // no payload, value u8
   PageRead = 0x57,          // payload: u16 BE page index; 4096 bytes back
+  GetLaserBrightness = 0x67,   // no payload, value u8 (0..100 percent)
+  SetLaserBrightness = 0x68,   // payload: u8 percent (clamped to 100)
+  GetStrobeBrightness = 0x6f,  // payload: route u8, value u16 BE
+  SetStrobeBrightness = 0x70,  // payload: route u8 + u16 BE
 };
 
 // ---------------------------------------------------------------------------
@@ -318,6 +322,19 @@ class ControlChannel final {
   [[nodiscard]] Status set_gain(unsigned camera, std::uint16_t gain_value);
   /// Opcodes 0x25/0x24; same caveat as exposure_range().
   [[nodiscard]] Result<GainRange> gain_range(unsigned camera);
+
+  // -- illuminator (projector / LED) ---------------------------------------
+  // 0x67/0x68 laser (speckle projector) brightness, 0x6f/0x70 strobe routes.
+  // The Einstar needs the speckle projector on for stereo IR texture; a unit
+  // that was last stopped by a client that calls lights_off() reports 0 here
+  // and its IR frames are nearly black until the brightness is set again.
+  // Both setters are volatile: they do not survive a power cycle.
+  [[nodiscard]] Result<std::uint8_t> laser_brightness();
+  /// `percent` above 100 is rejected (the library clamps; we refuse instead).
+  [[nodiscard]] Status set_laser_brightness(unsigned percent);
+  [[nodiscard]] Result<std::uint16_t> strobe_brightness(unsigned route);
+  [[nodiscard]] Status set_strobe_brightness(unsigned route,
+                                             std::uint16_t value);
 
   // -- trigger --------------------------------------------------------------
   [[nodiscard]] Result<TriggerCounts> trigger_counts();
