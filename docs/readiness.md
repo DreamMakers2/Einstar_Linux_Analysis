@@ -110,6 +110,18 @@ soak, thermal behaviour, side-by-side comparisons with the vendor stack, and any
 accuracy claim are still open. Absolute scale remains unresolved and cannot be settled with the
 plate alone.
 
+### Scanner readiness (2026-11-12)
+
+| item | state |
+|---|---|
+| live scanning on hardware | **verified**: 4/4 frames captured, tracked and fused from the physical device, capture stopped cleanly, trigger 0/0 and illuminator 0 % afterwards |
+| depth reconstruction | 35 ms/frame at scale 0.25, 132 ms at 0.5 (C++ engine) |
+| tracking | robust point-to-plane ICP, 31 ms/pair on the sweep, degeneracy signal reported |
+| fusion + meshing | TSDF + marching cubes; sphere recovered to 0.03 mm p95; fused plate 0.60 mm thick across 12 independent poses |
+| export | OBJ, PLY, STL and a reopenable project document |
+| performance | live budget measured: ~8 fps best single-core configuration, ~4 fps at default quality; 10 fps not reached |
+| accuracy | **absolute dimensional accuracy still unverified** (no external artefact) |
+
 ### Calibration wizard readiness (2026-11-11, updated)
 
 | item | state |

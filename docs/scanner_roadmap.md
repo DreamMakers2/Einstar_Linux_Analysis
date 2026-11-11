@@ -23,8 +23,8 @@ the design.
 | B tracking | **done** — `tools/track/baseline.py`, `docs/tracking/tracking_baseline.md` |
 | C fusion/meshing | **done** — `tools/fuse/tsdf.py`, `docs/reconstruction/fusion_and_meshing.md` |
 | D performance | **measured** — `docs/reconstruction/pipeline_latency.md` (live ~8 fps best, ~4 fps default) |
-| E scanning app | **first increment** — `tools/scan/` with Qt window and CLI, `docs/reconstruction/scan_application.md` |
-| A reconstruction | measured only; the engine already has SGBM + sub-pixel + LR consistency |
+| E scanning app | **working** — `tools/scan/`: Qt window + CLI, **live capture on the physical device** (4/4 frames, safe stop), TSDF fusion, OBJ/PLY/STL export and reopenable projects; `docs/reconstruction/scan_application.md` |
+| A reconstruction | measured only; the engine already has SGBM + sub-pixel + LR consistency.  Remaining: photometric normalisation, explicit confidence map, saturation masking |
 
 ## A. Better live stereo reconstruction
 
