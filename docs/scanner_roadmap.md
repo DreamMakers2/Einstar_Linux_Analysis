@@ -16,6 +16,16 @@ the design.
 | calibration | wizard, coverage/observability gates, validated profile, activation + rollback |
 | GUI | Qt6 calibration application: previews, guidance, capture, observability, controls |
 
+## Progress (2026-11-12)
+
+| milestone | state |
+|---|---|
+| B tracking | **done** — `tools/track/baseline.py`, `docs/tracking/tracking_baseline.md` |
+| C fusion/meshing | **done** — `tools/fuse/tsdf.py`, `docs/reconstruction/fusion_and_meshing.md` |
+| D performance | **measured** — `docs/reconstruction/pipeline_latency.md` (live ~8 fps best, ~4 fps default) |
+| E scanning app | **first increment** — `tools/scan/` with Qt window and CLI, `docs/reconstruction/scan_application.md` |
+| A reconstruction | measured only; the engine already has SGBM + sub-pixel + LR consistency |
+
 ## A. Better live stereo reconstruction
 
 Existing: CPU matcher on rectified IR pairs with the factory profile.  The
