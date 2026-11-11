@@ -1,0 +1,251 @@
+"""Qt scanning window: live preview, accumulating model, tracking status.
+
+It drives the same `ScanSession` as the command-line scanner, so there is one
+implementation of the pipeline and the GUI cannot drift from it.
+
+The point-cloud panel is a painter-based projection, not OpenGL: it has to run
+offscreen for the tests, and at a few thousand preview points a QPainter view is
+fast enough and has no driver dependency.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+
+from PySide6 import QtCore, QtGui, QtWidgets
+
+_HERE = Path(__file__).resolve()
+sys.path.insert(0, str(_HERE.parents[2]))
+sys.path.insert(0, str(_HERE.parents[1]))
+
+from tools.scan.session import ScanConfig, ScanSession  # noqa: E402
+from wizard.gui import theme  # noqa: E402
+
+
+class CloudView(QtWidgets.QWidget):
+    """Depth-coloured projection of the accumulating preview cloud."""
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setMinimumSize(320, 240)
+        self._points: np.ndarray | None = None
+        self._caption = "no data"
+        self._distance = QtCore.QPointF(0.0, 1.0)
+
+    def set_cloud(self, points) -> None:
+        self._points = None if points is None else np.asarray(points, float)
+        self.update()
+
+    def set_caption(self, text: str) -> None:
+        self._caption = str(text)
+        self.update()
+
+    def paintEvent(self, event) -> None:  # noqa: N802 - Qt API
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.fillRect(self.rect(), QtGui.QColor(getattr(theme, "BG_TILE", theme.PANEL)))
+        rect = self.rect().adjusted(10, 10, -10, -10)
+        painter.setPen(QtGui.QColor(theme.MUTED))
+        painter.drawRect(rect)
+        if self._points is None or len(self._points) == 0:
+            painter.drawText(rect, QtCore.Qt.AlignCenter, self._caption)
+            painter.end()
+            return
+        pts = self._points
+        # isometric-ish projection: x right, y up, z into the screen
+        x, y, z = pts[:, 0], pts[:, 1], pts[:, 2]
+        depth = float(np.median(z)) if len(z) else 1.0
+        depth = max(depth, 1.0)
+        sx = rect.center().x() + (x) * (rect.width() * 0.35 / max(200.0, depth))
+        sy = rect.center().y() - (y) * (rect.width() * 0.35 / max(200.0, depth))
+        lo, hi = float(np.percentile(z, 5)), float(np.percentile(z, 95))
+        span = max(hi - lo, 1e-6)
+        for px, py, pz in zip(sx, sy, z):
+            if not (rect.left() <= px <= rect.right() and rect.top() <= py <= rect.bottom()):
+                continue
+            t = min(max((pz - lo) / span, 0.0), 1.0)
+            colour = QtGui.QColor.fromHsvF(0.58 - 0.5 * t, 0.85, 0.95)
+            painter.setPen(QtGui.QPen(colour, 1.6))
+            painter.drawPoint(QtCore.QPointF(float(px), float(py)))
+        painter.setPen(QtGui.QColor(theme.TEXT))
+        painter.drawText(rect.adjusted(6, 4, -6, -4), QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop,
+                         self._caption)
+        painter.end()
+
+
+class ScanWorker(QtCore.QThread):
+    """Runs the scan in a thread: one Qt signal per frame, one at the end."""
+
+    progress = QtCore.Signal(dict)
+    finished_scan = QtCore.Signal(dict)
+    failed = QtCore.Signal(str)
+
+    def __init__(self, config: ScanConfig, start: int, count: int, parent=None) -> None:
+        super().__init__(parent)
+        self.config = config
+        # NB: do not shadow QThread.start()/stop() with attributes
+        self.first_index = int(start)
+        self.frame_count = int(count)
+        self._stop = False
+        self._pause = False
+        self.session: ScanSession | None = None
+
+    def stop(self) -> None:
+        self._stop = True
+
+    def pause(self, value: bool = True) -> None:
+        self._pause = bool(value)
+
+    def run(self) -> None:  # noqa: D401 - QThread API
+        try:
+            self.session = ScanSession(self.config)
+            for i in range(self.first_index, self.first_index + self.frame_count):
+                if self._stop:
+                    break
+                while self._pause and not self._stop:
+                    QtCore.QThread.msleep(50)
+                self.session.process(i)
+                self.progress.emit(self.session.snapshot())
+            report = self.session.finish()
+            self.finished_scan.emit(report)
+        except Exception as exc:  # pragma: no cover - surfaced in the UI
+            self.failed.emit(f"{type(exc).__name__}: {exc}")
+        finally:
+            if self.session is not None:
+                self.session.close()
+
+
+class ScanWindow(QtWidgets.QMainWindow):
+    def __init__(self, config: ScanConfig, *, count: int = 8) -> None:
+        super().__init__()
+        self.config = config
+        self.count = int(count)
+        self.worker: ScanWorker | None = None
+        self.last_snapshot: dict = {}
+        self.setWindowTitle("Einstar — scan")
+        self.resize(1280, 760)
+        try:
+            self.setStyleSheet(theme.app_stylesheet())
+        except Exception:
+            if hasattr(theme, "STYLESHEET"):
+                self.setStyleSheet(theme.STYLESHEET)
+
+        central = QtWidgets.QWidget()
+        outer = QtWidgets.QVBoxLayout(central)
+        header = QtWidgets.QLabel("EINSTAR · SCAN")
+        header.setObjectName("Header")
+        outer.addWidget(header)
+
+        body = QtWidgets.QHBoxLayout()
+        left = QtWidgets.QVBoxLayout()
+        self.cloud = CloudView()
+        left.addWidget(self.cloud, 1)
+        self.status = QtWidgets.QPlainTextEdit()
+        self.status.setReadOnly(True)
+        self.status.setMaximumHeight(150)
+        left.addWidget(self.status)
+        body.addLayout(left, 3)
+
+        right = QtWidgets.QVBoxLayout()
+        self.controls = QtWidgets.QGroupBox("Scan")
+        cl = QtWidgets.QVBoxLayout(self.controls)
+        self.btn_start = QtWidgets.QPushButton(f"Scan {self.count} frames")
+        self.btn_pause = QtWidgets.QPushButton("Pause")
+        self.btn_stop = QtWidgets.QPushButton("Stop")
+        for b in (self.btn_start, self.btn_pause, self.btn_stop):
+            cl.addWidget(b)
+        self.btn_pause.setEnabled(False)
+        self.btn_stop.setEnabled(False)
+        right.addWidget(self.controls)
+        self.log = QtWidgets.QPlainTextEdit()
+        self.log.setReadOnly(True)
+        right.addWidget(self.log, 1)
+        body.addLayout(right, 2)
+        outer.addLayout(body, 1)
+        self.setCentralWidget(central)
+
+        self.btn_start.clicked.connect(self.start_scan)
+        self.btn_pause.clicked.connect(self.toggle_pause)
+        self.btn_stop.clicked.connect(self.stop_scan)
+
+    # -- slots ------------------------------------------------------------
+    @QtCore.Slot()
+    def start_scan(self) -> None:
+        if self.worker is not None and self.worker.isRunning():
+            return
+        self.log.appendPlainText(f"scan: frames {self.config.frames_dir} "
+                                 f"count={self.count} voxel={self.config.voxel_mm} mm")
+        self.worker = ScanWorker(self.config, 0, self.count)
+        self.worker.progress.connect(self.on_progress)
+        self.worker.finished_scan.connect(self.on_finished)
+        self.worker.failed.connect(self.on_failed)
+        self.worker.start()
+        self.btn_start.setEnabled(False)
+        self.btn_pause.setEnabled(True)
+        self.btn_stop.setEnabled(True)
+
+    @QtCore.Slot()
+    def toggle_pause(self) -> None:
+        if self.worker is None:
+            return
+        paused = self.btn_pause.text().startswith("Pause")
+        self.worker.pause(paused)
+        self.btn_pause.setText("Resume" if paused else "Pause")
+
+    @QtCore.Slot()
+    def stop_scan(self) -> None:
+        if self.worker is not None:
+            self.worker.stop()
+
+    @QtCore.Slot(dict)
+    def on_progress(self, snap: dict) -> None:
+        self.last_snapshot = snap
+        self.cloud.set_cloud(snap.get("cloud"))
+        vol = snap.get("volume") or {}
+        caption = (f"frames {snap['frames_integrated']}  rejected {snap['frames_rejected']}"
+                   f"  voxels {vol.get('observed', 0):,}")
+        self.cloud.set_caption(caption)
+        last = snap.get("last") or {}
+        self.status.setPlainText(
+            f"frames      {snap['frames_processed']} (integrated {snap['frames_integrated']}, "
+            f"rejected {snap['frames_rejected']})\n"
+            f"depth p50   {last.get('depth_p50_mm')} mm   sigma {last.get('depth_sigma_p50_mm')} mm\n"
+            f"points      {last.get('points')}\n"
+            f"tracking    {'ok' if last.get('tracking_ok') else last.get('tracking_reason') or 'first frame'}"
+            f"   step {last.get('translation_mm')} mm / {last.get('rotation_deg')} deg\n"
+            f"quality     rms {last.get('rms_mm')} mm   inliers "
+            f"{(last.get('inlier_ratio') or 0) * 100:.0f}%   condition {last.get('condition')}\n"
+            f"elapsed     {snap['elapsed_s']} s")
+
+    @QtCore.Slot(dict)
+    def on_finished(self, report: dict) -> None:
+        self.log.appendPlainText(
+            f"done: frames {report.get('frames')} rejected {report.get('rejected')} "
+            f"vertices {report.get('vertices')} faces {report.get('faces')}")
+        self.log.appendPlainText(f"mesh: {report.get('obj')}")
+        self.btn_start.setEnabled(True)
+        self.btn_pause.setEnabled(False)
+        self.btn_stop.setEnabled(False)
+
+    @QtCore.Slot(str)
+    def on_failed(self, message: str) -> None:
+        self.log.appendPlainText(f"ERROR {message}")
+        self.btn_start.setEnabled(True)
+        self.btn_pause.setEnabled(False)
+        self.btn_stop.setEnabled(False)
+
+    def shutdown(self) -> None:
+        if self.worker is not None:
+            self.worker.stop()
+            self.worker.wait(5000)
+
+    def closeEvent(self, event) -> None:  # noqa: N802 - Qt API
+        self.shutdown()
+        super().closeEvent(event)
+
+    def snapshot_png(self, path: str | Path) -> bool:
+        image = self.grab()
+        return bool(image.save(str(path)))

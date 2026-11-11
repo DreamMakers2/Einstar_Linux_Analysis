@@ -1,0 +1,153 @@
+"""Tests for the scanning application core (tools/scan/session.py).
+
+The session is what both the CLI and the Qt window run, so these tests exercise
+the real chain on real frames: reconstruct → track → fuse → mesh, plus the
+failure paths a scanner must handle (a lost pose must never be integrated, a
+missing frame must not crash the run).
+"""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import sys
+
+import numpy as np
+import pytest
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tools"))
+
+from tools.scan import session as scan_session  # noqa: E402
+from tools.track import baseline as track  # noqa: E402
+
+SWEEP = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+FACTORY = Path(os.path.expanduser("~/einstar-private/einstar-profiles/factory-e10.json"))
+RECON = REPO / "build" / "recon" / "recon_cli"
+
+pytestmark = pytest.mark.skipif(
+    not (SWEEP.is_dir() and FACTORY.is_file() and RECON.is_file()),
+    reason="recorded sweep, factory profile or recon binary not available")
+
+
+def _config(tmp_path: Path, **kwargs) -> scan_session.ScanConfig:
+    cfg = dict(frames_dir=SWEEP, profile=FACTORY, out_dir=tmp_path / "scan",
+               recon_binary=RECON, voxel_mm=6.0, input_voxel_mm=10.0,
+               scale=0.25, **kwargs)
+    return scan_session.ScanConfig(**cfg)
+
+
+def test_session_produces_a_mesh_and_report(tmp_path):
+    session = scan_session.ScanSession(_config(tmp_path))
+    try:
+        statuses = [session.process(i) for i in range(4)]
+        assert all(s.ok for s in statuses), [s.as_dict() for s in statuses]
+        assert all(s.integrated for s in statuses)
+        assert session.n_frames == 4
+        report = session.finish()
+    finally:
+        session.close()
+    assert report["frames"] == 4
+    assert report["vertices"] > 1000 and report["faces"] > 1000
+    obj = Path(report["obj"])
+    assert obj.is_file() and obj.stat().st_size > 10_000
+    written = json.loads(Path(report["report"]).read_text())
+    assert written["frames"] == 4
+    assert len(written["frames_status"]) == 4
+    assert len(written["poses"]) == 4
+    # the first frame has no predecessor; the rest must have moved a little
+    moves = [s.translation_mm for s in statuses[1:]]
+    assert all(0.0 <= m < 5.0 for m in moves), moves
+
+
+def test_snapshot_contract(tmp_path):
+    session = scan_session.ScanSession(_config(tmp_path))
+    try:
+        session.process(0)
+        session.process(1)
+        snap = session.snapshot()
+    finally:
+        session.close()
+    for key in ("frames_processed", "frames_integrated", "frames_rejected",
+                "elapsed_s", "last", "depth", "cloud", "volume", "finished"):
+        assert key in snap
+    assert snap["frames_processed"] == 2
+    assert snap["frames_integrated"] == 2
+    assert isinstance(snap["cloud"], list) and len(snap["cloud"]) > 100
+    assert snap["volume"]["voxel_mm"] == 6.0
+    assert snap["depth"]["p50_mm"] is not None
+
+
+def test_lost_tracking_is_not_integrated(tmp_path, monkeypatch):
+    """A failed alignment must skip the frame, never absorb its pose."""
+    session = scan_session.ScanSession(_config(tmp_path))
+    real_align = track.align_point_to_plane
+
+    def failing_align(source, target, *a, **k):
+        result = real_align(source, target, *a, **k)
+        result.ok = False
+        result.reason = "simulated failure"
+        return result
+
+    try:
+        first = session.process(0)
+        assert first.ok
+        monkeypatch.setattr(track, "align_point_to_plane", failing_align)
+        bad = session.process(1)
+        assert bad.ok is False
+        assert "tracking lost" in bad.reason
+        assert bad.integrated is False
+        assert session.n_frames == 1          # only the good frame is fused
+        assert session.n_rejected == 1
+        snap = session.snapshot()
+        assert snap["frames_rejected"] == 1
+    finally:
+        session.close()
+
+
+def test_missing_frame_is_reported_not_fatal(tmp_path):
+    session = scan_session.ScanSession(_config(tmp_path))
+    try:
+        status = session.process(99999)
+        assert status.ok is False
+        assert status.reason
+        report = session.finish()
+    finally:
+        session.close()
+    assert report["frames"] == 0
+
+
+def test_finish_is_idempotent(tmp_path):
+    session = scan_session.ScanSession(_config(tmp_path))
+    try:
+        session.process(0)
+        first = session.finish()
+        second = session.finish()
+    finally:
+        session.close()
+    assert first["vertices"] == second["vertices"]
+    assert first["report"] == second["report"]
+
+
+def test_qt_scan_window_headless(tmp_path):
+    """The Qt window must drive the same session and produce a snapshot."""
+    import subprocess
+    app = REPO / "tools" / "scan" / "app.py"
+    python = REPO / ".venv" / "bin" / "python"
+    if not python.is_file():  # pragma: no cover
+        pytest.skip("venv python missing")
+    env = dict(os.environ)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    env["OMP_NUM_THREADS"] = "2"
+    env.pop("DISPLAY", None)
+    shot = tmp_path / "scan.png"
+    proc = subprocess.run(
+        [str(python), str(app), "--frames", str(SWEEP), "--profile", str(FACTORY),
+         "--out", str(tmp_path / "scan-gui"), "--recon", str(RECON),
+         "--count", "3", "--scale", "0.25", "--headless",
+         "--snapshot-out", str(shot)],
+        cwd=str(REPO), env=env, capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stderr[-1500:]
+    assert "frames=3" in proc.stdout, proc.stdout[-400:]
+    assert shot.is_file() and shot.stat().st_size > 10_000
