@@ -283,3 +283,35 @@ def test_ply_mesh_reader_round_trip(tmp_path):
     back_v, back_f = scan_export.read_ply_mesh(path)
     assert back_v.shape == verts.shape and np.allclose(back_v, verts)
     assert back_f.shape == faces.shape and np.array_equal(back_f, faces)
+
+
+def test_launcher_opens_scan_and_profiles(tmp_path):
+    """One entry point: the launcher must open the scan window and show profiles."""
+    import subprocess
+    app = REPO / "tools" / "app.py"
+    python = REPO / ".venv" / "bin" / "python"
+    env = dict(os.environ)
+    env["QT_QPA_PLATFORM"] = "offscreen"
+    env["OMP_NUM_THREADS"] = "2"
+    env.pop("DISPLAY", None)
+    script = (
+        "import sys; sys.path.insert(0,'tools'); sys.path.insert(0,'.')\n"
+        "from PySide6 import QtWidgets\n"
+        "app = QtWidgets.QApplication([])\n"
+        "import tools.app as L\n"
+        "ap = L.build_parser().parse_args(['--source','replay','--frames',sys.argv[1],"
+        "'--profile',sys.argv[2],'--session-dir',sys.argv[3]])\n"
+        "w = L.Launcher(ap); w.show(); app.processEvents()\n"
+        "w.open_scan(); app.processEvents()\n"
+        "assert w._scan is not None, 'scan window did not open'\n"
+        "w.show_profiles()\n"
+        "lines = w.info.toPlainText().splitlines()\n"
+        "assert any('factory profile' in l for l in lines), lines\n"
+        "w.close(); app.processEvents()\n"
+        "print('launcher-ok')\n")
+    proc = subprocess.run([str(python), "-c", script, str(SWEEP), str(FACTORY),
+                           str(tmp_path / "launch")],
+                          cwd=str(REPO), env=env, capture_output=True, text=True,
+                          timeout=300)
+    assert proc.returncode == 0, proc.stderr[-1500:]
+    assert "launcher-ok" in proc.stdout

@@ -74,6 +74,22 @@ elapsed 1.47 s                          mesh 17 520 vertices / 32 022 faces
 The depth-coloured preview shows the calibration plate (blue) and the platform
 background (orange) in the same cloud, which is what the fusion integrates.
 
+## One entry point
+
+`tools/app.py` is the single command a user runs:
+
+```sh
+.venv/bin/python tools/app.py --frames ~/einstar-private/sweep-b/frames   # scan a recording
+.venv/bin/python tools/app.py --source live                               # calibrate live
+```
+
+It opens a small launcher with three actions: the calibration wizard, the
+scanner, and a profile panel (factory path, store path, active revision).  Each
+action opens its own top-level window rather than reparenting widgets into
+tabs: the wizard and the scanner each own a capture process, a session directory
+and worker threads, and keeping them separate windows means one cannot stomp on
+the other's lifecycle.  Closing the launcher shuts both down.
+
 ## 3-D view and project browser
 
 `tools/scan/view3d.py` renders the mesh or the live preview cloud with orbit
