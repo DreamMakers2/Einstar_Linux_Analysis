@@ -193,7 +193,15 @@ def view_diversity(result: CalibrationResult, image_size: tuple[int, int] = (128
         ty.append(float(np.degrees(np.arctan2(n[1], max(abs(n[2]), 1e-9)))))
     zs = np.array(zs); tx = np.array(tx); ty = np.array(ty)
     bins = np.floor((zs - 200.0) / 50.0).astype(int)
-    txr = tx - float(np.median(tx)); tyr = ty - float(np.median(ty))
+    # Centre on the MIDRANGE, not the median.  A symmetric +/-16 deg design has a
+    # median that sits on one of the two modes (17 views at +16 and 16 at -16
+    # gives median = +16), which makes a perfectly balanced session look
+    # one-sided.  tools/wizard/coverage measures it the same way; both modules
+    # previously disagreed and this advisory check reported a false failure on a
+    # session whose stored poses cover all four tilt quadrants.
+    def _midrange(a):
+        return 0.5 * (float(np.max(a)) + float(np.min(a)))
+    txr = tx - _midrange(tx); tyr = ty - _midrange(ty)
     return {"distances_mm": zs.tolist(),
             "distance_bins": sorted(set(int(b) for b in bins)),
             "distance_bin_count": int(len(set(bins))),

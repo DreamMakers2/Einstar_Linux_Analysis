@@ -203,13 +203,18 @@ Command:
 | plan | 36 views, self-validated by render → detect → witness (all 9 image regions, 4 tilt quadrants, 2 rolls, 3 distance bands) |
 | ingest | 33 accepted, 3 rejected (1 redundant, 2 marker failures) |
 | coverage | **8 / 8**, `ready: true` |
-| final fit | RMS **0.452 px**, held-out **0.440 px** after dropping 1 of 96 view-camera observations (17.4 px outlier) |
+| final fit | RMS **0.451 px**, held-out **0.438 px** after dropping 1 of 96 view-camera observations (17.4 px outlier) |
+| model | 18 free parameters (distortion, principal point held), condition number **1600**, rank 18/18 |
+| advisory quality report | **pass** (the midrange fix removed the false `tilt_signs` failure) |
 | lifecycle validation | **9 / 9 gates pass** (`passed: true`) |
 | cross-camera (held-out) | 0.55 px vs **1.15 px for the ground-truth rig** on the same detections |
 | stereo consistency | 0.51 mm median vs 0.83 mm measured per-view scatter |
 | staged release | distortion **held** at the factory model (freeing it changed held-out by −0.2 %) |
 | activation | `lifecycle.activate` → revision 1 `validated`, integrity ok |
 | rollback | → `factory`, factory SHA-256 byte-identical before and after |
+
+Verdict reasons after the final fixes: **none** — coverage, lifecycle and the
+advisory quality report all pass on the same session.
 
 The candidate's recovered stereo baseline is **161.244 mm** against the
 synthetic ground truth **161.314 mm** (0.070 mm error) — the fit recovers the
@@ -232,12 +237,11 @@ measurement it is applied to, which is demonstrated above with numbers, and
 the alternative (improvement over reference / measured scatter) is still a
 real test.
 
-### What is still advisory
+### The false `tilt_signs` failure (fixed)
 
-The covariance `quality` report still reports `fail` for this session: its
-`tilt_signs` sub-check counts 16 views (a stale subset of the final 33) and
-reports one sign per axis, while the stored per-view poses and the coverage
-module both show all four tilt quadrants.  The discrepancy is an unresolved
-consistency bug in that advisory report; the authoritative lifecycle suite
-passes, and the operator report shows both.  It is recorded here rather than
-hidden.
+The advisory report first failed `tilt_signs` on a session whose stored poses
+cover all four quadrants.  Cause: it centred each axis on the **median**, and a
+symmetric design with 17 views at +16 deg and 16 at -16 deg has a median of
++16 deg, so the balanced set looked one-sided.  It now centres on the
+**midrange**, the same convention `tools/wizard/coverage` uses; a constructed
+balanced set measures `[16, 17]` on both axes.

@@ -80,20 +80,36 @@ and passes the other seven, so the new rules are genuinely exercised.
 
 ## 4. What is still limited — the detector
 
-The witness can only judge an observation that exists.  `calib/detect.py`
-currently requires **all four** large markers as anchors
-(`_pattern_candidates` + `_fit_from_anchor`) and bails out below 30 blobs, so a
-frame in which one large marker leaves the image returns
-`detect_grid_auto(...) is None` **before the witness runs**.  Measured: masking
-the chiral marker makes `detect_grid_auto` return `None` even with 40 blobs
-present.
+The witness can only judge an observation that exists, and the strict detector
+requires **all four** large markers as anchors.  Two separate failure modes
+were measured when the chiral marker is hidden:
 
-That is the remaining half of partial-plate recognition and is being addressed
-by a lattice-graph assignment fallback (`assign_grid_partial`) that recovers
-the labelling from the marker geometry alone, leaving the orientation decision
-here.  Until that lands, edge views that lose a large marker are refused
-rather than mislabelled — which is the safe direction, but it costs corner
-coverage that the plate could otherwise provide.
+* `detect_grid_auto` returns `None`; or
+* worse, it returns a self-consistent **shifted sub-lattice** — measured
+  `u ∈ 1..5, v ∈ 1..4` instead of the canonical `0..7 × 0..4` — which belongs to
+  a smaller plate and is silently wrong.
+
+`calib/detect_partial.py` closes this.  It finds the three on-lattice large
+markers by area, identifies the collinear triple with pitch-normalised gaps
+2:1 (the asymmetric `(2,1) → (4,1) → (5,1)` signature), derives the square
+lattice basis from the row and tries both perpendicular signs, then fits a
+homography to every matched blob and **rejects** anything that does not reach
+the canonical origin.
+
+Measured on a plate at 400 mm with the chiral marker masked:
+
+| path | result |
+|---|---|
+| strict detector | returns a shifted sub-lattice (`u` min > 0) or `None` |
+| `detect_grid_partial` | **39 / 40 points**, span `u 0..7`, `v 0..4`, RMS < 1.5 px |
+| witness, marker inside the image | `partial_witness`, **rejected** (correct: occlusion is not provable) |
+| witness, marker outside the usable area | `partial_verified`, **accepted**, identity 3/3 beats `mirror_u` 2/3 |
+
+The controller prefers the partial labelling whenever the strict one is
+missing or does not reach the canonical span, and only when it explains at
+least as many markers.  Seven regression tests cover the full plate, the
+masked plate, both witness outcomes, random blobs, a coarse lattice without the
+2:1 signature, determinism and the controller preference rule.
 
 ## 5. Temporal and stereo evidence
 

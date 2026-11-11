@@ -672,6 +672,40 @@ class WizardController:
 
     # ------------------------------------------------------------------
     # detection and extra checks
+    @staticmethod
+    def _prefer_partial(gray: np.ndarray, observation: Any) -> Any:
+        """Use the partial assignment when the strict one is wrong or missing.
+
+        The strict detector anchors on all four orientation markers.  At an
+        image corner the chiral marker leaves the frame, and the strict path
+        then either returns None or silently emits a *shifted sub-lattice*
+        (measured: u 1..5 instead of 0..7) that belongs to a smaller plate.
+        The partial assignment anchors on the three on-lattice large markers
+        and recovers the canonical span, so it is preferred whenever it yields
+        the full span with a low residual and the strict result does not.
+        """
+        try:
+            from calib import detect_partial
+            need_partial = observation is None
+            if not need_partial:
+                us = {round(float(k[0])) for k in observation.points}
+                vs = {round(float(k[1])) for k in observation.points}
+                need_partial = (min(us) > 0 or min(vs) > 0
+                                or max(us) < 7 or max(vs) < 4)
+            if not need_partial:
+                return observation
+            result = detect_partial.detect_grid_partial(gray)
+            cand = result.observation
+            if cand is None:
+                return observation
+            if observation is None:
+                return cand
+            if int(cand.n_lattice) > int(observation.n_lattice):
+                return cand
+            return observation
+        except Exception:
+            return observation
+
     # ------------------------------------------------------------------
     def _detect(self, images: Mapping[str, np.ndarray]) -> tuple[dict, dict]:
         """Detect the plate in every camera; returns (session grids, raw grids)."""
@@ -687,6 +721,7 @@ class WizardController:
             try:
                 gray = np.ascontiguousarray(np.asarray(image, dtype=np.uint8))
                 observation = detect_grid_auto(gray)
+                observation = self._prefer_partial(gray, observation)
             except Exception:
                 continue
             if observation is None:
