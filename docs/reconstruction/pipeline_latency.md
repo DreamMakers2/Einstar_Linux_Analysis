@@ -86,6 +86,10 @@ pipeline, including transfers, before adopting CUDA SGM.
   measured here is ~8 fps, and the default quality settings give ~4 fps.
 * No GPU measurement is claimed here; the CUDA bench tool has not been run in
   this round.
+* Photometric normalisation (`--equalize`) was measured on a real frame and
+  makes no difference: plane RMS 0.300 mm without it and 0.302 mm with it, with
+  slightly fewer valid points (136 968 vs 139 336).  The IR illumination is
+  already uniform enough, so it is not made a default.
 * Saturation is negligible on the recorded frames (0.10–0.15 % of pixels
   ≥ 250), so saturation masking is not implemented — it would change nothing
   measurable on this data and would be speculative until a scene with
