@@ -147,6 +147,7 @@ if(EINSTAR_BUILD_TESTS)
     test_control_channel
     test_replay_frames
     test_stress
+    test_capture_session
   )
 
   foreach(test_name ${EINSTAR_TESTS})
@@ -164,6 +165,7 @@ if(EINSTAR_BUILD_TESTS)
 
   target_link_libraries(test_descriptor_ffi PRIVATE einstar_ffi)
   target_link_libraries(test_replay_frames PRIVATE einstar_capture_core)
+  target_link_libraries(test_capture_session PRIVATE einstar_capture_core)
 endif()
 
 include(GNUInstallDirs)

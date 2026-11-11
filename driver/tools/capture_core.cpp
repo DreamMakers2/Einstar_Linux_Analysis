@@ -4,18 +4,26 @@
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <chrono>
+#include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <set>
 #include <string>
 #include <system_error>
+#include <thread>
 #include <utility>
 #include <vector>
+
+#include <sys/stat.h>
+#include <sys/statvfs.h>
 
 namespace einstar::capture {
 namespace {
@@ -91,6 +99,19 @@ std::string escaped_for_log(std::string_view text) {
     out.push_back(byte >= 0x20U && byte < 0x7FU ? c : '?');
   }
   return out;
+}
+
+/// Strips spaces and tabs (not newlines) from both ends.
+std::string_view trim_controls(std::string_view text) {
+  while (!text.empty() && (text.front() == ' ' || text.front() == '\t' ||
+                           text.front() == '\r')) {
+    text.remove_prefix(1);
+  }
+  while (!text.empty() && (text.back() == ' ' || text.back() == '\t' ||
+                           text.back() == '\r')) {
+    text.remove_suffix(1);
+  }
+  return text;
 }
 
 /// Quoted JSON string member.
@@ -567,7 +588,33 @@ Status GroupWriter::write_group(PendingGroup& pending) {
   stats_.bytes_written += static_cast<std::uint64_t>(width_) * height_ *
                           kStreamCount;
   groups_.push_back(std::move(record));
+  evict_old_groups();
   return Status::success();
+}
+
+void GroupWriter::evict_old_groups() {
+  if (ring_size_ == 0) {
+    return;
+  }
+  // `groups_` keeps every record for the manifest; only the oldest files that
+  // are still on disk are removed.  The newest group (index size()-1) is never
+  // selected because the loop stops once `groups_on_disk() == ring_size_`.
+  while (groups_on_disk() > ring_size_) {
+    const GroupRecord& oldest =
+        groups_[static_cast<std::size_t>(groups_evicted_)];
+    for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
+      const std::string& name = oldest.files[camera];
+      if (!safe_frame_filename(name)) {
+        continue;
+      }
+      std::error_code ignored;
+      std::filesystem::remove(file_path(name), ignored);
+      // The triplet is complete before this runs, so a .tmp should not exist;
+      // remove it anyway so an interrupted earlier attempt cannot leak one.
+      std::filesystem::remove(file_path(name + ".tmp"), ignored);
+    }
+    ++groups_evicted_;
+  }
 }
 
 void GroupWriter::finalize_pending(PendingGroup& pending) {
@@ -1028,6 +1075,606 @@ Result<ManifestWriteResult> write_frames_manifest(const std::string& path,
 }
 
 // ---------------------------------------------------------------------------
+// Control file, ring eviction and session state
+// ---------------------------------------------------------------------------
+
+std::string_view control_command_name(ControlCommand command) noexcept {
+  switch (command) {
+    case ControlCommand::None: return "none";
+    case ControlCommand::Start: return "start";
+    case ControlCommand::Pause: return "pause";
+    case ControlCommand::Resume: return "resume";
+    case ControlCommand::Stop: return "stop";
+  }
+  return "none";
+}
+
+ControlCommand parse_control_text(std::string_view text) {
+  ControlCommand command = ControlCommand::None;
+  while (!text.empty()) {
+    const std::size_t newline = text.find('\n');
+    std::string_view line = text.substr(0, newline);
+    if (newline == std::string_view::npos) {
+      text = {};
+    } else {
+      text.remove_prefix(newline + 1);
+    }
+    line = trim_controls(line);
+    if (line.empty()) {
+      continue;
+    }
+    // Unknown lines are ignored: they neither change the command nor undo the
+    // last recognised one.  This makes a trailing comment harmless.
+    if (line == "start") {
+      command = ControlCommand::Start;
+    } else if (line == "pause") {
+      command = ControlCommand::Pause;
+    } else if (line == "resume") {
+      command = ControlCommand::Resume;
+    } else if (line == "stop") {
+      command = ControlCommand::Stop;
+    }
+  }
+  return command;
+}
+
+ControlFile::ControlFile(std::string path) : path_(std::move(path)) {}
+
+ControlCommand ControlFile::poll() {
+  if (path_.empty()) {
+    command_ = ControlCommand::None;
+    return command_;
+  }
+  struct stat info {};
+  if (::stat(path_.c_str(), &info) != 0) {
+    // A missing control file means "keep running": it never changes state and
+    // is not an error.  The next appearance is read because have_stat_ is off.
+    have_stat_ = false;
+    command_ = ControlCommand::None;
+    return command_;
+  }
+  const auto device = static_cast<std::uint64_t>(info.st_dev);
+  const auto inode = static_cast<std::uint64_t>(info.st_ino);
+  const auto size = static_cast<std::uint64_t>(info.st_size);
+  const auto mtime_sec = static_cast<std::int64_t>(info.st_mtim.tv_sec);
+  const auto mtime_nsec = static_cast<std::int64_t>(info.st_mtim.tv_nsec);
+  if (have_stat_ && device == device_ && inode == inode_ && size == size_ &&
+      mtime_sec == mtime_sec_ && mtime_nsec == mtime_nsec_) {
+    return command_;  // stat only: no read, negligible cost
+  }
+
+  // A GUI writes a tiny command file atomically.  Read at most the last 64 KiB
+  // so a hostile/absurd file cannot stall the capture loop.
+  constexpr std::uint64_t kMaxControlBytes = 64 * 1024;
+  std::string text;
+  {
+    std::ifstream file(path_, std::ios::binary);
+    if (!file) {
+      have_stat_ = false;
+      command_ = ControlCommand::None;
+      return command_;
+    }
+    if (size > kMaxControlBytes) {
+      file.seekg(static_cast<std::streamoff>(size - kMaxControlBytes),
+                 std::ios::beg);
+    }
+    text.assign(std::istreambuf_iterator<char>(file),
+                std::istreambuf_iterator<char>());
+  }
+  ++reads_;
+  command_ = parse_control_text(text);
+  have_stat_ = true;
+  device_ = device;
+  inode_ = inode;
+  size_ = size;
+  mtime_sec_ = mtime_sec;
+  mtime_nsec_ = mtime_nsec;
+  return command_;
+}
+
+std::vector<std::uint32_t> ring_eviction_set(
+    std::span<const std::uint32_t> written_groups, std::uint32_t ring_size) {
+  if (ring_size == 0 || written_groups.size() <= ring_size) {
+    return {};
+  }
+  const std::size_t remove = written_groups.size() - ring_size;
+  return std::vector<std::uint32_t>(written_groups.begin(),
+                                    written_groups.begin() +
+                                        static_cast<std::ptrdiff_t>(remove));
+}
+
+bool safe_frame_filename(std::string_view name) noexcept {
+  if (name.empty() || name == "." || name == "..") {
+    return false;
+  }
+  return name.find('/') == std::string_view::npos &&
+         name.find('\\') == std::string_view::npos &&
+         name.find('\0') == std::string_view::npos;
+}
+
+std::string_view session_state_name(SessionState state) noexcept {
+  switch (state) {
+    case SessionState::Starting: return "starting";
+    case SessionState::Running: return "running";
+    case SessionState::Paused: return "paused";
+    case SessionState::Stopping: return "stopping";
+    case SessionState::Stopped: return "stopped";
+  }
+  return "stopped";
+}
+
+std::string_view stop_reason_name(StopReason reason) noexcept {
+  switch (reason) {
+    case StopReason::None: return {};
+    case StopReason::Groups: return "groups";
+    case StopReason::MaxSeconds: return "max_seconds";
+    case StopReason::SignalInt: return "signal:SIGINT";
+    case StopReason::SignalTerm: return "signal:SIGTERM";
+    case StopReason::ControlStop: return "control:stop";
+    case StopReason::Error: return "error";
+  }
+  return "error";
+}
+
+std::string build_live_status_json(const LiveStatus& status) {
+  std::string out = "{\"schema\":\"einstar-live-status-v1\",";
+  out += "\"state\":";
+  out += json_string(session_state_name(status.state));
+  out += ",\"stop_reason\":";
+  const std::string_view reason = stop_reason_name(status.stop_reason);
+  out += reason.empty() ? "null" : json_string(reason);
+  out += ",\"elapsed_s\":";
+  {
+    char buffer[64];
+    std::snprintf(buffer, sizeof(buffer), "%.6f", status.elapsed_s);
+    out += buffer;
+  }
+  out += ",\"groups_written\":" + std::to_string(status.groups_written);
+  out += ",\"groups_requested\":" + std::to_string(status.groups_requested);
+  out += ",\"latest_group\":" + std::to_string(status.latest_group);
+  out += ",\"last_group\":" + std::to_string(status.last_group);
+  out += ",\"ring_size\":" + std::to_string(status.ring_size);
+  out += ",\"groups_on_disk\":" + std::to_string(status.groups_on_disk);
+  out += ",\"groups_evicted\":" + std::to_string(status.groups_evicted);
+  out += ",\"frames_written\":" + std::to_string(status.frames_written);
+  out += ",\"bytes_written\":" + std::to_string(status.bytes_written);
+  out += ",\"disk_free_bytes\":" + std::to_string(status.disk_free_bytes);
+  out += ",\"frames_completed\":" + std::to_string(status.frames_completed);
+  out += ",\"frames_dropped\":" + std::to_string(status.frames_dropped);
+  out += ",\"bytes_received\":" + std::to_string(status.bytes_received);
+  out += ",\"throughput_mbps\":";
+  {
+    char buffer[64];
+    std::snprintf(buffer, sizeof(buffer), "%.3f", status.throughput_mbps);
+    out += buffer;
+  }
+  out += ",\"transfer_timeouts\":" + std::to_string(status.transfer_timeouts);
+  out += ",\"frames_invalid\":" + std::to_string(status.frames_invalid);
+  out += ",\"output_directory\":" + json_string(status.output_directory);
+  out += ",\"trigger_period_us\":" + std::to_string(status.trigger_period_us);
+  out += ",\"exposure_us\":[";
+  for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
+    out += (camera == 0 ? "" : ",") + std::to_string(status.exposure_us[camera]);
+  }
+  out += "],\"gain\":[";
+  for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
+    out += (camera == 0 ? "" : ",") + std::to_string(status.gain[camera]);
+  }
+  out += "],\"laser_percent\":";
+  out += status.laser_percent ? std::to_string(*status.laser_percent) : "null";
+  out += ",\"simulated\":";
+  out += status.simulated ? "true" : "false";
+  out += ",\"live\":";
+  out += status.live ? "true" : "false";
+  out += "}\n";
+  return out;
+}
+
+Status write_status_file(const std::string& path, std::string_view json) {
+  if (path.empty()) {
+    return Status::success();
+  }
+  const std::filesystem::path target(path);
+  if (target.has_parent_path()) {
+    const std::string parent = target.parent_path().string();
+    if (!parent.empty()) {
+      if (Status status = ensure_directory(parent); !status.ok()) {
+        return status;
+      }
+    }
+  }
+  std::uint64_t bytes = 0;
+  std::uint64_t digest = 0;
+  return write_text_atomic(path, json, bytes, digest);
+}
+
+std::uint64_t disk_free_bytes(const std::string& path) noexcept {
+  struct statvfs info {};
+  if (path.empty() || ::statvfs(path.c_str(), &info) != 0) {
+    return 0;
+  }
+  return static_cast<std::uint64_t>(info.f_bavail) *
+         static_cast<std::uint64_t>(info.f_frsize);
+}
+
+// ---------------------------------------------------------------------------
+// Signal flag
+// ---------------------------------------------------------------------------
+
+namespace {
+volatile std::sig_atomic_t g_stop_signal = 0;
+}  // namespace
+
+void notify_stop_signal(int signum) noexcept {
+  if (signum != SIGINT && signum != SIGTERM) {
+    return;
+  }
+  if (g_stop_signal == 0) {
+    g_stop_signal = signum;
+  }
+}
+
+int take_stop_signal() noexcept {
+  const int signal = g_stop_signal;
+  g_stop_signal = 0;
+  return signal;
+}
+
+void install_signal_handlers() {
+  struct sigaction action {};
+  action.sa_handler = [](int signum) { notify_stop_signal(signum); };
+  sigemptyset(&action.sa_mask);
+  action.sa_flags = 0;  // the loop polls with a 5 ms timeout
+  (void)::sigaction(SIGINT, &action, nullptr);
+  (void)::sigaction(SIGTERM, &action, nullptr);
+}
+
+// ---------------------------------------------------------------------------
+// Capture session loop
+// ---------------------------------------------------------------------------
+
+Result<CaptureSessionResult> run_capture_session(
+    const CaptureSessionOptions& options, CaptureSessionDriver& driver) {
+  auto directory = prepare_output_directory(options.output_directory);
+  if (!directory) {
+    return fail(directory.error());
+  }
+  GroupWriter writer(*directory);
+  writer.set_ring_size(options.ring_size);
+  if (Status status = writer.prepare(); !status.ok()) {
+    return fail(status);
+  }
+
+  const bool has_control = !options.control_path.empty();
+  ControlFile control(options.control_path);
+  install_signal_handlers();
+
+  ManifestInfo manifest = options.manifest;
+  manifest.output_directory = *directory;
+  manifest.requested_groups = options.groups;
+
+  const auto start = std::chrono::steady_clock::now();
+  const auto status_interval = std::chrono::milliseconds(500);
+  auto next_status = start;
+  auto next_progress = start;
+
+  SessionState state = SessionState::Starting;
+  StopReason reason = StopReason::None;
+  bool timed_out = false;
+  bool target_reached = false;
+  int signal_number = 0;
+  bool status_warned = false;
+  Status failure = Status::success();
+
+  // Freeze the reported capture duration when the loop ends so the final
+  // status does not grow while the recording is verified and the manifest is
+  // written.  While streaming, this is simply the live wall clock.
+  double frozen_elapsed = -1.0;
+  const auto elapsed = [&]() {
+    if (frozen_elapsed >= 0.0) {
+      return frozen_elapsed;
+    }
+    return std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                        start)
+        .count();
+  };
+
+  const auto publish = [&](SessionState current) {
+    if (options.status_file.empty()) {
+      return;
+    }
+    const PipelineStats live = driver.stats();
+    const DeviceInfo& device = driver.device();
+    LiveStatus status;
+    status.state = current;
+    status.stop_reason = reason;
+    status.elapsed_s = elapsed();
+    status.groups_written = writer.stats().groups_written;
+    status.groups_requested = options.groups;
+    status.latest_group =
+        writer.stats().groups_written == 0
+            ? 0
+            : writer.stats().groups_written - 1;
+    if (!writer.groups().empty()) {
+      status.last_group = writer.groups().back().device_group;
+    }
+    status.ring_size = options.ring_size;
+    status.groups_on_disk = writer.groups_on_disk();
+    status.groups_evicted = writer.groups_evicted();
+    status.frames_written = writer.stats().frames_written;
+    status.bytes_written = writer.stats().bytes_written;
+    status.disk_free_bytes = disk_free_bytes(*directory);
+    status.frames_completed = live.frames_completed;
+    status.frames_dropped = live.frames_dropped;
+    status.bytes_received = live.bytes_received;
+    status.throughput_mbps =
+        live.bytes_received / 1.0e6 / (status.elapsed_s > 0.0 ? status.elapsed_s : 1.0);
+    status.transfer_timeouts = live.transfer_timeouts;
+    status.frames_invalid = writer.stats().frames_invalid;
+    status.output_directory = *directory;
+    status.trigger_period_us = device.trigger_period_us;
+    status.exposure_us = device.exposure_us;
+    status.gain = device.gain;
+    status.laser_percent = device.laser_percent;
+    status.simulated = manifest.simulated;
+    status.live = manifest.live;
+    const Status written = write_status_file(
+        options.status_file, build_live_status_json(status));
+    if (!written.ok() && !status_warned) {
+      status_warned = true;
+      std::fprintf(stderr, "warning: cannot publish status file %s: %s\n",
+                   options.status_file.c_str(),
+                   written.message().c_str());
+    }
+  };
+
+  publish(SessionState::Starting);
+  if (Status started = driver.start(); !started.ok()) {
+    failure = started;
+    reason = StopReason::Error;
+  } else {
+    state = SessionState::Running;
+    publish(state);
+  }
+
+  Frame frame;
+  while (reason == StopReason::None) {
+    const auto now = std::chrono::steady_clock::now();
+
+    // -- signals: the handler only sets a flag; all teardown happens below ---
+    if (const int pending = take_stop_signal(); pending != 0) {
+      signal_number = pending;
+      reason = pending == SIGINT ? StopReason::SignalInt : StopReason::SignalTerm;
+      break;
+    }
+
+    // -- control file ------------------------------------------------------
+    if (has_control) {
+      switch (control.poll()) {
+        case ControlCommand::Stop:
+          reason = StopReason::ControlStop;
+          break;
+        case ControlCommand::Pause:
+          if (state == SessionState::Running) {
+            if (Status paused = driver.pause(); !paused.ok()) {
+              failure = paused;
+              reason = StopReason::Error;
+              break;
+            }
+            state = SessionState::Paused;
+            publish(state);
+          }
+          break;
+        case ControlCommand::Resume:
+          if (state == SessionState::Paused) {
+            if (Status resumed = driver.resume(); !resumed.ok()) {
+              failure = resumed;
+              reason = StopReason::Error;
+              break;
+            }
+            state = SessionState::Running;
+            publish(state);
+          }
+          break;
+        case ControlCommand::Start:
+        case ControlCommand::None:
+          break;
+      }
+      if (reason != StopReason::None) {
+        break;
+      }
+    }
+
+    // -- limits ------------------------------------------------------------
+    if (options.groups != 0 &&
+        writer.stats().groups_written >= options.groups) {
+      target_reached = true;
+      reason = StopReason::Groups;
+      break;
+    }
+    if (options.max_seconds > 0.0 && elapsed() >= options.max_seconds) {
+      reason = StopReason::MaxSeconds;
+      break;
+    }
+    if (options.timeout_seconds_set && options.timeout_seconds > 0 &&
+        now - start >= std::chrono::seconds(options.timeout_seconds)) {
+      timed_out = true;
+      reason = StopReason::Error;
+      break;
+    }
+
+    // -- pump --------------------------------------------------------------
+    if (state == SessionState::Paused) {
+      // Live keeps draining in-flight USB transfers here; the simulator uses
+      // it to sleep without generating new frames.
+      (void)driver.pump_paused(5);
+    } else {
+      (void)driver.poll(5);
+      bool popped_any = false;
+      while (driver.try_pop_frame(frame)) {
+        popped_any = true;
+        const Status added = writer.add(frame);
+        frame = Frame{};
+        if (!added.ok()) {
+          failure = added;
+          reason = StopReason::Error;
+          break;
+        }
+        if (options.groups != 0 &&
+            writer.stats().groups_written >= options.groups) {
+          target_reached = true;
+          reason = StopReason::Groups;
+          break;
+        }
+      }
+      if (reason != StopReason::None) {
+        break;
+      }
+      if (!popped_any && driver.source_exhausted()) {
+        // A finite simulated source (with injected loss) ended before the
+        // requested group count.  Stop now instead of idling until the wall
+        // clock safety limit; the manifest reports what was actually written.
+        target_reached =
+            options.groups != 0 &&
+            writer.stats().groups_written >= options.groups;
+        reason = StopReason::Groups;
+        break;
+      }
+    }
+
+    // -- periodic status (~2 Hz) and progress ------------------------------
+    const auto after = std::chrono::steady_clock::now();
+    if (!options.status_file.empty() && after >= next_status) {
+      next_status = after + status_interval;
+      publish(state);
+    }
+    if (options.progress_seconds > 0.0 && after >= next_progress) {
+      const PipelineStats live = driver.stats();
+      std::fprintf(
+          stderr,
+          "[progress] t=%.1fs state=%s groups=%llu on_disk=%llu evicted=%llu "
+          "completed=%llu dropped=%llu bytes=%llu timeouts=%llu stalls=%llu "
+          "pool_in_use=%zu/%zu starved=%llu queues=%zu\n",
+          elapsed(), std::string(session_state_name(state)).c_str(),
+          static_cast<unsigned long long>(writer.stats().groups_written),
+          static_cast<unsigned long long>(writer.groups_on_disk()),
+          static_cast<unsigned long long>(writer.groups_evicted()),
+          static_cast<unsigned long long>(live.frames_completed),
+          static_cast<unsigned long long>(live.frames_dropped),
+          static_cast<unsigned long long>(live.bytes_received),
+          static_cast<unsigned long long>(live.transfer_timeouts),
+          static_cast<unsigned long long>(live.transfer_stalls),
+          live.transfer_pool_in_use, live.transfer_pool_capacity,
+          static_cast<unsigned long long>(live.submission_starved),
+          live.frame_queue_depth);
+      next_progress =
+          after +
+          std::chrono::milliseconds(
+              static_cast<std::int64_t>(options.progress_seconds * 1000.0));
+    }
+  }
+
+  // -- graceful teardown, on every path -------------------------------------
+  if (reason == StopReason::None) {
+    // Defensive: the loop only exits with a reason above.
+    reason = StopReason::Error;
+  }
+  frozen_elapsed = elapsed();
+  state = SessionState::Stopping;
+  publish(state);
+
+  // Stop triggering, turn the illuminator off and close the pipeline BEFORE
+  // finalising the writer/recording, exactly like the historical path.
+  if (Status stopped = driver.stop(); !stopped.ok()) {
+    std::fprintf(stderr, "warning: device/pipeline stop failed: %s\n",
+                 stopped.message().c_str());
+    if (failure.ok()) {
+      failure = stopped;
+      reason = StopReason::Error;
+    }
+  }
+  const double virtual_seconds = driver.virtual_duration_seconds();
+  const auto end = std::chrono::steady_clock::now();
+
+  (void)writer.flush();
+  // Publish the final counters while the recording is verified and the
+  // manifest is written; the GUI should not wait without progress information.
+  publish(state);
+  const PipelineStats stats = driver.stats();
+
+  manifest.stopped_early =
+      options.groups != 0 &&
+      writer.stats().groups_written < options.groups;
+  manifest.metrics = RunMetrics{};
+  metrics_from_pipeline(manifest.metrics, stats);
+  manifest.metrics.frames_invalid = writer.stats().frames_invalid;
+  manifest.metrics.wall_seconds = seconds_between(start, end);
+  manifest.metrics.virtual_seconds = virtual_seconds;
+  manifest.throughput_mbps =
+      mb_per_second(stats.bytes_received, manifest.metrics.wall_seconds);
+  manifest.virtual_throughput_mbps =
+      mb_per_second(stats.bytes_received, manifest.metrics.virtual_seconds);
+  if (!options.record_path.empty()) {
+    auto recorded = verify_recording(options.record_path);
+    if (!recorded) {
+      std::fprintf(stderr, "recording verification failed: %s\n",
+                   recorded.error().message().c_str());
+      if (failure.ok()) {
+        failure = recorded.error();
+        reason = StopReason::Error;
+      }
+    } else {
+      std::uint64_t recorded_bytes = 0;
+      for (const auto& transfer : recorded->transfers) {
+        recorded_bytes += transfer.bytes.size();
+      }
+      manifest.recorded_path = options.record_path;
+      manifest.recorded_transfers = recorded->transfers.size();
+      manifest.recorded_bytes = recorded_bytes;
+      manifest.recorded_digest = recorded->trailer_digest;
+    }
+  }
+
+  const std::string manifest_path =
+      join_path(*directory, "frames_manifest.json");
+  auto written = write_frames_manifest(manifest_path, manifest, writer);
+  if (!written) {
+    std::fprintf(stderr, "manifest: %s\n", written.error().message().c_str());
+    if (failure.ok()) {
+      failure = written.error();
+      reason = StopReason::Error;
+    }
+  }
+
+  CaptureSessionResult result;
+  result.manifest = std::move(manifest);
+  result.stopped_early = result.manifest.stopped_early;
+  result.grouping = writer.stats();
+  result.cadence = writer.cadence();
+  result.groups = writer.groups();
+  result.incomplete_groups = writer.incomplete();
+  result.duplicates = writer.duplicates();
+  result.absent_group_ids = writer.absent_groups();
+  if (written) {
+    result.manifest_path = written->path;
+  }
+  result.state = SessionState::Stopped;
+  result.stop_reason = reason;
+  result.signal_number = signal_number;
+  result.timed_out = timed_out;
+  result.target_reached = target_reached;
+  result.ring_size = options.ring_size;
+  result.groups_evicted = writer.groups_evicted();
+  result.groups_on_disk = writer.groups_on_disk();
+
+  publish(SessionState::Stopped);
+  if (!failure.ok()) {
+    return fail(failure);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Replay
 // ---------------------------------------------------------------------------
 
@@ -1259,9 +1906,114 @@ Result<ReplayReport> replay_recording(const ReplayOptions& options) {
 // Simulated capture
 // ---------------------------------------------------------------------------
 
+namespace {
+
+/// Simulated session driver.  poll() advances the deterministic generator;
+/// while paused the loop calls pump_paused() instead, which sleeps without
+/// polling the transport, so no new frames are generated.  The pipeline, the
+/// writer and the recording stay open across a pause.
+class SimulatedSessionDriver final : public CaptureSessionDriver {
+ public:
+  SimulatedSessionDriver(SimConfig sim, PipelineConfig config, DeviceInfo device)
+      : sim_(std::move(sim)), config_(std::move(config)),
+        device_(std::move(device)) {}
+
+  Status start() override {
+    transport_ = std::make_unique<SimulatedTransport>(sim_);
+    generator_ = transport_.get();
+    pipeline_ =
+        std::make_unique<AcquisitionPipeline>(std::move(transport_), config_);
+    if (Status status = pipeline_->start(); !status.ok()) {
+      return status;
+    }
+    started_ns_ = pipeline_->start_time_ns();
+    return Status::success();
+  }
+
+  Status poll(int timeout_ms) override {
+    if (pipeline_) {
+      (void)pipeline_->poll(timeout_ms);
+    }
+    return Status::success();
+  }
+
+  bool try_pop_frame(Frame& frame) override {
+    return pipeline_ && pipeline_->try_pop_frame(frame);
+  }
+
+  [[nodiscard]] PipelineStats stats() const override {
+    return pipeline_ ? pipeline_->stats() : PipelineStats{};
+  }
+
+  [[nodiscard]] const DeviceInfo& device() const override { return device_; }
+
+  Status pause() override { return Status::success(); }
+  Status resume() override { return Status::success(); }
+
+  Status pump_paused(int timeout_ms) override {
+    if (timeout_ms > 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(timeout_ms));
+    }
+    return Status::success();
+  }
+
+  Status stop() override {
+    if (!pipeline_) {
+      return Status::success();
+    }
+    // Keep the pipeline object alive (stopped) so stats() and the final status
+    // still carry the run's counters after teardown.
+    return pipeline_->stop();
+  }
+
+  [[nodiscard]] double virtual_duration_seconds() const override {
+    if (generator_ == nullptr) {
+      return 0.0;
+    }
+    const std::int64_t end = generator_->virtual_clock().now_ns();
+    return end > started_ns_
+               ? static_cast<double>(end - started_ns_) / 1e9
+               : 0.0;
+  }
+
+  [[nodiscard]] std::uint64_t frames_generated() const override {
+    return generator_ ? generator_->generated_frames() : 0;
+  }
+
+  bool source_exhausted() override {
+    if (!generator_ || generator_->generated_frames() < sim_.frames) {
+      exhaustion_idle_ = 0;
+      exhaustion_bytes_ = 0;
+      return false;
+    }
+    const PipelineStats stats = pipeline_ ? pipeline_->stats() : PipelineStats{};
+    if (stats.bytes_received != exhaustion_bytes_) {
+      exhaustion_bytes_ = stats.bytes_received;
+      exhaustion_idle_ = 0;
+      return false;
+    }
+    return ++exhaustion_idle_ >= 50;
+  }
+
+ private:
+  SimConfig sim_;
+  PipelineConfig config_;
+  DeviceInfo device_;
+  std::unique_ptr<SimulatedTransport> transport_;
+  std::unique_ptr<AcquisitionPipeline> pipeline_;
+  SimulatedTransport* generator_ = nullptr;
+  std::int64_t started_ns_ = 0;
+  std::uint64_t exhaustion_bytes_ = 0;
+  std::size_t exhaustion_idle_ = 0;
+};
+
+}  // namespace
+
 Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options) {
-  if (options.groups == 0) {
-    return fail(ErrorCode::InvalidArgument, "--groups must be at least 1");
+  const bool has_control = !options.control_path.empty();
+  if (options.groups == 0 && !has_control && options.max_seconds <= 0.0) {
+    return fail(ErrorCode::InvalidArgument,
+                "--groups must be at least 1 (or use --control/--max-seconds)");
   }
   auto faults = fault_preset(options.faults);
   if (!faults) {
@@ -1274,18 +2026,24 @@ Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options) {
   if (!directory) {
     return fail(directory.error());
   }
-  GroupWriter writer(*directory);
-  if (Status status = writer.prepare(); !status.ok()) {
-    return fail(status);
-  }
 
   SimConfig sim;
   sim.seed = options.seed;
-  sim.frames = options.groups * kStreamCount;
+  if (options.groups == 0) {
+    // Unbounded: the session loop stops the generator via the control file,
+    // signals or --max-seconds long before this budget is reached.
+    sim.frames = std::numeric_limits<std::uint32_t>::max();
+  } else {
+    sim.frames = static_cast<std::uint32_t>(
+        std::min<std::uint64_t>(static_cast<std::uint64_t>(options.groups) *
+                                    kStreamCount,
+                                std::numeric_limits<std::uint32_t>::max()));
+  }
   sim.camera_count = kStreamCount;
   sim.first_camera_index = 0;
   sim.expect_interval_quirk = false;
-  sim.trigger_period_ns = static_cast<std::int64_t>(options.trigger_period_us) * 1000;
+  sim.trigger_period_ns =
+      static_cast<std::int64_t>(options.trigger_period_us) * 1000;
   sim.bandwidth_bytes_per_sec = options.bandwidth_bytes_per_sec;
   sim.faults = *faults;
 
@@ -1305,139 +2063,70 @@ Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options) {
         ";groups=" + std::to_string(options.groups);
   }
 
-  auto transport = std::make_unique<SimulatedTransport>(sim);
-  SimulatedTransport* generator = transport.get();
-  auto pipeline =
-      std::make_unique<AcquisitionPipeline>(std::move(transport), config);
-  const auto wall_start = std::chrono::steady_clock::now();
-  if (Status status = pipeline->start(); !status.ok()) {
-    return fail(status);
-  }
-  const std::int64_t start_ns = pipeline->start_time_ns();
+  DeviceInfo device;
+  device.simulated = true;
+  device.identified = false;
+  device.serial = "SIMULATED";
+  device.serial_redacted = false;
+  device.firmware = "simulated";
+  device.sensor_count = kStreamCount;
+  device.settings_applied = false;
+  device.trigger_period_us = options.trigger_period_us;
+  device.trigger_mono = 1;
+  device.trigger_rgb = 1;
 
-  bool target_reached = false;
-  bool exhausted_loop = false;
-  std::size_t iterations = 0;
-  std::size_t idle = 0;
-  std::uint64_t last_bytes = 0;
-  const std::size_t max_iterations =
-      2'000'000 + static_cast<std::size_t>(options.groups) * 8192;
-  Frame frame;
-  while (iterations++ < max_iterations) {
-    (void)pipeline->poll(2);
-    bool popped = false;
-    while (pipeline->try_pop_frame(frame)) {
-      popped = true;
-      Status status = writer.add(frame);
-      frame = Frame{};
-      if (!status.ok()) {
-        (void)pipeline->stop();
-        return fail(status);
-      }
-      if (writer.stats().groups_written >= options.groups) {
-        target_reached = true;
-        break;
-      }
-    }
-    if (target_reached) {
-      break;
-    }
-    if (generator->generated_frames() >= sim.frames) {
-      const PipelineStats stats = pipeline->stats();
-      if (stats.bytes_received == last_bytes && !popped) {
-        ++idle;
-      } else {
-        idle = 0;
-      }
-      last_bytes = stats.bytes_received;
-      if (idle >= 500) {
-        break;
-      }
-    }
-  }
-  if (iterations >= max_iterations) {
-    exhausted_loop = true;
-  }
+  SimulatedSessionDriver driver(sim, config, device);
 
-  const auto wall_end = std::chrono::steady_clock::now();
-  const std::int64_t end_ns = generator->virtual_clock().now_ns();
-  const Status stop_status = pipeline->stop();
-  if (!stop_status.ok()) {
-    return fail(stop_status);
-  }
-  if (exhausted_loop) {
-    return fail(ErrorCode::Timeout,
-                "simulated capture exceeded its iteration budget after " +
-                    std::to_string(writer.stats().groups_written) + " group(s)");
-  }
+  CaptureSessionOptions session;
+  session.output_directory = *directory;
+  session.control_path = options.control_path;
+  session.status_file = options.status_file;
+  session.groups = options.groups;
+  session.ring_size = options.ring_size;
+  session.max_seconds = options.max_seconds;
+  session.timeout_seconds = options.timeout_seconds;
+  // A fixed-count run keeps the historical 30 s default; a control session
+  // only gets a safety limit when the caller explicitly asked for one.
+  session.timeout_seconds_set =
+      options.timeout_seconds_set || !has_control;
+  session.progress_seconds = options.progress_seconds;
+  session.record_path = options.recording_path;
+  session.manifest.tool = "einstar-capture-frames";
+  session.manifest.backend = "simulated";
+  session.manifest.simulated = true;
+  session.manifest.live = false;
+  session.manifest.simulation_seed = options.seed;
+  session.manifest.simulation_faults = options.faults;
+  session.manifest.simulation_frames =
+      options.groups == 0 ? 0U : sim.frames;
+  session.manifest.device = device;
 
-  (void)writer.flush();
-  const PipelineStats stats = pipeline->stats();
+  auto session_result = run_capture_session(session, driver);
+  if (!session_result) {
+    return fail(session_result.error());
+  }
 
   SimCaptureReport report;
-  report.grouping = writer.stats();
-  report.cadence = writer.cadence();
-  report.groups = writer.groups();
-  report.incomplete_groups = writer.incomplete();
-  report.duplicates = writer.duplicates();
-  report.absent_group_ids = writer.absent_groups();
-  report.manifest.tool = "einstar-capture-frames";
-  report.manifest.backend = "simulated";
-  report.manifest.simulated = true;
-  report.manifest.live = false;
-  report.manifest.output_directory = *directory;
-  report.manifest.requested_groups = options.groups;
-  report.manifest.stopped_early = false;
-  report.manifest.simulation_seed = options.seed;
-  report.manifest.simulation_faults = options.faults;
-  report.manifest.simulation_frames = sim.frames;
-  report.manifest.device.simulated = true;
-  report.manifest.device.identified = false;
-  report.manifest.device.serial = "SIMULATED";
-  report.manifest.device.serial_redacted = false;
-  report.manifest.device.firmware = "simulated";
-  report.manifest.device.sensor_count = kStreamCount;
-  report.manifest.device.settings_applied = false;
-  report.manifest.device.trigger_period_us = options.trigger_period_us;
-  report.manifest.device.trigger_mono = 1;
-  report.manifest.device.trigger_rgb = 1;
-  metrics_from_pipeline(report.manifest.metrics, stats);
-  report.manifest.metrics.frames_invalid = writer.stats().frames_invalid;
-  report.manifest.metrics.wall_seconds = seconds_between(wall_start, wall_end);
-  report.manifest.metrics.virtual_seconds =
-      end_ns > start_ns ? static_cast<double>(end_ns - start_ns) / 1e9 : 0.0;
-  report.manifest.throughput_mbps =
-      mb_per_second(stats.bytes_received, report.manifest.metrics.wall_seconds);
-  report.manifest.virtual_throughput_mbps = mb_per_second(
-      stats.bytes_received, report.manifest.metrics.virtual_seconds);
+  report.manifest = session_result->manifest;
+  report.grouping = session_result->grouping;
+  report.cadence = session_result->cadence;
+  report.groups = session_result->groups;
+  report.incomplete_groups = session_result->incomplete_groups;
+  report.duplicates = session_result->duplicates;
+  report.absent_group_ids = session_result->absent_group_ids;
+  report.manifest_path = session_result->manifest_path;
+  report.ring_size = session_result->ring_size;
+  report.groups_evicted = session_result->groups_evicted;
+  report.groups_on_disk = session_result->groups_on_disk;
+  report.state = session_result->state;
+  report.stop_reason = session_result->stop_reason;
 
-  if (!options.recording_path.empty()) {
-    auto recorded = verify_recording(options.recording_path);
-    if (!recorded) {
-      return fail(recorded.error());
-    }
-    std::uint64_t recorded_bytes = 0;
-    for (const auto& transfer : recorded->transfers) {
-      recorded_bytes += transfer.bytes.size();
-    }
-    report.manifest.recorded_path = options.recording_path;
-    report.manifest.recorded_transfers = recorded->transfers.size();
-    report.manifest.recorded_bytes = recorded_bytes;
-    report.manifest.recorded_digest = recorded->trailer_digest;
-  }
-
-  const std::string manifest_path = join_path(*directory, "frames_manifest.json");
-  auto written = write_frames_manifest(manifest_path, report.manifest, writer);
-  if (!written) {
-    return fail(written.error());
-  }
-  report.manifest_path = written->path;
-
-  if (report.grouping.groups_written == 0) {
+  if (report.grouping.groups_written == 0 && options.groups > 0) {
     return fail(ErrorCode::Exhausted,
                 "simulated capture wrote no complete three-camera group");
   }
-  if (options.faults == "clean" && !target_reached) {
+  if (options.faults == "clean" && !has_control &&
+      options.max_seconds <= 0.0 && !session_result->target_reached) {
     return fail(ErrorCode::Internal,
                 "clean simulated capture stopped after " +
                     std::to_string(report.grouping.groups_written) + " of " +

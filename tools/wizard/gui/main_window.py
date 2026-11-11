@@ -1,0 +1,323 @@
+"""Main window: layout, display timer and control wiring."""
+from __future__ import annotations
+
+import time
+
+from PySide6 import QtCore, QtGui, QtWidgets
+
+from . import controller_adapter, panels, theme, tiles, worker
+
+
+class MainWindow(QtWidgets.QMainWindow):
+    def __init__(self, controller, source, *, pace_hz: float = 0.0,
+                 headless: bool = False, max_groups: int = 0, parent=None):
+        super().__init__(parent)
+        self.controller = controller
+        self.source = source
+        self.headless = headless
+        self.setWindowTitle("Einstar calibration wizard")
+        self.resize(1600, 950)
+        self.setStyleSheet(theme.app_stylesheet())
+
+        central = QtWidgets.QWidget()
+        self.setCentralWidget(central)
+        root = QtWidgets.QVBoxLayout(central)
+        root.setContentsMargins(8, 8, 8, 8)
+        root.setSpacing(8)
+        root.addWidget(self._build_header())
+
+        body = QtWidgets.QHBoxLayout()
+        body.setSpacing(8)
+        root.addLayout(body, 1)
+
+        # left: 2x2 tiles
+        grid = QtWidgets.QGridLayout()
+        grid.setSpacing(8)
+        self.tile_left = tiles.CameraTile("LEFT IR  ·  cam1")
+        self.tile_right = tiles.CameraTile("RIGHT IR  ·  cam0 (rotated 180°)")
+        self.tile_colour = tiles.CameraTile("COLOUR  ·  cam2 (BayerRG, rotated 180°)")
+        self.tile_coverage = tiles.CoverageTile()
+        grid.addWidget(self.tile_left, 0, 0)
+        grid.addWidget(self.tile_right, 0, 1)
+        grid.addWidget(self.tile_colour, 1, 0)
+        grid.addWidget(self.tile_coverage, 1, 1)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+        grid.setRowStretch(0, 1)
+        grid.setRowStretch(1, 1)
+        left = QtWidgets.QWidget()
+        left.setLayout(grid)
+        body.addWidget(left, 5)
+
+        # middle column: guidance + progress + observability
+        middle = QtWidgets.QVBoxLayout()
+        middle.setSpacing(8)
+        self.guidance = panels.GuidancePanel()
+        self.progress = panels.ProgressPanel()
+        self.observability = panels.ObservabilityPanel()
+        middle.addWidget(self.guidance, 0)
+        middle.addWidget(self.progress, 0)
+        middle.addWidget(self.observability, 1)
+        mid_host = QtWidgets.QWidget()
+        mid_host.setLayout(middle)
+        mid_host.setMinimumWidth(380)
+        body.addWidget(mid_host, 3)
+
+        # right column: capture, controls, log
+        right = QtWidgets.QVBoxLayout()
+        right.setSpacing(8)
+        self.capture = panels.CapturePanel()
+        self.controls = panels.ControlsPanel()
+        self.log = panels.EventLog()
+        right.addWidget(self.capture, 0)
+        right.addWidget(self.controls, 0)
+        right.addWidget(self.log, 1)
+        right_host = QtWidgets.QWidget()
+        right_host.setLayout(right)
+        right_host.setMinimumWidth(300)
+        body.addWidget(right_host, 2)
+
+        self.status = QtWidgets.QStatusBar()
+        self.setStatusBar(self.status)
+        self._status_right = QtWidgets.QLabel("idle")
+        self.status.addPermanentWidget(self._status_right)
+
+        self.controls.start.connect(self._on_start)
+        self.controls.pause.connect(self._on_pause)
+        self.controls.resume.connect(self._on_resume)
+        self.controls.finish.connect(self._on_finish)
+        self.controls.cancel.connect(self._on_cancel)
+
+        self.worker: worker.SessionWorker | None = None
+        self._last_index = -1
+        self._error: str | None = None
+        self._started_at = 0.0
+        self._decision_count = 0
+
+        self._timer = QtCore.QTimer(self)
+        self._timer.timeout.connect(self.refresh)
+        self._timer.start(100)  # 10 Hz display refresh
+
+        if pace_hz:
+            self._pace_hz = pace_hz
+        else:
+            self._pace_hz = 0.0
+        self._max_groups = max_groups
+        self._closing = False
+
+    # -- header ---------------------------------------------------------
+    def _build_header(self) -> QtWidgets.QWidget:
+        bar = QtWidgets.QFrame()
+        bar.setObjectName("panel")
+        lay = QtWidgets.QHBoxLayout(bar)
+        lay.setContentsMargins(14, 8, 14, 8)
+        title = QtWidgets.QLabel("EINSTAR  ·  CALIBRATION WIZARD")
+        title.setObjectName("value")
+        lay.addWidget(title)
+        lay.addSpacing(16)
+        self.header_device = QtWidgets.QLabel("no device")
+        self.header_device.setObjectName("muted")
+        lay.addWidget(self.header_device)
+        lay.addStretch(1)
+        self.header_state = QtWidgets.QLabel("IDLE")
+        self.header_state.setObjectName("value")
+        lay.addWidget(self.header_state)
+        lay.addSpacing(16)
+        self.header_clock = QtWidgets.QLabel("00:00")
+        self.header_clock.setObjectName("value")
+        self.header_clock.setFont(theme.mono_font(12))
+        lay.addWidget(self.header_clock)
+        return bar
+
+    # -- controls -------------------------------------------------------
+    def _on_start(self) -> None:
+        if self.worker is not None and self.worker.isRunning():
+            return
+        try:
+            self.controller.begin()
+        except Exception as exc:
+            self._fail(f"begin failed: {type(exc).__name__}: {exc}")
+            return
+        self._started_at = time.time()
+        self._error = None
+        self.worker = worker.SessionWorker(self.controller, self.source,
+                                           pace_hz=self._pace_hz,
+                                           max_groups=self._max_groups, parent=self)
+        self.worker.decision.connect(self._on_decision)
+        self.worker.error.connect(self._fail)
+        self.worker.finished_ok.connect(self._on_worker_done)
+        self.worker.start()
+        self.log.insertItem(0, QtWidgets.QListWidgetItem("▶ recording started"))
+        self.refresh()
+
+    def _on_pause(self) -> None:
+        if self.worker is not None:
+            self.worker.request_pause()
+        try:
+            self.controller.pause()
+        except Exception as exc:
+            self._fail(str(exc))
+        self.log.insertItem(0, QtWidgets.QListWidgetItem("⏸ paused"))
+
+    def _on_resume(self) -> None:
+        if self.worker is not None:
+            self.worker.request_resume()
+        try:
+            self.controller.resume()
+        except Exception as exc:
+            self._fail(str(exc))
+        self.log.insertItem(0, QtWidgets.QListWidgetItem("▶ resumed"))
+
+    def _on_finish(self) -> None:
+        if self.worker is not None and self.worker.isRunning():
+            self.worker.request_stop()
+            self.worker.wait(4000)
+        self.controls.setEnabled(False)
+        QtWidgets.QApplication.processEvents()
+        try:
+            result = self.controller.finish()
+        except Exception as exc:
+            self._fail(f"finish failed: {type(exc).__name__}: {exc}")
+            self.controls.setEnabled(True)
+            return
+        ok = bool(result.get("ok"))
+        prof = result.get("profile") or {}
+        text = ("✅ session finished — candidate profile written (validation: pending)"
+                if ok else
+                f"⚠ session finished but not ready: {result.get('reason') or result.get('quality', {})}")
+        self.log.insertItem(0, QtWidgets.QListWidgetItem(text))
+        self.status.showMessage(text, 20000)
+        self.controls.setEnabled(True)
+        self.refresh()
+
+    def _on_cancel(self) -> None:
+        if self.worker is not None and self.worker.isRunning():
+            self.worker.request_stop()
+            self.worker.wait(4000)
+        try:
+            self.controller.cancel()
+        except Exception as exc:
+            self._fail(str(exc))
+        self.log.insertItem(0, QtWidgets.QListWidgetItem("⏹ cancelled — data kept"))
+        self.refresh()
+
+    def _on_decision(self, payload: dict) -> None:
+        self._decision_count += 1
+        self.log.add_decision({"last_decision": payload})
+
+    def _on_worker_done(self, info: dict) -> None:
+        self.status.showMessage(
+            f"worker finished: {info.get('groups_ingested', 0)} groups ingested", 8000)
+
+    def _fail(self, message: str) -> None:
+        self._error = message
+        self.log.insertItem(0, QtWidgets.QListWidgetItem(f"‼ {message}"))
+        self.status.showMessage(message, 15000)
+
+    # -- refresh --------------------------------------------------------
+    def refresh(self) -> None:
+        try:
+            snap = self.controller.snapshot()
+        except Exception as exc:
+            self._fail(f"snapshot failed: {type(exc).__name__}: {exc}")
+            return
+        if self._error:
+            snap["error"] = self._error
+        latest = self.worker.latest if self.worker is not None else None
+        detections = snap.get("detections") or {}
+
+        if latest is not None and latest["index"] != self._last_index:
+            self._last_index = latest["index"]
+            left = latest["images"].get("left")
+            right = latest["images"].get("right")
+            colour = latest.get("colour_bgr")
+            axes_left = self._axes_from_snapshot(snap, "left")
+            self.tile_left.set_frame(left, detections.get("left"), axes_left)
+            self.tile_right.set_frame(right, detections.get("right"),
+                                      self._axes_from_snapshot(snap, "right"))
+            self.tile_colour.set_frame(colour, None, None, colour=True)
+
+        markers = snap.get("markers") or {}
+        self.tile_left.set_status(f"{markers.get('left', 0)} markers  ·  "
+                                  f"shared IR {snap.get('shared_markers_ir', 0)}")
+        self.tile_right.set_status(f"{markers.get('right', 0)} markers")
+        self.tile_colour.set_status(f"{markers.get('tex', 0)} markers  ·  "
+                                    f"assignment {'ok' if snap.get('assignment_ok') else 'AMBIGUOUS'}")
+
+        capture = snap.get("capture") or {}
+        state = str(snap.get("state", "idle"))
+        colour_state = {"recording": theme.OK, "paused": theme.WARN,
+                        "done": theme.INFO, "error": theme.BAD}.get(state, theme.MUTED)
+        self.header_state.setText(state.upper())
+        self.header_state.setStyleSheet(f"color: {colour_state};")
+        src = snap.get("source") or {}
+        where = src.get("serial") or src.get("path") or ""
+        if len(str(where)) > 60:
+            where = "…" + str(where)[-59:]
+        self.header_device.setText(f"{src.get('kind','—')}  ·  {where}")
+        elapsed = (time.time() - self._started_at) if self._started_at else 0.0
+        self.header_clock.setText(f"{int(elapsed)//60:02d}:{int(elapsed)%60:02d}")
+
+        cov = snap.get("coverage") or {}
+        views = cov.get("views") or []
+        regions = self._region_grid(views)
+        distances = [float(v.get("distance_mm") or 0) for v in views]
+        tilts = [(float(v.get("tilt_x_deg") or 0), float(v.get("tilt_y_deg") or 0))
+                 for v in views]
+        rolls = [float(v.get("roll_deg") or 0) for v in views]
+        self.tile_coverage.set_data(regions, distances, tilts, rolls,
+                                    bool(cov.get("ready")))
+
+        self.guidance.update_from(snap)
+        self.progress.update_from(snap)
+        self.observability.update_from(snap)
+        self.capture.update_from(snap)
+        self.controls.update_from(snap)
+
+        if snap.get("error"):
+            self.status.showMessage(str(snap["error"]), 5000)
+        elif capture.get("state"):
+            self._status_right.setText(
+                f"{capture.get('state')}  ·  {self._decision_count} decisions")
+
+    # -- small snapshot helpers (tolerant of missing keys) --------------
+    def _axes_from_snapshot(self, snap: dict, camera: str):
+        axes = (snap.get("overlays") or {}).get(camera)
+        if not axes:
+            return None
+        try:
+            return (axes["origin"], axes["u"], axes["v"])
+        except Exception:
+            return None
+
+    @staticmethod
+    def _region_grid(views):
+        import numpy as np
+        counts = np.zeros((3, 3), int)
+        for view in views:
+            uv = view.get("image_uv")
+            if not uv:
+                continue
+            r = int(np.clip(float(uv[1]) * 3, 0, 2))
+            c = int(np.clip(float(uv[0]) * 3, 0, 2))
+            counts[r, c] += 1
+        return counts
+
+    # -- shutdown -------------------------------------------------------
+    def shutdown(self) -> None:
+        """Stop the worker and the controller before the window goes away."""
+        self._closing = True
+        self._timer.stop()
+        if self.worker is not None and self.worker.isRunning():
+            self.worker.request_stop()
+            self.worker.wait(5000)
+
+    def closeEvent(self, event):  # noqa: N802 (Qt naming)
+        self.shutdown()
+        super().closeEvent(event)
+
+    # -- headless -------------------------------------------------------
+    def snapshot_png(self, path: str) -> None:
+        QtWidgets.QApplication.processEvents()
+        pix = self.grab()
+        pix.save(path)

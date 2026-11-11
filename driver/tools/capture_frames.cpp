@@ -6,6 +6,13 @@
 //       [--trigger US|off] [--trigger-counts MONO:RGB] [--faults clean|lossy|hostile]
 //       [--seed S] [--queue-depth N] [--timeout-seconds S] [--json]
 //       [--show-serial] [--probe-only]
+//   einstar-capture-frames --session-dir DIR --control PATH --groups 0
+//       [--ring N] [--max-seconds S] [--backend simulated|libusb]
+//
+// The wizard session mode (docs/calibration/wizard_architecture.md §5) polls a
+// command file (start|pause|resume|stop), keeps a bounded ring of the newest N
+// groups, reports state/stop_reason/ring counters in the live status JSON and
+// turns SIGINT/SIGTERM into the same graceful stop as `stop`.
 //
 // `simulated` uses SimulatedTransport (deterministic, no hardware).  `libusb`
 // uses the real transport, identifies the device over the control channel,
@@ -69,6 +76,7 @@ struct Options {
   std::uint64_t seed = 1;
   std::uint32_t queue_depth = 8;
   std::uint32_t timeout_seconds = 30;
+  bool timeout_seconds_set = false;
   bool json = false;
   bool show_serial = false;
   bool probe_only = false;
@@ -76,6 +84,12 @@ struct Options {
   double progress_seconds = 0.0;
   std::string status_file;
   std::vector<std::pair<unsigned, unsigned>> strobe_specs;
+
+  // Wizard session protocol (docs/calibration/wizard_architecture.md §5).
+  std::string control_path;
+  std::uint32_t ring_size = 0;
+  double max_seconds = 0.0;
+  std::string session_dir;
 };
 
 bool parse_u64(std::string_view text, std::uint64_t& value) {
@@ -123,12 +137,24 @@ void print_usage() {
       "      [--trigger US|off] [--trigger-counts MONO:RGB]\n"
       "      [--faults clean|lossy|hostile] [--seed S] [--queue-depth N]\n"
       "      [--timeout-seconds S] [--json] [--show-serial] [--probe-only]\n"
+      "  einstar-capture-frames --session-dir DIR --control PATH --groups 0\n"
+      "      [--ring N] [--max-seconds S] [--backend simulated|libusb]\n"
       "\n"
       "  --out DIR            output directory (frame_%%06u_cam%%u.pgm +\n"
       "                       frames_manifest.json)\n"
-      "  --groups N           synchronised three-camera groups to capture\n"
+      "  --session-dir DIR    standard wizard layout: equivalent to\n"
+      "                       --out DIR/frames --record DIR/raw.e1r\n"
+      "                       --status-file DIR/status.json\n"
+      "  --groups N           synchronised three-camera groups to capture;\n"
+      "                       with --control, 0 (the default) is unbounded\n"
       "  --backend NAME       simulated (default, deterministic) or libusb\n"
       "  --record FILE        also record the exact raw byte stream (RawRecorder)\n"
+      "  --control PATH       poll a command file (start|pause|resume|stop; last\n"
+      "                       line wins) and run until told to stop\n"
+      "  --ring N             keep only the newest N complete groups in OUT;\n"
+      "                       0 = keep everything (default).  The manifest and\n"
+      "                       the raw recording still keep every group\n"
+      "  --max-seconds S      graceful stop after S seconds of session time\n"
       "  --exposure-us SPEC   volatile exposure in us; SPEC = US or CAM:US\n"
       "                       (repeatable; libusb only)\n"
       "  --gain SPEC          volatile gain; SPEC = VALUE or CAM:VALUE\n"
@@ -142,13 +168,18 @@ void print_usage() {
       "  --trigger-counts A:B volatile mono:rgb frames per trigger (libusb only)\n"
       "  --faults NAME        simulated fault preset: clean, lossy, hostile\n"
       "  --seed S             simulated seed (default 1)\n"
-      "  --timeout-seconds S  wall-clock capture deadline (default 30)\n"
+      "  --timeout-seconds S  wall-clock safety deadline (default 30; with\n"
+      "                       --control only when explicitly given)\n"
       "  --status-file PATH   rewrite a live status JSON twice per second\n"
       "                       (einstar-live-status-v1; consumed by tools/liveview)\n"
       "  --progress SECONDS   print live pipeline counters to stderr\n"
       "  --json               print a machine-readable summary on stdout\n"
       "  --show-serial        do not redact the device serial in logs/manifest\n"
       "  --probe-only         libusb: read metadata + calibration, change nothing\n"
+      "\n"
+      "SIGINT/SIGTERM perform the same graceful stop as the 'stop' command: the\n"
+      "trigger is stopped, the illuminator is set to 0 and the recording and\n"
+      "manifest are finalised.  Every deliberate stop exits with status 0.\n"
       "\n"
       "Safety: only volatile exposure/gain/trigger commands are sent.  This tool\n"
       "cannot flash firmware, write persistent calibration or reboot the scanner.\n");
@@ -335,10 +366,13 @@ int run_simulated(const Options& options) {
     return 0;
   }
   if (options.output_directory.empty()) {
-    return usage_error("--out is required");
+    return usage_error("--out or --session-dir is required");
   }
-  if (options.groups == 0) {
-    return usage_error("--groups must be at least 1");
+  if (options.groups == 0 && options.control_path.empty() &&
+      options.max_seconds <= 0.0) {
+    return usage_error(
+        "--groups must be at least 1 unless --control or --max-seconds makes "
+        "the run unbounded");
   }
 
   SimCaptureOptions capture;
@@ -352,6 +386,14 @@ int run_simulated(const Options& options) {
       options.trigger_mode == TriggerMode::Period ? options.trigger_period_us
                                                   : 40'000;
   capture.partial_frame_timeout_ns = 500'000'000;
+  capture.control_path = options.control_path;
+  capture.status_file = options.status_file;
+  capture.ring_size = options.ring_size;
+  capture.max_seconds = options.max_seconds;
+  capture.timeout_seconds = options.timeout_seconds;
+  capture.timeout_seconds_set =
+      options.timeout_seconds_set || options.control_path.empty();
+  capture.progress_seconds = options.progress_seconds;
 
   auto report = einstar::capture::capture_simulated(capture);
   if (!report) {
@@ -367,13 +409,32 @@ int run_simulated(const Options& options) {
               result.manifest.simulation_faults.c_str());
   std::printf("  trigger period : %u us\n",
               result.manifest.device.trigger_period_us);
+  std::printf("  session        : %s, stop reason %s, ring %u (%llu on disk, "
+              "%llu evicted)\n",
+              std::string(einstar::capture::session_state_name(result.state))
+                  .c_str(),
+              result.stop_reason == einstar::capture::StopReason::None
+                  ? "none"
+                  : std::string(
+                        einstar::capture::stop_reason_name(result.stop_reason))
+                        .c_str(),
+              result.ring_size,
+              static_cast<unsigned long long>(result.groups_on_disk),
+              static_cast<unsigned long long>(result.groups_evicted));
   print_grouping(result.manifest, result.grouping, result.cadence,
                  result.manifest_path);
   if (options.json) {
     print_json_summary(result.manifest, result.grouping, result.cadence,
                        result.manifest_path);
   }
-  return result.grouping.groups_written == 0 ? 1 : 0;
+  if (result.stop_reason == einstar::capture::StopReason::SignalInt ||
+      result.stop_reason == einstar::capture::StopReason::SignalTerm) {
+    std::printf("stopped by signal %s\n",
+                result.stop_reason == einstar::capture::StopReason::SignalInt
+                    ? "SIGINT"
+                    : "SIGTERM");
+  }
+  return result.stop_reason == einstar::capture::StopReason::Error ? 1 : 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -389,15 +450,12 @@ using einstar::CopyMode;
 using einstar::Frame;
 using einstar::LibUsbTransport;
 using einstar::PipelineConfig;
+using einstar::PipelineStats;
 using einstar::Status;
-
-struct LiveResult {
-  ManifestInfo manifest;
-  GroupingStats grouping;
-  CadenceStats cadence;
-  std::string manifest_path;
-  bool timed_out = false;
-};
+using einstar::capture::CaptureSessionDriver;
+using einstar::capture::CaptureSessionOptions;
+using einstar::capture::SessionState;
+using einstar::capture::StopReason;
 
 void print_metadata(const einstar::DeviceIdentity& identity, bool show_serial) {
   std::printf("device\n");
@@ -672,12 +730,244 @@ void turn_illuminator_off(ControlChannel& channel) {
   }
 }
 
+/// Live session driver: owns the device-side pause/resume/stop transitions.
+/// The pipeline and control channel are opened before the session starts; the
+/// trigger is started by start() and always stopped by stop().
+class LiveSessionDriver final : public CaptureSessionDriver {
+ public:
+  LiveSessionDriver(AcquisitionPipeline& pipeline, ControlChannel& channel,
+                    const Options& options, DeviceInfo device,
+                    std::uint32_t trigger_period_us)
+      : pipeline_(pipeline),
+        channel_(channel),
+        options_(options),
+        device_(std::move(device)),
+        trigger_period_us_(trigger_period_us),
+        trigger_enabled_(options.trigger_mode != TriggerMode::Off) {
+    // Values to restore on resume: the capture arguments override the
+    // illuminator state observed before the trigger was started.
+    if (options.laser_percent) {
+      laser_on_ = *options.laser_percent;
+    } else {
+      laser_on_ = device_.laser_percent;
+    }
+    for (unsigned route = 0; route < 2; ++route) {
+      strobe_on_[route] = device_.strobe[route];
+    }
+    for (const auto& [route, value] : options.strobe_specs) {
+      if (route < 2) {
+        strobe_on_[route] = value;
+      }
+    }
+  }
+
+  Status start() override {
+    if (!trigger_enabled_ || streaming_) {
+      return Status::success();
+    }
+    const Status streamed = channel_.start_streaming(trigger_period_us_);
+    if (!streamed.ok()) {
+      return Status::error(ErrorCode::TransportError,
+                           "volatile start_streaming(" +
+                               std::to_string(trigger_period_us_) +
+                               " us) was refused: " + streamed.message());
+    }
+    streaming_ = true;
+    device_.trigger_period_us = trigger_period_us_;
+    device_.trigger_mono = 1;
+    device_.trigger_rgb = 1;
+    std::printf("  trigger        : %u us, 1 IR + 1 colour per trigger "
+                "(volatile)\n",
+                trigger_period_us_);
+    if (Status counts = apply_trigger_counts(); !counts.ok()) {
+      (void)channel_.stop_streaming();
+      streaming_ = false;
+      return counts;
+    }
+    return Status::success();
+  }
+
+  Status poll(int timeout_ms) override {
+    (void)pipeline_.poll(timeout_ms);
+    return Status::success();
+  }
+
+  bool try_pop_frame(Frame& frame) override {
+    return pipeline_.try_pop_frame(frame);
+  }
+
+  [[nodiscard]] PipelineStats stats() const override {
+    return pipeline_.stats();
+  }
+
+  [[nodiscard]] const DeviceInfo& device() const override { return device_; }
+
+  Status pause() override {
+    Status result = Status::success();
+    if (streaming_) {
+      result = channel_.stop_streaming();
+      streaming_ = false;
+      if (!result.ok()) {
+        std::fprintf(stderr, "warning: stop_streaming failed: %s\n",
+                     result.message().c_str());
+      }
+    }
+    turn_illuminator_off(channel_);
+    if (device_.laser_percent) {
+      device_.laser_percent = 0;
+    }
+    for (unsigned route = 0; route < 2; ++route) {
+      if (device_.strobe[route]) {
+        device_.strobe[route] = 0;
+      }
+    }
+    if (!result.ok()) {
+      return Status::error(ErrorCode::TransportError,
+                           "pause could not stop the trigger: " +
+                               result.message() +
+                               " (the illuminator was still turned off)");
+    }
+    return Status::success();
+  }
+
+  Status resume() override {
+    bool ok = true;
+    if (laser_on_) {
+      const Status status = channel_.set_laser_brightness(*laser_on_);
+      if (!status.ok()) {
+        ok = false;
+        std::fprintf(stderr, "warning: laser restore failed: %s\n",
+                     status.message().c_str());
+      } else {
+        device_.laser_percent = *laser_on_;
+      }
+    }
+    for (unsigned route = 0; route < 2; ++route) {
+      if (!strobe_on_[route]) {
+        continue;
+      }
+      const Status status = channel_.set_strobe_brightness(
+          route, static_cast<std::uint16_t>(*strobe_on_[route]));
+      if (!status.ok()) {
+        ok = false;
+        std::fprintf(stderr, "warning: strobe %u restore failed: %s\n", route,
+                     status.message().c_str());
+      } else {
+        device_.strobe[route] = *strobe_on_[route];
+      }
+    }
+    if (!trigger_enabled_) {
+      return ok ? Status::success()
+                : Status::error(ErrorCode::TransportError,
+                                "resume could not restore the illuminator");
+    }
+    const Status streamed = channel_.start_streaming(trigger_period_us_);
+    if (!streamed.ok()) {
+      return Status::error(ErrorCode::TransportError,
+                           "resume could not restart the trigger: " +
+                               streamed.message());
+    }
+    streaming_ = true;
+    device_.trigger_period_us = trigger_period_us_;
+    device_.trigger_mono = 1;
+    device_.trigger_rgb = 1;
+    // start_streaming() resets the counts to 1/1, so re-apply an explicit
+    // --trigger-counts value after every pause/resume cycle.
+    if (Status counts = apply_trigger_counts(); !counts.ok()) {
+      (void)channel_.stop_streaming();
+      streaming_ = false;
+      return counts;
+    }
+    if (!ok) {
+      return Status::error(ErrorCode::TransportError,
+                           "resume could not restore the illuminator");
+    }
+    return Status::success();
+  }
+
+  Status pump_paused(int timeout_ms) override {
+    // Keep the pipeline alive: in-flight USB transfers are reaped and the
+    // recording stays open, but the device is not triggering.
+    (void)pipeline_.poll(timeout_ms);
+    return Status::success();
+  }
+
+  Status stop() override {
+    if (stopped_) {
+      return Status::success();
+    }
+    stopped_ = true;
+    Status result = Status::success();
+    if (streaming_) {
+      result = channel_.stop_streaming();
+      streaming_ = false;
+    }
+    // Always leave the device dark, whatever happened above.
+    turn_illuminator_off(channel_);
+    if (device_.laser_percent) {
+      device_.laser_percent = 0;
+    }
+    for (unsigned route = 0; route < 2; ++route) {
+      if (device_.strobe[route]) {
+        device_.strobe[route] = 0;
+      }
+    }
+    channel_.close();
+    const Status pipeline_stopped = pipeline_.stop();
+    if (!result.ok()) {
+      if (!pipeline_stopped.ok()) {
+        std::fprintf(stderr, "warning: pipeline stop failed: %s\n",
+                     pipeline_stopped.message().c_str());
+      }
+      return Status::error(ErrorCode::TransportError,
+                           "stop_streaming failed: " + result.message());
+    }
+    return pipeline_stopped;
+  }
+
+  [[nodiscard]] double virtual_duration_seconds() const override { return 0.0; }
+
+ private:
+  Status apply_trigger_counts() {
+    if (!options_.trigger_counts_set) {
+      return Status::success();
+    }
+    const Status counts = channel_.set_trigger_counts(options_.trigger_mono,
+                                                      options_.trigger_rgb);
+    if (!counts.ok()) {
+      return Status::error(
+          ErrorCode::TransportError,
+          "volatile trigger counts were refused: " + counts.message());
+    }
+    device_.trigger_mono = options_.trigger_mono;
+    device_.trigger_rgb = options_.trigger_rgb;
+    std::printf("  trigger counts : mono %u, rgb %u (volatile)\n",
+                static_cast<unsigned>(options_.trigger_mono),
+                static_cast<unsigned>(options_.trigger_rgb));
+    return Status::success();
+  }
+
+  AcquisitionPipeline& pipeline_;
+  ControlChannel& channel_;
+  const Options& options_;
+  DeviceInfo device_;
+  std::uint32_t trigger_period_us_ = 0;
+  bool trigger_enabled_ = true;
+  bool streaming_ = false;
+  bool stopped_ = false;
+  std::optional<std::uint32_t> laser_on_;
+  std::array<std::optional<std::uint32_t>, 2> strobe_on_{};
+};
+
 int run_libusb(const Options& options) {
-  if (!options.probe_only && options.groups == 0) {
-    return usage_error("--groups must be at least 1");
+  if (!options.probe_only && options.groups == 0 &&
+      options.control_path.empty() && options.max_seconds <= 0.0) {
+    return usage_error(
+        "--groups must be at least 1 unless --control or --max-seconds makes "
+        "the run unbounded");
   }
   if (!options.probe_only && options.output_directory.empty()) {
-    return usage_error("--out is required");
+    return usage_error("--out or --session-dir is required");
   }
 
   std::optional<std::string> directory;
@@ -852,6 +1142,8 @@ int run_libusb(const Options& options) {
                    "volatile strobe route %u = %u was refused: %s\n"
                    "aborting; the trigger was not started\n",
                    route, value, status.message().c_str());
+      // A previous --laser may already be on; never leave it projecting.
+      turn_illuminator_off(*channel);
       channel->close();
       (void)pipeline->stop();
       return 1;
@@ -865,262 +1157,79 @@ int run_libusb(const Options& options) {
   const std::uint32_t trigger_period =
       options.trigger_mode == TriggerMode::Period ? options.trigger_period_us
                                                   : 68'000;
-  bool streaming = false;
-  if (options.trigger_mode != TriggerMode::Off) {
-    const Status status = channel->start_streaming(trigger_period);
-    if (!status.ok()) {
-      std::fprintf(stderr,
-                   "volatile start_streaming(%u us) was refused: %s\n"
-                   "aborting; the trigger was not left running\n",
-                   trigger_period, status.message().c_str());
-      channel->close();
-      (void)pipeline->stop();
-      return 1;
-    }
-    streaming = true;
-    applied = true;
-    device.trigger_period_us = trigger_period;
-    device.trigger_mono = 1;
-    device.trigger_rgb = 1;
-    std::printf("  trigger        : %u us, 1 IR + 1 colour per trigger "
-                "(volatile)\n",
-                trigger_period);
-    if (options.trigger_counts_set) {
-      const Status counts = channel->set_trigger_counts(options.trigger_mono,
-                                                        options.trigger_rgb);
-      if (!counts.ok()) {
-        std::fprintf(stderr, "volatile trigger counts were refused: %s\n",
-                     counts.message().c_str());
-        (void)channel->stop_streaming();
-        channel->close();
-        (void)pipeline->stop();
-        return 1;
-      }
-      device.trigger_mono = options.trigger_mono;
-      device.trigger_rgb = options.trigger_rgb;
-      std::printf("  trigger counts : mono %u, rgb %u (volatile)\n",
-                  static_cast<unsigned>(options.trigger_mono),
-                  static_cast<unsigned>(options.trigger_rgb));
-    }
-  } else {
+  if (options.trigger_mode == TriggerMode::Off) {
     std::printf("  trigger        : left untouched (--trigger off)\n");
   }
   device.settings_applied = applied;
 
-  // ---- capture -------------------------------------------------------------
-  GroupWriter writer(output_directory);
-  if (Status status = writer.prepare(); !status.ok()) {
-    std::fprintf(stderr, "%s\n", status.message().c_str());
-    if (streaming) {
-      (void)channel->stop_streaming();
-    }
-    channel->close();
-    (void)pipeline->stop();
+  LiveSessionDriver driver(*pipeline, *channel, options, device,
+                           trigger_period);
+
+  CaptureSessionOptions session;
+  session.output_directory = output_directory;
+  session.control_path = options.control_path;
+  session.status_file = options.status_file;
+  session.groups = options.groups;
+  session.ring_size = options.ring_size;
+  session.max_seconds = options.max_seconds;
+  session.timeout_seconds = options.timeout_seconds;
+  session.timeout_seconds_set =
+      options.timeout_seconds_set || options.control_path.empty();
+  session.progress_seconds = options.progress_seconds;
+  session.record_path = options.record_path;
+  session.manifest.tool = "einstar-capture-frames";
+  session.manifest.backend = "libusb";
+  session.manifest.simulated = false;
+  session.manifest.live = true;
+  session.manifest.device = device;
+
+  auto session_result = einstar::capture::run_capture_session(session, driver);
+  if (!session_result) {
+    // The session loop stops the device on every path it enters, but setup can
+    // fail before that (for example if the frames directory disappears).  Stop
+    // is idempotent: trigger off, illuminator off, pipeline closed.
+    (void)driver.stop();
+    std::fprintf(stderr, "%s\n", session_result.error().message().c_str());
     return 1;
   }
-
-  const auto wall_start = std::chrono::steady_clock::now();
-  const auto deadline =
-      wall_start + std::chrono::seconds(options.timeout_seconds == 0
-                                            ? 30
-                                            : options.timeout_seconds);
-  bool target_reached = false;
-  bool timed_out = false;
-  Frame frame;
-  const double progress_seconds =
-      options.progress_seconds == 0 ? 0.0 : options.progress_seconds;
-  auto next_progress = wall_start;
-  auto next_status = wall_start;
-  constexpr auto kStatusInterval = std::chrono::milliseconds(500);
-  while (!target_reached) {
-    (void)pipeline->poll(5);
-    if (!options.status_file.empty() &&
-        std::chrono::steady_clock::now() >= next_status) {
-      next_status = std::chrono::steady_clock::now() + kStatusInterval;
-      const einstar::PipelineStats live = pipeline->stats();
-      const double elapsed =
-          std::chrono::duration<double>(std::chrono::steady_clock::now() -
-                                       wall_start)
-              .count();
-      std::string json = "{\"schema\":\"einstar-live-status-v1\",";
-      json += "\"elapsed_s\":" + std::to_string(elapsed);
-      json += ",\"groups_written\":" +
-              std::to_string(writer.stats().groups_written);
-      json += ",\"groups_requested\":" + std::to_string(options.groups);
-      json += ",\"latest_group\":" +
-              std::to_string(writer.stats().groups_written == 0
-                                 ? 0
-                                 : writer.stats().groups_written - 1);
-      json += ",\"frames_completed\":" + std::to_string(live.frames_completed);
-      json += ",\"frames_dropped\":" + std::to_string(live.frames_dropped);
-      json += ",\"bytes_received\":" + std::to_string(live.bytes_received);
-      json += ",\"throughput_mbps\":" +
-              std::to_string(live.bytes_received / 1.0e6 /
-                             (elapsed > 0.0 ? elapsed : 1.0));
-      json += ",\"transfer_timeouts\":" +
-              std::to_string(live.transfer_timeouts);
-      json += ",\"frames_invalid\":" +
-              std::to_string(writer.stats().frames_invalid);
-      json += ",\"output_directory\":\"" + output_directory + "\"";
-      json += ",\"trigger_period_us\":" +
-              std::to_string(device.trigger_period_us);
-      json += ",\"exposure_us\":[";
-      for (unsigned camera = 0; camera < 3; ++camera) {
-        json += (camera == 0 ? "" : ",") + std::to_string(device.exposure_us[camera]);
-      }
-      json += "],\"gain\":[";
-      for (unsigned camera = 0; camera < 3; ++camera) {
-        json += (camera == 0 ? "" : ",") + std::to_string(device.gain[camera]);
-      }
-      json += "],\"laser_percent\":";
-      json += device.laser_percent ? std::to_string(*device.laser_percent) : "null";
-      json += ",\"simulated\":false,\"live\":true}";
-      const std::string temporary = options.status_file + ".tmp";
-      std::ofstream status(temporary, std::ios::trunc);
-      if (status) {
-        status << json << "\n";
-        status.close();
-        if (std::rename(temporary.c_str(), options.status_file.c_str()) != 0) {
-          std::fprintf(stderr, "warning: cannot publish status file %s\n",
-                       options.status_file.c_str());
-        }
-      }
-    }
-    if (progress_seconds > 0.0 &&
-        std::chrono::steady_clock::now() >= next_progress) {
-      const einstar::PipelineStats live = pipeline->stats();
-      std::fprintf(
-          stderr,
-          "[progress] t=%.1fs groups=%llu completed=%llu dropped=%llu "
-          "bytes=%llu timeouts=%llu stalls=%llu pool_in_use=%zu/%zu "
-          "starved=%llu queues=%zu\n",
-          std::chrono::duration<double>(std::chrono::steady_clock::now() -
-                                       wall_start)
-              .count(),
-          static_cast<unsigned long long>(writer.stats().groups_written),
-          static_cast<unsigned long long>(live.frames_completed),
-          static_cast<unsigned long long>(live.frames_dropped),
-          static_cast<unsigned long long>(live.bytes_received),
-          static_cast<unsigned long long>(live.transfer_timeouts),
-          static_cast<unsigned long long>(live.transfer_stalls),
-          live.transfer_pool_in_use, live.transfer_pool_capacity,
-          static_cast<unsigned long long>(live.submission_starved),
-          live.frame_queue_depth);
-      next_progress = std::chrono::steady_clock::now() +
-                      std::chrono::milliseconds(
-                          static_cast<std::int64_t>(progress_seconds * 1000.0));
-    }
-    while (pipeline->try_pop_frame(frame)) {
-      const Status status = writer.add(frame);
-      frame = Frame{};
-      if (!status.ok()) {
-        std::fprintf(stderr, "%s\n", status.message().c_str());
-        if (streaming) {
-          (void)channel->stop_streaming();
-        }
-        channel->close();
-        (void)pipeline->stop();
-        return 1;
-      }
-      if (writer.stats().groups_written >= options.groups) {
-        target_reached = true;
-        break;
-      }
-    }
-    if (!target_reached && std::chrono::steady_clock::now() >= deadline) {
-      timed_out = true;
-      break;
-    }
-  }
-  const auto wall_end = std::chrono::steady_clock::now();
-
-  if (streaming) {
-    const Status status = channel->stop_streaming();
-    if (!status.ok()) {
-      std::fprintf(stderr, "warning: stop_streaming failed: %s\n",
-                   status.message().c_str());
-    }
-  }
-  // Always leave the device dark, whatever happened above.
-  turn_illuminator_off(*channel);
-  channel->close();
-  const Status stop_status = pipeline->stop();
-  if (!stop_status.ok()) {
-    std::fprintf(stderr, "pipeline stop failed: %s\n",
-                 stop_status.message().c_str());
-    return 1;
-  }
-  (void)writer.flush();
-  const einstar::PipelineStats stats = pipeline->stats();
-
-  LiveResult result;
-  result.timed_out = timed_out;
-  result.grouping = writer.stats();
-  result.cadence = writer.cadence();
-  result.manifest.tool = "einstar-capture-frames";
-  result.manifest.backend = "libusb";
-  result.manifest.simulated = false;
-  result.manifest.live = true;
-  result.manifest.output_directory = output_directory;
-  result.manifest.requested_groups = options.groups;
-  result.manifest.stopped_early = false;
-  result.manifest.device = device;
-  einstar::capture::metrics_from_pipeline(result.manifest.metrics, stats);
-  result.manifest.metrics.frames_invalid = writer.stats().frames_invalid;
-  result.manifest.metrics.wall_seconds =
-      std::chrono::duration<double>(wall_end - wall_start).count();
-  result.manifest.metrics.virtual_seconds = 0.0;
-  result.manifest.throughput_mbps =
-      megabytes_per_second(stats.bytes_received,
-                           result.manifest.metrics.wall_seconds);
-  result.manifest.virtual_throughput_mbps = 0.0;
-
-  if (!options.record_path.empty()) {
-    auto recorded = einstar::capture::verify_recording(options.record_path);
-    if (!recorded) {
-      std::fprintf(stderr, "recording verification failed: %s\n",
-                   recorded.error().message().c_str());
-      return 1;
-    }
-    std::uint64_t bytes = 0;
-    for (const auto& transfer : recorded->transfers) {
-      bytes += transfer.bytes.size();
-    }
-    result.manifest.recorded_path = options.record_path;
-    result.manifest.recorded_transfers = recorded->transfers.size();
-    result.manifest.recorded_bytes = bytes;
-    result.manifest.recorded_digest = recorded->trailer_digest;
-  }
-
-  const std::string manifest_path =
-      join_path(output_directory, "frames_manifest.json");
-  auto written = einstar::capture::write_frames_manifest(
-      manifest_path, result.manifest, writer);
-  if (!written) {
-    std::fprintf(stderr, "manifest: %s\n", written.error().message().c_str());
-    return 1;
-  }
-  result.manifest_path = written->path;
+  const einstar::capture::CaptureSessionResult& result = *session_result;
 
   std::printf("capture (libusb) - UNTESTED PATH, no scanner was attached\n");
   std::printf("  out dir        : %s\n",
               result.manifest.output_directory.c_str());
+  std::printf("  session        : %s, stop reason %s, ring %u (%llu on disk, "
+              "%llu evicted)\n",
+              std::string(einstar::capture::session_state_name(result.state))
+                  .c_str(),
+              result.stop_reason == StopReason::None
+                  ? "none"
+                  : std::string(
+                        einstar::capture::stop_reason_name(result.stop_reason))
+                        .c_str(),
+              result.ring_size,
+              static_cast<unsigned long long>(result.groups_on_disk),
+              static_cast<unsigned long long>(result.groups_evicted));
   print_grouping(result.manifest, result.grouping, result.cadence,
                  result.manifest_path);
   if (options.json) {
     print_json_summary(result.manifest, result.grouping, result.cadence,
                        result.manifest_path);
   }
-  if (timed_out) {
+  if (result.timed_out) {
     std::fprintf(stderr,
-                 "capture timed out after %u s with %llu of %u group(s); the "
+                 "capture timed out after %u s with %llu group(s) written; the "
                  "manifest records the partial result\n",
                  options.timeout_seconds,
-                 static_cast<unsigned long long>(result.grouping.groups_written),
-                 options.groups);
+                 static_cast<unsigned long long>(result.grouping.groups_written));
     return 1;
   }
-  return result.grouping.groups_written == 0 ? 1 : 0;
+  if (result.stop_reason == StopReason::SignalInt ||
+      result.stop_reason == StopReason::SignalTerm) {
+    std::printf("stopped by signal %s\n",
+                result.stop_reason == StopReason::SignalInt ? "SIGINT"
+                                                            : "SIGTERM");
+  }
+  return result.stop_reason == StopReason::Error ? 1 : 0;
 }
 
 #endif  // EINSTAR_WITH_LIBUSB
@@ -1157,6 +1266,23 @@ int main(int argc, char** argv) {
       options.gain_specs.emplace_back(argv[++i]);
     } else if (argument == "--status-file" && i + 1 < argc) {
       options.status_file = argv[++i];
+    } else if (argument == "--control" && i + 1 < argc) {
+      options.control_path = argv[++i];
+    } else if (argument == "--ring" && i + 1 < argc) {
+      std::uint32_t value = 0;
+      if (!parse_u32(argv[++i], value)) {
+        return usage_error("--ring needs a non-negative integer");
+      }
+      options.ring_size = value;
+    } else if (argument == "--max-seconds" && i + 1 < argc) {
+      char* end = nullptr;
+      const double seconds = std::strtod(argv[++i], &end);
+      if (end == argv[i] || !(seconds > 0.0) || !(seconds < 1.0e9)) {
+        return usage_error("--max-seconds takes a positive number of seconds");
+      }
+      options.max_seconds = seconds;
+    } else if (argument == "--session-dir" && i + 1 < argc) {
+      options.session_dir = argv[++i];
     } else if (argument == "--progress" && i + 1 < argc) {
       char* end = nullptr;
       const double seconds = std::strtod(argv[++i], &end);
@@ -1227,6 +1353,7 @@ int main(int argc, char** argv) {
         return usage_error("--timeout-seconds must be at least 1");
       }
       options.timeout_seconds = value;
+      options.timeout_seconds_set = true;
     } else if (argument == "--json") {
       options.json = true;
     } else if (argument == "--show-serial") {
@@ -1240,6 +1367,22 @@ int main(int argc, char** argv) {
       print_usage();
       return 2;
     }
+  }
+  if (!options.session_dir.empty()) {
+    if (!options.output_directory.empty() || !options.record_path.empty() ||
+        !options.status_file.empty()) {
+      return usage_error(
+          "--session-dir cannot be combined with --out, --record or "
+          "--status-file (it supplies all three)");
+    }
+    options.output_directory = join_path(options.session_dir, "frames");
+    options.record_path = join_path(options.session_dir, "raw.e1r");
+    options.status_file = join_path(options.session_dir, "status.json");
+  }
+  if (!options.control_path.empty() && !options.timeout_seconds_set) {
+    // A wizard session runs until the GUI says stop; the 30 s default safety
+    // deadline would otherwise end a perfectly healthy multi-minute capture.
+    options.timeout_seconds = 0;
   }
   if (show_help) {
     print_usage();

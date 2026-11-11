@@ -110,6 +110,21 @@ soak, thermal behaviour, side-by-side comparisons with the vendor stack, and any
 accuracy claim are still open. Absolute scale remains unresolved and cannot be settled with the
 plate alone.
 
+### Calibration wizard readiness (2026-11-11)
+
+| item | state |
+|---|---|
+| Qt6 application (PySide6) | launches, renders three cameras + overlays + coverage map + observability, controls work, headless snapshot mode tested |
+| one decision path for live and replay | same controller wraps `calib.session`; replay determinism tested |
+| live acquisition through the GUI | **verified on hardware** (25 s: 6 accepted, ring 120, 0 drops, safe shutdown) |
+| capture tool control/ring/signals | `--control/--ring/--max-seconds/--session-dir`; 13/13 driver tests incl. 134 new capture-session checks |
+| coverage gate (D1–D8) | measured on real data; one-axis sweep correctly NOT READY with named missing dimensions; readiness path exercised both ways in tests |
+| observability gate | marginal σ, condition number, per-parameter verdicts; 0.3–2.5 ms |
+| profile lifecycle | factory/candidate/validated, 9 gates, activation refused on failure, store byte-identical, rollback |
+| offline rehearsal | sweep (16 accepted, NOT READY), vendor corpus (17 accepted, candidate produced, 4/9 gates fail honestly) |
+| synthetic full-coverage rehearsal | **not achieved** — the renderer's right-camera chirality fails at some poses (documented limitation) |
+| one comprehensive session | **ready to run**; operator guide in `calibration/wizard_operator_guide.md` |
+
 ### Reconstruction and calibration readiness (2026-11-11)
 
 | item | state |

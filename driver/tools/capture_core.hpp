@@ -153,6 +153,23 @@ class GroupWriter {
   /// Forget pending groups without reporting them (deliberate early stop).
   void discard_pending() noexcept;
 
+  /// Keep only the newest `ring_size` complete groups on disk (0 = keep all).
+  /// Set before the first group is written.  `groups()` and the manifest still
+  /// record every group ever written; only the triplet files of the oldest
+  /// groups are removed from this writer's output directory.
+  void set_ring_size(std::uint32_t ring_size) noexcept {
+    ring_size_ = ring_size;
+  }
+  [[nodiscard]] std::uint32_t ring_size() const noexcept { return ring_size_; }
+  /// Complete triplets removed by the ring so far.
+  [[nodiscard]] std::uint64_t groups_evicted() const noexcept {
+    return groups_evicted_;
+  }
+  /// Complete triplets currently present in the frames directory.
+  [[nodiscard]] std::uint64_t groups_on_disk() const noexcept {
+    return static_cast<std::uint64_t>(groups_.size()) - groups_evicted_;
+  }
+
   [[nodiscard]] const std::vector<GroupRecord>& groups() const noexcept {
     return groups_;
   }
@@ -182,11 +199,14 @@ class GroupWriter {
   Status write_group(PendingGroup& pending);
   void finalize_pending(PendingGroup& pending);
   void update_absent_groups();
+  void evict_old_groups();
   [[nodiscard]] std::string file_path(std::string_view name) const;
 
   std::string directory_;
   std::uint32_t width_ = kFrameWidth;
   std::uint32_t height_ = kFrameHeight;
+  std::uint32_t ring_size_ = 0;
+  std::uint64_t groups_evicted_ = 0;
   std::map<std::uint64_t, PendingGroup> pending_;
   std::set<std::uint64_t> written_device_groups_;
   std::vector<std::uint64_t> seen_device_groups_;
@@ -341,6 +361,224 @@ std::uint64_t fnv1a64(std::span<const std::uint8_t> bytes) noexcept;
 std::string json_quote(std::string_view text);
 
 // ---------------------------------------------------------------------------
+// Control file, ring eviction and session state
+// ---------------------------------------------------------------------------
+
+/// A command in the GUI control file.  `None` covers an absent file, an empty
+/// file and an unrecognised last line; all three mean "keep doing what you are
+/// doing".
+enum class ControlCommand { None, Start, Pause, Resume, Stop };
+
+std::string_view control_command_name(ControlCommand command) noexcept;
+
+/// Parse the whole control file: commands are newline terminated, the last
+/// non-empty line wins and unknown commands are ignored (`None`).
+ControlCommand parse_control_text(std::string_view text);
+
+/// Cheap control-file poller.  It stats the path on every poll and only reads
+/// the file when its inode/size/mtime identity changed.  The last recognised
+/// command is sticky, so an unchanged file keeps reporting it: `pause` written
+/// once keeps meaning paused, and re-reading is not needed for idempotence.
+/// A missing file reports `None` and changes nothing ("keep running").
+class ControlFile {
+ public:
+  explicit ControlFile(std::string path);
+  ControlFile(const ControlFile&) = delete;
+  ControlFile& operator=(const ControlFile&) = delete;
+
+  ControlCommand poll();
+  [[nodiscard]] ControlCommand last_command() const noexcept {
+    return command_;
+  }
+  /// Number of file reads; the stat-only polls do not increment it.
+  [[nodiscard]] std::uint64_t reads() const noexcept { return reads_; }
+  [[nodiscard]] const std::string& path() const noexcept { return path_; }
+
+ private:
+  std::string path_;
+  ControlCommand command_ = ControlCommand::None;
+  bool have_stat_ = false;
+  std::uint64_t device_ = 0;
+  std::uint64_t inode_ = 0;
+  std::uint64_t size_ = 0;
+  std::int64_t mtime_sec_ = 0;
+  std::int64_t mtime_nsec_ = 0;
+  std::uint64_t reads_ = 0;
+};
+
+/// Expected deletion set for a bounded ring: the oldest `written.size() - N`
+/// written group ids when more than N groups exist, otherwise empty.  N = 0
+/// keeps everything.  The newest written group is never returned.
+std::vector<std::uint32_t> ring_eviction_set(
+    std::span<const std::uint32_t> written_groups, std::uint32_t ring_size);
+
+/// True for a plain file name directly inside the frames directory: non-empty,
+/// no path separator and not "."/"..".  The ring only ever deletes names that
+/// pass this check, so it cannot escape its frames directory.
+bool safe_frame_filename(std::string_view name) noexcept;
+
+enum class SessionState { Starting, Running, Paused, Stopping, Stopped };
+
+std::string_view session_state_name(SessionState state) noexcept;
+
+enum class StopReason {
+  None,
+  Groups,
+  MaxSeconds,
+  SignalInt,
+  SignalTerm,
+  ControlStop,
+  Error,
+};
+
+/// "groups" | "max_seconds" | "signal:SIGINT" | "signal:SIGTERM" |
+/// "control:stop" | "error"; empty for `None` (JSON null).
+std::string_view stop_reason_name(StopReason reason) noexcept;
+
+/// Everything the GUI-visible `einstar-live-status-v1` file carries.  The
+/// fields that existed before this structure must stay valid for
+/// tools/liveview; the session fields are additive.
+struct LiveStatus {
+  SessionState state = SessionState::Starting;
+  StopReason stop_reason = StopReason::None;
+  double elapsed_s = 0.0;
+  std::uint64_t groups_written = 0;
+  /// Requested upper bound; 0 means unbounded (--control).
+  std::uint64_t groups_requested = 0;
+  /// Dense output id of the newest written group (0 when none); matches the
+  /// historical `latest_group` field.
+  std::uint64_t latest_group = 0;
+  /// Device trigger-group counter of the newest written group (0 when none).
+  std::uint64_t last_group = 0;
+  std::uint32_t ring_size = 0;
+  std::uint64_t groups_on_disk = 0;
+  std::uint64_t groups_evicted = 0;
+  std::uint64_t frames_written = 0;
+  std::uint64_t bytes_written = 0;
+  std::uint64_t disk_free_bytes = 0;
+  std::uint64_t frames_completed = 0;
+  std::uint64_t frames_dropped = 0;
+  std::uint64_t bytes_received = 0;
+  double throughput_mbps = 0.0;
+  std::uint64_t transfer_timeouts = 0;
+  std::uint64_t frames_invalid = 0;
+  std::string output_directory;
+  std::uint32_t trigger_period_us = 0;
+  std::array<std::uint32_t, kStreamCount> exposure_us{};
+  std::array<std::uint16_t, kStreamCount> gain{};
+  std::optional<std::uint32_t> laser_percent;
+  bool simulated = false;
+  bool live = false;
+};
+
+/// Serialise the status object (single line plus trailing newline).
+std::string build_live_status_json(const LiveStatus& status);
+
+/// Write `json` to `path` through `path.tmp` + rename.  Creates the parent
+/// directory when needed.  The viewer never sees a partially written file.
+Status write_status_file(const std::string& path, std::string_view json);
+
+/// Free bytes on the filesystem holding `path` (statvfs); 0 when unavailable.
+std::uint64_t disk_free_bytes(const std::string& path) noexcept;
+
+/// Install SIGINT/SIGTERM handlers that only set the signal flag below.
+void install_signal_handlers();
+
+/// The complete body of the signal handler (also called by tests): records the
+/// first SIGINT/SIGTERM received and ignores everything else.
+void notify_stop_signal(int signum) noexcept;
+
+/// Reads and clears the pending signal flag; returns 0 when none is pending.
+int take_stop_signal() noexcept;
+
+// ---------------------------------------------------------------------------
+// Capture session (shared by the live and simulated backends)
+// ---------------------------------------------------------------------------
+
+/// Device-side operations the session loop drives.  The live implementation
+/// wraps ControlChannel + AcquisitionPipeline; the simulated one freezes its
+/// deterministic generator while paused.
+class CaptureSessionDriver {
+ public:
+  virtual ~CaptureSessionDriver() = default;
+
+  /// Start triggering (live) / start the generator (simulated).
+  virtual Status start() = 0;
+  /// Pump the transport for at most `timeout_ms`.
+  virtual Status poll(int timeout_ms) = 0;
+  /// Non-blocking completed-frame dequeue.
+  virtual bool try_pop_frame(Frame& frame) = 0;
+  [[nodiscard]] virtual PipelineStats stats() const = 0;
+  [[nodiscard]] virtual const DeviceInfo& device() const = 0;
+
+  /// Pause: stop triggering and turn the illuminator off, keeping the
+  /// transport and the recording open.
+  virtual Status pause() = 0;
+  /// Resume: restore the illuminator and start triggering again.
+  virtual Status resume() = 0;
+  /// Keep the pipeline alive while paused.  The live driver keeps draining
+  /// in-flight USB transfers; the simulator deliberately does not poll, which
+  /// freezes its generator (pumping it would generate new frames).
+  virtual Status pump_paused(int timeout_ms) = 0;
+
+  /// Stop triggering, leave the illuminator dark and release the transport.
+  /// Must be idempotent and is called by the session loop on every exit path.
+  virtual Status stop() = 0;
+
+  [[nodiscard]] virtual double virtual_duration_seconds() const = 0;
+  [[nodiscard]] virtual std::uint64_t frames_generated() const { return 0; }
+  /// True once a finite deterministic source has produced everything and the
+  /// pipeline stopped making progress.  Always false for a live device.
+  virtual bool source_exhausted() { return false; }
+};
+
+struct CaptureSessionOptions {
+  std::string output_directory;  // frames directory (not the session dir)
+  /// Empty: fixed-count capture with no external control.
+  std::string control_path;
+  std::string status_file;       // empty: no status file
+  /// Requested groups; 0 is only valid with `control_path` or `max_seconds`.
+  std::uint32_t groups = 0;
+  std::uint32_t ring_size = 0;
+  double max_seconds = 0.0;      // 0 = disabled
+  std::uint32_t timeout_seconds = 30;
+  /// The tool only sets this when the user passed --timeout-seconds; with
+  /// --control an unset safety limit must not end a multi-minute session.
+  bool timeout_seconds_set = false;
+  double progress_seconds = 0.0;
+  std::string record_path;       // empty: no raw recording
+  ManifestInfo manifest;         // template: tool/backend/device/simulation
+};
+
+struct CaptureSessionResult {
+  ManifestInfo manifest;
+  GroupingStats grouping;
+  CadenceStats cadence;
+  std::vector<GroupRecord> groups;
+  std::vector<IncompleteGroup> incomplete_groups;
+  std::vector<DuplicateFrame> duplicates;
+  std::vector<std::uint64_t> absent_group_ids;
+  std::string manifest_path;
+  SessionState state = SessionState::Stopped;
+  StopReason stop_reason = StopReason::None;
+  int signal_number = 0;
+  bool timed_out = false;     // --timeout-seconds safety limit fired
+  bool target_reached = false;
+  bool stopped_early = false; // control/signal/max_seconds/max groups
+  std::uint32_t ring_size = 0;
+  std::uint64_t groups_evicted = 0;
+  std::uint64_t groups_on_disk = 0;
+};
+
+/// Run the control/status/ring/signal-aware capture loop.  On every exit path
+/// (target, `stop`, SIGINT/SIGTERM, max seconds, safety timeout, write error)
+/// it calls driver.stop() so the trigger is off and the illuminator is dark,
+/// then finalises the recording (verifies it when one was requested), flushes
+/// the writer, writes the manifest and publishes the final `stopped` status.
+Result<CaptureSessionResult> run_capture_session(
+    const CaptureSessionOptions& options, CaptureSessionDriver& driver);
+
+// ---------------------------------------------------------------------------
 // Fault presets (mirrors einstar-record-replay)
 // ---------------------------------------------------------------------------
 
@@ -396,6 +634,16 @@ struct SimCaptureOptions {
   std::uint32_t bandwidth_bytes_per_sec = 300'000'000;
   std::uint32_t frame_queue_capacity = 32;
   std::int64_t partial_frame_timeout_ns = 500'000'000;
+
+  // Wizard session controls (all optional; the defaults keep the historical
+  // fixed-count behaviour used by test_replay_frames).
+  std::string control_path;
+  std::string status_file;
+  std::uint32_t ring_size = 0;
+  double max_seconds = 0.0;
+  std::uint32_t timeout_seconds = 30;
+  bool timeout_seconds_set = false;
+  double progress_seconds = 0.0;
 };
 
 struct SimCaptureReport {
@@ -407,6 +655,11 @@ struct SimCaptureReport {
   std::vector<DuplicateFrame> duplicates;
   std::vector<std::uint64_t> absent_group_ids;
   std::string manifest_path;
+  std::uint32_t ring_size = 0;
+  std::uint64_t groups_evicted = 0;
+  std::uint64_t groups_on_disk = 0;
+  SessionState state = SessionState::Stopped;
+  StopReason stop_reason = StopReason::None;
 };
 
 Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options);

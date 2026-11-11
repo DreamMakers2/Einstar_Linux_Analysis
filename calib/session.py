@@ -282,15 +282,25 @@ class CalibrationSession:
             return {"accept": False, "reasons": reasons + ["no pose"]}
         need = int(self.policy["bootstrap_views"])
         if len(self.accepted) < need:
-            # require the bootstrap views to be mutually diverse
-            if self.accepted:
-                nearest = self._nearest_pose(q.pose)
-                if nearest is not None:
-                    R0, t0 = nearest
-                    ang = np.degrees(np.arccos(np.clip(
-                        (np.trace(np.asarray(q.pose[0]) @ np.asarray(R0).T) - 1) / 2, -1, 1)))
-                    if ang < 8.0 and abs(float(q.pose[1][2] - t0[2])) < 40.0:
-                        reasons.append("bootstrap view too similar to an accepted view")
+            # Bootstrap must never deadlock.  A real operator starts with the
+            # plate held at one pose and a continuous capture creeps forward, so
+            # requiring the bootstrap views to be *diverse* (the old 8 deg /
+            # 40 mm rule) can block the first solve forever: observed on the
+            # live sweep as 2 accepted views and zero solves.  Reject only a
+            # near-duplicate of an already accepted view, using the same
+            # separation rule as the ordinary acceptance path; any genuine
+            # motion eventually passes it, so the phase always terminates.
+            nearest = self._nearest_pose(q.pose) if self.accepted else None
+            if nearest is not None:
+                R0, t0 = nearest
+                ang = np.degrees(np.arccos(np.clip(
+                    (np.trace(np.asarray(q.pose[0]) @ np.asarray(R0).T) - 1) / 2,
+                    -1, 1)))
+                dist = abs(float(q.pose[1][2] - t0[2]))
+                if ang < 1.5 and dist < 8.0:
+                    reasons.append(
+                        f"too similar to an accepted view "
+                        f"(bootstrap duplicate, {ang:.1f} deg, {dist:.1f} mm)")
             return {"accept": not reasons, "reasons": reasons}
         return {"accept": False, "reasons": reasons + ["bootstrap complete"]}
 
