@@ -94,8 +94,19 @@ class ScanWorker(QtCore.QThread):
         self._stop = False
         self._pause = False
         self.session: ScanSession | None = None
+        #: refresh the live mesh every N processed frames
+        self.mesh_every = 5
         #: optional live CaptureSource; when set the worker owns the capture
         self.source = source
+
+    def _maybe_preview_mesh(self, snap: dict) -> None:
+        if self.session is None:
+            return
+        n = int(snap.get("frames_integrated") or 0)
+        if n > 0 and n % max(1, int(self.mesh_every)) == 0:
+            preview = self.session.preview_mesh()
+            if preview is not None:
+                snap["mesh"] = preview
 
     def stop(self) -> None:
         self._stop = True
@@ -121,6 +132,7 @@ class ScanWorker(QtCore.QThread):
                         self.session.process(int(frame_id))
                         snap = self.session.snapshot()
                         snap["capture"] = self.source.snapshot()
+                        self._maybe_preview_mesh(snap)
                         self.progress.emit(snap)
                 finally:
                     self.source.stop()
@@ -131,7 +143,9 @@ class ScanWorker(QtCore.QThread):
                     while self._pause and not self._stop:
                         QtCore.QThread.msleep(50)
                     self.session.process(i)
-                    self.progress.emit(self.session.snapshot())
+                    snap = self.session.snapshot()
+                    self._maybe_preview_mesh(snap)
+                    self.progress.emit(snap)
             report = self.session.finish()
             self.finished_scan.emit(report)
         except Exception as exc:  # pragma: no cover - surfaced in the UI
@@ -229,7 +243,11 @@ class ScanWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(dict)
     def on_progress(self, snap: dict) -> None:
         self.last_snapshot = snap
-        if snap.get("cloud"):
+        mesh = snap.get("mesh")
+        if mesh is not None:
+            verts, faces = mesh
+            self.view.set_mesh(verts, faces)
+        elif snap.get("cloud"):
             self.view.set_points(snap.get("cloud"))
         vol = snap.get("volume") or {}
         caption = (f"frames {snap['frames_integrated']}  rejected {snap['frames_rejected']}"

@@ -315,3 +315,36 @@ def test_launcher_opens_scan_and_profiles(tmp_path):
                           timeout=300)
     assert proc.returncode == 0, proc.stderr[-1500:]
     assert "launcher-ok" in proc.stdout
+
+
+def test_scan_is_byte_identical_across_runs(tmp_path):
+    """The same recording and settings must produce the same mesh."""
+    import hashlib
+    digests = []
+    for run in ("a", "b"):
+        session = scan_session.ScanSession(_config(tmp_path / run))
+        try:
+            for i in range(3):
+                assert session.process(i).ok
+            report = session.finish()
+        finally:
+            session.close()
+        data = Path(report["ply"]).read_bytes()
+        digests.append(hashlib.sha256(data).hexdigest())
+    assert digests[0] == digests[1], digests
+
+
+def test_preview_mesh_is_decimated_and_final_mesh_is_not(tmp_path):
+    session = scan_session.ScanSession(_config(tmp_path))
+    try:
+        for i in range(3):
+            assert session.process(i).ok
+        preview = session.preview_mesh(target_faces=2000)
+        assert preview is not None
+        verts, faces = preview
+        assert len(faces) <= 2100, len(faces)
+        assert len(verts) > 0
+        final = session.finish()
+    finally:
+        session.close()
+    assert final["faces"] > len(faces), (final["faces"], len(faces))

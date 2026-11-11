@@ -179,6 +179,32 @@ class ScanSession:
             "finished": self._finished is not None,
         }
 
+    def preview_mesh(self, target_faces: int = 6000):
+        """A decimated mesh of the fused volume, for the live 3-D view.
+
+        Re-extracting at a coarser resolution is not possible from a fixed
+        voxel grid, so the full mesh is decimated by taking every k-th face and
+        remapping the vertices it still uses.  It is a preview only: the final
+        mesh written by finish() is never decimated.
+        """
+        from tools.fuse import tsdf as _tsdf
+        if self._volume is None or not self._frames:
+            return None
+        try:
+            pts = np.vstack([np.asarray(c.points, float) for c in self._frames])
+            nrm = np.vstack([np.asarray(c.normals, float) for c in self._frames])
+            verts, faces = _tsdf.extract_mesh(self._volume, points=pts, normals=nrm)
+        except Exception:
+            return None
+        if len(faces) == 0:
+            return None
+        stride = max(1, int(np.ceil(len(faces) / float(max(1, target_faces)))))
+        faces = faces[::stride]
+        used = np.unique(faces)
+        remap = -np.ones(len(verts), np.int64)
+        remap[used] = np.arange(len(used))
+        return verts[used], remap[faces]
+
     # -- internals --------------------------------------------------------
     def _reconstruct(self, index: int) -> tuple[Path, dict]:
         out = self._work / f"recon_{index:06d}"
