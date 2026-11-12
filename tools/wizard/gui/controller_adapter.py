@@ -302,7 +302,9 @@ def open_source(kind: str, *, frames: str | None = None, recording: str | None =
         from wizard.vendor_source import VendorCorpusSource
         return VendorCorpusSource(frames)
     if kind == "replay":
-        return sources.ReplayDirSource(frames, loop=loop)
+        # the wizard defers the colour conversion to the decision path: it costs
+        # 11 ms per group and only groups that reach a decision need it
+        return sources.ReplayDirSource(frames, loop=loop, lazy_colour=True)
     if kind == "recording":
         return sources.RecordingSource(recording)
     if kind == "synthetic":

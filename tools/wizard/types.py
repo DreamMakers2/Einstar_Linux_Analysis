@@ -65,6 +65,10 @@ class FrameGroup:
     continuous: bool = True
     #: Colour BGR preview for the GUI, present only when the source provides it.
     colour_bgr: np.ndarray | None = None
+    #: unconverted Bayer frame; when set, ``colour_bgr``/``images["tex"]`` are
+    #: produced on demand by the consumer instead of in the source.  Debayering
+    #: costs 11 ms per group and is pure waste for a group the scheduler skips.
+    raw_colour: np.ndarray | None = None
 
     def camera(self, key: str) -> np.ndarray | None:
         return self.images.get(key)

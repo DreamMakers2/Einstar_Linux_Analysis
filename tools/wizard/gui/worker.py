@@ -196,7 +196,8 @@ class SessionWorker(QtCore.QThread):
                         "device_group": group.device_group,
                         "timestamp_s": group.timestamp_s,
                         "images": dict(group.images),
-                        "colour_bgr": getattr(group, "colour_bgr", None),
+                        "colour_bgr": (getattr(group, "colour_bgr", None)
+                                       or getattr(self.controller, "_last_colour_bgr", None)),
                         "complete": group.complete,
                         "source": group.source,
                         "decision": payload,

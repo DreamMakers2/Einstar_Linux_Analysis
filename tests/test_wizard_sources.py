@@ -269,3 +269,29 @@ def test_surface_texture_is_fixed_to_the_plate_not_the_image():
     c = sources.render_plate_view(left, pose, off, rng=np.random.default_rng(0))
     d = sources.render_plate_view(left, pose, off, rng=np.random.default_rng(99))
     assert np.array_equal(c, d)
+
+
+def test_lazy_colour_defers_the_conversion_and_matches_eager(tmp_path):
+    """A group's colour is only produced when a consumer asks for it."""
+    from wizard import sources, types
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    if not frames.is_dir():
+        pytest.skip("recording not available")
+    lazy = next(iter(sources.ReplayDirSource(frames, limit=1, lazy_colour=True)))
+    eager = next(iter(sources.ReplayDirSource(frames, limit=1, lazy_colour=False)))
+    assert "tex" in eager.images and eager.colour_bgr is not None
+    assert "tex" not in lazy.images
+    assert lazy.raw_colour is not None and lazy.colour_bgr is None
+    # the deferred conversion produces exactly the eager result
+    bgr = types.debayer_bgr(lazy.raw_colour)
+    grey = types.grey_from_bgr(bgr)
+    assert np.array_equal(grey, eager.images["tex"])
+    assert np.array_equal(bgr, eager.colour_bgr)
+
+
+def test_live_source_lag_bound_is_configurable():
+    """The live source exposes its lag bound; -1 means keep every group."""
+    import inspect
+    from wizard import sources
+    sig = inspect.signature(sources.LiveSource.__init__)
+    assert sig.parameters["max_lag"].default == 1

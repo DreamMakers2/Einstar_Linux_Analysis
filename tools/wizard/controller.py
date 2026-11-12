@@ -998,6 +998,17 @@ class WizardController:
 
         if self.state in ("idle", "cancelled"):
             self.begin()
+        if "tex" not in group.images and getattr(group, "raw_colour", None) is not None:
+            # the source deferred the colour conversion to us (it costs 11 ms
+            # per group and only groups that reach a decision need it).  The
+            # FrameGroup is frozen, so a copy carries the converted images.
+            import dataclasses as _dc
+            from wizard import types as _types
+            bgr = _types.debayer_bgr(group.raw_colour)
+            grey = _types.grey_from_bgr(bgr)
+            self._last_colour_bgr = bgr
+            group = _dc.replace(group, images={**group.images, "tex": grey},
+                                colour_bgr=bgr)
         if self.state in ("done", "finishing"):
             raise RuntimeError(f"session is {self.state}; cannot ingest")
         with self._lock:

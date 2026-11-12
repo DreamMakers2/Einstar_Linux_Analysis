@@ -245,8 +245,8 @@ def scan_frame_files(directory: str | Path) -> dict[int, dict[int, Path]]:
     return out
 
 
-def _group_images(files: Mapping[int, Path]) -> tuple[dict[str, np.ndarray],
-                                                     np.ndarray | None] | None:
+def _group_images(files: Mapping[int, Path], *, lazy_colour: bool = False
+                  ) -> tuple[dict[str, np.ndarray], np.ndarray | None] | None:
     """Read and orient one complete group; ``None`` if any file is unusable.
 
     All three PGM files must exist and parse.  A partially written directory is
@@ -266,6 +266,12 @@ def _group_images(files: Mapping[int, Path]) -> tuple[dict[str, np.ndarray],
         return None
     if min(raw0.shape) < 16:
         return None
+    if lazy_colour:
+        # hand the Bayer frame to the consumer; the colour conversion is only
+        # paid for when a group actually reaches the decision path
+        images = {"left": types.orient_left(raw1),
+                  "right": types.orient_right(raw0)}
+        return images, np.ascontiguousarray(raw2)
     bgr = types.debayer_bgr(raw2)
     images = {
         "left": types.orient_left(raw1),
@@ -279,7 +285,8 @@ def _make_group(*, index: int, file_index: int, device_group: int | None,
                 timestamp_s: float, images: Mapping[str, np.ndarray],
                 colour_bgr: np.ndarray | None, source: str,
                 slot_ids: Mapping[str, int] | None = None,
-                label: str = "", continuous: bool = True) -> types.FrameGroup:
+                label: str = "", continuous: bool = True,
+                raw_colour: np.ndarray | None = None) -> types.FrameGroup:
     return types.FrameGroup(
         index=int(index),
         device_group=device_group,
@@ -291,6 +298,7 @@ def _make_group(*, index: int, file_index: int, device_group: int | None,
         label=label or f"frame {file_index:06d}",
         colour_bgr=colour_bgr,
         continuous=bool(continuous),
+        raw_colour=raw_colour,
     )
 
 
@@ -318,7 +326,8 @@ class ReplayDirSource:
     retry_delay_s = 0.04
 
     def __init__(self, frames_dir: str | Path, *, start: int = 0,
-                 limit: int | None = None, loop: bool = False) -> None:
+                 limit: int | None = None, loop: bool = False,
+                 lazy_colour: bool = False) -> None:
         self.frames_dir = Path(frames_dir)
         if not self.frames_dir.is_dir():
             raise SourceError(f"frames directory does not exist: {self.frames_dir}")
@@ -329,6 +338,7 @@ class ReplayDirSource:
         self.start = int(start)
         self.limit = None if limit is None else int(limit)
         self.loop = bool(loop)
+        self.lazy_colour = bool(lazy_colour)
         self._closed = False
         self._next_index = 0
         self._pass = 0
@@ -371,15 +381,17 @@ class ReplayDirSource:
         files = scan_frame_files(self.frames_dir).get(file_index, {})
         if len(files) < 3:
             return None
-        parsed = _group_images(files)
+        parsed = _group_images(files, lazy_colour=self.lazy_colour)
         if parsed is None:
             return None
         images, bgr = parsed
+        lazy = self.lazy_colour
         return _make_group(
             index=self._next_index, file_index=file_index,
             device_group=self._manifest.device_group.get(file_index),
             timestamp_s=self._timestamp(file_index), images=images,
-            colour_bgr=bgr, source=types.SOURCE_REPLAY,
+            colour_bgr=None if lazy else bgr, source=types.SOURCE_REPLAY,
+            raw_colour=bgr if lazy else None,
             slot_ids=self._manifest.slot_ids.get(file_index),
             continuous=bool(self.continuous),
         )
@@ -597,7 +609,8 @@ class LiveSource:
 
     def __init__(self, session_dir: str | Path, *,
                  capture_args: Mapping[str, Any] | Any,
-                 profile: Any | None = None) -> None:
+                 profile: Any | None = None,
+                 max_lag: int = 1) -> None:
         if _capture is None:  # pragma: no cover - capture.py is shipped in-package
             raise SourceError("tools.wizard.capture is unavailable")
         self.session_dir = Path(session_dir)
@@ -607,6 +620,10 @@ class LiveSource:
             capture_args, session_dir=self.session_dir)
         self.capture = _capture.LiveCaptureProcess(config)
         self.poll_interval_s = float(config.poll_interval_s)
+        #: how many unseen groups may wait before the oldest are dropped; -1
+        #: keeps every group in order (used by tests that need completeness)
+        self.max_lag = int(max_lag)
+        self.dropped_for_lag = 0
         self.final_verdict: dict | None = None
         self._started = False
         self._closed = False
@@ -685,12 +702,27 @@ class LiveSource:
         while not self._closed:
             self._refresh_manifest()
             files = scan_frame_files(self.frames_dir)
-            for gid in sorted(files):
-                if gid in self._seen:
-                    continue
+            pending = [gid for gid in sorted(files)
+                       if gid not in self._seen and len(files[gid]) >= 3]
+            # Bounded lag: the wizard decides ~4 frames/s but the camera offers
+            # 10, so a strictly in-order consumer falls further behind every
+            # second and ends up showing a view from seconds ago.  A calibration
+            # frame that stale is worthless (the plate has moved), so the older
+            # backlog is dropped and the newest group is processed instead.  The
+            # frames are still in the capture tool's raw recording.
+            dropped = 0
+            if self.max_lag >= 0 and len(pending) > self.max_lag + 1:
+                keep = pending[-(self.max_lag + 1):]
+                for gid in pending[:-len(keep)]:
+                    self._seen.add(gid)
+                    self.skipped.append({"group": int(gid), "reason": "lag"})
+                    dropped += 1
+                self.dropped_for_lag += dropped
+                pending = keep
+            for gid in pending:
                 if len(files[gid]) < 3:
                     continue
-                parsed = _group_images(files[gid])
+                parsed = _group_images(files[gid], lazy_colour=True)
                 if parsed is None:
                     continue  # still being written; retry next poll
                 images, bgr = parsed
@@ -700,8 +732,8 @@ class LiveSource:
                 group = _make_group(
                     index=self._next_index, file_index=gid,
                     device_group=self._manifest.device_group.get(gid),
-                    timestamp_s=ts, images=images, colour_bgr=bgr,
-                    source=types.SOURCE_LIVE,
+                    timestamp_s=ts, images=images, colour_bgr=None,
+                    raw_colour=bgr, source=types.SOURCE_LIVE,
                     slot_ids=self._manifest.slot_ids.get(gid),
                     continuous=True)
                 self._next_index += 1
