@@ -148,6 +148,19 @@ The object was stationary, so a near-zero step is the correct answer rather
 than a tracking failure — the same run before the projective default reported
 0.45-1.6 mm steps on replay data with real motion.
 
+## Tracking loss and recovery
+
+A frame whose alignment fails is rejected, never integrated, and **the reference
+frame stays at the last accepted one**.  That last part was a real bug: the
+session used to move its reference to the rejected frame, so one glitch made
+every later frame align against a pose that was never trusted - a permanent loss
+instead of a recoverable one.  It is now covered by a test that fails the
+alignment for one frame, checks the reference did not move, and then checks the
+next frame integrates and is reported as `tracking_reason: "recovered"`.
+
+Recovered frames are counted in the report (`recoveries`), so a scan that had to
+re-anchor is distinguishable from one that tracked cleanly throughout.
+
 ## Determinism
 
 Two independent runs of the same recording with the same settings produce a

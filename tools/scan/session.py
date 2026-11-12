@@ -183,6 +183,8 @@ class ScanSession:
         self._colour: dict | None = None
         self._prev_depth = None
         self._intrinsics = None
+        self._lost_run = 0
+        self._recoveries = 0
         #: when set (reprocessing), these poses are used instead of tracking
         self.replay_poses: list[np.ndarray] | None = None
         self.replay_order: list[int] | None = None
@@ -381,10 +383,19 @@ class ScanSession:
             if r.get("ok"):
                 pose = self._poses[-1] @ np.linalg.inv(
                     np.asarray(r.get("transform", np.eye(4)), float))
+                if self._lost_run:
+                    # this frame re-anchored to the last accepted one after a run
+                    # of failures; say so rather than presenting it as seamless
+                    status.tracking_reason = "recovered"
+                    self._recoveries += 1
+                    self._lost_run = 0
             else:
                 status.reason = f"tracking lost: {r.get('reason') or 'unknown'}"
                 self._rejected += 1
-                self._prev_depth = depth_frame
+                # keep the reference at the last ACCEPTED frame: updating it to a
+                # rejected one makes every later frame align against a pose that
+                # was never trusted, so a single glitch becomes a permanent loss
+                self._lost_run += 1
                 self._statuses.append(status)
                 return status
             self._prev_depth = depth_frame
@@ -493,6 +504,8 @@ class ScanSession:
                       "vertices": int(len(verts)), "faces": int(len(faces))}
             self._mesh = (verts, faces)
         out.update(result)
+        if self._recoveries:
+            out["recoveries"] = int(self._recoveries)
         if self._colour is not None:
             out["colour"] = self._colour
         out["poses"] = [[[float(x) for x in row] for row in p] for p in self._poses]

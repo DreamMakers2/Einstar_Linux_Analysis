@@ -433,3 +433,41 @@ def test_session_tracks_projectively_by_default_and_falls_back(tmp_path):
         assert status.tracking_reason != "replayed pose"
     finally:
         session.close()
+
+
+def test_tracking_loss_keeps_the_last_accepted_reference(tmp_path, monkeypatch):
+    """A rejected frame must not become the reference for the next one.
+
+    Before this was fixed the session set ``_prev_depth`` to the rejected frame,
+    so one glitch made every later frame align against a pose that was never
+    trusted - a permanent loss instead of a recoverable one.
+    """
+    session = scan_session.ScanSession(_config(tmp_path, tracking="projective"))
+    real = track_proj.align_projective
+
+    def flaky(source, target, *a, **k):
+        out = dict(real(source, target, *a, **k))
+        out["ok"] = False
+        out["reason"] = "simulated failure"
+        return out
+
+    try:
+        assert session.process(0).ok
+        accepted = session._prev_depth
+        monkeypatch.setattr(track_proj, "align_projective", flaky)
+        bad = session.process(1)
+        assert bad.ok is False and "tracking lost" in bad.reason
+        assert session._prev_depth is accepted, "reference moved to a rejected frame"
+        assert session._lost_run == 1
+        # recovery: the next frame aligns against the last accepted one and is
+        # marked as recovered rather than silently accepted
+        monkeypatch.setattr(track_proj, "align_projective", real)
+        good = session.process(2)
+        assert good.ok, good.reason
+        assert good.tracking_reason == "recovered"
+        assert session._recoveries == 1
+        report = session.finish()
+        assert report["frames"] == 2
+        assert report.get("recoveries") == 1
+    finally:
+        session.close()
