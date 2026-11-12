@@ -62,10 +62,23 @@ class GuidancePanel(QtWidgets.QFrame):
         row.addWidget(self.target, 1)
         lay.addLayout(row)
 
+        # transient feedback for the decision just taken: the operator needs to
+        # know immediately whether the pose they are holding was captured
+        self.feedback = QtWidgets.QLabel("")
+        self.feedback.setObjectName("big")
+        self.feedback.setMinimumHeight(26)
+        lay.addWidget(self.feedback)
+
         self.ready = QtWidgets.QLabel("NOT READY")
         self.ready.setObjectName("value")
         self.ready.setWordWrap(True)
         lay.addWidget(self.ready)
+
+    def show_feedback(self, text: str, colour: str) -> None:
+        """Show the latest decision for a moment, then fade back."""
+        self.feedback.setText(text)
+        self.feedback.setStyleSheet(f"color: {colour};")
+        QtCore.QTimer.singleShot(1800, lambda: self.feedback.setText(""))
 
     def update_from(self, snap: dict) -> None:
         guide = snap.get("guidance") or {}
@@ -119,6 +132,32 @@ class GuidancePanel(QtWidgets.QFrame):
                 text += " — missing: " + ", ".join(str(m) for m in missing[:4])
             self.ready.setText(text)
             self.ready.setStyleSheet(f"color: {theme.WARN}; font-weight: 600;")
+
+
+class GuidancePanelFeedback:
+    """Mixin-free helper: the text/colour for one decision (unit-testable)."""
+
+
+def feedback_text(decision: dict | None) -> tuple[str, str]:
+    """(text, colour-name) describing the latest decision for the operator."""
+    if not decision:
+        return "", "MUTED"
+    reasons = [str(r) for r in (decision.get("reasons") or [])]
+    if decision.get("accepted"):
+        view = decision.get("view_id")
+        return (f"✓ captured view {view}" if view is not None
+                else "✓ captured"), "OK"
+    joined = "; ".join(reasons)
+    if "too similar" in joined:
+        return "↺ already have this view — move further", "WARN"
+    if "moving" in joined or "blur" in joined:
+        return "⚠ too fast — hold still", "WARN"
+    if "redundant" in joined:
+        return "↺ adds nothing new — change the pose", "WARN"
+    if any(k in joined for k in ("no pose", "orientation", "ambiguous",
+                                 "insufficient", "markers")):
+        return "⚠ plate not read — show it fully", "BAD"
+    return "✗ not captured" + (f": {reasons[0]}" if reasons else ""), "BAD"
 
 
 class ProgressPanel(QtWidgets.QFrame):

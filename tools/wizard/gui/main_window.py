@@ -238,6 +238,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._rate_count += 1
         self._last_decision_at = time.time()
         self._stall_logged = False
+        text, colour = panels.feedback_text(payload)
+        self.guidance.show_feedback(text, getattr(theme, colour, theme.MUTED))
         self.log.add_decision({"last_decision": payload})
 
     def processing_fps(self) -> float:
@@ -334,6 +336,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.header_device.setText(f"{src.get('kind','—')}  ·  {where}")
         elapsed = (time.time() - self._started_at) if self._started_at else 0.0
         self.header_clock.setText(f"{int(elapsed)//60:02d}:{int(elapsed)%60:02d}")
+        # scanner status: what the device is doing and what we are keeping up with
+        rate = self.processing_fps()
+        live_fps = None
+        if str((snap.get("source") or {}).get("kind", "")).lower() == "live":
+            try:
+                live_fps = float((snap.get("capture") or {}).get("fps"))
+            except (TypeError, ValueError):
+                live_fps = None
+        bits = [f"{rate:.1f} decisions/s"]
+        if live_fps is not None:
+            bits.insert(0, f"{live_fps:.1f} fps")
+        self.header_device.setText(
+            f"{src.get('kind') or 'replay'}  ·  " + "  ·  ".join(bits))
 
         cov = snap.get("coverage") or {}
         views = cov.get("views") or []
