@@ -5,7 +5,7 @@ import time
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import controller_adapter, panels, theme, tiles, worker
+from . import controller_adapter, panels, status as status_rules, theme, tiles, worker
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -93,6 +93,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self._error: str | None = None
         self._started_at = 0.0
         self._decision_count = 0
+        self._rate_count = 0
+        self._rate_at = 0.0
+        self._last_decision_at = 0.0
+        self._zero_fps_since = 0.0
+        self._stall_logged = False
 
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.refresh)
@@ -203,7 +208,23 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _on_decision(self, payload: dict) -> None:
         self._decision_count += 1
+        self._rate_count += 1
+        self._last_decision_at = time.time()
+        self._stall_logged = False
         self.log.add_decision({"last_decision": payload})
+
+    def processing_fps(self) -> float:
+        """Decisions processed per second since the previous sample."""
+        now = time.time()
+        if self._rate_at <= 0.0:
+            self._rate_at, self._rate_count = now, 0
+            return 0.0
+        span = now - self._rate_at
+        if span < 1.0:
+            return self._cached_fps if hasattr(self, "_cached_fps") else 0.0
+        self._cached_fps = self._rate_count / span
+        self._rate_at, self._rate_count = now, 0
+        return self._cached_fps
 
     def _on_worker_done(self, info: dict) -> None:
         self.status.showMessage(
@@ -246,9 +267,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
         capture = snap.get("capture") or {}
         state = str(snap.get("state", "idle"))
+        # never claim RECORDING while nothing is arriving: the operator could not
+        # tell a slow session from a dead one (the reported failure)
+        fps_reported = capture.get("fps")
+        try:
+            fps_reported = None if fps_reported is None else float(fps_reported)
+        except (TypeError, ValueError):
+            fps_reported = None
+        now = time.time()
+        if fps_reported is not None and fps_reported <= 0.05:
+            if self._zero_fps_since <= 0.0:
+                self._zero_fps_since = now
+        else:
+            self._zero_fps_since = 0.0
+        since_decision = (now - self._last_decision_at) if self._last_decision_at else None
+        reason = status_rules.stall_reason(
+            state, since_decision, fps_reported,
+            seconds_at_zero=(now - self._zero_fps_since) if self._zero_fps_since else 0.0)
         colour_state = {"recording": theme.OK, "paused": theme.WARN,
                         "done": theme.INFO, "error": theme.BAD}.get(state, theme.MUTED)
-        self.header_state.setText(state.upper())
+        if reason is not None:
+            colour_state = theme.BAD
+            if not self._stall_logged:
+                self._stall_logged = True
+                self.log.insertItem(0, QtWidgets.QListWidgetItem(
+                    f"‼ capture stalled — {reason}"))
+        self.header_state.setText(status_rules.display_state(state, reason))
         self.header_state.setStyleSheet(f"color: {colour_state};")
         src = snap.get("source") or {}
         where = src.get("serial") or src.get("path") or ""
