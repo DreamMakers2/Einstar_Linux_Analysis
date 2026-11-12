@@ -82,6 +82,50 @@ calibration-only scan would hit.
 * a broken chain is reported rather than chained;
 * ASCII PLY round trip.
 
+## Long sequence (100 frames, second recording)
+
+`~/einstar-private/sweep-c/frames`, every fifth frame reconstructed at scale
+0.25 (8.3k points per cloud after 5 mm downsampling), tracked end to end:
+
+```
+pairs ok 99/99          wall 4.3 s (23 pairs/s)
+median step 3.28 mm / 0.124 deg      robust step sigma 0.718 mm
+per-pair RMS 1.18 mm     inliers 79 %
+camera trajectory planarity: 0.19 mm rms off-plane
+path 317.8 mm            end-to-end 20.1 mm / 1.1 deg
+```
+
+The path/end-to-end mismatch is the shape of the motion, not a failure: the
+platform carries the plate along an arc, so the path accumulates while the
+displacement does not.  Rotation per step is under 0.15 deg with alternating
+sign — small platform jitter on top of translation.
+
+**Fusion over the same 100 frames** (5 mm voxels, 15 mm truncation):
+
+```
+9.4 s total (9.0 s integration, 0.39 s meshing)  = 94 ms/frame
+volume 3.28 M voxels, 26 MB, 406 k observed
+mesh 126 405 vertices / 245 914 faces
+```
+
+### What the planar target can and cannot show
+
+The fused plate surface measures 2.05 mm thick at 10 frames and 4.3 mm at 50-100
+frames.  That number is **not** a drift measurement: fusing with every frame
+aligned *directly to frame 0* gives the same thickness (2.07 mm at 10 frames,
+2.43 mm at 20) as fusing with the chained poses.  A plane cannot reveal
+tangential error — and the chained and direct poses differ by a median 6.3 mm,
+up to 30.7 mm, over 19 pairs.  So:
+
+* **there is real chain deviation**, up to 31 mm over 19 pairs, in directions the
+  plane cannot constrain;
+* **surface thickness is the wrong metric for it** on a planar target;
+* evaluating drift properly needs a 3-D object (or a measured trajectory
+  reference), which is exactly what the roadmap says.
+
+This is why the fusion quality signal must not be inferred from a thin plate
+model: a scan of a wall would look perfect while the pose chain slid along it.
+
 ## What is still missing for the production tracker
 
 1. **Projective association on the organised depth map** instead of KD-tree
