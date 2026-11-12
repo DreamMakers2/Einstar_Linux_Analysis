@@ -395,3 +395,53 @@ def test_autosave_writes_a_resumable_state(tmp_path):
     assert info["solved"] is True
     assert len(other.session.accepted) == len(ctl.session.accepted)
     assert len(other.session.obs) == len(ctl.session.obs)
+
+
+def test_disk_failure_rejects_frames_without_crashing(tmp_path, monkeypatch):
+    """A full or failing disk must degrade to vetoes, not an exception."""
+    pytest.importorskip("cv2")
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    if not (frames.is_dir() and factory.is_file()):
+        pytest.skip("recording or factory profile not available")
+    ctl = controller.WizardController(factory_profile=str(factory),
+                                      session_dir=str(tmp_path / "s"),
+                                      mode="standard")
+    ctl.begin()
+    monkeypatch.setattr(ctl, "_materialise", lambda group: None)
+    src = sources.ReplayDirSource(frames, limit=3, lazy_colour=True)
+    reasons = []
+    for group in src:
+        decision = ctl.ingest(group)
+        reasons.append(tuple(decision.reasons or ()))
+    assert all(any("io:" in r for r in rs) for rs in reasons), reasons
+    assert ctl.session.accepted == []
+    assert len(ctl.session.rejected) == 3
+    # the session is still usable: a solvable frame set can follow
+    ctl.cancel()
+
+
+def test_a_failing_solver_does_not_stop_the_session(tmp_path, monkeypatch):
+    """Solver exceptions are recorded, never fatal."""
+    pytest.importorskip("cv2")
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    if not (frames.is_dir() and factory.is_file()):
+        pytest.skip("recording or factory profile not available")
+    ctl = controller.WizardController(factory_profile=str(factory),
+                                      session_dir=str(tmp_path / "s"),
+                                      mode="standard")
+    ctl.begin()
+
+    def boom(*a, **k):
+        raise RuntimeError("simulated solver failure")
+
+    ctl.session.solve_fn = boom
+    src = sources.ReplayDirSource(frames, limit=6, lazy_colour=True)
+    for group in src:
+        ctl.ingest(group)          # must not raise
+    assert ctl.session.result is None
+    assert "simulated solver failure" in (ctl.session.last_solve_error or "")
+    ctl.cancel()

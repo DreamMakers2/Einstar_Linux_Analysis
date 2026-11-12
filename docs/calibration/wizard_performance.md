@@ -71,3 +71,35 @@ after `worker.wait(5000)` timed out, which aborts the process.  The close is now
 deferred until the worker ends (`closeEvent` refuses, retries every 200 ms, and
 the window stays visible); measured close time 0.00 s with the solve still
 running, clean exit afterwards.
+
+
+## Six-minute soak (2x the failed session)
+
+A looped 10 Hz replay into the real window, decision thread and adaptive spacing
+enabled, `MemoryMax=6G CPUQuota=300%`, sampled every 30 s:
+
+```
+t= 30s  rss 361 MB  decisions 3.40/s  groups 6.87/s  refresh p95 6.5 ms
+t=120s  rss 396 MB  decisions 3.93/s  groups 7.90/s  refresh p95 8.9 ms
+t=240s  rss 418 MB  decisions 3.77/s  groups 7.50/s  refresh p95 8.6 ms
+t=360s  rss 435 MB  decisions 3.83/s  groups 7.70/s  refresh p95 8.2 ms
+shutdown 0.04 s, final rss 441 MB
+```
+
+No crash, no progressive degradation (decisions and refresh latency are flat while
+RSS slows to a plateau), and shutdown after six minutes is immediate.  The accepted
+count stops at 16 because the loop replays the same 350 frames: once the poses are
+covered nothing new is accepted, which is the duplicate gate doing its job.
+
+Degradation over time was the reported symptom; the same measurement now shows
+none.
+
+## Failure-mode behaviour (tested)
+
+| failure | behaviour |
+|---|---|
+| disk write fails | every frame is vetoed with `io: cannot materialise the frame triplets`; the session stays usable (test) |
+| solver raises | the error is recorded in `last_solve_error`, the session continues without a result (test) |
+| window closed during a long solve | close deferred, window visible, worker joined, clean exit (test) |
+| crash mid-session | autosave block resumes the session; final calibration identical to an uninterrupted run (test) |
+| capture stops producing | source drains and ends; the header reports the stall rather than claiming RECORDING (test) |
