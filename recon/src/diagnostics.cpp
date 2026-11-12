@@ -132,6 +132,19 @@ void write_report_json(const ReconResult& r, const std::string& path) {
      << "sha256" << r.stats.frame_sha256
      << "width" << (r.frames.streams[0].width) << "height" << (r.frames.streams[0].height);
   fs << "}";
+  // The depth map lives on the SCALED rectified grid, so its intrinsics are
+  // stereo.geometry (f/cx/cy/size), not the full-resolution calibration block.
+  // Anyone consuming recon_depth_mm.* needs these to turn pixels into rays.
+  fs << "rectified" << "{";
+  fs << "scale" << r.stereo.geometry.scale
+     << "width" << r.stereo.geometry.size.width
+     << "height" << r.stereo.geometry.size.height
+     << "f" << r.stereo.geometry.f
+     << "cx" << r.stereo.geometry.cx
+     << "cy" << r.stereo.geometry.cy
+     << "baseline_mm" << r.stereo.geometry.baseline_mm
+     << "disp_offset" << r.stereo.geometry.disp_offset;
+  fs << "}";
   fs << "stereo" << "{";
   fs << "scale" << r.stereo.geometry.scale
      << "min_disparity" << r.stereo.stats.min_disparity

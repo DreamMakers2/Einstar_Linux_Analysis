@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from pathlib import Path
 import time
 from typing import Sequence
 
@@ -56,9 +57,39 @@ class DepthFrame:
         return np.stack([x, y, z], axis=1), np.stack([u, v], axis=1)
 
 
-def load_depth(path, K: np.ndarray, confidence_path=None) -> DepthFrame:
+def intrinsics_from_report(report: dict) -> np.ndarray:
+    """K for the depth map from the reconstruction report's ``rectified`` block.
+
+    The depth map lives on the *scaled rectified* grid, so the full-resolution
+    calibration intrinsics are wrong for it by the scale factor (and by the
+    rectification itself).  Using them silently produced nonsense rays - a
+    320-pixel-wide map with cx=624 puts every pixel left of the principal
+    point - which is why this block exists.
+    """
+    rect = (report or {}).get("rectified") or {}
+    f = rect.get("f")
+    cx = rect.get("cx")
+    cy = rect.get("cy")
+    if f is None or cx is None or cy is None:
+        raise ValueError("report has no rectified intrinsics")
+    return np.array([[float(f), 0.0, float(cx)],
+                     [0.0, float(f), float(cy)],
+                     [0.0, 0.0, 1.0]])
+
+
+def load_depth(path, K: np.ndarray | None = None, confidence_path=None, *,
+               report=None) -> DepthFrame:
     if cv2 is None:  # pragma: no cover
         raise RuntimeError("OpenCV is required to read the depth maps")
+    if K is None:
+        import json as _json
+        rep = report
+        if rep is None:
+            sibling = Path(path).parent / "recon_report.json"
+            if not sibling.is_file():
+                raise ValueError("load_depth needs K or a recon_report.json")
+            rep = _json.loads(sibling.read_text())
+        K = intrinsics_from_report(rep)
     depth = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
     if depth is None:
         raise ValueError(f"cannot read {path}")

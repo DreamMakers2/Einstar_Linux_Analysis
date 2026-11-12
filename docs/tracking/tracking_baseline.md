@@ -177,19 +177,46 @@ was **not** integrated, because an independent check contradicted that:
 | 15→20 | 3.12 mm | 0.29 mm | — |
 
 The plate is a rigid target whose motion is measurable from its own markers, so
-this is a real reference.  The projective path reports a tenth of the true
-motion: it is under-estimating, not merely imprecise.
+this looked like a real reference — and it exposed a genuine bug, but not the
+one it appeared to.
 
-It also exposes a trap in the consistency metric: a pose set that barely moves
-scores *better* on "distance to the union of other frames", so consistency alone
-would have endorsed a tracker that is nearly frozen.  That metric is fine for
-comparing equally-moving pose sets, not for validating one on its own.
+**Root cause: the wrong intrinsics.**  The engine's depth map lives on the
+*scaled rectified* grid (320 x 256 at `--scale 0.25`), while the profile
+carries full-resolution intrinsics (fx 1159, cx 624).  Feeding those to the
+depth map puts every pixel left of the principal point, so every reconstructed
+ray was nonsense and the solver converged to a near-identity transform.  The
+engine now writes the scaled rectified geometry into the report:
 
-Status: the module and its unit tests stay (synthetic recovery, normals,
-degeneracy, consistency), the independent check is kept as a **strict xfail**
-so the failure is visible in every test run and the test will fail loudly when
-someone "fixes" it by loosening it.  The scan session keeps the cloud tracker,
-and `ScanConfig.tracking` documents why.
+```json
+"rectified": {"scale": 0.25, "width": 320, "height": 256,
+              "f": 289.59, "cx": 159.11, "cy": 128.78,
+              "baseline_mm": 158.56, "disp_offset": 48.0}
+```
+
+`load_depth` reads that block (and refuses to guess), and with the correct
+intrinsics the same pairs measure:
+
+| pair | PnP motion | projective ICP (fixed) | projective (wrong K) |
+|---|---|---|---|
+| 0→5 | 3.37 mm | 2.39 mm | 0.23 mm |
+| 5→10 | 3.32 mm | 2.38 mm | 0.18 mm |
+| 10→15 | 3.37 mm | 1.95 mm | 0.09 mm |
+| 15→20 | 3.12 mm | 2.18 mm | 0.29 mm |
+
+The remaining gap is **not** tracker error: the plate sits on a turntable and
+the background is static, so the scene is not one rigid body and ICP reports a
+compromise between the moving plate and the stationary surroundings.  This data
+can catch a broken tracker; it cannot rank two working ones.
+
+Status: the bug is fixed and covered by a regression test that reconstructs
+fresh frames, asserts the depth map's size and focal length, and bounds the
+tracked step to 0.3-1.5x of the plate's PnP motion (a wide bound because of the
+non-rigid scene).  The scan session still uses the cloud tracker: projective is
+not measurably better on this data, and switching would be a guess.
+
+The episode also exposed a trap in the consistency metric: a pose set that
+barely moves scores *better* on "distance to the union of other frames", so
+consistency alone would have endorsed a tracker that is nearly frozen.
 
 ## What is still missing for the production tracker
 

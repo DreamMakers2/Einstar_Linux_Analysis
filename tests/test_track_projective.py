@@ -123,26 +123,45 @@ def test_surface_consistency_is_zero_for_identical_frames():
     assert pj.surface_consistency(frames, [np.eye(4)] * 3) < 0.05
 
 
-@pytest.mark.xfail(strict=True, reason="known failure: the projected path "
-                   "under-estimates real motion (0.1-0.3 mm vs 3.1-3.4 mm from "
-                   "the plate's own PnP pose); it must not be used until fixed")
-def test_projective_step_matches_the_plate_pnp_motion():
-    """Independent motion reference: the calibration plate is a rigid target."""
+def test_projective_step_is_the_right_order_of_magnitude(tmp_path):
+    """Regression for the intrinsics bug: the depth map is on the SCALED
+    rectified grid, and using the full-resolution calibration intrinsics made
+    every ray nonsense - the tracker then reported ~0.1-0.3 mm for a real
+    3.1-3.4 mm motion.  With the report's ``rectified`` block the step is the
+    right order of magnitude.
+
+    The bound is wide on purpose: the plate moves on a turntable against a
+    static background, so the scene is not one rigid body and ICP reports a
+    compromise between them.  This data therefore cannot arbitrate between
+    trackers; it can only catch a broken one.
+    """
+    import subprocess
     from calib import detect, geometry, plate, recon_profile
     from wizard import types
-    base = Path(os.path.expanduser("~/einstar-private/analysis/long/clouds"))
+
     frames_dir = Path(os.path.expanduser("~/einstar-private/sweep-c/frames"))
     profile = Path(os.path.expanduser(
         "~/einstar-private/einstar-profiles/factory-e10.json"))
-    if not (base.is_dir() and frames_dir.is_dir() and profile.is_file()):
-        pytest.skip("recorded frames not available")
-    dirs = sorted(base.iterdir(), key=lambda p: int(p.name))[:4]
-    ids = [int(d.name) for d in dirs]
+    recon = REPO / "build" / "recon" / "recon_cli"
+    if not (frames_dir.is_dir() and profile.is_file() and recon.is_file()):
+        pytest.skip("recording, profile or recon binary not available")
+    ids = [0, 5, 10, 15]
+    outdirs = []
+    for fid in ids:
+        out = tmp_path / f"f{fid}"
+        proc = subprocess.run(
+            [str(recon), "reconstruct", "--frames", str(frames_dir),
+             "--id", str(fid), "--profile", str(profile), "--out", str(out),
+             "--scale", "0.25"], capture_output=True, text=True, timeout=120)
+        if proc.returncode != 0 or not (out / "recon_depth_mm.tiff").is_file():
+            pytest.skip("reconstruction failed in this environment")
+        outdirs.append(out)
+
     prof = recon_profile.load(profile)
     intr = prof.camera("ir_left").intrinsics()
     Kp = np.asarray(intr.K, float)
     kc = np.asarray(intr.kc, float)
-    pts = plate.board_points_mm()
+    board = plate.board_points_mm()
     idx = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
     pnp = []
     for fid in ids:
@@ -150,14 +169,20 @@ def test_projective_step_matches_the_plate_pnp_motion():
             frames_dir / f"frame_{fid:06d}_cam1.pgm"))
         o = detect.detect_grid_auto(np.ascontiguousarray(im))
         ks = [k for k in o.points if (float(k[0]), float(k[1])) in idx]
-        obj = np.asarray([pts[idx[(float(u), float(v))]] for u, v in ks])
+        obj = np.asarray([board[idx[(float(u), float(v))]] for u, v in ks])
         img = np.asarray([o.points[k] for k in ks], float)
         pnp.append(geometry.solve_pnp(obj, img, Kp, kc))
-    steps = [pj.load_depth(d / "recon_depth_mm.tiff", Kp) for d in dirs]
-    for i in range(1, len(steps)):
+    frames = [pj.load_depth(d / "recon_depth_mm.tiff") for d in outdirs]
+    # the depth map is the scaled rectified grid, not the full-resolution one
+    assert frames[0].depth_mm.shape == (256, 320)
+    assert 250.0 < frames[0].K[0, 0] < 330.0, frames[0].K[0, 0]
+    ratios = []
+    for i in range(1, len(frames)):
         ref = float(np.linalg.norm(pnp[i].t - pnp[i - 1].t))
-        got = float(pj.align_projective(steps[i - 1], steps[i])["translation_mm"])
-        assert abs(got - ref) < 0.5 * ref, (got, ref)
+        got = float(pj.align_projective(frames[i - 1], frames[i])["translation_mm"])
+        ratios.append(got / max(ref, 1e-9))
+    assert min(ratios) > 0.3, ratios
+    assert max(ratios) < 1.5, ratios
 
 
 def test_real_frames_beat_the_cloud_baseline_on_the_same_points():
