@@ -73,6 +73,10 @@ class ScanConfig:
     #: which is ~13 % of the whole scan loop.  Falls back to "cloud" when the
     #: depth map or its rectified intrinsics are unavailable.
     tracking: str = "projective"
+    #: cap on the ICP point count.  Measured at scale 0.5: 82 k masked points
+    #: take 316 ms and 30 k take 87 ms with the same residual (0.095 mm) and
+    #: rotation within 0.02 deg, so the cap buys ~3.6x for free.
+    tracking_max_points: int = 30000
     max_frames: int | None = None
     keep_frames: bool = True
     ascii_ply: bool = True
@@ -264,7 +268,10 @@ class ScanSession:
                "--frames", str(self.config.frames_dir), "--id", str(index),
                "--profile", str(self.config.profile), "--out", str(out),
                "--scale", f"{self.config.scale:g}",
-               "--min-confidence", f"{self.config.min_confidence:g}"]
+               "--min-confidence", f"{self.config.min_confidence:g}",
+               # only the depth map and the report are read back by the session;
+               # the diagnostic maps cost ~24 ms/frame in a live loop
+               "--maps", "depth"]
         if self.config.ascii_ply:
             cmd.append("--ascii-ply")
         proc = subprocess.run(cmd, capture_output=True, text=True)
@@ -347,7 +354,9 @@ class ScanSession:
                     depth_frame = None
         if depth_frame is not None and self._prev_depth is not None:
             t1 = time.time()
-            r = track_proj.align_projective(self._prev_depth, depth_frame)
+            r = track_proj.align_projective(
+                self._prev_depth, depth_frame,
+                max_points=int(getattr(cfg, "tracking_max_points", 0) or 0))
             status.tracking_seconds = time.time() - t1
             status.tracking_ok = bool(r["ok"])
             status.tracking_reason = str(r["reason"])

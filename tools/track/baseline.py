@@ -182,12 +182,14 @@ def voxel_downsample(points: np.ndarray, voxel_mm: float) -> np.ndarray:
     order = np.lexsort((keys[:, 2], keys[:, 1], keys[:, 0]))
     keys = keys[order]
     pts = np.asarray(points, float)[order]
-    _, start = np.unique(keys, axis=0, return_index=True)
-    start = np.sort(start)
-    end = np.r_[start[1:], len(pts)]
-    out = np.empty((len(start), 3), float)
-    for i, (a, b) in enumerate(zip(start, end)):
-        out[i] = pts[a:b].mean(axis=0)
+    # the keys are already sorted, so segment starts are the rows that differ
+    # from the previous one: np.add.reduceat then gives every centroid in one
+    # pass.  (np.unique(axis=0) sorted the array a second time and a Python loop
+    # averaged each voxel, which cost 135 ms per cloud in the live loop.)
+    first = np.r_[True, np.any(keys[1:] != keys[:-1], axis=1)]
+    start = np.flatnonzero(first)
+    counts = np.diff(np.r_[start, len(pts)]).astype(float)
+    out = np.add.reduceat(pts, start, axis=0) / counts[:, None]
     return out
 
 
@@ -204,21 +206,20 @@ def estimate_normals(points: np.ndarray, k: int = 12,
     else:
         tree = cKDTree(pts)
         _, idx = tree.query(pts, k=max(3, min(k, n)))
-    norms = np.zeros((n, 3), float)
     eye = np.asarray(viewpoint, float)
-    for i in range(n):
-        nb = pts[idx[i]]
-        centred = nb - nb.mean(axis=0)
-        cov = centred.T @ centred
-        try:
-            vals, vecs = np.linalg.eigh(cov)
-        except np.linalg.LinAlgError:  # pragma: no cover
-            norms[i] = (0.0, 0.0, -1.0)
-            continue
-        normal = vecs[:, 0]
-        if np.dot(normal, pts[i] - eye) > 0:
-            normal = -normal
-        norms[i] = normal
+    # batched PCA: build every neighbourhood covariance at once and take the
+    # smallest eigenvector.  A per-point Python loop over np.linalg.eigh cost
+    # ~100 ms per cloud in the live loop; the batched form is one BLAS call.
+    nb = pts[idx]                                   # (n, k, 3)
+    centred = nb - nb.mean(axis=1, keepdims=True)
+    cov = np.einsum("nki,nkj->nij", centred, centred) / max(1, centred.shape[1])
+    try:
+        vals, vecs = np.linalg.eigh(cov)            # ascending eigenvalues
+        norms = vecs[:, :, 0]
+    except np.linalg.LinAlgError:  # pragma: no cover
+        norms = np.tile(np.array([0.0, 0.0, -1.0]), (n, 1))
+    flip = np.einsum("ni,ni->n", norms, pts - eye) > 0
+    norms[flip] = -norms[flip]
     length = np.linalg.norm(norms, axis=1, keepdims=True)
     length[length == 0] = 1.0
     return norms / length

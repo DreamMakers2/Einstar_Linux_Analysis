@@ -96,3 +96,34 @@ pipeline, including transfers, before adopting CUDA SGM.
   highlights is recorded.
 * These numbers are for *this* implementation, on recorded frames, one process.
   They are not a claim about the vendor's performance.
+
+
+## Measured loop after the tracking work (2026-11-12)
+
+Per frame at `--scale 0.5`, 5 mm voxels, 8 mm input, projective tracking with the
+near-object mask, on the development machine:
+
+| stage | before | after |
+|---|---|---|
+| reconstruction (with `--maps depth`) | 370-390 ms | 350 ms |
+| tracking (projective ICP) | 313-343 ms | 86-99 ms |
+| fusion | 57-66 ms | 59-62 ms |
+| cloud load + downsample + normals | 135 ms | 85 ms |
+| **loop** | **~1.2 fps** | **1.50 fps** |
+
+What changed, all measured rather than assumed:
+
+* `--maps depth` writes only the depth TIFF and the report, skipping the
+  rectified/disparity/confidence diagnostics: 266 -> 242 ms per reconstruction.
+* `align_projective(max_points=30000)` subsamples by stride: 82 k masked points
+  take 316 ms and 30 k take 87 ms with the same residual (0.095 mm) and a
+  rotation within 0.02 deg.
+* `voxel_downsample` uses `np.add.reduceat` over the already-sorted keys instead
+  of a second sort plus a Python loop: ~135 -> 8 ms.
+* `estimate_normals` computes all neighbourhood covariances in one batched
+  `np.linalg.eigh` call instead of a per-point loop, with output identical to
+  the per-point reference (max angle 0.000 deg): ~100 -> 11 ms.
+
+The earlier "~4 fps default" figure in this document was a sum of isolated
+component timings, not a measured loop.  The measured loop is what the table
+above reports, and the 10 fps target is still not met.

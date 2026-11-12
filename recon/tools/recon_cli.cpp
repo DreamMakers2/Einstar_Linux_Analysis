@@ -28,7 +28,7 @@ void usage() {
       "  reconstruct --frames DIR --id N --profile FILE --out DIR\n"
       "              [--scale 0.5] [--min-depth 150] [--max-depth 800]\n"
       "              [--block 5] [--equalize] [--no-color] [--ascii-ply]\n"
-      "              [--min-confidence 0..1]\n"
+      "              [--min-confidence 0..1] [--maps full|depth|none]\n"
       "              [--prefix recon]\n"
       "  synthetic --profile FILE --out DIR [--depth 350] [--seed 1]\n"
       "  bench     --frames DIR --ids 0,1,2 --profile FILE [--repeat 3]\n";
@@ -109,6 +109,7 @@ int main(int argc, char** argv) {
             std::stod(arg(argc, argv, "--min-confidence", "0")));
         o.depth.min_confidence = min_conf;
         o.cloud.min_confidence = min_conf;
+
       }
       o.depth.color = !flag(argc, argv, "--no-color");
       fs::create_directories(out);
@@ -127,6 +128,20 @@ int main(int argc, char** argv) {
       OutputOptions oo;
       oo.prefix = arg(argc, argv, "--prefix", "recon");
       oo.ascii_ply = flag(argc, argv, "--ascii-ply");
+      // --maps depth writes only the depth TIFF (what tracking consumes) and the
+      // report; --maps none writes neither.  The diagnostics (rectified pair,
+      // disparity, confidence, previews) cost real time per frame in a live
+      // loop and are not read by the scanner.
+      const std::string maps = arg(argc, argv, "--maps", "full");
+      if (maps == "none") {
+        oo.write_maps = false;
+      } else if (maps == "depth") {
+        oo.write_maps = true;
+        oo.write_extra_maps = false;
+      } else if (maps != "full") {
+        std::fprintf(stderr, "recon: --maps must be full, depth or none\n");
+        return 2;
+      }
       const auto ply = write_outputs(r, out, oo);
       print_stats(r);
       if (!ply.empty()) std::printf("ply: %s\n", ply.c_str());

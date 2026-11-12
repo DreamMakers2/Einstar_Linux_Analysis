@@ -63,6 +63,8 @@ struct OutputOptions {
   std::string prefix = "recon";
   bool write_ply = true;
   bool write_maps = true;       // rectified pair, disparity, depth, confidence
+  bool write_extra_maps = true; // colourised/rectified diagnostics (not the
+                                // depth TIFF, which tracking consumes)
   bool write_preview = true;    // shaded point-cloud preview PNG
   bool write_report = true;     // report.json
   bool ascii_ply = false;

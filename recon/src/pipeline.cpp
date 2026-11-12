@@ -90,6 +90,7 @@ std::string write_outputs(const ReconResult& result, const std::string& outdir,
     return {};
   }
   if (options.write_maps) {
+    if (options.write_extra_maps) {
     cv::imwrite(path("_rectified_left.png"), result.rectified.left);
     cv::imwrite(path("_rectified_right.png"), result.rectified.right);
     cv::imwrite(path("_valid_left.png"), result.rectified.valid_left);
@@ -106,10 +107,13 @@ std::string write_outputs(const ReconResult& result, const std::string& outdir,
                                 result.depth.stats.depth_p95_mm));
     cv::imwrite(path("_confidence.png"), colorize_confidence(result.depth.confidence));
     cv::imwrite(path("_invalid.png"), 255 - result.depth.valid);
-    cv::imwrite(path("_depth_mm.tiff"), result.depth.z_mm);
     cv::imwrite(path("_disparity.tiff"), result.stereo.disparity);
     cv::imwrite(path("_confidence.tiff"), result.depth.confidence);
     if (!result.depth.bgr.empty()) cv::imwrite(path("_color.png"), result.depth.bgr);
+    }
+    // the depth map itself is what a tracker consumes, so it is written even in
+    // the trimmed mode
+    cv::imwrite(path("_depth_mm.tiff"), result.depth.z_mm);
   }
   if (options.write_preview) {
     cv::imwrite(path("_preview.png"), render_preview(result.cloud, {1000, 760}, 20, -25));
