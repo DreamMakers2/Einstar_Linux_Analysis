@@ -257,9 +257,48 @@ plate (median absolute tilt error against the plate's PnP pose):
 | 24→32 | 0.03° | 0.04° (0.01) | 0.01° (0.01) |
 | **median** | | **0.048°** | **0.464°** |
 
-The cloud path *under-reports* tilt systematically (0.34 against 0.80): 5 mm
-voxel downsampling flattens the surface and the trimmed solve shrinks the
-rotation.  Projective association keeps the pixels and gets it right.
+The cloud path *under-reports* tilt systematically (0.34 against 0.80).
+
+**Correction to an earlier note in this file.**  I first attributed that to 5 mm
+voxel downsampling flattening the surface.  That was wrong, and the test was
+simple: finer voxels and an untrimmed solve made no difference.
+
+```
+voxel 5.0 mm, trim 0.80 -> median tilt error 0.47 deg
+voxel 5.0 mm, trim 1.00 -> 0.44 deg
+voxel 2.0 mm, trim 0.80 -> 0.70 deg
+voxel 2.0 mm, trim 1.00 -> 0.47 deg
+```
+
+The real cause is **scene composition**: these clouds are the whole scene, the
+background is static while the plate moves, and the background has ~6x the
+points.  Restricting the cloud to the plate's depth band (350-540 mm, 1 685
+points instead of 10 580) gives:
+
+```
+plate depth band        -> tilt errors 0.74, 0.10, 0.07  median 0.10 deg
+whole scene             -> tilt errors 0.46, 0.47, 0.53  median 0.47 deg
+```
+
+So the cloud tracker is not bad at rotation - it was solving a scene in which
+most of the geometry does not move.  That matters for a scanner: a turntable
+object against a static room will have its motion damped unless the object is
+isolated.  `tools.track.baseline.foreground()` and
+`track_sequence(foreground_mm=...)` implement the near-cluster restriction.
+
+It is **not enabled by default**, because the right band is scene-dependent and
+three pairs are not enough to pick one:
+
+```
+band   0 mm -> median 0.47 deg
+band 150 mm -> median 0.05 deg   (but one pair 0.71)
+band 200 mm -> median 0.59 deg
+band 300 mm -> median 0.28 deg
+```
+
+A production scanner should segment the object properly - by depth cluster,
+by the previous frame's support, or by user selection - rather than by a fixed
+millimetre band.
 
 ### Cost decides where each one is used
 

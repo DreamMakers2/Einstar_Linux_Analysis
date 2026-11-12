@@ -173,3 +173,27 @@ def test_keyframe_reanchoring_mechanics_and_consistency_metric():
     for entry in kf["reanchored"]:
         assert entry["drift_mm"] >= 0.01 or entry["drift_deg"] >= 0.001
     assert len(kf["poses"]) == len(plain["poses"])
+
+
+def test_foreground_keeps_the_near_object_and_falls_back():
+    """The foreground helper isolates the near cluster; it must not empty a
+    cloud that has nothing near, and it must keep the object's surface."""
+    rng = np.random.default_rng(5)
+    # a small "object" at 400 mm and a large "background" at 900 mm
+    obj = rng.normal(0, 30, size=(2000, 3)) * [1, 1, 0.2] + [0, 0, 400]
+    bkg = rng.normal(0, 300, size=(6000, 3)) * [1, 1, 0.05] + [0, 0, 900]
+    pts = np.vstack([obj, bkg])
+    cloud = tb.Cloud(pts, tb.estimate_normals(pts))
+    far_cloud = tb.Cloud(bkg, tb.estimate_normals(bkg))
+    near = tb.foreground(cloud, band_mm=150.0)
+    assert 1500 < len(near) < 2600, len(near)
+    z = near.points[:, 2]
+    assert z.max() < 600.0
+    # too few points near the sensor to solve with -> the original comes back
+    tiny = bkg[:150]
+    small = tb.Cloud(tiny, tb.estimate_normals(tiny))
+    same = tb.foreground(small, band_mm=10.0)
+    assert len(same) == len(small), (len(same), len(small))
+    # a band that does capture a usable cluster is honoured
+    thinned = tb.foreground(far_cloud, band_mm=50.0)
+    assert 200 <= len(thinned) < len(far_cloud)
