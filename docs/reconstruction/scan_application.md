@@ -134,6 +134,20 @@ are missing, and the worker never aborts on a tracker result: early exits return
 a complete result dict and the session reads defensively (a short dict once
 raised `KeyError: 'translation_mm'` and aborted a live scan).
 
+**Verified on the physical scanner** (first live run with the projective
+default, 8 groups at scale 0.5, colour-fitted profile, `MemoryMax=8G
+CPUQuota=300%`):
+
+```
+frames 8  rejected 0  vertices 18 059  faces 32 788  colour on
+tracking ok  rms 0.04-0.15 mm  inliers 71-81 %  condition 401
+elapsed 8.7 s            after exit: trigger counts 0/0, illuminator 0 %
+```
+
+The object was stationary, so a near-zero step is the correct answer rather
+than a tracking failure — the same run before the projective default reported
+0.45-1.6 mm steps on replay data with real motion.
+
 ## Determinism
 
 Two independent runs of the same recording with the same settings produce a
