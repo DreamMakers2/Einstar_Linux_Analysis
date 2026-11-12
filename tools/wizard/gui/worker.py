@@ -13,6 +13,63 @@ import numpy as np
 from PySide6 import QtCore
 
 
+class DecisionRunner(QtCore.QThread):
+    """Runs ``controller.ingest`` on a thread of its own.
+
+    Acquisition must never wait for a decision: a decision costs ~0.16 s and the
+    camera offers a group every 0.1 s, so deciding inline makes the loop fall
+    behind the stream no matter how the pacing is arranged (measured: 6.8 of 10
+    groups/s).  The queue holds at most one pending group - a calibration frame
+    that is two frames stale is useless, and a longer queue would only delay the
+    guidance.
+    """
+
+    decision = QtCore.Signal(dict)
+    error = QtCore.Signal(str)
+    busy = False
+
+    def __init__(self, controller, parent=None):
+        super().__init__(parent)
+        self.controller = controller
+        self._lock = threading.Lock()
+        self._pending = None
+        self._stop = threading.Event()
+        self._wake = threading.Event()
+
+    def submit(self, group) -> bool:
+        """Hand a group to the runner; False when it is already busy."""
+        with self._lock:
+            if self.busy:
+                return False
+            self.busy = True
+            self._pending = group
+        self._wake.set()
+        return True
+
+    def request_stop(self) -> None:
+        self._stop.set()
+        self._wake.set()
+
+    def run(self) -> None:  # noqa: D401
+        while not self._stop.is_set():
+            self._wake.wait(0.05)
+            self._wake.clear()
+            with self._lock:
+                group, self._pending = self._pending, None
+            if group is None:
+                continue
+            try:
+                decision = self.controller.ingest(group)
+                payload = (decision.as_dict() if hasattr(decision, "as_dict")
+                           else dict(decision))
+                self.decision.emit(payload)
+            except Exception as exc:  # pragma: no cover - surfaced to the UI
+                self.error.emit(f"{type(exc).__name__}: {exc}")
+            finally:
+                with self._lock:
+                    self.busy = False
+
+
 class SessionWorker(QtCore.QThread):
     """Runs the capture loop off the UI thread."""
 
@@ -35,6 +92,13 @@ class SessionWorker(QtCore.QThread):
         self._last_ingest_s = 0.0
         self.recorded_only = 0
         self.groups_seen = 0
+        #: created here (not inside run(), where it would be parented across
+        #: threads and Qt warns), and started by run() when adaptive spacing is on
+        self.runner: DecisionRunner | None = None
+        if self.min_decision_interval_s > 0:
+            self.runner = DecisionRunner(controller)
+            self.runner.decision.connect(self.decision)
+            self.runner.error.connect(self.error)
         self._stop = threading.Event()
         self._pause = threading.Event()
         self._lock = threading.Lock()
@@ -81,6 +145,8 @@ class SessionWorker(QtCore.QThread):
                 time.sleep(delay)
 
         try:
+            if self.runner is not None:
+                self.runner.start()
             for group in self.source:
                 if self._stop.is_set():
                     break
@@ -106,6 +172,17 @@ class SessionWorker(QtCore.QThread):
                         and now - self._last_decision_at < interval):
                     self.controller.record_only(group)
                     self.recorded_only += 1
+                    pace()
+                    continue
+                if self.runner is not None:
+                    # non-blocking: acquisition keeps its cadence, the decision
+                    # runs on its own thread and reports when it is done
+                    if not self.runner.submit(group):
+                        self.controller.record_only(group)
+                        self.recorded_only += 1
+                    else:
+                        self._last_decision_at = time.monotonic()
+                    self._count += 1
                     pace()
                     continue
                 started = time.monotonic()
@@ -135,5 +212,9 @@ class SessionWorker(QtCore.QThread):
         except Exception as exc:  # pragma: no cover - surface to the UI
             self.error.emit(f"{type(exc).__name__}: {exc}")
         finally:
+            if self.runner is not None:
+                self.runner.request_stop()
+                self.runner.wait(15000)
+                self.runner = None
             self.finished_ok.emit({"groups_ingested": self._count,
                                    "stopped": self._stop.is_set()})
