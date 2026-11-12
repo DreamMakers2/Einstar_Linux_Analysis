@@ -1,7 +1,9 @@
 # Einstar calibration wizard — operator guide
 
-Status: 2026-11-11.  Offline-rehearsed and validated on the physical scanner.
-The workflow is ready for the single comprehensive calibration session.
+Status: 2026-11-12.  Offline-rehearsed, stress-tested for six minutes (twice the
+length of the session that used to fail), and smoke-tested on the physical
+scanner in short capped runs.  The workflow is ready for the single
+comprehensive calibration session.
 
 ## 1. Before you start
 
@@ -31,14 +33,24 @@ quality gate and finish criteria).  Use `high` for the real session.
 
 The window shows, left to right:
 
-* **Left IR** and **Right IR** previews with the detected markers circled in
-  green; the colour camera below them; a coverage map in the fourth tile.
-* **NEXT MOVE** — the one instruction to follow.
-* **SESSION** — accepted / rejected / redundant counts and the eight coverage
-  dimensions with the exact hint for each missing one.
-* **PARAMETER OBSERVABILITY** — what the data collected so far can and cannot
-  determine, per parameter, with a colour-coded verdict.
-* **ACQUISITION / CONTROLS / decision log** on the right.
+* **Left IR**, **Right IR** and **colour** previews with the detected markers
+  circled in green, plus a coverage map of the plate centre in the fourth tile.
+  Each tile carries its own one-line status (markers found, assignment, colour).
+* **NEXT MOVE** — the one instruction to follow, sized to fit, with a line of
+  immediate feedback under it ("captured view 7", "too fast — hold still", …).
+* **3-D PLATE** — the known plate geometry drawn at the estimated pose, with
+  distance, tilt and roll.  It shows where the board is and how it is tilted;
+  drag it to orbit, double-click to return to the scanner view.  It refreshes at
+  10 Hz, drops to 5 Hz if the pipeline is behind, and never takes time from
+  acquisition or the solver.
+* **SESSION** — accepted / rejected / redundant counts, the eight coverage
+  dimensions with the exact hint for each missing one, and a readiness verdict
+  ("NOT READY — missing …" or "READY — press Finish").
+* **Advanced diagnostics** (collapsed) — per-parameter observability, the
+  uncertainty table and the gate detail.
+* **ACQUISITION / CONTROLS / decision log** on the right.  The header always
+  states the truth: `live · 9.9 fps · 4.6 decisions/s`, or
+  `RECORDING · STALLED` with the reason if frames stop arriving.
 
 ## 3. The one adaptive sequence
 
@@ -53,7 +65,8 @@ normal (markers circled, not saturated).  Then follow **NEXT MOVE**:
 | "Rotate the plate by N°" | rotate it in its own plane (four sectors, 0/90/180/270) |
 | "Put the plate centre in the <corner/edge>" | move so the plate sits in that part of the image |
 | "Good viewpoint captured — keep moving" | the view was accepted; move on |
-| "This viewpoint is redundant" | you are too close to a pose you already have; make a bigger change |
+| "This viewpoint is redundant" / "↺ adds nothing new" | you are too close to a pose you already have; make a bigger change |
+| "⚠ plate not read — show it fully" | the plate is cropped, at too steep an angle or ambiguous; bring the whole plate into both IR views |
 | the colour tile goes blank for a pose | the colour sensor cannot see the plate at this angle (it is offset from the IR pair) — the IR data is still used; keep going |
 | "ambiguous marker assignment" | the wizard cannot prove which corner of the plate is which; rotate it slightly (or bring the whole plate into both IR views) — it will not guess |
 | "READY TO FINISH" | every dimension is covered; press **Finish** |
@@ -68,9 +81,13 @@ and the plate speed itself.
 
 ## 4. Controls
 
-* **Pause** stops the trigger and turns the illuminator off, keeping the device
-  open and the recording open.  **Resume** continues; the raw recording has no
-  gap in its group counter.
+* **Pause** stops processing and keeps everything open; **Resume** continues.
+  Both are exercised by a test, so pause cannot silently keep consuming.
+* **Resume after a crash**: the session is autosaved at least every two
+  seconds.  Relaunch with `--resume` on the same `--session-dir` and the wizard
+  rebuilds the accepted views, the observations and the calibration, then
+  continues.  Verified against an uninterrupted run: same accepted count and a
+  final calibration identical to 0.000e+00.
 * **Cancel (keep data)** ends the session but keeps every frame, decision and
   the raw recording for later offline work.  No profile is produced.
 * **Finish && build profile** runs the final solve, the Phase-7 validation

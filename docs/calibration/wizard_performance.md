@@ -103,3 +103,41 @@ none.
 | window closed during a long solve | close deferred, window visible, worker joined, clean exit (test) |
 | crash mid-session | autosave block resumes the session; final calibration identical to an uninterrupted run (test) |
 | capture stops producing | source drains and ends; the header reports the stall rather than claiming RECORDING (test) |
+
+## Live scanner runs (short, capped)
+
+Three short capped runs on the physical scanner, after the offline checklist:
+
+| run | outcome |
+|---|---|
+| 30 groups, 8 s | 4 accepted, 15 rejected, device left safe |
+| 25 s + Finish | 4 accepted, 84 rejected, candidate written, validation refused, factory sha unchanged |
+| 20 s + Finish | 10 accepted, 49 rejected, state `done`, validation refused |
+
+They found two defects that no replay run could reach:
+
+1. **Every live run was labelled `replay`.**  `make_controller` passed the source
+   kind only to the demo controller, and the controller's empty-snapshot
+   template hard-coded an empty source, so the header, acquisition panel and
+   readiness footer all claimed replay.
+2. **The controller never saw the capture process** (it belongs to the
+   `LiveSource`), so it reported `fps 0 · idle · 0 groups` and the stall rule
+   fired permanently: `RECORDING · STALLED` while frames arrived at 9.6 fps.
+
+Both are fixed and tested.  Measured after the fix, during a live run:
+`live · 9.9 fps · 4.6 decisions/s`, state running, no false stall.
+
+This is why the brief asks for a short live test before trusting the wizard: the
+replay path has no capture process, so it cannot exercise the status plumbing
+that the operator actually watches.
+
+## GUI behaviour under load
+
+| element | rule |
+|---|---|
+| camera tiles | 10 Hz refresh, images come from the last decision (no re-detection) |
+| 3-D preview | 10 Hz, lengthened to 5 Hz when the measured decision rate drops below 2/s |
+| instruction | one line, font scaled to its length |
+| feedback | 1.8 s after each decision, plain language, unit-tested |
+| readiness | a verdict with named gaps, never a bare percentage |
+| diagnostics | collapsed by default |
