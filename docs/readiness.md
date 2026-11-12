@@ -168,3 +168,31 @@ plate alone.
 | strategy evidence | 10-trial Monte Carlo, task-space best (10/10 vs vendor) |
 | real-corpus accuracy | unverified; scale traceable to plate pitch only |
 | hardware validation | blocked on a calibrated artefact (B15) |
+
+## Publishing the sanitized tree
+
+`scripts/export_public.sh <public-repo>` copies docs/tools/calibration/recon/
+driver, scrubs machine paths and device identifiers, and then runs two checks:
+
+1. **working tree** - forbidden binaries and sensitive strings in the files that
+   were just written;
+2. **committed tree** (`git grep … HEAD`) - the same patterns in what is already
+   published.
+
+The second check exists because the first one cannot see history: a run that was
+interrupted after writing but before committing leaves an unscrubbed tree, and a
+later run would happily report the working tree clean once those files were
+committed.  Verified by planting a serial in a scratch clone: the committed-tree
+check failed with the file and line, as intended.
+
+The script also prints a `NOTE` when the destination has uncommitted changes, so
+a partial export is visible rather than silent.
+
+A publish is only complete when the clean clone builds and passes:
+
+```sh
+git clone <public-repo> /tmp/check && cd /tmp/check
+scripts/verify_all.sh            # 278 passed, 70 skipped without fixtures
+cmake -S recon  -B /tmp/rc && cmake --build /tmp/rc && ctest --test-dir /tmp/rc
+cmake -S driver -B /tmp/dr && cmake --build /tmp/dr && ctest --test-dir /tmp/dr
+```
