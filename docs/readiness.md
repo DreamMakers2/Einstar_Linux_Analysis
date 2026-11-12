@@ -7,6 +7,7 @@ document separates four states:
 |---|---|
 | **Implemented** | code exists and is wired into the build |
 | **Offline-validated** | covered by deterministic tests independent of the implementation (golden vectors, invariants, fuzzing, sanitizers) |
+| **Static checks** | `scripts/verify_all.sh` fails on undefined names, redefinitions and duplicate dictionary keys (pyflakes when available); the tree currently reports zero of those, and the check found four real defects when introduced |
 | **Clean-room verified** | a fresh clone of the published repository passes its own `scripts/verify_all.sh` (278 tests, 70 skipped without private fixtures) and builds both C++ trees (`recon` ctest 1/1, `driver` ctest 13/13) with no files missing |
 | **Hardware-validated** | observed working against the physical scanner |
 | **Unresolved** | known gap; a gate below is required before it can be trusted |

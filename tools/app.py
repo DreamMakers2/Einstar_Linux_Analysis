@@ -58,6 +58,9 @@ class Launcher(QtWidgets.QMainWindow):
         self.setWindowTitle("Einstar")
         self.resize(560, 420)
         try:
+            # imported here: the launcher class lives at module scope, where the
+            # wizard package may not be importable (e.g. a Qt-free --help run)
+            from wizard.gui import theme
             self.setStyleSheet(theme.app_stylesheet())
         except Exception:
             pass
@@ -302,8 +305,6 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.headless:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from wizard.gui import theme
-
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv[:1])
 
     launcher = Launcher(args)

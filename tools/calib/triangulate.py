@@ -173,10 +173,8 @@ def read_ply_vertices(path: str | Path) -> np.ndarray:
     count = 0
     binary = False
     has_color = False
-    fmt = ""
     for line in header:
         if line.startswith("format"):
-            fmt = line
             binary = "binary" in line
         elif line.startswith("element vertex"):
             count = int(line.split()[-1])

@@ -111,7 +111,6 @@ def get_pdb(pe):
                 st = entry.struct
                 if getattr(st, "Type", None) != 2:
                     continue
-                data = entry.entry
                 raw = pe.get_data(entry.struct.AddressOfRawData, entry.struct.SizeOfData)
                 if raw[:4] == b"RSDS":
                     guid = raw[4:20].hex()

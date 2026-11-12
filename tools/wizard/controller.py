@@ -38,6 +38,7 @@ from __future__ import annotations
 import copy
 from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 import hashlib
 import importlib
 import json
@@ -46,6 +47,9 @@ import os
 from pathlib import Path
 import shutil
 import threading
+
+if TYPE_CHECKING:              # annotations only; avoids a circular import
+    from . import guidance
 import time
 from typing import Any, Iterable, Mapping, Sequence
 

@@ -136,7 +136,7 @@ def cmd_plan(args):
     data = json.loads(Path(args.result).read_text())
     res = data["result"]
     # Rebuild a minimal result object from the JSON
-    from .calibrate import CalibrationResult, CameraIntrinsics
+    from .calibrate import CalibrationResult
     cams = {c: CameraIntrinsics(**{k: (np.array(val) if k == "kc" else val)
                                   for k, val in cam.items()
                                   if k in ("fx", "fy", "cx", "cy", "kc", "skew")})

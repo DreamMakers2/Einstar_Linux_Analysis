@@ -101,14 +101,21 @@ COMMANDS = {
 }
 
 # Table 3-8: device IDCODEs (28-bit meaningful value)
+# One IDCODE can name more than one part: 0x00303899 is documented as both
+# PGL22G and PGL22GS (docs/firmware/fpga_bitstream.md).  A plain dict silently
+# dropped one of the names; the value is the documented label and ``aliases``
+# keeps the alternative.
 DEVICE_IDS = {
     0x00501899: "PGL12G",
     0x00303899: "PGL22G",
-    0x00303899: "PGL22GS",
-    0x00511899: "PGL25G",
     0x005A1899: "PGL50G",
     0x00521899: "PGL50H",
     0x00522899: "PGL100H",
+}
+
+#: alternative part names for the same IDCODE
+DEVICE_ALIASES = {
+    0x00303899: ("PGL22GS",),
 }
 
 # Table 3-3: uncompressed bitstream sizes, KiB (as printed in the vendor doc)
@@ -315,6 +322,8 @@ def analyse(data, words, path=None):
         "commands": cmds,
         "idcode": f"0x{idcode:08x}" if idcode is not None else None,
         "device": DEVICE_IDS.get(idcode) if idcode is not None else None,
+        "device_aliases": list(DEVICE_ALIASES.get(idcode, ()))
+        if idcode is not None else [],
         "device_bitstream_kib": BITSTREAM_KIB.get(DEVICE_IDS.get(idcode))
         if idcode in DEVICE_IDS else None,
         "frame_address_writes": addr_writes,
@@ -417,7 +426,6 @@ def show_opcodes(words, packets):
         items = agg[key]
         regs = ", ".join(f"{r}(cnt={c})x{v}" for (r, c), v in
                          sorted(items.items(), key=lambda kv: -kv[1]))
-        first = next(iter(items))
         ptype = (key >> 5) & 7
         op = (key >> 3) & 3
         total = sum(items.values())

@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from typing import Optional
+
 from calib import plate
 from calib.calibrate import CAMERAS
 from calib.quality import ACCURACY_TARGETS
