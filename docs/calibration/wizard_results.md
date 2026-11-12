@@ -245,3 +245,37 @@ symmetric design with 17 views at +16 deg and 16 at -16 deg has a median of
 +16 deg, so the balanced set looked one-sided.  It now centres on the
 **midrange**, the same convention `tools/wizard/coverage` uses; a constructed
 balanced set measures `[16, 17]` on both axes.
+
+
+## Integrated rehearsal through the launcher (2026-11-12)
+
+Run through the real entry point (`tools/app.py` -> launcher -> Calibration
+wizard), replay source, 41 groups of the one-axis sweep, factory profile:
+
+```
+accepted 8    rejected 33    redundant 33    coverage 3/8
+NEXT MOVE: "Move to 300-380 mm (closer, 42 mm), tilt 16 deg"  priority distance
+NOT READY - missing: distance bands; tilt about the x axis (positive and
+                 negative); tilt about the second axis (y, positive and
+                 negative); tilt quadrants (four sign combinations)
+observability: condition 1.97e5, rank 18/18, constrained 4, unknown 6,
+               unobservable 12, weak 2; left.fx 10.26 px, right.fx 26.48 px
+gates: FAIL freed_parameters, stereo_rotation, baseline, model_sensitivity
+```
+
+Every marker was detected in all three cameras (40/40, 40/40, 40/40,
+"assignment ok"), so the refusal is about **geometry**, not detection: the app
+declines to declare the dataset ready and names each missing dimension.  The
+parameter table shows why - on a one-axis sweep `left.fx`, `left.fy`,
+`right.fx` and `right.fy` are unobservable at 10-26 px, which is the same
+finding as the ranked observability study, now visible to the operator in the
+window rather than in a log.
+
+The 33 "redundant" rejections are the duplicate gate firing on 0.1-1.5 deg /
+0.6-3.8 mm steps - frames that add no information.  That is the intended
+behaviour, and it is what makes the operator's time the constraint rather than
+the frame rate.
+
+This rehearsal used replay, not the physical plate, so it demonstrates the
+workflow and the refusal path; it is not a substitute for the comprehensive
+recording.
