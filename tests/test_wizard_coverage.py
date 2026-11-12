@@ -341,10 +341,28 @@ def test_guidance_prefers_the_nearest_unsatisfied_family():
     assert g["effort"]["score"] >= 0.0
 
 
-def test_guidance_refuses_to_extrapolate_from_an_unstable_pose():
+def test_guidance_keeps_guiding_through_ordinary_motion():
+    """Inter-frame speed is not blur and must not stop the session.
+
+    A 1.2 ms exposure at ordinary hand speed produces a sharp frame; the old
+    gate rejected 55 of 178 views and then asked the operator to hold still on
+    nearly every decision.  The coverage guidance must keep offering the next
+    family; D7 still records that this was not a dwell view.
+    """
     views = good_views()[:6]               # far from complete
     views[-1]["timestamp"] = views[-2]["timestamp"] + 1e-3
     views[-1]["pose"]["t"] = np.asarray(views[-2]["pose"]["t"], float) + [0.0, 0.0, 50.0]
+    m = measure(views)
+    assert m["stable"] is False
+    g = coverage.guidance_target(m, views[-1]["pose"])
+    assert g["mode"] == "move"
+    assert g["target_pose"] is not None
+    assert "hold still" not in g["instruction"].lower()
+
+
+def test_guidance_holds_when_the_pose_itself_is_unreliable():
+    views = good_views()[:6]
+    views[-1]["assignment_ok"] = False
     m = measure(views)
     assert m["stable"] is False
     g = coverage.guidance_target(m, views[-1]["pose"])

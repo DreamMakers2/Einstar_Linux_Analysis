@@ -2,12 +2,38 @@
 
 Reverse-engineering research and a native-Linux engineering baseline for the **SHINING 3D
 Einstar** 3D scanner (`EinScan10_01`, USB `3267:0003`), produced offline from the shipped
-Windows software, official firmware packages and a recorded device session — with no scanner
-attached.
+Windows software, official firmware packages and recorded device sessions. The scanner was
+attached for controlled bring-up and validation in November 2026; hardware-dependent claims
+are labelled with their evidence.
 
 This repository publishes the **findings, tools, specifications, tests and benchmarks**.
 It deliberately does **not** contain proprietary vendor binaries, firmware images, factory
 calibration records or user data (see [Scope and exclusions](#scope-and-exclusions)).
+
+---
+
+## Current milestone — calibration performance (2026-11-12)
+
+The calibration application was rebuilt around four independent workloads
+(acquisition, preview, detection, optimisation). On the preserved 35-view
+session the complete finalisation dropped from **38.94 s to 3.47 s (11.2x)**
+at the same optimum (0.33037 vs 0.33044 px RMS), with every held-out,
+split-half, epipolar, coverage and lifecycle gate still running. On the
+physical scanner, preview held **9.75 Hz** (p95 121 ms) while decisions ran at
+4.55/s, capture held 9.76 groups/s at 36.9 MB/s with 0 transfer timeouts, and a
+GUI `SIGKILL` left capture stopped with verified trigger `0/0` and illuminator
+readback `0`.
+
+* [Performance and architecture report](docs/calibration/performance_overhaul_2026-11-12.md)
+* [Operator UI](docs/calibration/modern_ui.md)
+* [Safe automatic exposure](docs/calibration/auto_exposure.md)
+* [Capture process safety](docs/calibration/process_safety.md)
+* [Established-systems review](docs/calibration/established_systems_review.md)
+* Evidence: `analysis/calibration/overhaul/`
+
+The preserved 35-view capture remains **NOT READY** for geometric coverage;
+no comprehensive physical calibration is claimed. Absolute dimensional
+accuracy still requires an independent length artefact.
 
 ---
 

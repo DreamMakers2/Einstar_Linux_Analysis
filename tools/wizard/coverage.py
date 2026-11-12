@@ -1272,13 +1272,22 @@ def guidance_target(measurement: Mapping[str, Any],
     stable = bool(measurement.get("stable", True))
     if not ready["ready"] and not stable:
         stab = measurement.get("stability") or {}
-        why = ", ".join(stab.get("reasons") or ["pose not stable"])
-        return {"mode": "hold", "instruction": "Hold still for a moment "
-                f"({why}); guidance resumes when the pose is stable.",
-                "target_pose": None, "target_R": None, "target_t": None,
-                "family": None, "families": [], "unlocks": [],
-                "effort": None, "precise": False, "reason": why,
-                "readiness": ready["summary"]}
+        raw_reasons = [str(r) for r in (stab.get("reasons") or ["pose not stable"])]
+        # Inter-frame speed is not a reason to stop the session: a 1.2 ms
+        # exposure does not blur at ordinary hand speed, and a single sharp
+        # frame carries a valid pose.  Ask for a pause only when the *pose*
+        # itself is unreliable (missing/ambiguous markers, no pose).  Dwell
+        # views are collected when the operator naturally pauses; the coverage
+        # strip asks for them later instead of interrupting every movement.
+        blocking = [r for r in raw_reasons
+                    if not (r.startswith("moving at") or r.startswith("rotating at"))]
+        if blocking:
+            why = ", ".join(blocking)
+            return {"mode": "hold", "instruction": "Hold still for a moment — "
+                    f"{why}.", "target_pose": None, "target_R": None,
+                    "target_t": None, "family": None, "families": [],
+                    "unlocks": [], "effort": None, "precise": False,
+                    "reason": why, "readiness": ready["summary"]}
 
     families = _families(measurement, spec, cur)
     if ready["ready"] and not families:

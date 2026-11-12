@@ -361,4 +361,6 @@ EINSTAR_TEST(signal_flag_keeps_first_signal_and_is_consumed_once) {
   CHECK_EQ(take_stop_signal(), 0);
 }
 
+#include "test_capture_safety.cpp"
+
 EINSTAR_TEST_MAIN()

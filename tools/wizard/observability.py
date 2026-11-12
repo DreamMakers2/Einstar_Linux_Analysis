@@ -42,6 +42,9 @@ session end and passed to the gate.
 """
 from __future__ import annotations
 
+import copy
+import hashlib
+
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -821,6 +824,35 @@ def _rms(err: np.ndarray) -> float:
     return float(np.sqrt(np.mean(err ** 2))) if len(err) else float("nan")
 
 
+_MODEL_SENSITIVITY_CACHE: dict[tuple, dict] = {}
+_MODEL_SENSITIVITY_ORDER: list[tuple] = []
+_MODEL_SENSITIVITY_MAX = 4
+
+
+def _model_sensitivity_key(observations: Sequence[Observation],
+                           result: CalibrationResult, pitch: float,
+                           holdout_fraction: float, seed: int,
+                           max_nfev: int) -> tuple:
+    """Content key for the expensive held-out analysis.
+
+    The finish path asks for the same analysis up to three times (release
+    decision, observability gate, lifecycle validation).  Measured on the
+    preserved 35-view session that cost 2.6 s of a 7.8 s finish even after the
+    solver was made fast.  The key covers every input that changes the result;
+    it is cheap (~1 ms) compared with the two refits it guards.
+    """
+    h = hashlib.blake2b(digest_size=16)
+    for o in sorted(observations, key=lambda z: (str(z.camera), int(z.view))):
+        h.update(str(o.camera).encode())
+        h.update(int(o.view).to_bytes(8, "little", signed=True))
+        for k in sorted(o.uv):
+            h.update(np.asarray(k, np.float64).tobytes())
+            h.update(np.asarray(o.uv[k], np.float64).tobytes())
+    h.update(np.asarray(result.vector(), np.float64).tobytes())
+    h.update(np.asarray([pitch, holdout_fraction, seed, max_nfev], np.float64).tobytes())
+    return (h.hexdigest(),)
+
+
 def model_sensitivity_analysis(observations: Sequence[Observation],
                                result: CalibrationResult,
                                *, pitch: float = plate.DEFAULT_PITCH_MM,
@@ -836,6 +868,11 @@ def model_sensitivity_analysis(observations: Sequence[Observation],
     residual.  Cost: two calibrations (seconds), so call it once at the end of
     a session.
     """
+    key = _model_sensitivity_key(observations, result, pitch,
+                                 holdout_fraction, seed, max_nfev)
+    cached = _MODEL_SENSITIVITY_CACHE.get(key)
+    if cached is not None:
+        return copy.deepcopy(cached)
     views = sorted({int(o.view) for o in observations})
     if len(views) < 6:
         return {"ok": False, "reason": f"only {len(views)} views"}
@@ -859,7 +896,7 @@ def model_sensitivity_analysis(observations: Sequence[Observation],
     e_fixed = _rms(_pnp_residuals(r_fixed, held, pitch))
     delta = e_fixed - e_free
     rel = delta / e_fixed if e_fixed and np.isfinite(e_fixed) else float("nan")
-    return {
+    out = {
         "ok": True, "n_views": len(views), "n_train_views": len(views) - n_test,
         "n_heldout_views": n_test,
         "heldout_rms_free_kc_px": e_free,
@@ -872,6 +909,12 @@ def model_sensitivity_analysis(observations: Sequence[Observation],
         "note": "selection uses the held-out change; the training RMS is reported "
                 "only to show it moves the other way",
     }
+    _MODEL_SENSITIVITY_CACHE[key] = copy.deepcopy(out)
+    _MODEL_SENSITIVITY_ORDER.append(key)
+    while len(_MODEL_SENSITIVITY_ORDER) > _MODEL_SENSITIVITY_MAX:
+        old = _MODEL_SENSITIVITY_ORDER.pop(0)
+        _MODEL_SENSITIVITY_CACHE.pop(old, None)
+    return out
 
 
 # ---------------------------------------------------------------------------

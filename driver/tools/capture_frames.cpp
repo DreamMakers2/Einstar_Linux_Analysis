@@ -87,6 +87,7 @@ struct Options {
 
   // Wizard session protocol (docs/calibration/wizard_architecture.md §5).
   std::string control_path;
+  std::string exposure_control_path;
   std::uint32_t ring_size = 0;
   double max_seconds = 0.0;
   std::string session_dir;
@@ -388,6 +389,7 @@ int run_simulated(const Options& options) {
   capture.partial_frame_timeout_ns = 500'000'000;
   capture.control_path = options.control_path;
   capture.status_file = options.status_file;
+  capture.volatility_path = options.exposure_control_path;
   capture.ring_size = options.ring_size;
   capture.max_seconds = options.max_seconds;
   capture.timeout_seconds = options.timeout_seconds;
@@ -454,6 +456,7 @@ using einstar::PipelineStats;
 using einstar::Status;
 using einstar::capture::CaptureSessionDriver;
 using einstar::capture::CaptureSessionOptions;
+using einstar::capture::VolatileSettings;
 using einstar::capture::SessionState;
 using einstar::capture::StopReason;
 
@@ -709,26 +712,65 @@ int run_libusb_probe(const Options& options,
 
 /// Leave the projector/LEDs dark.  Volatile only (no flash write), and the
 /// safe state for a device that will be left unattended: the vendor's own
-/// `lights_off()` does the same.  Failures are reported, never fatal.
-void turn_illuminator_off(ControlChannel& channel) {
+/// `lights_off()` does the same. Failures are reported and returned.
+Status turn_illuminator_off(ControlChannel& channel, DeviceInfo* device = nullptr) {
   bool ok = true;
+  // Try every off command, then read back; never infer zero from a write.
+  if (device != nullptr) {
+    device->laser_percent.reset();
+    for (auto& value : device->strobe) { value.reset(); }
+  }
   if (const Status status = channel.set_laser_brightness(0); !status.ok()) {
     ok = false;
-    std::fprintf(stderr, "warning: laser off failed: %s\n",
-                 status.message().c_str());
+    std::fprintf(stderr, "warning: laser off failed: %s\n", status.message().c_str());
   }
   for (unsigned route = 0; route < 2; ++route) {
-    if (const Status status = channel.set_strobe_brightness(route, 0);
-        !status.ok()) {
+    if (const Status status = channel.set_strobe_brightness(route, 0); !status.ok()) {
       ok = false;
       std::fprintf(stderr, "warning: strobe %u off failed: %s\n", route,
                    status.message().c_str());
     }
   }
-  if (ok) {
-    std::printf("  illuminator    : off (volatile)\n");
-  }
+  return ok ? Status::success()
+            : Status::error(ErrorCode::TransportError, "illuminator off command failed");
 }
+
+Status verify_illuminator_off(ControlChannel& channel, DeviceInfo* device = nullptr) {
+  bool ok = true;
+  const auto laser = channel.laser_brightness();
+  if (device != nullptr && laser) { device->laser_percent = *laser; }
+  ok = laser && *laser == 0 && ok;
+  for (unsigned route = 0; route < 2; ++route) {
+    const auto strobe = channel.strobe_brightness(route);
+    if (device != nullptr && strobe) { device->strobe[route] = *strobe; }
+    ok = strobe && *strobe == 0 && ok;
+  }
+  if (!ok) {
+    std::fprintf(stderr, "warning: illuminator off UNVERIFIED (nonzero/missing readback)\n");
+    return Status::error(ErrorCode::TransportError, "illuminator off unverified");
+  }
+  std::printf("  illuminator    : off (volatile readback; optical state unverified)\n");
+  return Status::success();
+}
+
+// Covers setup errors and unwinding before the session driver takes over.
+struct SetupSafetyCleanup {
+  ControlChannel& channel;
+  AcquisitionPipeline& pipeline;
+  bool armed = true;
+  ~SetupSafetyCleanup() {
+    if (!armed) { return; }
+    (void)turn_illuminator_off(channel);
+    if (const Status stopped = channel.stop_streaming(); !stopped.ok()) {
+      (void)channel.set_trigger_counts(0, 0);
+      std::fprintf(stderr, "warning: setup trigger cleanup UNVERIFIED: %s\n",
+                   stopped.message().c_str());
+    }
+    (void)verify_illuminator_off(channel);
+    channel.close();
+    (void)pipeline.stop();
+  }
+};
 
 /// Live session driver: owns the device-side pause/resume/stop transitions.
 /// The pipeline and control channel are opened before the session starts; the
@@ -760,6 +802,8 @@ class LiveSessionDriver final : public CaptureSessionDriver {
       }
     }
   }
+
+  ~LiveSessionDriver() override { (void)stop(); }
 
   Status start() override {
     if (!trigger_enabled_ || streaming_) {
@@ -802,32 +846,59 @@ class LiveSessionDriver final : public CaptureSessionDriver {
 
   [[nodiscard]] const DeviceInfo& device() const override { return device_; }
 
+  Status apply_volatile(const VolatileSettings& settings) override {
+    bool ok = true;
+    std::string error;
+    if (settings.has_exposure) {
+      for (unsigned camera = 0; camera < 3; ++camera) {
+        const Status status =
+            channel_.set_exposure_us(camera, settings.exposure_us[camera]);
+        if (!status.ok()) {
+          ok = false;
+          error = "exposure camera " + std::to_string(camera) + ": " +
+                  status.message();
+          break;
+        }
+        device_.exposure_us[camera] = settings.exposure_us[camera];
+      }
+    }
+    if (ok && settings.has_gain) {
+      for (unsigned camera = 0; camera < 3; ++camera) {
+        const Status status = channel_.set_gain(camera, settings.gain[camera]);
+        if (!status.ok()) {
+          ok = false;
+          error = "gain camera " + std::to_string(camera) + ": " +
+                  status.message();
+          break;
+        }
+        device_.gain[camera] = settings.gain[camera];
+      }
+    }
+    if (ok && settings.laser_percent) {
+      const Status status = channel_.set_laser_brightness(*settings.laser_percent);
+      if (!status.ok()) {
+        ok = false;
+        error = "laser: " + status.message();
+      } else {
+        device_.laser_percent = *settings.laser_percent;
+      }
+    }
+    return ok ? Status::success()
+              : Status::error(ErrorCode::TransportError,
+                              "volatile settings: " + error);
+  }
+
   Status pause() override {
-    Status result = Status::success();
-    if (streaming_) {
-      result = channel_.stop_streaming();
-      streaming_ = false;
-      if (!result.ok()) {
-        std::fprintf(stderr, "warning: stop_streaming failed: %s\n",
-                     result.message().c_str());
-      }
-    }
-    turn_illuminator_off(channel_);
-    if (device_.laser_percent) {
-      device_.laser_percent = 0;
-    }
-    for (unsigned route = 0; route < 2; ++route) {
-      if (device_.strobe[route]) {
-        device_.strobe[route] = 0;
-      }
-    }
-    if (!result.ok()) {
+    const Status off = turn_illuminator_off(channel_, &device_);
+    const Status stopped = channel_.stop_streaming();
+    streaming_ = false;
+    if (!stopped.ok()) {
+      (void)channel_.set_trigger_counts(0, 0);
       return Status::error(ErrorCode::TransportError,
-                           "pause could not stop the trigger: " +
-                               result.message() +
-                               " (the illuminator was still turned off)");
+                           "pause could not stop trigger: " + stopped.message());
     }
-    return Status::success();
+    const Status readback = verify_illuminator_off(channel_, &device_);
+    return off.ok() ? readback : off;
   }
 
   Status resume() override {
@@ -893,41 +964,42 @@ class LiveSessionDriver final : public CaptureSessionDriver {
   }
 
   Status stop() override {
-    if (stopped_) {
-      return Status::success();
-    }
+    if (stopped_) { return stop_status_; }
     stopped_ = true;
-    Status result = Status::success();
-    if (streaming_) {
-      result = channel_.stop_streaming();
-      streaming_ = false;
+    device_.cleanup_attempted = true;
+    // Darkness first, including partial-start and trigger-off sessions.
+    const Status off = turn_illuminator_off(channel_, &device_);
+    const Status stopped = channel_.stop_streaming();
+    // stop_streaming returns early if its period write fails.
+    if (!stopped.ok()) { (void)channel_.set_trigger_counts(0, 0); }
+    streaming_ = false;
+    const Status dark = verify_illuminator_off(channel_, &device_);
+    const auto counts = channel_.trigger_counts();
+    if (counts) {
+      device_.trigger_mono = counts->mono;
+      device_.trigger_rgb = counts->rgb;
     }
-    // Always leave the device dark, whatever happened above.
-    turn_illuminator_off(channel_);
-    if (device_.laser_percent) {
-      device_.laser_percent = 0;
-    }
-    for (unsigned route = 0; route < 2; ++route) {
-      if (device_.strobe[route]) {
-        device_.strobe[route] = 0;
-      }
+    device_.cleanup_verified = off.ok() && dark.ok() && counts &&
+                              counts->mono == 0 && counts->rgb == 0;
+    if (!device_.cleanup_verified) {
+      std::fprintf(stderr, "warning: device cleanup UNVERIFIED\n");
     }
     channel_.close();
     const Status pipeline_stopped = pipeline_.stop();
-    if (!result.ok()) {
-      if (!pipeline_stopped.ok()) {
-        std::fprintf(stderr, "warning: pipeline stop failed: %s\n",
-                     pipeline_stopped.message().c_str());
-      }
-      return Status::error(ErrorCode::TransportError,
-                           "stop_streaming failed: " + result.message());
+    if (!device_.cleanup_verified) {
+      stop_status_ = Status::error(ErrorCode::TransportError, "device cleanup unverified");
+    } else if (!stopped.ok()) {
+      stop_status_ = stopped;
+    } else {
+      stop_status_ = pipeline_stopped;
     }
-    return pipeline_stopped;
+    return stop_status_;
   }
 
   [[nodiscard]] double virtual_duration_seconds() const override { return 0.0; }
 
  private:
+  Status stop_status_ = Status::success();
   Status apply_trigger_counts() {
     if (!options_.trigger_counts_set) {
       return Status::success();
@@ -1031,6 +1103,7 @@ int run_libusb(const Options& options) {
     (void)pipeline->stop();
     return 1;
   }
+  SetupSafetyCleanup setup_cleanup{*channel, *pipeline};
   print_metadata(*identity, options.show_serial);
 
   auto device_result = read_device_metadata(*channel, *identity,
@@ -1038,8 +1111,6 @@ int run_libusb(const Options& options) {
   if (!device_result) {
     std::fprintf(stderr, "metadata read failed: %s\n",
                  device_result.error().message().c_str());
-    channel->close();
-    (void)pipeline->stop();
     return 1;
   }
   DeviceInfo device = *device_result;
@@ -1052,8 +1123,7 @@ int run_libusb(const Options& options) {
     std::uint32_t value = 0;
     if (!parse_camera_value(spec, camera, value)) {
       std::fprintf(stderr, "invalid --exposure-us value: %s\n", spec.c_str());
-      channel->close();
-      (void)pipeline->stop();
+
       return 2;
     }
     for (unsigned index = 0; index < 3; ++index) {
@@ -1072,8 +1142,6 @@ int run_libusb(const Options& options) {
                    "volatile exposure for camera %u was refused: %s\n"
                    "aborting without changing anything else\n",
                    camera, status.message().c_str());
-      channel->close();
-      (void)pipeline->stop();
       return 1;
     }
     device.exposure_us[camera] = *exposures[camera];
@@ -1088,8 +1156,7 @@ int run_libusb(const Options& options) {
     std::uint32_t value = 0;
     if (!parse_camera_value(spec, camera, value) || value > 0xFFFFU) {
       std::fprintf(stderr, "invalid --gain value: %s\n", spec.c_str());
-      channel->close();
-      (void)pipeline->stop();
+
       return 2;
     }
     for (unsigned index = 0; index < 3; ++index) {
@@ -1108,8 +1175,6 @@ int run_libusb(const Options& options) {
                    "volatile gain for camera %u was refused: %s\n"
                    "aborting without changing anything else\n",
                    camera, status.message().c_str());
-      channel->close();
-      (void)pipeline->stop();
       return 1;
     }
     device.gain[camera] = *gains[camera];
@@ -1125,8 +1190,6 @@ int run_libusb(const Options& options) {
                    "volatile laser brightness %u%% was refused: %s\n"
                    "aborting; the trigger was not started\n",
                    *options.laser_percent, status.message().c_str());
-      channel->close();
-      (void)pipeline->stop();
       return 1;
     }
     device.laser_percent = *options.laser_percent;
@@ -1142,10 +1205,7 @@ int run_libusb(const Options& options) {
                    "volatile strobe route %u = %u was refused: %s\n"
                    "aborting; the trigger was not started\n",
                    route, value, status.message().c_str());
-      // A previous --laser may already be on; never leave it projecting.
-      turn_illuminator_off(*channel);
-      channel->close();
-      (void)pipeline->stop();
+      // The setup guard also handles a previously enabled laser.
       return 1;
     }
     device.strobe[route] = value;
@@ -1165,10 +1225,12 @@ int run_libusb(const Options& options) {
   LiveSessionDriver driver(*pipeline, *channel, options, device,
                            trigger_period);
 
+  setup_cleanup.armed = false;
   CaptureSessionOptions session;
   session.output_directory = output_directory;
   session.control_path = options.control_path;
   session.status_file = options.status_file;
+  session.volatility_path = options.exposure_control_path;
   session.groups = options.groups;
   session.ring_size = options.ring_size;
   session.max_seconds = options.max_seconds;
@@ -1236,7 +1298,12 @@ int run_libusb(const Options& options) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) try {
+  einstar::capture::ProcessSafetyGuard safety;
+  if (const auto armed = safety.arm_from_environment(); !armed.ok()) {
+    std::fprintf(stderr, "process safety: %s; capture refused\n", armed.message().c_str());
+    return 1;
+  }
   Options options;
   bool show_help = false;
   for (int i = 1; i < argc; ++i) {
@@ -1268,6 +1335,8 @@ int main(int argc, char** argv) {
       options.status_file = argv[++i];
     } else if (argument == "--control" && i + 1 < argc) {
       options.control_path = argv[++i];
+    } else if (argument == "--exposure-control" && i + 1 < argc) {
+      options.exposure_control_path = argv[++i];
     } else if (argument == "--ring" && i + 1 < argc) {
       std::uint32_t value = 0;
       if (!parse_u32(argv[++i], value)) {
@@ -1402,4 +1471,7 @@ int main(int argc, char** argv) {
 #endif
   }
   return 2;
+} catch (const std::exception& error) {
+  std::fprintf(stderr, "capture failed: %s; consult cleanup diagnostics\n", error.what());
+  return 1;
 }

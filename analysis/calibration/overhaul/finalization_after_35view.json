@@ -1,0 +1,24 @@
+{
+ "accepted": 35,
+ "candidate": "<shadow-session>/candidate/profile.json",
+ "error": null,
+ "factory_unchanged": true,
+ "finish_s": 3.465353008999955,
+ "ok": true,
+ "resume": {
+  "accepted": 35,
+  "next_view": 35,
+  "resumed": true,
+  "solved": true,
+  "views": 105
+ },
+ "resume_s": 3.20553011300035,
+ "rms_px": 0.3302788115688135,
+ "schema": "einstar-bench-finalize/1",
+ "session": "<preserved-35-view-session>",
+ "solve_seconds": 3.745940685272217,
+ "solves": 2,
+ "state": "done",
+ "verdict": "pending",
+ "would_activate": false
+}

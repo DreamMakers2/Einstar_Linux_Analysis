@@ -149,9 +149,11 @@ def feedback_text(decision: dict | None) -> tuple[str, str]:
                 else "✓ captured"), "OK"
     joined = "; ".join(reasons)
     if "too similar" in joined:
-        return "↺ already have this view — move further", "WARN"
-    if "moving" in joined or "blur" in joined:
-        return "⚠ too fast — hold still", "WARN"
+        return "↺ pose already covered — keep moving", "MUTED"
+    if "blur" in joined:
+        return "⚠ image soft — slow down for a moment", "WARN"
+    if "moving" in joined:
+        return "⚠ move a little slower", "WARN"
     if "redundant" in joined:
         return "↺ adds nothing new — change the pose", "WARN"
     if any(k in joined for k in ("no pose", "orientation", "ambiguous",

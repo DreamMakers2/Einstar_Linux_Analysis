@@ -6,6 +6,7 @@
 #include <array>
 #include <cerrno>
 #include <chrono>
+#include <charconv>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -24,6 +25,12 @@
 
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <unistd.h>
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
 
 namespace einstar::capture {
 namespace {
@@ -1118,6 +1125,169 @@ ControlCommand parse_control_text(std::string_view text) {
   return command;
 }
 
+namespace {
+
+bool parse_token_uint(std::string_view token, unsigned base, std::uint64_t& value) {
+  if (token.empty()) {
+    return false;
+  }
+  std::string text(token);
+  char* end = nullptr;
+  errno = 0;
+  const unsigned long long parsed = std::strtoull(text.c_str(), &end, base);
+  if (errno != 0 || end == text.c_str() || *end != '\0') {
+    return false;
+  }
+  value = static_cast<std::uint64_t>(parsed);
+  return true;
+}
+
+bool parse_camera_uint(std::string_view token, unsigned& camera,
+                       std::uint64_t& value) {
+  const std::size_t colon = token.find(':');
+  if (colon == std::string_view::npos) {
+    return false;
+  }
+  std::uint64_t cam = 0;
+  if (!parse_token_uint(token.substr(0, colon), 10, cam) || cam > 2) {
+    return false;
+  }
+  if (!parse_token_uint(token.substr(colon + 1), 10, value)) {
+    return false;
+  }
+  camera = static_cast<unsigned>(cam);
+  return true;
+}
+
+}  // namespace
+
+/// Poll a tiny volatile-settings file.  The wizard rewrites it atomically
+/// (write + rename), so a partial file is never observed.  Unknown lines and
+/// out-of-range values are reported once and otherwise ignored.
+class VolatileSettingsFile {
+ public:
+  explicit VolatileSettingsFile(std::string path) : path_(std::move(path)) {}
+
+  std::optional<VolatileSettings> poll() {
+    if (path_.empty()) {
+      return std::nullopt;
+    }
+    struct stat info {};
+    if (::stat(path_.c_str(), &info) != 0) {
+      have_stat_ = false;
+      return std::nullopt;
+    }
+    const auto device = static_cast<std::uint64_t>(info.st_dev);
+    const auto inode = static_cast<std::uint64_t>(info.st_ino);
+    const auto size = static_cast<std::uint64_t>(info.st_size);
+    const auto mtime_sec = static_cast<std::int64_t>(info.st_mtim.tv_sec);
+    const auto mtime_nsec = static_cast<std::int64_t>(info.st_mtim.tv_nsec);
+    if (have_stat_ && device == device_ && inode == inode_ && size == size_ &&
+        mtime_sec == mtime_sec_ && mtime_nsec == mtime_nsec_) {
+      return std::nullopt;
+    }
+    std::ifstream file(path_, std::ios::binary);
+    if (!file) {
+      have_stat_ = false;
+      return std::nullopt;
+    }
+    std::string text((std::istreambuf_iterator<char>(file)),
+                     std::istreambuf_iterator<char>());
+    if (text.size() > 64 * 1024) {
+      text.resize(64 * 1024);
+    }
+    have_stat_ = true;
+    device_ = device;
+    inode_ = inode;
+    size_ = size;
+    mtime_sec_ = mtime_sec;
+    mtime_nsec_ = mtime_nsec;
+
+    VolatileSettings out;
+    std::array<bool, 3> exposure_seen{};
+    std::array<bool, 3> gain_seen{};
+    std::size_t pos = 0;
+    bool bad = false;
+    while (pos < text.size()) {
+      const std::size_t end = text.find('\n', pos);
+      std::string line = text.substr(pos, end == std::string::npos
+                                             ? std::string::npos : end - pos);
+      pos = end == std::string::npos ? text.size() : end + 1;
+      line = std::string(trim_controls(line));
+      if (line.empty() || line[0] == '#') {
+        continue;
+      }
+      std::size_t sep = line.find_first_of(" \t");
+      const std::string key = line.substr(0, sep);
+      std::size_t cursor = sep;
+      while (cursor < line.size()) {
+        while (cursor < line.size() &&
+               (line[cursor] == ' ' || line[cursor] == '\t')) {
+          ++cursor;
+        }
+        const std::size_t token_end = line.find_first_of(" \t", cursor);
+        const std::string_view token(line.data() + cursor,
+                                     (token_end == std::string::npos
+                                          ? line.size() : token_end) - cursor);
+        cursor = token_end == std::string::npos ? line.size() : token_end;
+        if (key == "exposure" || key == "gain") {
+          unsigned camera = 0;
+          std::uint64_t value = 0;
+          if (!parse_camera_uint(token, camera, value)) {
+            bad = true;
+            continue;
+          }
+          if (key == "exposure") {
+            if (value < 10 || value > 1000000) {
+              bad = true;
+              continue;
+            }
+            out.exposure_us[camera] = static_cast<std::uint32_t>(value);
+            exposure_seen[camera] = true;
+          } else {
+            if (value > 65535) {
+              bad = true;
+              continue;
+            }
+            out.gain[camera] = static_cast<std::uint16_t>(value);
+            gain_seen[camera] = true;
+          }
+        } else if (key == "laser") {
+          std::uint64_t value = 0;
+          if (!parse_token_uint(token, 10, value) || value > 100) {
+            bad = true;
+            continue;
+          }
+          out.laser_percent = static_cast<std::uint8_t>(value);
+        }
+      }
+    }
+    if (bad && !warned_) {
+      warned_ = true;
+      std::fprintf(stderr, "warning: ignoring malformed volatile settings line\n");
+    }
+    // An exposure/gain block must name all three cameras.  A partial line
+    // would otherwise zero the cameras it omitted and the live driver would
+    // try to write an invalid value.
+    out.has_exposure = exposure_seen[0] && exposure_seen[1] && exposure_seen[2];
+    out.has_gain = gain_seen[0] && gain_seen[1] && gain_seen[2];
+    if (!out.has_exposure && !out.has_gain && !out.laser_percent) {
+      return std::nullopt;
+    }
+    return out;
+  }
+
+ private:
+  std::string path_;
+  bool have_stat_ = false;
+  bool warned_ = false;
+  std::uint64_t device_ = 0;
+  std::uint64_t inode_ = 0;
+  std::uint64_t size_ = 0;
+  std::int64_t mtime_sec_ = 0;
+  std::int64_t mtime_nsec_ = 0;
+};
+
 ControlFile::ControlFile(std::string path) : path_(std::move(path)) {}
 
 ControlCommand ControlFile::poll() {
@@ -1262,6 +1432,15 @@ std::string build_live_status_json(const LiveStatus& status) {
   }
   out += "],\"laser_percent\":";
   out += status.laser_percent ? std::to_string(*status.laser_percent) : "null";
+  out += ",\"cleanup_attempted\":";
+  out += status.cleanup_attempted ? "true" : "false";
+  out += ",\"cleanup_verified\":";
+  out += status.cleanup_verified ? "true" : "false";
+  if (status.trigger_counts) {
+    out += ",\"trigger_counts\":{\"mono\":" +
+           std::to_string((*status.trigger_counts)[0]) + ",\"rgb\":" +
+           std::to_string((*status.trigger_counts)[1]) + "}";
+  }
   out += ",\"simulated\":";
   out += status.simulated ? "true" : "false";
   out += ",\"live\":";
@@ -1302,31 +1481,137 @@ std::uint64_t disk_free_bytes(const std::string& path) noexcept {
 // ---------------------------------------------------------------------------
 
 namespace {
-volatile std::sig_atomic_t g_stop_signal = 0;
+static_assert(std::atomic<int>::is_always_lock_free);
+std::atomic<int> g_stop_signal{0};
+std::atomic<int> g_shutdown_requested{0};
 }  // namespace
 
 void notify_stop_signal(int signum) noexcept {
   if (signum != SIGINT && signum != SIGTERM) {
     return;
   }
-  if (g_stop_signal == 0) {
-    g_stop_signal = signum;
-  }
+  int expected = 0;
+  (void)g_stop_signal.compare_exchange_strong(expected, signum);
+  g_shutdown_requested.store(1);
 }
 
 int take_stop_signal() noexcept {
-  const int signal = g_stop_signal;
-  g_stop_signal = 0;
-  return signal;
+  return g_stop_signal.exchange(0);
 }
 
-void install_signal_handlers() {
+Status install_signal_handlers() {
   struct sigaction action {};
   action.sa_handler = [](int signum) { notify_stop_signal(signum); };
   sigemptyset(&action.sa_mask);
   action.sa_flags = 0;  // the loop polls with a 5 ms timeout
-  (void)::sigaction(SIGINT, &action, nullptr);
-  (void)::sigaction(SIGTERM, &action, nullptr);
+  if (::sigaction(SIGINT, &action, nullptr) != 0 ||
+      ::sigaction(SIGTERM, &action, nullptr) != 0) {
+    return Status::error(ErrorCode::IoError,
+                         "cannot install capture signal handlers");
+  }
+  return Status::success();
+}
+
+ProcessSafetyGuard::~ProcessSafetyGuard() {
+  finished_.store(true);
+  if (watchdog_.joinable()) {
+    watchdog_.join();
+  }
+  if (heartbeat_fd_ >= 0) {
+    (void)::close(heartbeat_fd_);
+  }
+}
+
+Status ProcessSafetyGuard::arm_from_environment() {
+  if (watchdog_.joinable()) {
+    return Status::error(ErrorCode::InvalidArgument, "process safety already armed");
+  }
+  // Never clear a pending signal: one may have arrived during process startup.
+  if (const Status handlers = install_signal_handlers(); !handlers.ok()) {
+    return handlers;
+  }
+  const auto parse_env = [](const char* name, int& value) {
+    const char* text = std::getenv(name);
+    if (text == nullptr) {
+      return true;
+    }
+    const char* end = text + std::strlen(text);
+    const auto parsed = std::from_chars(text, end, value);
+    return parsed.ec == std::errc{} && parsed.ptr == end && value > 0;
+  };
+  int parent = static_cast<int>(::getppid());
+  int fd = -1;
+  if (!parse_env("EINSTAR_CAPTURE_PARENT_PID", parent) ||
+      !parse_env("EINSTAR_CAPTURE_HEARTBEAT_FD", fd)) {
+    return Status::error(ErrorCode::InvalidArgument, "invalid process safety environment");
+  }
+#ifdef __linux__
+  if (::prctl(PR_SET_PDEATHSIG, SIGTERM) != 0) {
+    return Status::error(ErrorCode::IoError, "PR_SET_PDEATHSIG failed");
+  }
+#else
+  if (std::getenv("EINSTAR_CAPTURE_PARENT_PID") != nullptr) {
+    return Status::error(ErrorCode::InvalidArgument, "wizard parent safety requires Linux");
+  }
+#endif
+  // Covers parent death before exec/main and between getppid and prctl.
+  if (parent <= 0 || ::getppid() != parent) {
+    return Status::error(ErrorCode::IoError, "capture parent already exited (startup race)");
+  }
+  if (fd >= 0) {
+    struct stat metadata {};
+    const int flags = ::fcntl(fd, F_GETFL);
+    if (fd < 3 || flags < 0 || ::fstat(fd, &metadata) != 0 ||
+        !S_ISFIFO(metadata.st_mode) ||
+        ::fcntl(fd, F_SETFL, flags | O_NONBLOCK) != 0) {
+      return Status::error(ErrorCode::InvalidArgument, "invalid heartbeat pipe");
+    }
+    heartbeat_fd_ = fd;
+  }
+  watchdog_ = std::thread([this, parent] {
+    using Clock = std::chrono::steady_clock;
+    auto heartbeat = Clock::now();
+    auto deadline = Clock::time_point::max();
+    while (!finished_.load()) {
+      struct pollfd descriptor {heartbeat_fd_, POLLIN, 0};
+      const int ready = ::poll(&descriptor, heartbeat_fd_ >= 0 ? 1U : 0U, 50);
+      const auto now = Clock::now();
+      const char* reason = nullptr;
+      if (::getppid() != parent) {
+        reason = "process safety: parent exited; requesting cleanup\n";
+      } else if (heartbeat_fd_ >= 0) {
+        if (ready > 0 && (descriptor.revents & POLLIN) != 0) {
+          char bytes[256];
+          const auto count = ::read(heartbeat_fd_, bytes, sizeof(bytes));
+          if (count > 0) {
+            heartbeat = now;
+          } else if (count == 0 || (errno != EAGAIN && errno != EINTR)) {
+            reason = "process safety: heartbeat pipe closed; requesting cleanup\n";
+          }
+        }
+        if (ready > 0 && (descriptor.revents & (POLLHUP | POLLERR | POLLNVAL)) != 0) {
+          reason = "process safety: heartbeat pipe closed; requesting cleanup\n";
+        } else if (now - heartbeat >= std::chrono::seconds(2)) {
+          reason = "process safety: heartbeat expired; requesting cleanup\n";
+        }
+      }
+      if (reason != nullptr && deadline == Clock::time_point::max()) {
+        notify_stop_signal(SIGTERM);
+        // Avoid stdio locks held by an acquisition thread during teardown.
+        (void)::write(STDERR_FILENO, reason, std::strlen(reason));
+      }
+      if (g_shutdown_requested.load() != 0 && deadline == Clock::time_point::max()) {
+        deadline = now + std::chrono::seconds(5);
+      }
+      if (now >= deadline) {
+        constexpr char message[] = "process safety: cleanup deadline exceeded; illuminator state UNVERIFIED; forcing SIGKILL\n";
+        (void)::write(STDERR_FILENO, message, sizeof(message) - 1);
+        (void)::kill(::getpid(), SIGKILL);
+        ::_exit(128 + SIGKILL);
+      }
+    }
+  });
+  return Status::success();
 }
 
 // ---------------------------------------------------------------------------
@@ -1335,6 +1620,11 @@ void install_signal_handlers() {
 
 Result<CaptureSessionResult> run_capture_session(
     const CaptureSessionOptions& options, CaptureSessionDriver& driver) {
+  // Includes preparation failures and exception unwinding before the loop.
+  struct StopOnExit {
+    CaptureSessionDriver& driver;
+    ~StopOnExit() { (void)driver.stop(); }
+  } stop_on_exit{driver};
   auto directory = prepare_output_directory(options.output_directory);
   if (!directory) {
     return fail(directory.error());
@@ -1347,7 +1637,11 @@ Result<CaptureSessionResult> run_capture_session(
 
   const bool has_control = !options.control_path.empty();
   ControlFile control(options.control_path);
-  install_signal_handlers();
+  VolatileSettingsFile volatile_settings(options.volatility_path);
+  bool volatility_warned = false;
+  if (const Status handlers = install_signal_handlers(); !handlers.ok()) {
+    return fail(handlers);
+  }
 
   ManifestInfo manifest = options.manifest;
   manifest.output_directory = *directory;
@@ -1416,6 +1710,12 @@ Result<CaptureSessionResult> run_capture_session(
     status.exposure_us = device.exposure_us;
     status.gain = device.gain;
     status.laser_percent = device.laser_percent;
+    status.cleanup_attempted = device.cleanup_attempted;
+    status.cleanup_verified = device.cleanup_verified;
+    if (device.cleanup_verified) {
+      status.trigger_counts = std::array<std::uint8_t, 2>{device.trigger_mono,
+                                                       device.trigger_rgb};
+    }
     status.simulated = manifest.simulated;
     status.live = manifest.live;
     const Status written = write_status_file(
@@ -1429,7 +1729,10 @@ Result<CaptureSessionResult> run_capture_session(
   };
 
   publish(SessionState::Starting);
-  if (Status started = driver.start(); !started.ok()) {
+  if (const int pending = take_stop_signal(); pending != 0) {
+    signal_number = pending;
+    reason = pending == SIGINT ? StopReason::SignalInt : StopReason::SignalTerm;
+  } else if (Status started = driver.start(); !started.ok()) {
     failure = started;
     reason = StopReason::Error;
   } else {
@@ -1482,6 +1785,21 @@ Result<CaptureSessionResult> run_capture_session(
       }
       if (reason != StopReason::None) {
         break;
+      }
+    }
+
+    // -- volatile exposure/gain/laser changes ------------------------------
+    if (auto requested = volatile_settings.poll(); requested.has_value()) {
+      if (state == SessionState::Running) {
+        const Status applied = driver.apply_volatile(*requested);
+        if (!applied.ok() && !volatility_warned) {
+          volatility_warned = true;
+          std::fprintf(stderr,
+                       "warning: volatile settings change rejected: %s\n",
+                       applied.message().c_str());
+        } else if (applied.ok()) {
+          publish(state);
+        }
       }
     }
 
@@ -1947,6 +2265,19 @@ class SimulatedSessionDriver final : public CaptureSessionDriver {
 
   [[nodiscard]] const DeviceInfo& device() const override { return device_; }
 
+  Status apply_volatile(const VolatileSettings& settings) override {
+    if (settings.has_exposure) {
+      device_.exposure_us = settings.exposure_us;
+    }
+    if (settings.has_gain) {
+      device_.gain = settings.gain;
+    }
+    if (settings.laser_percent) {
+      device_.laser_percent = *settings.laser_percent;
+    }
+    return Status::success();
+  }
+
   Status pause() override { return Status::success(); }
   Status resume() override { return Status::success(); }
 
@@ -1958,12 +2289,16 @@ class SimulatedSessionDriver final : public CaptureSessionDriver {
   }
 
   Status stop() override {
-    if (!pipeline_) {
-      return Status::success();
+    device_.cleanup_attempted = true;
+    const Status stopped = pipeline_ ? pipeline_->stop() : Status::success();
+    device_.cleanup_verified = stopped.ok();  // Simulator state only.
+    if (stopped.ok()) {
+      device_.trigger_mono = 0;
+      device_.trigger_rgb = 0;
+      device_.laser_percent = 0;
     }
-    // Keep the pipeline object alive (stopped) so stats() and the final status
-    // still carry the run's counters after teardown.
-    return pipeline_->stop();
+    // Retain the stopped pipeline so final status/manifest keep its counters.
+    return stopped;
   }
 
   [[nodiscard]] double virtual_duration_seconds() const override {
@@ -2081,6 +2416,7 @@ Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options) {
   session.output_directory = *directory;
   session.control_path = options.control_path;
   session.status_file = options.status_file;
+  session.volatility_path = options.volatility_path;
   session.groups = options.groups;
   session.ring_size = options.ring_size;
   session.max_seconds = options.max_seconds;

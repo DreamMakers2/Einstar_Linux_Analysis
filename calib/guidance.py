@@ -50,8 +50,21 @@ DEFAULT_QUALITY = {
     "min_focus": {"left": 150.0, "right": 150.0, "tex": 55.0},
     "max_sync_ms": 3.0,
     "min_dwell_s": 0.25,
-    "max_motion_mm": 3.0,           # board-centre motion between consecutive frames
+    "max_motion_mm": 3.0,           # dwell threshold: reported, not a rejection
     "max_motion_deg": 1.5,
+    # A single frame is sharp or it is not; motion *between* frames does not
+    # blur a 1.2 ms exposure.  Reject only motion so extreme that the pose or
+    # marker association is unlikely to be trustworthy (>= 4 cm/frame at
+    # 10 Hz = 0.4 m/s), and let the measured focus/contrast gates reject blur.
+    "max_motion_reject_mm": 40.0,
+    "max_motion_reject_deg": 8.0,
+    # Physical blur during the exposure, not motion between frames:
+    # blur_mm = board speed (mm/s) * exposure time (s).  A 1.2 ms IR exposure
+    # tolerates ordinary hand motion; a 5 ms colour exposure needs a slower
+    # hand or a shorter exposure.  Both thresholds are conservative.
+    "exposure_s": 0.0012,
+    "max_motion_blur_mm": 0.30,
+    "max_motion_blur_px": 0.45,
 }
 
 
@@ -237,8 +250,34 @@ def evaluate_frame(images: dict[str, np.ndarray],
         # mm of board-centre motion per frame; at 400 mm, 1.5 px ~ 0.5 mm
         metrics["motion_mm"] = d
         metrics["motion_deg"] = ang
-        if d > q["max_motion_mm"] or ang > q["max_motion_deg"]:
-            reasons.append(f"moving ({d:.1f} mm, {ang:.2f} deg)")
+        dt = None
+        if previous_timestamp is not None and timestamp > previous_timestamp:
+            dt = float(timestamp - previous_timestamp)
+        if dt is not None and dt > 1e-6:
+            speed = d / dt
+            exposure_s = float(q.get("exposure_s", 0.0012) or 0.0012)
+            blur_mm = speed * exposure_s
+            # Projected blur: f * blur / depth (small-angle approximation).
+            f_px = 1150.0
+            depth_mm = max(50.0, float(abs(pose[1][2])))
+            blur_px = f_px * blur_mm / depth_mm
+            metrics["speed_mm_s"] = speed
+            metrics["exposure_s"] = exposure_s
+            metrics["motion_blur_mm"] = blur_mm
+            metrics["motion_blur_px"] = blur_px
+            if blur_mm > float(q["max_motion_blur_mm"]) or \
+                    blur_px > float(q["max_motion_blur_px"]):
+                reasons.append(
+                    f"motion blur ({blur_mm:.2f} mm / {blur_px:.2f} px at "
+                    f"{speed:.0f} mm/s and {exposure_s * 1e3:.1f} ms exposure)")
+        if d > q["max_motion_reject_mm"] or ang > q["max_motion_reject_deg"]:
+            reasons.append(f"moving too fast for a reliable pose "
+                           f"({d:.1f} mm, {ang:.2f} deg between frames)")
+        elif d > q["max_motion_mm"] or ang > q["max_motion_deg"]:
+            # Informational: the frame is kept if it is sharp.  The session's
+            # stationarity coverage still asks for a few dwell views, but the
+            # operator is no longer stopped every time the plate moves.
+            metrics["motion_warning"] = True
     if previous_timestamp is not None:
         metrics["dt_s"] = float(timestamp - previous_timestamp)
 

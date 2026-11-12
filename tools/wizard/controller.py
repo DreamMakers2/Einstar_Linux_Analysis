@@ -405,6 +405,16 @@ class WizardController:
         self.continuous = (True if continuous is None else bool(continuous))
         if source is not None and continuous is None:
             self.continuous = bool(getattr(source, "continuous", True))
+        # Live acquisition must not share the GIL with the detector.  A
+        # process pool keeps the 10 Hz reader and the GUI responsive while the
+        # three cameras are analysed.  Replay/tests keep the cheaper thread
+        # path (deterministic ordering, no spawn cost).
+        kind = str(getattr(source, "kind", "") or "").lower()
+        self._detect_processes = bool(
+            capture is not None or kind.endswith("live")
+            or os.environ.get("EINSTAR_DETECT_PROCESSES") == "1")
+        self._detect_process_pool = None
+        self._last_detect_error = None
         self.seed_k = (int(seed_k) if seed_k is not None
                        else {"quick": 2, "standard": 3, "high": 3}.get(self.mode, 3))
 
@@ -435,6 +445,11 @@ class WizardController:
         self.finished_wall: float | None = None
         self._lock = threading.RLock()
         self._snap_lock = threading.Lock()
+        #: record_only is called by the acquisition thread while a decision
+        #: holds ``_lock``.  Sharing the decision lock here made the 10 Hz
+        #: source loop wait for every 150 ms detection (measured: preview
+        #: collapsed to 7 Hz).  These two counters need no decision state.
+        self._record_only_lock = threading.Lock()
         self._published: dict = self._empty_snapshot()
 
         self._accepted = 0
@@ -468,7 +483,11 @@ class WizardController:
         self._observability_key: tuple | None = None
         self._guidance_cache: dict | None = None
         self._guidance_key: tuple | None = None
-        self._finish_result: dict | None = None
+        self._finish_result = None
+        #: background session digest for candidate provenance; started at the
+        #: beginning of finish so the multi-GB raw hash overlaps validation
+        self._candidate_hash_future = None
+        self._candidate_hash_pool = None
         self._session_io_info: dict | None = None
         self._lifecycle: str | None = None
 
@@ -732,24 +751,67 @@ class WizardController:
     def _detect(self, images: Mapping[str, np.ndarray]) -> tuple[dict, dict]:
         """Detect the plate in every camera; returns (session grids, raw grids).
 
-        The three cameras are independent and OpenCV releases the GIL, so they
-        run in parallel: measured 62 + 61 + 88 = 212 ms serially against ~90 ms
-        with three workers.  Detection is the ingest bottleneck (172 ms of a
-        230 ms frame), and the live stream offers one frame every 100 ms, so
-        this is what makes real-time operation possible at all.
+        Live sessions use a process pool, replay/tests use threads.  The
+        process pool is the architectural point: the detector's per-blob
+        Python loops hold the GIL, and a thread pool starved the 10 Hz
+        acquisition/preview loop down to 6.4 Hz (measured).  With three
+        processes, acquisition and the GUI stay on the device cadence while
+        the decision thread waits for the result.
         """
         from calib.calibrate import Observation
 
         keys = [k for k in CAMERAS if images.get(k) is not None]
         if not keys:
             return {}, {}
-        results = self._detect_pool().map(
-            lambda key: (key, self._detect_one(key, images[key])), keys)
+        from . import detection as _detection
+        early = self._early_lattice()
+        tasks = [(images[key], self._roi_for(key, images[key]), early)
+                 for key in keys]
+        if self._detect_processes:
+            try:
+                pool = self._process_pool()
+                outcomes = list(pool.map(_detection.detect_task, tasks))
+            except Exception as exc:
+                # A worker crash (import/OOM/spawn failure) must not kill the
+                # live session.  Fall back to the thread path for this frame
+                # and stop using the process pool.
+                self._detect_processes = False
+                self._last_detect_error = f"{type(exc).__name__}: {exc}"
+                ppool = self._detect_process_pool
+                self._detect_process_pool = None
+                if ppool is not None:
+                    try:
+                        ppool.shutdown(wait=False, cancel_futures=True)
+                    except Exception:
+                        pass
+                outcomes = list(self._detect_pool().map(
+                    lambda args: _detection.detect_one(*args), tasks))
+        else:
+            outcomes = list(self._detect_pool().map(
+                lambda args: _detection.detect_one(*args), tasks))
+        stats = getattr(self, "_roi_stats", None)
+        if stats is None:
+            stats = self._roi_stats = {"roi": 0, "full": 0, "fallback": 0}
         raw: dict[str, Any] = {}
         grids: dict[str, Any] = {}
-        for key, observation in results:
-            if observation is None:
+        for key, outcome in zip(keys, outcomes):
+            if outcome is None:
                 continue
+            if outcome.used_roi:
+                stats["roi"] += 1
+            else:
+                stats["full"] += 1
+            if outcome.fallback:
+                stats["fallback"] += 1
+            observation = outcome.observation
+            if observation is None:
+                getattr(self, "_last_box", {}).pop(key, None)
+                continue
+            if outcome.box is not None:
+                boxes = getattr(self, "_last_box", None)
+                if boxes is None:
+                    boxes = self._last_box = {}
+                boxes[key] = outcome.box
             raw[key] = observation
             grids[key] = Observation(
                 key, -1,
@@ -757,8 +819,24 @@ class WizardController:
                  for k, v in observation.points.items()})
         return grids, raw
 
+    def _process_pool(self):
+        pool = self._detect_process_pool
+        if pool is None:
+            from concurrent.futures import ProcessPoolExecutor
+            import multiprocessing as _mp
+            try:
+                ctx = _mp.get_context("spawn")
+            except Exception:
+                ctx = None
+            pool = (ProcessPoolExecutor(max_workers=len(CAMERAS),
+                                        mp_context=ctx)
+                    if ctx is not None else
+                    ProcessPoolExecutor(max_workers=len(CAMERAS)))
+            self._detect_process_pool = pool
+        return pool
+
     def _detect_pool(self):
-        """A small persistent pool; creating threads per frame costs ~1 ms."""
+        """A small persistent thread pool for replay/tests (cheap to create)."""
         pool = getattr(self, "_detect_executor", None)
         if pool is None:
             from concurrent.futures import ThreadPoolExecutor
@@ -808,36 +886,6 @@ class WizardController:
         if boxes is None:
             boxes = self._last_box = {}
         boxes[key] = box
-
-    def _detect_one(self, key: str, image):
-        from calib.detect import detect_grid_auto
-        try:
-            gray = np.ascontiguousarray(np.asarray(image, dtype=np.uint8))
-            roi = self._roi_for(key, gray)
-            stats = getattr(self, "_roi_stats", None)
-            if stats is None:
-                stats = self._roi_stats = {"roi": 0, "full": 0, "fallback": 0}
-            observation = None
-            if roi is not None:
-                observation = detect_grid_auto(gray, roi=roi)
-                if observation is not None:
-                    pts = np.asarray(list(observation.points.values()), float)
-                    edge = 8.0
-                    inside = (pts[:, 0] > roi[0] + edge) & (pts[:, 0] < roi[2] - edge) \
-                        & (pts[:, 1] > roi[1] + edge) & (pts[:, 1] < roi[3] - edge)
-                    if not bool(inside.all()):
-                        observation = None          # may be clipped: redo
-                        stats["fallback"] += 1
-                if observation is not None:
-                    stats["roi"] += 1
-            if observation is None:
-                observation = detect_grid_auto(gray)
-                stats["full"] += 1
-            observation = self._prefer_partial(gray, observation)
-            self._note_box(key, observation)
-            return observation
-        except Exception:
-            return None
 
     def _witness(self, gray: np.ndarray, grid: Any) -> dict:
         """Score the four lattice label hypotheses (large-marker chirality)."""
@@ -983,7 +1031,7 @@ class WizardController:
         instead of keeping up.  Accepted and rejected-by-decision frames are
         still materialised exactly as before.
         """
-        with self._lock:
+        with self._record_only_lock:
             self._skipped_recorded += 1
             self._last_recorded = int(group.index)
         return {"recorded": True, "skipped": True, "index": int(group.index),
@@ -1915,7 +1963,8 @@ class WizardController:
         return {
             "parameters": parameters,
             "condition": None if not math.isfinite(condition) else condition,
-            "rank": int(cov_info.get("rank_kept", 0) or 0),
+            "rank": int(cov_info.get("rank_kept",
+                                     cov_info.get("rank", 0)) or 0),
             # n_params/rank describe the full free vector (rig + board poses);
             # ``parameters``/``free`` list the rig parameters the GUI shows.
             "n_params": int(cov_info.get("n_free", len(names)) or len(names)),
@@ -2091,6 +2140,33 @@ class WizardController:
     # ------------------------------------------------------------------
     # finish / cancel
     # ------------------------------------------------------------------
+    def _stop_capture_for_finish(self) -> bool:
+        """Stop the writer before provenance hashing or validation.
+
+        The raw recording must be immutable while its digest is computed and
+        while the candidate's provenance is assembled.  Previously the capture
+        child only stopped later during window shutdown, so the 5.6 GB raw file
+        could still grow while a precomputed digest was accepted.
+        """
+        cap = self.capture
+        if cap is None:
+            return True
+        try:
+            if getattr(cap, "running", False):
+                cap.stop(reason="final calibration")
+            verdict = cap.check_safe_final_state() if hasattr(
+                cap, "check_safe_final_state") else {"ok": True}
+            if not bool(verdict.get("ok", False)):
+                self.error = ("capture did not reach a verified stopped state: "
+                              + ", ".join(str(r) for r in
+                                          (verdict.get("reasons") or [])
+                                          or ["unknown"]))
+                return False
+            return True
+        except Exception as exc:
+            self.error = f"capture stop before finish failed: {type(exc).__name__}: {exc}"
+            return False
+
     def finish(self) -> dict:
         """Final solve, candidate profile + validation report; never activates."""
         with self._lock:
@@ -2100,7 +2176,15 @@ class WizardController:
                 self.begin()
             self.state = "finishing"
             self._publish()
+            if not self._stop_capture_for_finish():
+                self.state = "error"
+                self._write_session_json()
+                self._publish()
+                result = {"ok": False, "state": self.state, "error": self.error}
+                self._finish_result = result
+                return copy.deepcopy(result)
             factory_before = self.factory_sha256
+            self._start_candidate_hashing()
             try:
                 pruned = self._prune_outliers()
                 release = self._stage_release_decision()
@@ -2285,6 +2369,42 @@ class WizardController:
                                "validation: pending")
         return path
 
+    def _start_candidate_hashing(self) -> None:
+        """Hash session inputs on one worker while validation runs.
+
+        The raw recording is multi-gigabyte; hashing it serially added 2.5 s
+        to a 7 s finish.  This is pure I/O + hashlib work and releases the GIL.
+        """
+        try:
+            from concurrent.futures import ThreadPoolExecutor
+            from . import lifecycle as _lifecycle
+        except Exception:
+            return
+        if self._candidate_hash_future is not None:
+            return
+        try:
+            self._candidate_hash_pool = ThreadPoolExecutor(
+                max_workers=1, thread_name_prefix="session-hash")
+            self._candidate_hash_future = self._candidate_hash_pool.submit(
+                _lifecycle._session_input_hashes, self.paths, None)
+        except Exception:
+            self._candidate_hash_future = None
+
+    def _finish_candidate_hashing(self) -> Mapping[str, str] | None:
+        future = self._candidate_hash_future
+        self._candidate_hash_future = None
+        pool = self._candidate_hash_pool
+        self._candidate_hash_pool = None
+        if future is None:
+            return None
+        try:
+            out = future.result(timeout=120.0)
+        except Exception:
+            return None
+        if pool is not None:
+            pool.shutdown(wait=False, cancel_futures=True)
+        return out
+
     def _save_candidate_file(self, candidate: Mapping[str, Any],
                              report: Mapping[str, Any]) -> Path:
         """Write the candidate with ``tools.wizard.lifecycle`` when present."""
@@ -2294,7 +2414,9 @@ class WizardController:
             self._lifecycle = "local"
             return self._write_candidate(candidate)
         try:
-            path = Path(save(self.paths.root, dict(candidate), dict(report)))
+            hashes = self._finish_candidate_hashing()
+            path = Path(save(self.paths.root, dict(candidate), dict(report),
+                             input_hashes=dict(hashes) if hashes else None))
             self._lifecycle = f"tools.wizard.lifecycle.save_candidate -> {path}"
             if path.is_file() and types.read_json(path, default={}).get(
                     "validation") == "pending":
@@ -3114,6 +3236,16 @@ class WizardController:
                 "ring_size": status.get("ring_size", self.ring_keep),
                 "stop_reason": status.get("stop_reason"),
                 "last_group": status.get("last_group"),
+                # Device state the operator/auto-exposure loop needs.  These
+                # are read-only status fields; the capture tool owns the device.
+                "exposure_us": status.get("exposure_us"),
+                "gain": status.get("gain"),
+                "laser_percent": status.get("laser_percent"),
+                "trigger_period_us": status.get("trigger_period_us"),
+                "frames_completed": status.get("frames_completed"),
+                "frames_dropped": status.get("frames_dropped"),
+                "transfer_timeouts": status.get("transfer_timeouts"),
+                "cleanup_verified": status.get("cleanup_verified"),
             })
         else:
             base["disk_free_gb"] = self._disk_free_gb()
@@ -3185,11 +3317,20 @@ class WizardController:
             self._published = _jsonable(snapshot)
 
     def close(self) -> None:
-        """Release the detector pool (the window calls this on close)."""
+        """Release the detector pools (the window calls this on close)."""
         pool = getattr(self, "_detect_executor", None)
         if pool is not None:
             pool.shutdown(wait=False)
             self._detect_executor = None
+        ppool = getattr(self, "_detect_process_pool", None)
+        if ppool is not None:
+            try:
+                # Wait for the current detection (bounded by the caller's
+                # stop sequence); leak-free process teardown is a safety gate.
+                ppool.shutdown(wait=True, cancel_futures=True)
+            except Exception:
+                pass
+            self._detect_process_pool = None
 
     def snapshot(self) -> dict:
         """Everything the GUI renders; safe to call while ``ingest`` runs.

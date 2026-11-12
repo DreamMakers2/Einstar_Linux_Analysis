@@ -29,6 +29,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 from typing import Any, Mapping, Sequence
@@ -105,8 +106,47 @@ def _sha256_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
 
 
+_FILE_DIGEST_CACHE: dict[tuple, str] = {}
+
+
 def file_digest(path: str | Path) -> str:
-    return _sha256_bytes(Path(path).read_bytes())
+    """Streaming SHA-256 with an in-process (size, mtime, inode) cache.
+
+    The old implementation read the whole file into memory.  A session raw
+    recording is multi-gigabyte, so that was both a 5.6 GB allocation and a
+    needless copy on every candidate write.  Streaming keeps memory flat; the
+    cache makes repeated provenance calls free when the file is unchanged.
+    """
+    p = Path(path)
+    st = p.stat()
+    key = (str(p.resolve()), int(st.st_size), int(st.st_mtime_ns),
+           int(getattr(st, "st_ctime_ns", 0)), int(getattr(st, "st_ino", 0)))
+    cached = _FILE_DIGEST_CACHE.get(key)
+    if cached is not None:
+        return cached
+    h = hashlib.sha256()
+    with p.open("rb") as fh:
+        before = os.fstat(fh.fileno())
+        for chunk in iter(lambda: fh.read(8 * 1024 * 1024), b""):
+            h.update(chunk)
+        after = os.fstat(fh.fileno())
+    digest = h.hexdigest()
+    # A file actively being written can change between stat() and read().
+    # Re-check identity after hashing and never cache such a digest; callers
+    # that need immutable inputs (the finish path) stop the writer first.
+    final = (str(p.resolve()), int(after.st_size), int(after.st_mtime_ns),
+             int(getattr(after, "st_ctime_ns", 0)), int(getattr(after, "st_ino", 0)))
+    if (int(before.st_ino), int(before.st_size), int(before.st_mtime_ns),
+            int(getattr(before, "st_ctime_ns", 0))) != (
+            int(after.st_ino), int(after.st_size), int(after.st_mtime_ns),
+            int(getattr(after, "st_ctime_ns", 0))):
+        return digest
+    if final != key:
+        return digest
+    _FILE_DIGEST_CACHE[key] = digest
+    if len(_FILE_DIGEST_CACHE) > 64:
+        _FILE_DIGEST_CACHE.pop(next(iter(_FILE_DIGEST_CACHE)))
+    return digest
 
 
 def tree_digest(root: str | Path, *, skip_pycache: bool = True) -> dict[str, str]:
@@ -281,7 +321,14 @@ def _session_input_hashes(paths, extra: Mapping[str, str] | None) -> dict[str, s
     :func:`tools.wizard.session_io.verify`.  This keeps candidate creation
     cheap while keeping the provenance chain intact.
     """
-    out: dict[str, str] = {}
+    out: dict[str, str] = dict(extra or {})
+    names = {Path(p).name for p in (paths.session_json, paths.manifest_json,
+                                   paths.decisions_jsonl, paths.raw_recording)}
+    if names.issubset(out) and "accepted_views_digest" in out:
+        # A caller (the finish path) already computed this map, possibly on a
+        # worker thread overlapped with validation.  Do not re-read multi-GB
+        # files here.
+        return out
     for p in (paths.session_json, paths.manifest_json, paths.decisions_jsonl,
               paths.raw_recording):
         try:

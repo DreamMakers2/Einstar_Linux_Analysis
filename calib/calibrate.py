@@ -579,16 +579,62 @@ def calibrate(obs: list[Observation],
               max_nfev: int = 1200,
               free_intrinsics: bool = True,
               fix_left_intrinsics: bool = False,
-              robust_covariance: bool = True) -> CalibrationResult:
+              robust_covariance: bool = True,
+              backend: str = "auto") -> CalibrationResult:
     """Calibrate the three cameras from grid observations.
 
     Views are renumbered internally to a compact range, so unused slots never
     enter the parameter vector or the covariance.  The returned covariance is
     the joint covariance over the free parameters; its top-left 39x39 block is
     the *marginal* rig covariance (board poses are nuisance parameters).
+
+    ``backend`` selects the estimator:
+
+    * ``"auto"`` / ``"fast"`` — the analytic-Jacobian LM in
+      :mod:`calib.solvers` (the production path).  It is typically 5-10x
+      faster than the SciPy finite-difference path at session sizes and is
+      validated against it in ``tests/test_solver_equivalence.py``.
+    * ``"scipy"`` — the original SciPy TRF path, kept as the independent
+      reference and for debugging.
+
+    The default used to be SciPy.  Measured on the preserved 35-view session,
+    ten verification/stability refits spent 34.3 s in SciPy finite
+    differences; the analytic LM does the same fits in a few seconds.
     """
     if not obs:
         raise ValueError("no observations")
+    backend = str(backend or "auto").lower()
+    if backend in ("auto", "fast", "lm"):
+        try:
+            from . import solvers
+            problem = solvers.make_problem(
+                list(obs), pitch_mm=board_pitch_mm,
+                init_cameras=init_cameras)
+            out = solvers.solve_joint(
+                problem, backend="lm", robust=robust_loss,
+                f_scale=float(f_scale), priors=None, free_kc=free_kc,
+                free_intrinsics=bool(free_intrinsics),
+                fix_left_intrinsics=bool(fix_left_intrinsics),
+                covariance=True,
+                covariance_estimator=("sandwich" if robust_covariance
+                                      else "gauss_newton"),
+                max_iter=max(2, min(200, int(max_nfev))),
+                max_nfev=int(max_nfev),
+                allow_fallback=True,
+                depths=(300.0, 450.0, 600.0))
+            result = out.get("result")
+            if result is not None:
+                result.info.setdefault("pitch_source",
+                                       plate.current_spec().pitch_source)
+                result.info.setdefault("message",
+                                       (out.get("diagnostics") or {}).get("solver_status", ""))
+                return result
+        except Exception:
+            if backend in ("fast", "lm"):
+                raise
+            # fall through to the independent reference path
+    if backend not in ("auto", "fast", "lm", "scipy"):
+        raise ValueError(f"unknown calibration backend {backend!r}")
     used = sorted(set(int(o.view) for o in obs))
     remap = {v: i for i, v in enumerate(used)}
     obs = [Observation(o.camera, remap[int(o.view)], o.uv) for o in obs]

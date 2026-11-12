@@ -205,7 +205,14 @@ def test_end_to_end_rehearsal_refuses_an_insufficient_session(tmp_path):
         while time.time() - t0 < 180 and win.worker and win.worker.isRunning():
             app.processEvents(); time.sleep(0.01)
         app.processEvents()
-        win._on_finish(); app.processEvents()
+        win._on_finish()
+        t0 = time.time()
+        while time.time() - t0 < 240:
+            app.processEvents()
+            if ctl.snapshot().get("state") in ("done", "error", "cancelled"):
+                break
+            time.sleep(0.02)
+        app.processEvents()
         cand = ctl.paths.candidate_dir
         files = sorted(p.name for p in cand.glob("*")) if cand.is_dir() else []
         after = hashlib.sha256(open(factory, "rb").read()).hexdigest()

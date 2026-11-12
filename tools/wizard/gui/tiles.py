@@ -218,7 +218,8 @@ class CoverageTile(QtWidgets.QFrame):
         p.setPen(QtGui.QColor(theme.MUTED))
         p.drawText(QtCore.QRect(rect.left(), grid.bottom() + 8, rect.width(), 16),
                    QtCore.Qt.AlignmentFlag.AlignLeft,
-                   f"TILT QUADRANTS  ·  ROLL SECTORS  ·  ready={self._ready}")
+                   "TILT QUADRANTS  ·  ROLL SECTORS  ·  "
+                   + ("complete" if self._ready else "in progress"))
         quads = [0, 0, 0, 0]
         for tx, ty in self._tilts:
             if abs(tx) < 8 and abs(ty) < 8:

@@ -1,0 +1,23 @@
+{
+ "comparison": {
+  "native_reported_speedup": 3.1,
+  "not_integrated": true,
+  "reason": "native backend only supports all-distortion-free, no priors, and its covariance has a documented tangential-Jacobian defect; final profile solves hold distortion and use priors. The Python analytic LM already meets the measured target.",
+  "same_reported_rms": true
+ },
+ "native_cpp_ref": {
+  "iterations": 9,
+  "jacobian_s": 0.057069,
+  "reported_total_s": 0.14114,
+  "rms_px": 0.323109409851,
+  "status": "converged_step",
+  "wall_s": 0.462
+ },
+ "problem": "35-view preserved session, all five distortion coefficients free, 8288 residuals, 249 parameters",
+ "python_analytic_lm": {
+  "iterations": 10,
+  "rms_px": 0.32310930872210114,
+  "wall_s": 0.4399
+ },
+ "schema": "einstar-bench-native-solver/1"
+}

@@ -435,7 +435,7 @@ def quality_report(result: CalibrationResult,
         warnings.append("pitch unresolved: absolute metric scale is not physically validated")
     if result.info.get("free_kc") is False:
         warnings.append("distortion fixed: a biased factory kc is a model error outside the covariance")
-    if int((cov or {}).get("rank_kept", 0)) == 0:
+    if int((cov or {}).get("rank_kept", (cov or {}).get("rank", 0)) or 0) == 0:
         warnings.append("zero rank: no identifiable parameters")
     if bootstrap and bootstrap.get("ok") and bootstrap.get("ratio_fx", 1.0) < 0.75:
         warnings.append("view-bootstrap spread exceeds the single-fit sigma: reported uncertainty is optimistic")
@@ -454,7 +454,7 @@ def quality_report(result: CalibrationResult,
         "n_observations": result.n_observations,
         "n_free_parameters": cov.get("n_free"),
         "jacobian_condition": cov.get("condition"),
-        "rank_kept": cov.get("rank_kept"),
+        "rank_kept": cov.get("rank_kept", cov.get("rank")),
         "covariance_estimator": cov.get("estimator"),
         "heldout_rms_px": heldout_rms_px,
         "stopping": stop,

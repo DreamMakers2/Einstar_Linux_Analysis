@@ -24,6 +24,7 @@
 #pragma once
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <map>
 #include <optional>
@@ -31,6 +32,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include "einstar/frame.hpp"
@@ -242,6 +244,8 @@ Result<std::string> prepare_output_directory(const std::string& directory);
 // ---------------------------------------------------------------------------
 
 struct DeviceInfo {
+  bool cleanup_attempted = false;
+  bool cleanup_verified = false;
   bool simulated = true;
   bool identified = false;
   std::string vendor_id = "3267";
@@ -439,6 +443,9 @@ std::string_view stop_reason_name(StopReason reason) noexcept;
 /// fields that existed before this structure must stay valid for
 /// tools/liveview; the session fields are additive.
 struct LiveStatus {
+  bool cleanup_attempted = false;
+  bool cleanup_verified = false;
+  std::optional<std::array<std::uint8_t, 2>> trigger_counts;
   SessionState state = SessionState::Starting;
   StopReason stop_reason = StopReason::None;
   double elapsed_s = 0.0;
@@ -482,7 +489,24 @@ Status write_status_file(const std::string& path, std::string_view json);
 std::uint64_t disk_free_bytes(const std::string& path) noexcept;
 
 /// Install SIGINT/SIGTERM handlers that only set the signal flag below.
-void install_signal_handlers();
+Status install_signal_handlers();
+
+/// CLI lifetime guard, armed before any acquisition or USB setup. Linux uses
+/// PR_SET_PDEATHSIG plus an immediate expected-parent check. The optional
+/// inherited heartbeat pipe is provided by the wizard, not the CLI protocol.
+/// A stop gets five seconds to unwind before forced exit (cleanup unverified).
+class ProcessSafetyGuard {
+ public:
+  ProcessSafetyGuard() = default;
+  ~ProcessSafetyGuard();
+  ProcessSafetyGuard(const ProcessSafetyGuard&) = delete;
+  ProcessSafetyGuard& operator=(const ProcessSafetyGuard&) = delete;
+  Status arm_from_environment();
+ private:
+  std::atomic<bool> finished_{false};
+  std::thread watchdog_;
+  int heartbeat_fd_ = -1;
+};
 
 /// The complete body of the signal handler (also called by tests): records the
 /// first SIGINT/SIGTERM received and ignores everything else.
@@ -494,6 +518,17 @@ int take_stop_signal() noexcept;
 // ---------------------------------------------------------------------------
 // Capture session (shared by the live and simulated backends)
 // ---------------------------------------------------------------------------
+
+/// A volatile settings change requested by the operator/auto-exposure loop.
+/// Every field is optional; the driver applies only the fields present and
+/// updates its reported DeviceInfo after a successful device write.
+struct VolatileSettings {
+  std::array<std::uint32_t, 3> exposure_us{};
+  std::array<std::uint16_t, 3> gain{};
+  std::optional<std::uint8_t> laser_percent;
+  bool has_exposure = false;
+  bool has_gain = false;
+};
 
 /// Device-side operations the session loop drives.  The live implementation
 /// wraps ControlChannel + AcquisitionPipeline; the simulated one freezes its
@@ -521,6 +556,16 @@ class CaptureSessionDriver {
   /// freezes its generator (pumping it would generate new frames).
   virtual Status pump_paused(int timeout_ms) = 0;
 
+  /// Apply a volatile exposure/gain/illumination change while the session is
+  /// running.  The default is Unsupported so a driver cannot silently claim
+  /// it changed the device.  The live implementation writes only volatile
+  /// registers, validates each value against the device range, and updates the
+  /// reported DeviceInfo only after success.
+  virtual Status apply_volatile(const VolatileSettings&) {
+    return Status::error(ErrorCode::Unsupported,
+                         "volatile settings changes are not supported");
+  }
+
   /// Stop triggering, leave the illuminator dark and release the transport.
   /// Must be idempotent and is called by the session loop on every exit path.
   virtual Status stop() = 0;
@@ -537,6 +582,9 @@ struct CaptureSessionOptions {
   /// Empty: fixed-count capture with no external control.
   std::string control_path;
   std::string status_file;       // empty: no status file
+  /// Optional path polled for volatile exposure/gain/laser changes.  Written
+  /// atomically by the wizard; missing/unchanged files change nothing.
+  std::string volatility_path;
   /// Requested groups; 0 is only valid with `control_path` or `max_seconds`.
   std::uint32_t groups = 0;
   std::uint32_t ring_size = 0;
@@ -639,6 +687,7 @@ struct SimCaptureOptions {
   // fixed-count behaviour used by test_replay_frames).
   std::string control_path;
   std::string status_file;
+  std::string volatility_path;
   std::uint32_t ring_size = 0;
   double max_seconds = 0.0;
   std::uint32_t timeout_seconds = 30;

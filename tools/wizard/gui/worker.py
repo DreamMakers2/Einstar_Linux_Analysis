@@ -6,6 +6,7 @@ reads ``latest`` (a small, lock-protected snapshot) and asks the controller for 
 """
 from __future__ import annotations
 
+import queue
 import threading
 import time
 
@@ -51,12 +52,14 @@ class DecisionRunner(QtCore.QThread):
         self._wake.set()
 
     def run(self) -> None:  # noqa: D401
-        while not self._stop.is_set():
-            self._wake.wait(0.05)
-            self._wake.clear()
+        while True:
             with self._lock:
                 group, self._pending = self._pending, None
             if group is None:
+                if self._stop.is_set():
+                    break
+                self._wake.wait(0.05)
+                self._wake.clear()
                 continue
             try:
                 decision = self.controller.ingest(group)
@@ -121,12 +124,16 @@ class SessionWorker(QtCore.QThread):
     """Runs the capture loop off the UI thread."""
 
     decision = QtCore.Signal(dict)
+    #: newest complete group, emitted *before* any calibration work touches it.
+    #: The display reads this; it never waits for a decision.
+    preview = QtCore.Signal(dict)
     error = QtCore.Signal(str)
     finished_ok = QtCore.Signal(dict)
 
     def __init__(self, controller, source, *, pace_hz: float = 0.0,
                  max_groups: int = 0, parent=None,
-                 min_decision_interval_s: float = 0.0):
+                 min_decision_interval_s: float = 0.0,
+                 async_decisions: bool | None = None):
         super().__init__(parent)
         self.controller = controller
         self.source = source
@@ -135,6 +142,12 @@ class SessionWorker(QtCore.QThread):
         #: adaptive spacing between full decisions.  0 analyses every group.
         #: The record-only path keeps every frame on disk either way.
         self.min_decision_interval_s = float(min_decision_interval_s)
+        #: Live acquisition must never wait for detection.  Replay/headless
+        #: keeps the deterministic in-order path unless the caller opts in.
+        kind = str(getattr(source, "kind", "") or "").lower()
+        self.async_decisions = (str(kind).endswith("live")
+                                if async_decisions is None
+                                else bool(async_decisions))
         self._last_decision_at: float | None = None
         self._last_ingest_s = 0.0
         self.recorded_only = 0
@@ -142,15 +155,19 @@ class SessionWorker(QtCore.QThread):
         #: created here (not inside run(), where it would be parented across
         #: threads and Qt warns), and started by run() when adaptive spacing is on
         self.runner: DecisionRunner | None = None
-        if self.min_decision_interval_s > 0:
+        if self.async_decisions or self.min_decision_interval_s > 0:
             self.runner = DecisionRunner(controller)
-            self.runner.decision.connect(self.decision)
+            self.runner.decision.connect(self._on_runner_decision)
             self.runner.error.connect(self.error)
         self._stop = threading.Event()
         self._pause = threading.Event()
         self._lock = threading.Lock()
         self._latest: dict | None = None
         self._count = 0
+        self._preview_times: list[float] = []
+        self._decision_times: list[float] = []
+        self.preview_count = 0
+        self.decision_count = 0
 
     # -- control -------------------------------------------------------
     def request_stop(self) -> None:
@@ -172,8 +189,189 @@ class SessionWorker(QtCore.QThread):
         with self._lock:
             return self._latest
 
+    def _on_runner_decision(self, payload: dict) -> None:
+        self.decision_count += 1
+        self._decision_times.append(time.monotonic())
+        if len(self._decision_times) > 2000:
+            del self._decision_times[:1000]
+        with self._lock:
+            if self._latest is not None:
+                self._latest = dict(self._latest, decision=payload)
+        self.decision.emit(payload)
+
+    def metrics(self) -> dict:
+        """Cadence measurements for the session's evidence file."""
+        def summary(times: list[float]) -> dict:
+            if len(times) < 2:
+                return {"count": len(times), "hz": None, "p50_ms": None,
+                        "p95_ms": None, "max_ms": None}
+            gaps = sorted((b - a) * 1000.0 for a, b in zip(times, times[1:])
+                          if b > a)
+            if not gaps:
+                return {"count": len(times), "hz": None, "p50_ms": None,
+                        "p95_ms": None, "max_ms": None}
+            mean = sum(gaps) / len(gaps)
+            return {
+                "count": len(times),
+                "hz": (1000.0 / mean) if mean > 0 else None,
+                "p50_ms": gaps[len(gaps) // 2],
+                "p95_ms": gaps[min(len(gaps) - 1, int(0.95 * len(gaps)))],
+                "max_ms": gaps[-1],
+            }
+        return {"preview": summary(self._preview_times),
+                "decision": summary(self._decision_times),
+                "groups_seen": int(self.groups_seen),
+                "recorded_only": int(self.recorded_only),
+                "async_decisions": bool(self.async_decisions)}
+
     # -- loop ----------------------------------------------------------
     def run(self) -> None:  # noqa: D401
+        if self.async_decisions:
+            self._run_split()
+            return
+        self._run_sync()
+
+    def _publish_preview(self, group) -> None:
+        payload_preview = {
+            "index": group.index,
+            "device_group": group.device_group,
+            "timestamp_s": group.timestamp_s,
+            "images": dict(group.images),
+            "colour_bgr": (group.colour_bgr
+                           if getattr(group, "colour_bgr", None) is not None
+                           else getattr(self.controller, "_last_colour_bgr", None)),
+            "complete": group.complete,
+            "source": group.source,
+            "decision": None,
+        }
+        with self._lock:
+            self._latest = payload_preview
+        self.preview_count += 1
+        self._preview_times.append(time.monotonic())
+        if len(self._preview_times) > 2000:
+            del self._preview_times[:1000]
+        self.preview.emit(payload_preview)
+
+    def _run_split(self) -> None:
+        """Live architecture: reader thread + newest-frame queue + decision.
+
+        The reader owns the source cadence and preview.  The consumer only
+        takes the newest complete group; a slower decision never holds an
+        older frame and never blocks the reader.  This is what keeps preview
+        at the device rate while detection/optimisation run independently.
+
+        End-of-stream is signalled by ``reader_done``, not by a sentinel in the
+        queue: a sentinel inserted into a full one-slot queue would evict the
+        last real frame (confirmed in review).  The consumer drains the queue
+        after the reader finishes, then stops the decision worker; the decision
+        worker itself drains one already-submitted frame before exiting.
+        """
+        q: queue.Queue = queue.Queue(maxsize=1)
+        self._decision_queue = q
+        period = 1.0 / self.pace_hz if self.pace_hz > 0 else 0.0
+        reader_done = threading.Event()
+        reader_error: list[str] = []
+
+        def reader() -> None:
+            next_at = time.monotonic()
+            try:
+                for group in self.source:
+                    if self._stop.is_set():
+                        break
+                    while self._pause.is_set() and not self._stop.is_set():
+                        time.sleep(0.02)
+                    if self._stop.is_set():
+                        break
+                    self.groups_seen += 1
+                    self._publish_preview(group)
+                    if period:
+                        next_at += period
+                        delay = next_at - time.monotonic()
+                        if delay > 0:
+                            time.sleep(delay)
+                    try:
+                        q.put_nowait(group)
+                    except queue.Full:
+                        # One newest frame is all a live calibration can use.
+                        # The older frame remains in the raw recording.
+                        try:
+                            q.get_nowait()
+                        except queue.Empty:
+                            pass
+                        try:
+                            q.put_nowait(group)
+                        except queue.Full:
+                            self.recorded_only += 1
+                            try:
+                                self.controller.record_only(group)
+                            except Exception:
+                                pass
+            except Exception as exc:  # pragma: no cover
+                reader_error.append(f"{type(exc).__name__}: {exc}")
+            finally:
+                reader_done.set()
+
+        reader_thread = threading.Thread(target=reader, daemon=True,
+                                         name="einstar-reader")
+        reader_thread.start()
+        if self.runner is not None:
+            self.runner.start()
+        try:
+            while not self._stop.is_set():
+                try:
+                    group = q.get(timeout=0.1)
+                except queue.Empty:
+                    if reader_done.is_set():
+                        break
+                    continue
+                if self.runner is not None:
+                    if not self.runner.submit(group):
+                        self.controller.record_only(group)
+                        self.recorded_only += 1
+                    else:
+                        self._last_decision_at = time.monotonic()
+                        self._count += 1
+                        if self.max_groups and self._count >= self.max_groups:
+                            break
+                else:  # pragma: no cover - async always has a runner here
+                    decision = self.controller.ingest(group)
+                    payload = (decision.as_dict() if hasattr(decision, "as_dict")
+                               else dict(decision))
+                    self._on_runner_decision(payload)
+                    self._count += 1
+        finally:
+            self._stop.set()
+            # Interrupt a source blocked in iteration, then wait for the reader
+            # to actually exit.  Do not report completion while it is alive.
+            reader_thread.join(timeout=5.0)
+            if reader_thread.is_alive():
+                try:
+                    close = getattr(self.source, "close", None)
+                    if callable(close):
+                        close()
+                except Exception:
+                    pass
+                reader_thread.join(timeout=5.0)
+            reader_alive = reader_thread.is_alive()
+            if reader_error:
+                self.error.emit("acquisition reader: " + reader_error[0])
+            if reader_alive:
+                self.error.emit("acquisition reader did not stop; "
+                                "session completion is not claimed")
+            runner_alive = False
+            if self.runner is not None:
+                self.runner.request_stop()
+                if not self.runner.wait(30000):
+                    runner_alive = True
+                    self.error.emit("decision worker did not stop; "
+                                    "session completion is not claimed")
+                else:
+                    self.runner = None
+            self.finished_ok.emit({"groups_ingested": self._count,
+                                   "stopped": self._stop.is_set(),
+                                   "complete": not (reader_alive or runner_alive)})
+
+    def _run_sync(self) -> None:
         period = 1.0 / self.pace_hz if self.pace_hz > 0 else 0.0
         next_at = time.monotonic()
         def pace() -> None:
@@ -204,6 +402,11 @@ class SessionWorker(QtCore.QThread):
                 self.groups_seen += 1
                 iteration_started = time.monotonic()
                 now = iteration_started
+                # Publish the newest images first.  This is the whole point of
+                # the split: preview cadence is the device cadence, not the
+                # detection cadence (the old code updated after ingest, so a
+                # 158 ms decision capped the display at ~6 Hz).
+                self._publish_preview(group)
                 # adaptive scheduling on measured cost, not on stream time: the
                 # decision interval is the time one decision actually takes, so
                 # the loop spends at most ~1/1.25 of its time deciding and always
@@ -230,26 +433,17 @@ class SessionWorker(QtCore.QThread):
                     else:
                         self._last_decision_at = time.monotonic()
                     self._count += 1
+                    if self.max_groups and self._count >= self.max_groups:
+                        break
                     pace()
                     continue
                 started = time.monotonic()
                 decision = self.controller.ingest(group)
                 self._last_ingest_s = time.monotonic() - started
                 self._last_decision_at = time.monotonic()
-                payload = decision.as_dict() if hasattr(decision, "as_dict") else dict(decision)
-                with self._lock:
-                    self._latest = {
-                        "index": group.index,
-                        "device_group": group.device_group,
-                        "timestamp_s": group.timestamp_s,
-                        "images": dict(group.images),
-                        "colour_bgr": (getattr(group, "colour_bgr", None)
-                                       or getattr(self.controller, "_last_colour_bgr", None)),
-                        "complete": group.complete,
-                        "source": group.source,
-                        "decision": payload,
-                    }
-                self.decision.emit(payload)
+                payload = (decision.as_dict() if hasattr(decision, "as_dict")
+                           else dict(decision))
+                self._on_runner_decision(payload)
                 self._count += 1
                 if self.max_groups and self._count >= self.max_groups:
                     break

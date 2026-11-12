@@ -1,0 +1,79 @@
+{
+ "auto_exposure": {
+  "changes": 3,
+  "first_change_s": 3.2,
+  "ir_exposure_us_final": 2343,
+  "laser_percent": 100,
+  "rgb_exposure_us_final": 9765,
+  "verified_in_status": true
+ },
+ "capture": {
+  "cleanup_verified": true,
+  "fps": 9.76,
+  "frames_completed": 321,
+  "frames_dropped": 3,
+  "groups_written": 107,
+  "laser_percent_after_stop": 0,
+  "partial_timeouts": 1,
+  "throughput_mbps": 36.9,
+  "transfer_timeouts": 0,
+  "trigger_counts": {
+   "mono": 0,
+   "rgb": 0
+  }
+ },
+ "cpu": {
+  "effective_cores": 1.93,
+  "process_average_percent": 193,
+  "reader_thread_percent": 10,
+  "top_thread_percent": 44
+ },
+ "decisions": {
+  "count": 46,
+  "hz": 4.55,
+  "max_ms": 692.6,
+  "p50_ms": 201.8,
+  "p95_ms": 527.1
+ },
+ "gpu": {
+  "calibration_uses_gpu": false,
+  "idle_baseline_percent": [
+   28,
+   36
+  ],
+  "note": "no CUDA path in calibration; variation overlaps unrelated desktop load",
+  "observed_utilization_percent": [
+   29,
+   41
+  ]
+ },
+ "host": "i9-14900K / RTX 3080 12GB / 64GB, USB 2.0 High Speed",
+ "preview": {
+  "count": 105,
+  "hz": 9.75,
+  "max_ms": 312.1,
+  "p50_ms": 113.3,
+  "p95_ms": 121.1
+ },
+ "safety_unit_tests": {
+  "parent_sigkill_s": 0.02,
+  "parent_sigterm_s": 0.01,
+  "pipe_eof_s": 0.007,
+  "stalled_heartbeat_s": 2.031
+ },
+ "schema": "einstar-live-validation/1",
+ "session": "private controlled 12 s live run; no comprehensive calibration attempted",
+ "sigkill_test": {
+  "capture_exit": "within 4 s (status published)",
+  "child_alive_after": false,
+  "cleanup_verified": true,
+  "gui": "SIGKILL",
+  "laser_percent": 0,
+  "optical_darkness_verified": false,
+  "stop_reason": "signal:SIGTERM",
+  "trigger_counts": {
+   "mono": 0,
+   "rgb": 0
+  }
+ }
+}

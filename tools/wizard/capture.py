@@ -101,6 +101,9 @@ class CaptureConfig:
     ring: int = 0
     control: Path | None = None
     status: Path | None = None
+    #: tiny volatile-settings file polled by the capture tool.  The wizard
+    #: writes it atomically; unchanged content is a no-op on the device.
+    exposure_control: Path | None = None
     groups: int = 0
     #: wall-clock safety deadline.  ``None`` (the default) leaves the tool's own
     #: rule in charge: with ``--control`` it runs until told to stop, which is
@@ -138,6 +141,12 @@ class CaptureConfig:
         else:
             object.__setattr__(self, "status_explicit", True)
             object.__setattr__(self, "status", _as_path(self.status))
+        if self.exposure_control is None:
+            object.__setattr__(self, "exposure_control",
+                               self.session_dir / "exposure-control.txt")
+        else:
+            object.__setattr__(self, "exposure_control",
+                               _as_path(self.exposure_control))
         object.__setattr__(self, "strobe",
                            tuple((int(r), int(v)) for r, v in self.strobe))
         object.__setattr__(self, "exposure_us",
@@ -265,6 +274,7 @@ class CaptureConfig:
         cmd = [str(self.binary),
                "--session-dir", str(self.session_dir),
                "--control", str(self.control),
+               "--exposure-control", str(self.exposure_control),
                "--ring", str(int(self.ring))]
         # --session-dir already supplies DIR/status.json; passing --status-file
         # as well is a usage error in the tool.  Only forward an override.
@@ -299,6 +309,7 @@ class CaptureConfig:
             "binary": str(self.binary), "session_dir": str(self.session_dir),
             "ring": int(self.ring), "control": str(self.control),
             "status": str(self.status), "groups": int(self.groups),
+            "exposure_control": str(self.exposure_control),
             "timeout_seconds": (None if self.timeout_seconds is None
                                 else int(self.timeout_seconds)),
             "max_seconds": self.max_seconds,
@@ -420,6 +431,11 @@ class LiveCaptureProcess:
         self._disk_cache: tuple[float, int | None] = (0.0, None)
         self._groups_cache: tuple[float, int | None] = (0.0, None)
         self._closed = False
+        self._exposure_current = {int(k): int(v)
+                                  for k, v in config.exposure_us.items()}
+        self._gain_current = {int(k): int(v) for k, v in config.gain.items()}
+        self._heartbeat_stop: threading.Event | None = None
+        self._heartbeat_thread: threading.Thread | None = None
 
     # -- simple properties ----------------------------------------------
     @property
@@ -548,7 +564,98 @@ class LiveCaptureProcess:
         self.commands.append(record)
         return record
 
+    def set_volatile(self, *, exposure_us: Mapping[int, int] | None = None,
+                     gain: Mapping[int, int] | None = None,
+                     laser_percent: int | None = None,
+                     source: str = "manual") -> dict:
+        """Write a volatile exposure/gain/laser change for the capture tool.
+
+        The file is written atomically and the C++ session applies it only while
+        running.  Nothing here writes persistent device state; the capture tool
+        validates each value against the device range and keeps the previous
+        setting if a write is refused.
+        """
+        if not self.running:
+            raise CaptureError("capture is not running; refusing a volatile change")
+        path = self.config.exposure_control
+        assert path is not None
+        lines: list[str] = []
+        if exposure_us:
+            vals = dict(self._exposure_current)
+            vals.update({int(k): int(v) for k, v in exposure_us.items()})
+            for cam, us in sorted(vals.items()):
+                if cam not in (0, 1, 2) or not 10 <= us <= 1_000_000:
+                    raise ValueError(f"bad exposure for camera {cam}: {us}")
+            # The C++ parser intentionally requires all three cameras in one
+            # block; merge the omitted ones from current state rather than
+            # writing a partial block the device would ignore.
+            lines.append("exposure " + " ".join(f"{k}:{v}" for k, v in sorted(vals.items())))
+        if gain:
+            vals = dict(self._gain_current)
+            vals.update({int(k): int(v) for k, v in gain.items()})
+            for cam, value in sorted(vals.items()):
+                if cam not in (0, 1, 2) or not 0 <= value <= 65_535:
+                    raise ValueError(f"bad gain for camera {cam}: {value}")
+            lines.append("gain " + " ".join(f"{k}:{v}" for k, v in sorted(vals.items())))
+        if laser_percent is not None:
+            value = int(laser_percent)
+            if not 0 <= value <= 100:
+                raise ValueError("laser_percent must be 0..100")
+            lines.append(f"laser {value}")
+        if not lines:
+            return {"applied": False, "reason": "no settings"}
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+        if exposure_us:
+            self._exposure_current.update({int(k): int(v)
+                                           for k, v in exposure_us.items()})
+        if gain:
+            self._gain_current.update({int(k): int(v)
+                                       for k, v in gain.items()})
+        record = {"at_s": time.time(), "source": str(source),
+                  "exposure_us": None if not exposure_us else
+                  {str(k): int(v) for k, v in exposure_us.items()},
+                  "gain": None if not gain else
+                  {str(k): int(v) for k, v in gain.items()},
+                  "laser_percent": laser_percent}
+        self.commands.append(record)
+        return record
+
     # -- lifecycle -------------------------------------------------------
+    def _start_heartbeat(self, write_fd: int, proc: subprocess.Popen) -> None:
+        """Pipe ownership stays with this thread until it closes its own fd."""
+        stop = threading.Event()
+        self._heartbeat_stop = stop
+
+        def pulse() -> None:
+            try:
+                while not stop.is_set() and proc.poll() is None:
+                    try:
+                        os.write(write_fd, b".")
+                    except BlockingIOError:
+                        # A full pipe means the child stopped consuming pulses;
+                        # never block the GUI on the safety channel.
+                        pass
+                    except OSError:
+                        break
+                    stop.wait(0.25)
+            finally:
+                os.close(write_fd)
+
+        self._heartbeat_thread = threading.Thread(
+            target=pulse, name="capture-heartbeat", daemon=True)
+        self._heartbeat_thread.start()
+
+    def _stop_heartbeat(self) -> None:
+        if self._heartbeat_stop is not None:
+            self._heartbeat_stop.set()
+        if self._heartbeat_thread is not None:
+            self._heartbeat_thread.join(timeout=0.5)
+        self._heartbeat_stop = None
+        self._heartbeat_thread = None
+
     def start(self) -> dict:
         """Start one capture process; refuse if any other is alive."""
         with self._lock:
@@ -572,17 +679,25 @@ class LiveCaptureProcess:
                 self._write_control("start")
             log_out = self._stdout_path.open("wb")
             log_err = self._stderr_path.open("wb")
+            self._stop_heartbeat()
+            read_fd, write_fd = os.pipe2(os.O_CLOEXEC | os.O_NONBLOCK)
+            environment = os.environ.copy()
+            environment["EINSTAR_CAPTURE_PARENT_PID"] = str(os.getpid())
+            environment["EINSTAR_CAPTURE_HEARTBEAT_FD"] = str(read_fd)
             try:
                 self._proc = subprocess.Popen(
                     self.command, stdin=subprocess.DEVNULL, stdout=log_out,
                     stderr=log_err, cwd=str(self.config.session_dir),
-                    start_new_session=True)
+                    start_new_session=True, pass_fds=(read_fd,), env=environment)
             except OSError as exc:
+                os.close(write_fd)
                 self._cleanup_lock()
                 raise CaptureError(f"cannot start capture tool: {exc}") from exc
             finally:
+                os.close(read_fd)
                 log_out.close()
                 log_err.close()
+            self._start_heartbeat(write_fd, self._proc)
             self._write_lock_pid(self._proc.pid)
             self._states = []
             self._last_state = None
@@ -678,6 +793,8 @@ class LiveCaptureProcess:
                 self._proc.wait(timeout=0.1)
             except subprocess.TimeoutExpired:
                 pass
+        # EOF is the fallback if the ordinary control/signal stop did not finish.
+        self._stop_heartbeat()
         self._cleanup_lock()
         try:
             atexit.unregister(self._atexit_cleanup)
@@ -840,6 +957,9 @@ class LiveCaptureProcess:
         """
         status = self.status()
         reasons: list[str] = []
+        raw = status.get("raw", {})
+        if raw.get("cleanup_attempted") and not raw.get("cleanup_verified"):
+            reasons.append("device cleanup readback is unverified")
         state = status.get("state")
         if state != "stopped":
             reasons.append(f"state is {state!r}, expected 'stopped'")

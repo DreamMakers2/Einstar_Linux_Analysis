@@ -311,7 +311,10 @@ def open_source(kind: str, *, frames: str | None = None, recording: str | None =
     if kind == "replay":
         # the wizard defers the colour conversion to the decision path: it costs
         # 11 ms per group and only groups that reach a decision need it
-        return sources.ReplayDirSource(frames, loop=loop, lazy_colour=True)
+        # Preview needs the colour frame immediately.  Decode it once here so
+        # the live feed and the decision path use the same pixels; the old lazy
+        # path left the colour tile one decision behind.
+        return sources.ReplayDirSource(frames, loop=loop, lazy_colour=False)
     if kind == "recording":
         return sources.RecordingSource(recording)
     if kind == "synthetic":

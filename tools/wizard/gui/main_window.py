@@ -166,9 +166,24 @@ class MainWindow(QtWidgets.QMainWindow):
     def _on_start(self) -> None:
         if self.worker is not None and self.worker.isRunning():
             return
+        # Start capture from this long-lived thread, not from the reader
+        # thread: Linux PR_SET_PDEATHSIG follows the spawning thread.
+        try:
+            starter = getattr(self.source, "start", None)
+            if callable(starter):
+                starter()
+        except Exception as exc:
+            self._fail(f"could not start acquisition: {type(exc).__name__}: {exc}")
+            return
         try:
             self.controller.begin()
         except Exception as exc:
+            try:
+                close = getattr(self.source, "close", None)
+                if callable(close):
+                    close()
+            except Exception:
+                pass
             self._fail(f"begin failed: {type(exc).__name__}: {exc}")
             return
         self._started_at = time.time()

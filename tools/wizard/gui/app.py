@@ -48,6 +48,8 @@ def parse(argv=None):
     ap.add_argument("--snapshot-out", default="")
     ap.add_argument("--autostart", action="store_true",
                     help="start recording immediately (default in headless mode)")
+    ap.add_argument("--no-auto-exposure", action="store_true",
+                    help="keep the configured IR/RGB exposure fixed")
     ap.add_argument("--finish", action="store_true",
                     help="headless: run the final solve and build the candidate "
                          "profile instead of cancelling")
@@ -62,7 +64,7 @@ def main(argv=None) -> int:
     from PySide6 import QtWidgets
 
     from wizard.gui import controller_adapter
-    from wizard.gui.main_window import MainWindow
+    from wizard.gui.modern_window import ModernMainWindow as MainWindow
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv[:1])
 
@@ -85,8 +87,12 @@ def main(argv=None) -> int:
         info = controller.resume()
         print(f"wizard: resume {info}")
     win = MainWindow(controller, source, pace_hz=args.pace,
-                     headless=args.headless, max_groups=args.max_groups)
+                     headless=args.headless, max_groups=args.max_groups,
+                     autostart=(args.autostart or
+                                (not args.headless and args.source == "live")),
+                     auto_exposure=not args.no_auto_exposure)
     win.show()
+    win.maybe_autostart()
 
     if args.headless or args.autostart:
         win._on_start()
@@ -113,6 +119,9 @@ def main(argv=None) -> int:
         try:
             if args.finish:
                 win._on_finish()
+                # the solve is deliberately off the GUI thread; the headless
+                # driver must wait for it (the old immediate read raced it)
+                win.wait_for_finish(600.0)
             else:
                 win._on_cancel()
             win.shutdown()

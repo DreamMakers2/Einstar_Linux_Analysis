@@ -725,7 +725,11 @@ class LiveSource:
             for gid in pending:
                 if len(files[gid]) < 3:
                     continue
-                parsed = _group_images(files[gid], lazy_colour=True)
+                # The operator preview needs all three feeds at device rate.
+                # Debayering here (11 ms) is cheaper than letting the decision
+                # thread own the only colour frame: the old lazy path left the
+                # colour tile showing the previous decision, seconds behind.
+                parsed = _group_images(files[gid], lazy_colour=False)
                 if parsed is None:
                     continue  # still being written; retry next poll
                 images, bgr = parsed

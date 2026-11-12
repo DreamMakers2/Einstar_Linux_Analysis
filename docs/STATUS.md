@@ -4,7 +4,29 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-12.  Private HEAD `aa030c7`, public HEAD `678eeda`, 372 tests.
+Date: 2026-11-12.  This working tree: **420 Python tests**, 13/13 driver
+C++ tests, 1/1 reconstruction C++ tests, plus 8 real parent/child process-safety
+tests.  The previous published HEAD was `aa030c7`; this milestone is committed
+separately.
+
+---
+
+## 0. Performance and architecture (2026-11-12)
+
+| claim | number | source |
+|---|---|---|
+| 35-view finalisation | **38.94 s → 3.47 s**, 11.2x, same optimum (RMS 0.33037 vs 0.33044 px) | `docs/calibration/performance_overhaul_2026-11-12.md`, `analysis/calibration/overhaul/` |
+| 35-view analytic solve | 0.57 s vs 5.01 s SciPy reference (7.5x), parameter agreement 4.4e-5 | `tests/test_solver_equivalence.py` |
+| verification passes | SciPy FD → analytic LM; 3 sensitivity analyses → 2 unique (content-keyed cache); raw hash overlapped | same |
+| live preview | **9.75 Hz**, p50 113 ms, p95 121 ms; decisions 4.55/s | `analysis/calibration/overhaul/live_validation_2026-11-12.json` |
+| live acquisition | 9.76 groups/s, 36.9 MB/s, 0 transfer timeouts, 1 partial, 3 startup drops | same |
+| GUI finish | responsive, final solve on `FinishWorker`; modern operator window replaces the engineering dashboard | `tools/wizard/gui/modern_window.py` |
+| auto exposure | IR 1200→2343 µs, RGB 5000→9765 µs in 12 s; volatile only; every change logged | `docs/calibration/auto_exposure.md` |
+| process death | GUI `SIGKILL` → capture stops, trigger 0/0, illuminator readback 0, `cleanup_verified` | `docs/calibration/process_safety.md` |
+| CPU/GPU | 193% process average (1.93 cores), top thread 44%; GPU unchanged from idle, calibration is CPU-only | live validation JSON |
+
+**Still not achieved:** a full physical calibration session, absolute accuracy,
+an 8 h soak, and a stated GPU speedup (none is justified for this problem size).
 
 ---
 
@@ -26,9 +48,11 @@ window accepted 8 views, rejected 33 as redundant, reported `3/8` coverage and
 declared **NOT READY** with the exact missing dimensions - all 41 markers were
 detected in all three cameras, so the refusal is about geometry, not detection.
 
-**Not done:** the one comprehensive physical recording.  The software is ready;
-the procedure is in `docs/calibration/wizard_operator_guide.md`.  It needs the
-plate physically moved through the coverage families.
+**Not done:** the one comprehensive physical recording.  The preserved
+35-view capture (`~/einstar-calibration-02`) remains **NOT READY** for
+distance/tilt/roll/region/stationarity coverage; the performance overhaul did
+not change that verdict.  The procedure is in
+`docs/calibration/wizard_operator_guide.md`.
 
 ## 2. Scanner: working and measured
 

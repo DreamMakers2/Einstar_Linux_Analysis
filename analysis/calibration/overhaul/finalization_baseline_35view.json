@@ -1,0 +1,19 @@
+{
+ "accepted_views": 35,
+ "finish_s": 38.938143057,
+ "measured_before_changes": true,
+ "model_sensitivity_calls": 3,
+ "model_sensitivity_time_s": 22.627,
+ "notes": "Measured with cProfile on this host before replacing the SciPy verification passes; the original session was copied to a shadow directory and restored read-only.",
+ "observability_refresh_s": 7.729,
+ "residual_evaluations": 14190,
+ "rms_px": 0.3304370809462498,
+ "schema": "einstar-bench-baseline/1",
+ "scipy_least_squares_s": 24.605,
+ "session": "<preserved-35-view-session>",
+ "session_hashing_s": 2.726,
+ "solver_passes": 10,
+ "solver_time_s": 34.335,
+ "stage_release_s": 8.146,
+ "validation_metrics_s": 12.264
+}

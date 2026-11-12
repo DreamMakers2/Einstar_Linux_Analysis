@@ -1,0 +1,20 @@
+{
+ "accepted": 1,
+ "detect_seconds": 0.0,
+ "groups": 20,
+ "per_group_ms": {
+  "max": 490.9391510000205,
+  "mean": 122.70479174999309,
+  "p50": 106.17207599989342,
+  "p95": 490.9391510000205
+ },
+ "processes": true,
+ "refine_seconds": 1.3351905345916748,
+ "roi_stats": {
+  "fallback": 0,
+  "full": 3,
+  "roi": 66
+ },
+ "schema": "einstar-bench-detection/1",
+ "wall_s": 2.454095834999862
+}
