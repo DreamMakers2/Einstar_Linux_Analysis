@@ -29,6 +29,7 @@ void usage() {
       "              [--scale 0.5] [--min-depth 150] [--max-depth 800]\n"
       "              [--block 5] [--equalize] [--no-color] [--ascii-ply]\n"
       "              [--min-confidence 0..1] [--maps full|depth|none]\n"
+      "              [--min-depth MM] [--max-depth MM]\n"
       "              [--prefix recon]\n"
       "  synthetic --profile FILE --out DIR [--depth 350] [--seed 1]\n"
       "  bench     --frames DIR --ids 0,1,2 --profile FILE [--repeat 3]\n";
@@ -112,6 +113,11 @@ int main(int argc, char** argv) {
 
       }
       o.depth.color = !flag(argc, argv, "--no-color");
+      // the disparity search range is derived from the depth limits, and its
+      // width is the dominant cost of matching: a scene that starts at 350 mm
+      // does not need the 150 mm lower bound
+      o.stereo.min_depth_mm = std::stod(arg(argc, argv, "--min-depth", "150"));
+      o.stereo.max_depth_mm = std::stod(arg(argc, argv, "--max-depth", "800"));
       fs::create_directories(out);
       if (cmd == "rectify") {
         auto pair = rectify(frames, p, o.rectify);

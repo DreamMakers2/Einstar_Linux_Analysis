@@ -77,6 +77,12 @@ class ScanConfig:
     #: take 316 ms and 30 k take 87 ms with the same residual (0.095 mm) and
     #: rotation within 0.02 deg, so the cap buys ~3.6x for free.
     tracking_max_points: int = 30000
+    #: disparity search range.  Its width dominates the matching cost, and the
+    #: default 150 mm lower bound is below the scanner's working distance:
+    #: measured 247 ms at 150-800 mm against 203 ms at 250-800 mm with the same
+    #: valid fraction (42.5 % -> 42.9 %).
+    min_depth_mm: float = 250.0
+    max_depth_mm: float = 800.0
     max_frames: int | None = None
     keep_frames: bool = True
     ascii_ply: bool = True
@@ -271,7 +277,9 @@ class ScanSession:
                "--min-confidence", f"{self.config.min_confidence:g}",
                # only the depth map and the report are read back by the session;
                # the diagnostic maps cost ~24 ms/frame in a live loop
-               "--maps", "depth"]
+               "--maps", "depth",
+               "--min-depth", f"{self.config.min_depth_mm:g}",
+               "--max-depth", f"{self.config.max_depth_mm:g}"]
         if self.config.ascii_ply:
             cmd.append("--ascii-ply")
         proc = subprocess.run(cmd, capture_output=True, text=True)

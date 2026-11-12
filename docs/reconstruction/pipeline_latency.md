@@ -127,3 +127,28 @@ What changed, all measured rather than assumed:
 The earlier "~4 fps default" figure in this document was a sum of isolated
 component timings, not a measured loop.  The measured loop is what the table
 above reports, and the 10 fps target is still not met.
+
+### Disparity range: the largest remaining lever
+
+The disparity search width dominates matching cost, and it is derived from
+`min_depth_mm`/`max_depth_mm`.  Measured on the same frame (`--scale 0.5`):
+
+| depth range | time | num_disparities | valid fraction | points |
+|---|---|---|---|---|
+| 150-800 mm (old default) | 247 ms | 512 | 42.5 % | 139 336 |
+| **250-800 mm (new default)** | **203 ms** | **256** | **42.9 %** | 140 520 |
+| 300-800 mm | 194 ms | 208 | 42.9 % | 140 626 |
+| 350-800 mm | 185 ms | 160 | 43.0 % | 141 047 |
+| 350-600 mm | 182 ms | 128 | 35.0 % | 114 826 |
+
+The old lower bound (150 mm) is below the scanner's working distance, so half
+the search range was spent on depths the device never sees.  250 mm is the
+conservative choice: 18 % faster with *more* valid points.  350-800 mm would be
+25 % faster but starts to clip a close object, and 350-600 mm loses a third of
+the valid surface.
+
+End to end on an 8-frame scan: **7.5 s -> 5.1 s** wall time at the same vertex
+count (22 883 -> 23 358) and the same valid fraction.
+
+`recon_cli` exposes `--min-depth`/`--max-depth`; `ScanConfig.min_depth_mm`
+defaults to 250 mm.  With this the measured loop is **1.58 fps**.
