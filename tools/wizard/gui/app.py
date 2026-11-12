@@ -76,7 +76,10 @@ def main(argv=None) -> int:
     else:
         controller = controller_adapter.make_controller(
             factory_profile=args.profile, session_dir=args.session_dir,
-            mode=args.mode, source_kind=args.source)
+            mode=args.mode, source_kind=args.source,
+            # the capture process belongs to the live source; without it the
+            # controller cannot report fps and the wizard shows a false stall
+            capture=getattr(source, "capture", None))
 
     if args.resume:
         info = controller.resume()

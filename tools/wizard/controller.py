@@ -3049,8 +3049,9 @@ class WizardController:
         return {
             "state": "idle",
             "error": None,
-            "source": {"kind": "", "path": "", "serial": "", "firmware": "",
-                       "note": ""},
+            # the source is known before the first frame, and a live run
+            # labelled "replay" is exactly the misleading state to avoid
+            "source": self._source_dict(),
             "session": {"dir": str(self.paths.root), "started_s": 0.0,
                         "elapsed_s": 0.0, "factory_sha256": "",
                         "raw_recording": str(self.paths.raw_recording),

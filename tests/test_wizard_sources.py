@@ -379,3 +379,40 @@ def test_live_lag_bound_drops_old_groups(tmp_path):
     assert src.max_lag == 1 and src.skipped == []
     assert src.dropped_for_lag == 0
     src.close()
+
+
+def test_live_capture_status_reaches_the_controller(tmp_path):
+    """The controller must see the capture's fps, or the wizard shows a false stall."""
+    pytest.importorskip("cv2")
+    from tools.wizard.gui import controller_adapter
+    from wizard import sources
+    capture_binary = REPO / "build" / "driver" / "einstar-capture-frames"
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    if not (capture_binary.is_file() and factory.is_file()):
+        pytest.skip("capture binary or factory profile missing")
+    src = sources.LiveSource(
+        tmp_path / "live",
+        capture_args={"backend": "simulated", "ring": 20, "binary": str(capture_binary)})
+    ctl = controller_adapter.make_controller(
+        factory_profile=str(factory), session_dir=str(tmp_path / "live"),
+        mode="standard", source_kind="live",
+        capture=getattr(src, "capture", None))
+    try:
+        iterator = iter(src)
+        next(iterator)
+        deadline = time.time() + 30
+        status = {}
+        while time.time() < deadline:
+            status = ctl.snapshot().get("capture") or {}
+            if (status.get("fps") or 0.0) > 0.0:
+                break
+            time.sleep(0.2)
+        assert status.get("state") in ("running", "starting"), status
+        assert (status.get("fps") or 0.0) > 0.0, status
+        assert int(status.get("groups_written") or 0) > 0, status
+    finally:
+        try:
+            src.close()
+        finally:
+            pass

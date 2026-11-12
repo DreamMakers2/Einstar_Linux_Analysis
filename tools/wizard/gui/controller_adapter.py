@@ -34,6 +34,13 @@ def make_controller(*, factory_profile: str, session_dir: str, mode: str = "high
     """Return the real controller when available, else the demo one."""
     if real_controller_available():
         from wizard.controller import WizardController
+        if "source" not in kwargs:
+            # the header and the acquisition panel report the *source*, and a
+            # live run labelled "replay" is exactly the misleading state the
+            # wizard must never show
+            from wizard import types as _types
+            kwargs["source"] = _types.SourceInfo(kind=str(source_kind),
+                                                 path=str(session_dir))
         return WizardController(factory_profile=factory_profile,
                                 session_dir=session_dir, mode=mode, **kwargs)
     return DemoController(factory_profile=factory_profile, session_dir=session_dir,
