@@ -218,6 +218,32 @@ The episode also exposed a trap in the consistency metric: a pose set that
 barely moves scores *better* on "distance to the union of other frames", so
 consistency alone would have endorsed a tracker that is nearly frozen.
 
+## Tilt validated against the plate on real frames
+
+The plate is rigid, so its PnP tilt is an independent reference; masking the
+depth map to the plate polygon makes the comparison like-for-like.  At full
+resolution the tracker agrees:
+
+| pair | plate PnP tilt | projective ICP | difference |
+|---|---|---|---|
+| 0→5 | 0.56° | 0.43° | 0.13° |
+| 5→10 | 0.44° | 0.45° | **0.01°** |
+| 10→15 | 0.53° | 0.43° | 0.09° |
+
+Depth noise at scale 1.0 is 0.17 mm over ~40-50 k plate pixels.  The same pairs
+at **scale 0.25** (noise 2.3 mm over ~2.5 k pixels) gave tilt errors of 0.09°,
+0.87° and 1.15° - noise-dominated, exactly as the plane-fit error model predicts
+(`sigma / (extent/2)`): ~1.8° at scale 0.25 against ~0.1° at scale 1.0.
+
+So the tracker's *rotation* is validated on real data to a tenth of a degree at
+full resolution, and the resolution dependence is understood rather than
+anomalous.  What is **not** validated is in-plane translation: a plane cannot
+observe it, and the full-scene tracker only gets it from the background
+structure, which has no independent reference here.
+
+This is the first positive tracking validation in several rounds, and it came
+from matching the measurement to what the geometry can actually observe.
+
 ## Synthetic end-to-end resolution: 1.19 mm / 0.269 deg
 
 The idea was to validate tracking with *known* motion: render the plate at two

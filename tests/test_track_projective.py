@@ -209,3 +209,76 @@ def test_real_frames_beat_the_cloud_baseline_on_the_same_points():
     cloud_c = pj.surface_consistency(frames, cloud_poses)
     proj_c = pj.surface_consistency(frames, proj_poses)
     assert proj_c < cloud_c, (proj_c, cloud_c)
+
+
+def test_projective_tilt_matches_the_plate_reference_on_real_frames(tmp_path):
+    """The plate is a rigid target: its PnP tilt is an independent reference.
+
+    The depth map is masked to the plate polygon, so the comparison is
+    like-for-like.  Tilt is the *observable* component on a plane; in-plane
+    translation is not, which is why only the rotation is asserted.
+
+    Resolution matters and is measured: at scale 1.0 the depth noise is ~0.17 mm
+    over ~40k plate pixels and the tilt agrees to <=0.15 deg.  At scale 0.25 the
+    noise is ~2.3 mm over ~2.5k pixels and the tilt estimate is noise-dominated
+    (~1 deg error), which is what a plane-fit error model predicts
+    (sigma / (extent/2)).
+    """
+    import subprocess
+    import cv2
+    from calib import detect, geometry, plate, recon_profile
+    from wizard import types
+
+    base = Path(os.path.expanduser("~/einstar-private/sweep-c/frames"))
+    profile = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    recon = REPO / "build" / "recon" / "recon_cli"
+    if not (base.is_dir() and profile.is_file() and recon.is_file()):
+        pytest.skip("recording, profile or recon binary not available")
+    ids = [0, 5, 10]
+    prof = recon_profile.load(profile)
+    intr = prof.camera("ir_left").intrinsics()
+    Kp = np.asarray(intr.K, float)
+    kc = np.asarray(intr.kc, float)
+    board = plate.board_points_mm()
+    idx = {(float(u), float(v)): i for i, (u, v) in enumerate(plate.lattice_uv())}
+    poses, hulls, outdirs = [], [], []
+    for fid in ids:
+        im = types.orient_left(types.read_pgm(base / f"frame_{fid:06d}_cam1.pgm"))
+        o = detect.detect_grid_auto(np.ascontiguousarray(im))
+        ks = [k for k in o.points if (float(k[0]), float(k[1])) in idx]
+        uvs = np.asarray([(float(k[0]), float(k[1])) for k in ks])
+        obj = np.asarray([board[idx[(u, v)]] for u, v in uvs])
+        img = np.asarray([o.points[k] for k in ks], float)
+        poses.append(geometry.solve_pnp(obj, img, Kp, kc))
+        hulls.append(cv2.convexHull(
+            np.asarray([o.points[k] for k in ks], np.float32)).astype(np.int32))
+        out = tmp_path / f"f{fid}"
+        proc = subprocess.run(
+            [str(recon), "reconstruct", "--frames", str(base), "--id", str(fid),
+             "--profile", str(profile), "--out", str(out), "--scale", "1.0"],
+            capture_output=True, text=True, timeout=180)
+        if proc.returncode != 0:
+            pytest.skip("full-resolution reconstruction unavailable")
+        outdirs.append(out)
+
+    def masked(path, hull):
+        frame = pj.load_depth(path)
+        d = frame.depth_mm.copy()
+        m = np.zeros(d.shape, np.uint8)
+        cv2.fillConvexPoly(m, hull, 255)
+        m = cv2.erode(m, np.ones((9, 9), np.uint8))
+        d[m == 0] = 0
+        return pj.DepthFrame(d, frame.K, frame.confidence)
+
+    frames = [masked(d / "recon_depth_mm.tiff", h) for d, h in zip(outdirs, hulls)]
+    assert all(int(f.valid.sum()) > 10000 for f in frames), \
+        [int(f.valid.sum()) for f in frames]
+    diffs = []
+    for i in range(1, len(ids)):
+        n0 = poses[i - 1].R[:, 2]
+        n1 = poses[i].R[:, 2]
+        ref = float(np.degrees(np.arccos(np.clip(n0 @ n1, -1.0, 1.0))))
+        got = float(pj.align_projective(frames[i - 1], frames[i])["rotation_deg"])
+        diffs.append(abs(got - ref))
+    assert max(diffs) < 0.25, diffs
