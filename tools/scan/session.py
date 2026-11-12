@@ -112,6 +112,8 @@ class FrameStatus:
     rms_mm: float = float("nan")
     inlier_ratio: float = float("nan")
     condition: float = float("nan")
+    #: 1 - fraction of this frame's points whose voxel was already observed
+    novelty: float | None = None
     recon_seconds: float = float("nan")
     tracking_seconds: float = float("nan")
     fusion_seconds: float = float("nan")
@@ -239,6 +241,7 @@ class ScanSession:
             "depth": depth,
             "cloud": cloud,
             "volume": volume,
+            "novelty": last.get("novelty"),
             "finished": self._finished is not None,
         }
 
@@ -440,6 +443,12 @@ class ScanSession:
             self._volume = tsdf.make_volume([world], voxel_mm=cfg.voxel_mm,
                                             margin_mm=25.0,
                                             max_voxels=60_000_000)
+        # how much of this frame is new surface: the operator's coverage signal
+        if status.novelty is None:
+            try:
+                status.novelty = 1.0 - tsdf.observed_fraction(self._volume, world)
+            except Exception:
+                status.novelty = None
         t0 = time.time()
         tsdf.integrate(self._volume, world, world_n, trunc_mm=cfg.trunc_mm,
                        confidence=conf)

@@ -148,6 +148,23 @@ The object was stationary, so a near-zero step is the correct answer rather
 than a tracking failure — the same run before the projective default reported
 0.45-1.6 mm steps on replay data with real motion.
 
+## New-surface feedback
+
+The scan view reports how much of each frame is **new surface** - the fraction
+of its points whose voxel had not been observed before (`tsdf.observed_fraction`,
+a voxel lookup, not a surface-distance test).  The caption shows it live and the
+finished log reports the last frame's value; every frame's value is in
+`scan_report.json`.
+
+Measured on a nearly stationary sweep segment: 100 % on the first frame, then
+1.7 %, 1.3 %, 0.2 %, 0.4 %, 0.2 % - the signal tells the operator that more
+frames are adding nothing.  On widely spaced frames (0, 40, 80, 120) it reads
+100 %, 25.2 %, 18.4 %, 1.2 %, tracking how much new surface each view brings.
+
+This is deliberately a *voxel* measure, so it says "you have seen this volume
+before", not "your model is complete" - a fully covered object still needs an
+exit condition based on the model, and that remains open.
+
 ## Tracking loss and recovery
 
 A frame whose alignment fails is rejected, never integrated, and **the reference

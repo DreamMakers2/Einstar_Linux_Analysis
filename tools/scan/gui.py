@@ -251,8 +251,11 @@ class ScanWindow(QtWidgets.QMainWindow):
         elif snap.get("cloud"):
             self.view.set_points(snap.get("cloud"))
         vol = snap.get("volume") or {}
+        novelty = snap.get("novelty")
+        new = "" if novelty is None else f"  new surface {100.0 * novelty:.0f}%"
         caption = (f"frames {snap['frames_integrated']}  rejected {snap['frames_rejected']}"
-                   f"  voxels {vol.get('observed', 0):,}   drag to orbit, wheel to zoom")
+                   f"  voxels {vol.get('observed', 0):,}{new}"
+                   f"   drag to orbit, wheel to zoom")
         self.view.set_caption(caption)
         last = snap.get("last") or {}
         self.status.setPlainText(
@@ -271,6 +274,15 @@ class ScanWindow(QtWidgets.QMainWindow):
         self.log.appendPlainText(
             f"done: frames {report.get('frames')} rejected {report.get('rejected')} "
             f"vertices {report.get('vertices')} faces {report.get('faces')}")
+        statuses = report.get("frames_status") or []
+        last_new = None
+        for status in reversed(statuses):
+            if status.get("novelty") is not None:
+                last_new = float(status["novelty"])
+                break
+        if last_new is not None:
+            self.log.appendPlainText(
+                f"new surface on the last frame: {100.0 * last_new:.1f}%")
         self.log.appendPlainText(f"mesh: {report.get('obj')}")
         self.load_mesh_file(report.get("ply") or report.get("obj"))
         self.btn_start.setEnabled(True)

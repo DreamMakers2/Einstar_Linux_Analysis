@@ -471,3 +471,35 @@ def test_tracking_loss_keeps_the_last_accepted_reference(tmp_path, monkeypatch):
         assert report.get("recoveries") == 1
     finally:
         session.close()
+
+
+def test_novelty_reports_new_surface_and_falls_to_zero(tmp_path):
+    """The coverage signal: a repeat view adds nothing, a moved view adds surface."""
+    from tools.fuse import tsdf
+
+    rng = np.random.default_rng(7)
+    pts = rng.normal(0, 25, size=(6000, 3))
+    normals = np.tile([0.0, 0.0, -1.0], (len(pts), 1))
+    volume = tsdf.make_volume([pts], voxel_mm=4.0, margin_mm=20.0)
+    assert tsdf.observed_fraction(volume, pts) == 0.0
+    tsdf.integrate(volume, pts, normals, trunc_mm=12.0)
+    assert tsdf.observed_fraction(volume, pts) > 0.99
+    # the same surface seen again is not new; a displaced one is
+    assert tsdf.observed_fraction(volume, pts + 1e-3) > 0.99
+    assert tsdf.observed_fraction(volume, pts + 300.0) < 0.01
+
+
+def test_scan_reports_novelty_per_frame(tmp_path):
+    session = scan_session.ScanSession(_config(tmp_path, scale=0.5))
+    try:
+        first = session.process(0)
+        assert first.ok
+        assert first.novelty is not None and first.novelty > 0.9
+        second = session.process(1)          # almost the same view
+        assert second.ok
+        assert second.novelty is not None and second.novelty < 0.5
+        snapshot = session.snapshot()
+        # the snapshot rounds its floats for display
+        assert snapshot["novelty"] == pytest.approx(second.novelty, abs=1e-3)
+    finally:
+        session.close()

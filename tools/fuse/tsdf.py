@@ -91,6 +91,26 @@ def make_volume(points: Sequence[np.ndarray], voxel_mm: float = 2.0,
                   tuple(int(x) for x in shape), tsdf, weight)
 
 
+def observed_fraction(volume: Volume, points: np.ndarray) -> float:
+    """Fraction of ``points`` whose voxel has already been observed.
+
+    A scanner should tell the operator how much *new* surface a frame brings;
+    a frame that only revisits observed voxels adds nothing.  This is a voxel
+    lookup, not a surface-distance test, so it is cheap and deterministic.
+    """
+    pts = np.asarray(points, float).reshape(-1, 3)
+    if len(pts) == 0:
+        return 0.0
+    idx = np.floor((pts - volume.origin) / float(volume.voxel_mm)).astype(np.int64)
+    shape = np.asarray(volume.tsdf.shape, np.int64)
+    inside = np.all((idx >= 0) & (idx < shape), axis=1)
+    if not inside.any():
+        return 0.0
+    idx = idx[inside]
+    seen = volume.weight[idx[:, 0], idx[:, 1], idx[:, 2]] > 0
+    return float(seen.mean())
+
+
 def integrate(volume: Volume, points: np.ndarray, normals: np.ndarray,
               *, trunc_mm: float | None = None, confidence: np.ndarray | None = None,
               max_weight: float = 64.0) -> dict:
