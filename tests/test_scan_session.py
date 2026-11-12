@@ -20,7 +20,8 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
 from tools.scan import session as scan_session  # noqa: E402
-from tools.track import baseline as track  # noqa: E402
+from tools.track import baseline as track
+from tools.track import projective as track_proj  # noqa: E402
 
 SWEEP = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
 FACTORY = Path(os.path.expanduser("~/einstar-private/einstar-profiles/factory-e10.json"))
@@ -82,7 +83,8 @@ def test_snapshot_contract(tmp_path):
 
 def test_lost_tracking_is_not_integrated(tmp_path, monkeypatch):
     """A failed alignment must skip the frame, never absorb its pose."""
-    session = scan_session.ScanSession(_config(tmp_path))
+    # cloud path
+    session = scan_session.ScanSession(_config(tmp_path, tracking="cloud"))
     real_align = track.align_point_to_plane
 
     def failing_align(source, target, *a, **k):
@@ -99,6 +101,24 @@ def test_lost_tracking_is_not_integrated(tmp_path, monkeypatch):
         assert bad.ok is False
         assert "tracking lost" in bad.reason
         assert bad.integrated is False
+
+        # projective path: the same guarantee
+        proj = scan_session.ScanSession(_config(tmp_path / "proj", tracking="projective"))
+        real_proj = track_proj.align_projective
+
+        def failing_proj(source, target, *a, **k):
+            out = dict(real_proj(source, target, *a, **k))
+            out["ok"] = False
+            out["reason"] = "simulated failure"
+            return out
+
+        assert proj.process(0).ok
+        monkeypatch.setattr(track_proj, "align_projective", failing_proj)
+        bad2 = proj.process(1)
+        assert bad2.ok is False
+        assert "tracking lost" in bad2.reason
+        assert bad2.integrated is False
+        proj.close()
         assert session.n_frames == 1          # only the good frame is fused
         assert session.n_rejected == 1
         snap = session.snapshot()
@@ -383,3 +403,33 @@ def test_reprocess_from_project_reuses_the_recorded_poses(tmp_path):
     assert a.shape == b.shape
     assert np.allclose(a, b, atol=1e-9)
     assert (Path(second["ply"]).is_file() and Path(second["obj"]).is_file())
+
+
+def test_session_tracks_projectively_by_default_and_falls_back(tmp_path):
+    """The projective path is the default; a missing depth map must not break it."""
+    cfg = _config(tmp_path / "proj")
+    assert cfg.tracking == "projective"
+    session = scan_session.ScanSession(cfg)
+    try:
+        first = session.process(0)
+        assert first.ok
+        second = session.process(1)
+        assert second.ok, second.reason
+        # the projective path reports its own residual and a replayed/ICP reason
+        assert second.tracking_reason in ("ok", "replayed pose"), second.tracking_reason
+        assert second.rms_mm is not None
+    finally:
+        session.close()
+
+    # a frames directory whose reconstructions carry no depth map falls back to
+    # the cloud tracker instead of failing
+    fallback = _config(tmp_path / "fb")
+    session = scan_session.ScanSession(fallback)
+    try:
+        session.process(0)
+        session._prev_depth = None                      # simulate no depth map
+        status = session.process(1)
+        assert status.ok, status.reason
+        assert status.tracking_reason != "replayed pose"
+    finally:
+        session.close()

@@ -66,11 +66,13 @@ class ScanConfig:
     min_confidence: float = 0.0
     #: grey-world white balance on the highlight set (measured cast 29 % -> 2.5 %)
     white_balance: bool = True
-    #: "projective" would track on the engine's depth maps, but that path is NOT
-    #: validated: on real frames it reports 0.1-0.3 mm steps where the plate's
-    #: own PnP motion is 3.1-3.4 mm (see docs/tracking/tracking_baseline.md), so
-    #: it is off until it passes that check.  "cloud" is the KD-tree path.
-    tracking: str = "cloud"
+    #: "projective" tracks on the engine's depth maps, restricted to the near
+    #: object by a depth-only mask.  Measured against the plate's own PnP pose
+    #: on real frames: median tilt error 0.24 deg at scale 0.5 (cloud 0.58) and
+    #: 0.06 deg at scale 1.0.  It costs ~200 ms/frame of tracking against ~76 ms,
+    #: which is ~13 % of the whole scan loop.  Falls back to "cloud" when the
+    #: depth map or its rectified intrinsics are unavailable.
+    tracking: str = "projective"
     max_frames: int | None = None
     keep_frames: bool = True
     ascii_ply: bool = True
@@ -255,17 +257,6 @@ class ScanSession:
         return verts[used], remap[faces]
 
     # -- internals --------------------------------------------------------
-    def _left_intrinsics(self):
-        if self._intrinsics is None:
-            try:
-                from calib import recon_profile
-                prof = recon_profile.load(self.config.profile)
-                cam = prof.camera("ir_left").intrinsics()
-                self._intrinsics = np.asarray(cam.K, float)
-            except Exception:
-                self._intrinsics = False
-        return None if self._intrinsics is False else self._intrinsics
-
     def _reconstruct(self, index: int) -> tuple[Path, dict]:
         out = self._work / f"recon_{index:06d}"
         out.mkdir(parents=True, exist_ok=True)
@@ -339,11 +330,19 @@ class ScanSession:
             return status
         depth_frame = None
         if str(getattr(cfg, "tracking", "projective")) == "projective":
-            K = self._left_intrinsics()
             depth_path = ply.parent / "recon_depth_mm.tiff"
-            if K is not None and depth_path.is_file():
+            if depth_path.is_file():
                 try:
-                    depth_frame = track_proj.load_depth(depth_path, K)
+                    # K must come from the reconstruction report: the depth map
+                    # is on the SCALED rectified grid, and the profile's
+                    # full-resolution intrinsics are wrong for it (that mistake
+                    # once made the tracker report a tenth of the true motion)
+                    raw = track_proj.load_depth(depth_path)
+                    # isolate the object: a static background damps a moving
+                    # object's motion (measured: 0.47 deg -> 0.06 deg tilt
+                    # error) and the mask also cuts the ICP point count
+                    depth_frame = track_proj.mask_to_object(
+                        raw, track_proj.object_mask(raw))
                 except Exception:
                     depth_frame = None
         if depth_frame is not None and self._prev_depth is not None:
@@ -352,16 +351,21 @@ class ScanSession:
             status.tracking_seconds = time.time() - t1
             status.tracking_ok = bool(r["ok"])
             status.tracking_reason = str(r["reason"])
-            status.translation_mm = float(r["translation_mm"])
-            status.rotation_deg = float(r["rotation_deg"])
-            status.rms_mm = float(r["rms_mm"])
-            status.condition = float(r["condition"])
-            status.inlier_ratio = float(r["inliers"]) / max(
-                1.0, float(len(depth_frame.points()[0])))
-            if r["ok"]:
-                pose = self._poses[-1] @ np.linalg.inv(np.asarray(r["transform"], float))
+            # defensive reads: a tracker result must never abort a scan
+            status.translation_mm = float(r.get("translation_mm") or 0.0)
+            status.rotation_deg = float(r.get("rotation_deg") or 0.0)
+            status.rms_mm = r.get("rms_mm")
+            status.condition = r.get("condition")
+            try:
+                n_px = max(1, len(depth_frame.points()[0]))
+                status.inlier_ratio = float(r.get("inliers") or 0) / n_px
+            except Exception:
+                status.inlier_ratio = 0.0
+            if r.get("ok"):
+                pose = self._poses[-1] @ np.linalg.inv(
+                    np.asarray(r.get("transform", np.eye(4)), float))
             else:
-                status.reason = f"tracking lost: {r['reason']}"
+                status.reason = f"tracking lost: {r.get('reason') or 'unknown'}"
                 self._rejected += 1
                 self._prev_depth = depth_frame
                 self._statuses.append(status)

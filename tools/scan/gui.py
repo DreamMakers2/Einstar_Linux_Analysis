@@ -10,6 +10,7 @@ fast enough and has no driver dependency.
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -309,6 +310,8 @@ class ScanWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(str)
     def on_failed(self, message: str) -> None:
         self.log.appendPlainText(f"ERROR {message}")
+        if os.environ.get("EINSTAR_SCAN_DEBUG"):
+            print(f"scan worker failed: {message}", file=sys.stderr, flush=True)
         self.btn_start.setEnabled(True)
         self.btn_pause.setEnabled(False)
         self.btn_stop.setEnabled(False)

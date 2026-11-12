@@ -34,6 +34,22 @@ except Exception:  # pragma: no cover
 __all__ = ["DepthFrame", "load_depth", "normals_from_depth", "object_mask",
            "mask_to_object", "align_projective", "surface_consistency"]
 
+_FAILURE_KEYS = ("ok", "reason", "transform", "translation_mm", "rotation_deg",
+                 "rms_mm", "inliers", "iterations", "runtime_s", "condition")
+
+
+def _failure(reason: str, t0: float, *, iterations: int = 0) -> dict:
+    """A complete failure result.
+
+    Every early exit used to return a short dict, which crashed callers that
+    read ``translation_mm`` (found by the live scan test: a second frame whose
+    mask was too small raised KeyError and aborted the scan).
+    """
+    return {"ok": False, "reason": reason, "transform": np.eye(4),
+            "translation_mm": 0.0, "rotation_deg": 0.0, "rms_mm": float("nan"),
+            "inliers": 0, "iterations": int(iterations),
+            "runtime_s": time.time() - t0, "condition": float("inf")}
+
 
 @dataclass
 class DepthFrame:
@@ -195,9 +211,7 @@ def align_projective(source: DepthFrame, target: DepthFrame,
         pts = pts[::stride]
         uv = uv[::stride]
     if len(pts) < 500:
-        return {"ok": False, "reason": "too few valid pixels", "transform": np.eye(4),
-                "rms_mm": float("nan"), "inliers": 0, "iterations": 0,
-                "runtime_s": time.time() - t0, "condition": float("inf")}
+        return _failure("too few valid pixels", t0)
     target_normals = normals_from_depth(target.depth_mm, K)
     T = np.eye(4) if init is None else np.asarray(init, float).copy()
     fx, fy = float(K[0, 0]), float(K[1, 1])

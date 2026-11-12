@@ -120,6 +120,20 @@ vertices it still uses, so it is deterministic; the final mesh written by
 Measured on a 10-frame scan: the preview showed 20 250 vertices / 36 927 faces
 while the run was still going, and the final mesh is larger.
 
+## Tracking path
+
+Scans now track on the engine's depth maps by default
+(`ScanConfig.tracking="projective"`): the depth map is restricted to the near
+object with a depth-only band mask and aligned projectively.  Measured against
+the calibration plate's own PnP pose on real frames, median tilt error is
+**0.24 deg at scale 0.5** against **0.58 deg** for the cloud tracker, at
+~200 ms/frame of tracking instead of ~76 ms (~13 % of the scan loop).
+
+It falls back to the cloud tracker when a depth map or its rectified intrinsics
+are missing, and the worker never aborts on a tracker result: early exits return
+a complete result dict and the session reads defensively (a short dict once
+raised `KeyError: 'translation_mm'` and aborted a live scan).
+
 ## Determinism
 
 Two independent runs of the same recording with the same settings produce a
