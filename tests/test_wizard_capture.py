@@ -297,3 +297,30 @@ def test_control_file_is_written_atomically(tmp_path):
     assert (tmp_path / "control.txt").read_text() == "resume\n"
     assert [c["command"] for c in supervisor.commands] == ["pause", "resume"]
     assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_live_capture_has_no_wall_clock_deadline(tmp_path):
+    """A live session must run until stopped, not for 30 seconds.
+
+    The tool applies its own rule: with ``--control`` it runs until told to
+    stop, and 30 s only applies to stand-alone runs.  Passing an explicit
+    ``--timeout-seconds 30`` ended every wizard session half a minute in.
+    """
+    from wizard import capture
+    cfg = capture.CaptureConfig.from_mapping({"ring": 20},
+                                             session_dir=tmp_path / "s")
+    argv = cfg.command()
+    assert "--timeout-seconds" not in argv, argv
+    assert "--control" in argv
+
+
+def test_an_explicit_capture_deadline_is_still_honoured(tmp_path):
+    from wizard import capture
+    cfg = capture.CaptureConfig.from_mapping({"ring": 20, "timeout": 45},
+                                             session_dir=tmp_path / "s")
+    argv = cfg.command()
+    idx = argv.index("--timeout-seconds")
+    assert argv[idx + 1] == "45"
+    with pytest.raises(ValueError):
+        capture.CaptureConfig.from_mapping({"timeout_seconds": 0},
+                                           session_dir=tmp_path / "s")

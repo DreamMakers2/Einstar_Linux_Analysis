@@ -102,7 +102,12 @@ class CaptureConfig:
     control: Path | None = None
     status: Path | None = None
     groups: int = 0
-    timeout_seconds: int = 30
+    #: wall-clock safety deadline.  ``None`` (the default) leaves the tool's own
+    #: rule in charge: with ``--control`` it runs until told to stop, which is
+    #: what a live calibration session needs.  A fixed 30 s default here silently
+    #: ended every real session half a minute in, and the wizard then correctly -
+    #: but uselessly - reported the capture as stalled.
+    timeout_seconds: int | None = None
     max_seconds: float | None = None
     trigger_us: int = SAFE_SETTINGS["trigger_us"]
     laser_percent: int = SAFE_SETTINGS["laser_percent"]
@@ -146,8 +151,8 @@ class CaptureConfig:
             raise ValueError("ring must be >= 0 (0 keeps every group)")
         if int(self.groups) < 0:
             raise ValueError("groups must be >= 0 (0 = until stopped)")
-        if int(self.timeout_seconds) <= 0:
-            raise ValueError("timeout_seconds must be > 0")
+        if self.timeout_seconds is not None and int(self.timeout_seconds) <= 0:
+            raise ValueError("timeout_seconds must be > 0 when given")
         if self.max_seconds is not None and float(self.max_seconds) <= 0:
             raise ValueError("max_seconds must be > 0 or None")
         if not 0 <= int(self.trigger_us) <= 4_000_000:
@@ -267,8 +272,9 @@ class CaptureConfig:
         if Path(str(self.status)).resolve() != default_status:
             cmd += ["--status-file", str(self.status)]
         cmd += ["--backend", self.backend,
-               "--groups", str(int(self.groups)),
-               "--timeout-seconds", str(int(self.timeout_seconds))]
+               "--groups", str(int(self.groups))]
+        if self.timeout_seconds is not None:
+            cmd += ["--timeout-seconds", str(int(self.timeout_seconds))]
         if self.max_seconds is not None:
             cmd += ["--max-seconds", f"{float(self.max_seconds):g}"]
         cmd += ["--trigger",
@@ -293,7 +299,8 @@ class CaptureConfig:
             "binary": str(self.binary), "session_dir": str(self.session_dir),
             "ring": int(self.ring), "control": str(self.control),
             "status": str(self.status), "groups": int(self.groups),
-            "timeout_seconds": int(self.timeout_seconds),
+            "timeout_seconds": (None if self.timeout_seconds is None
+                                else int(self.timeout_seconds)),
             "max_seconds": self.max_seconds,
             "trigger_us": int(self.trigger_us),
             "laser_percent": int(self.laser_percent),
