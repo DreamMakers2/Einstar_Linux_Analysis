@@ -6,6 +6,7 @@ directory, so the same code path as the GUI is exercised without a scanner.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -15,6 +16,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
+if str(REPO / "tools") not in sys.path:
+    sys.path.insert(0, str(REPO / "tools"))
 
 from tools.wizard import controller, sources, types  # noqa: E402
 
@@ -273,3 +276,34 @@ def test_factory_profile_is_never_modified(tmp_path):
     ctl.finish()
     assert factory.read_bytes() == before
     assert ctl.factory_sha256 == digest
+
+
+def test_roi_detection_is_equivalent_to_the_full_frame():
+    """ROI detection must return the same markers as the full-frame search.
+
+    The crop uses the full image's threshold (a percentile computed inside the
+    crop would change it) and shifts coordinates back, so the two paths must
+    agree to floating-point noise.  This is what makes it safe to use ROI as a
+    pure speed device.
+    """
+    import numpy as np
+    pytest.importorskip("cv2")
+    from calib import detect
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    if not frames.is_dir():
+        pytest.skip("recording not available")
+    from wizard import types
+    gray = np.ascontiguousarray(types.orient_left(
+        types.read_pgm(frames / "frame_000000_cam1.pgm")))
+    full = detect.detect_grid_auto(gray)
+    assert full is not None and full.n_lattice >= 20
+    pts = np.asarray(list(full.points.values()), float)
+    lo = np.clip(pts.min(0) - 80, 0, [gray.shape[1], gray.shape[0]]).astype(int)
+    hi = np.clip(pts.max(0) + 80, 0, [gray.shape[1], gray.shape[0]]).astype(int)
+    roi = detect.detect_grid_auto(gray, roi=(int(lo[0]), int(lo[1]), int(hi[0]), int(hi[1])))
+    assert roi is not None
+    assert roi.n_lattice == full.n_lattice
+    assert set(roi.points) == set(full.points)
+    worst = max(float(np.linalg.norm(roi.points[k] - full.points[k]))
+                for k in full.points)
+    assert worst < 1e-6, worst

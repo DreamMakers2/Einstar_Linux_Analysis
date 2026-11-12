@@ -348,16 +348,48 @@ class MainWindow(QtWidgets.QMainWindow):
         return counts
 
     # -- shutdown -------------------------------------------------------
-    def shutdown(self) -> None:
-        """Stop the worker and the controller before the window goes away."""
+    def shutdown(self, timeout_s: float = 20.0) -> bool:
+        """Stop the worker; True when it has actually finished.
+
+        Calling ``QThread.wait`` once and giving up leaves a running thread that
+        Qt then destroys with the window - which aborts the process.  That is the
+        crash a long solver pause produced: the wait timed out after 5 s, the
+        window went away, and the process died with the thread still inside the
+        optimisation.  Now the wait keeps the event loop alive (so the window
+        stays responsive) and reports honestly whether the worker is gone.
+        """
         self._closing = True
         self._timer.stop()
-        if self.worker is not None and self.worker.isRunning():
-            self.worker.request_stop()
-            self.worker.wait(5000)
+        worker = self.worker
+        if worker is None or not worker.isRunning():
+            return True
+        worker.request_stop()
+        deadline = time.time() + float(timeout_s)
+        while worker.isRunning() and time.time() < deadline:
+            QtWidgets.QApplication.processEvents()
+            time.sleep(0.01)
+        return not worker.isRunning()
 
     def closeEvent(self, event):  # noqa: N802 (Qt naming)
-        self.shutdown()
+        """Never let Qt destroy the window while the worker thread runs.
+
+        Destroying a running ``QThread`` aborts the process, and a solver pause
+        can last tens of seconds.  The close is therefore deferred: the request
+        is refused now, the worker is asked to stop, and the close is retried
+        shortly while the window stays responsive.
+        """
+        worker = self.worker
+        if worker is not None and worker.isRunning():
+            self._closing = True
+            self._timer.stop()
+            worker.request_stop()
+            event.ignore()
+            self.status.showMessage(
+                "stopping: waiting for the optimisation to finish…", 0)
+            QtCore.QTimer.singleShot(200, self.close)
+            return
+        self._closing = True
+        self._timer.stop()
         super().closeEvent(event)
 
     # -- headless -------------------------------------------------------

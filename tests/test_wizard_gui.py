@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import textwrap
 
 import pytest
 
@@ -111,3 +112,62 @@ def test_vendor_corpus_session_if_available(tmp_path):
     lc = report.get("lifecycle_validate") or {}
     assert lc.get("gates"), lc
     assert (out / "report.md").is_file()
+
+
+def test_closing_a_window_during_a_long_solve_never_aborts(tmp_path):
+    """A close during a solver pause must defer, not destroy a running thread.
+
+    Reproduced the reported crash: ``worker.wait(5000)`` timed out while the
+    solver was busy, the window was destroyed, and Qt aborted the process with
+    the thread still alive.  The window now refuses the close and retries.
+    """
+    script = tmp_path / "close_during_solve.py"
+    script.write_text(textwrap.dedent('''
+        import sys, threading, time
+        sys.path.insert(0, "tools"); sys.path.insert(0, ".")
+        from PySide6 import QtWidgets
+        app = QtWidgets.QApplication([])
+        from tools.wizard.gui import controller_adapter
+        from tools.wizard.gui.main_window import MainWindow
+        import os
+        frames = os.path.expanduser("~/einstar-private/sweep-b/frames")
+        source = controller_adapter.open_source("replay", frames=frames)
+        ctl = controller_adapter.make_controller(
+            factory_profile=os.path.expanduser(
+                "~/einstar-private/einstar-profiles/factory-e10.json"),
+            session_dir=sys.argv[1], mode="standard", source_kind="replay")
+        win = MainWindow(ctl, source, pace_hz=10.0, headless=True)
+        win.resize(1000, 700); win.show(); app.processEvents()
+        running = threading.Event()
+        real = ctl.session.solve_fn
+        def slow(*a, **k):
+            running.set(); time.sleep(3.0); return real(*a, **k)
+        ctl.session.solve_fn = slow
+        win._on_start()
+        t0 = time.time()
+        while time.time() - t0 < 40 and not running.is_set():
+            app.processEvents(); time.sleep(0.01)
+        assert running.is_set(), "never reached a solve"
+        t = time.time(); win.close(); app.processEvents()
+        took = time.time() - t
+        print("close-took", round(took, 2))
+        print("visible-after-close", bool(win.isVisible()))
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            app.processEvents(); time.sleep(0.02)
+            if win.worker is None or not win.worker.isRunning():
+                break
+        win.shutdown(timeout_s=30.0)
+        print("worker-finished", win.worker is None or not win.worker.isRunning())
+    '''))
+    env = dict(os.environ)
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    env.pop("DISPLAY", None)
+    proc = subprocess.run([str(PYTHON), str(script), str(tmp_path / "session")],
+                          cwd=str(REPO), env=env, capture_output=True, text=True,
+                          timeout=180)
+    assert proc.returncode == 0, proc.stderr[-1500:]
+    out = proc.stdout
+    assert "close-took 0.0" in out or "close-took 0.1" in out, out
+    assert "visible-after-close True" in out, out
+    assert "worker-finished True" in out, out

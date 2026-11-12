@@ -749,12 +749,66 @@ class WizardController:
             self._detect_executor = pool
         return pool
 
+    #: how far the plate may have moved between frames, as a fraction of its
+    #: own size, plus a floor in pixels.  The ROI is a *speed* device only: a
+    #: detection that lands near the crop border is redone on the full frame,
+    #: because a clipped crop could otherwise drop markers.
+    _ROI_MARGIN_FRACTION = 0.30
+    _ROI_MARGIN_PX = 80
+
+    def _roi_for(self, key: str, gray: np.ndarray):
+        box = getattr(self, "_last_box", {}).get(key)
+        if box is None:
+            return None
+        x0, y0, x1, y1 = box
+        w = max(1.0, x1 - x0); h = max(1.0, y1 - y0)
+        mx = max(self._ROI_MARGIN_PX, self._ROI_MARGIN_FRACTION * w)
+        my = max(self._ROI_MARGIN_PX, self._ROI_MARGIN_FRACTION * h)
+        rx0 = int(max(0, x0 - mx)); ry0 = int(max(0, y0 - my))
+        rx1 = int(min(gray.shape[1], x1 + mx)); ry1 = int(min(gray.shape[0], y1 + my))
+        if rx1 - rx0 < 64 or ry1 - ry0 < 64:
+            return None
+        return (rx0, ry0, rx1, ry1)
+
+    def _note_box(self, key: str, observation) -> None:
+        if observation is None or not observation.points:
+            getattr(self, "_last_box", {}).pop(key, None)
+            return
+        pts = np.asarray(list(observation.points.values()), float)
+        box = (float(pts[:, 0].min()), float(pts[:, 1].min()),
+               float(pts[:, 0].max()), float(pts[:, 1].max()))
+        boxes = getattr(self, "_last_box", None)
+        if boxes is None:
+            boxes = self._last_box = {}
+        boxes[key] = box
+
     def _detect_one(self, key: str, image):
         from calib.detect import detect_grid_auto
         try:
             gray = np.ascontiguousarray(np.asarray(image, dtype=np.uint8))
-            observation = detect_grid_auto(gray)
-            return self._prefer_partial(gray, observation)
+            roi = self._roi_for(key, gray)
+            stats = getattr(self, "_roi_stats", None)
+            if stats is None:
+                stats = self._roi_stats = {"roi": 0, "full": 0, "fallback": 0}
+            observation = None
+            if roi is not None:
+                observation = detect_grid_auto(gray, roi=roi)
+                if observation is not None:
+                    pts = np.asarray(list(observation.points.values()), float)
+                    edge = 8.0
+                    inside = (pts[:, 0] > roi[0] + edge) & (pts[:, 0] < roi[2] - edge) \
+                        & (pts[:, 1] > roi[1] + edge) & (pts[:, 1] < roi[3] - edge)
+                    if not bool(inside.all()):
+                        observation = None          # may be clipped: redo
+                        stats["fallback"] += 1
+                if observation is not None:
+                    stats["roi"] += 1
+            if observation is None:
+                observation = detect_grid_auto(gray)
+                stats["full"] += 1
+            observation = self._prefer_partial(gray, observation)
+            self._note_box(key, observation)
+            return observation
         except Exception:
             return None
 

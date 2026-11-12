@@ -93,13 +93,34 @@ def _ellipse_centre(gray: np.ndarray, x: int, y: int, r: int):
     return float(cx + x0), float(cy + y0)
 
 
+def threshold_for(gray: np.ndarray, invert: bool = False,
+                  percentile: float = 99.0) -> int:
+    """The binarisation threshold a full image would use for this combination.
+
+    Exposed so a cropped (ROI) detection can use the *same* threshold as the
+    full frame: computing a percentile inside a crop would change the threshold
+    and therefore the result, which would silently alter calibration decisions.
+    """
+    img = gray if not invert else (255 - gray)
+    return max(30, int(np.percentile(img, percentile)))
+
+
 def detect_blobs(gray: np.ndarray, invert: bool = False,
                  percentile: float = 99.0,
                  min_area: float = 25.0, max_diameter: float = 60.0,
-                 refine: bool = True, refine_mode: str = "centroid") -> list[Blob]:
-    """Detect circular marker blobs.  ``invert`` selects dark-on-light markers."""
+                 refine: bool = True, refine_mode: str = "centroid",
+                 threshold: int | None = None,
+                 offset: tuple[float, float] = (0.0, 0.0)) -> list[Blob]:
+    """Detect circular marker blobs.  ``invert`` selects dark-on-light markers.
+
+    ``threshold`` overrides the percentile (used by ROI detection so a crop sees
+    the full-frame threshold) and ``offset`` shifts the returned centres back
+    into full-image coordinates.
+    """
     img = gray if not invert else (255 - gray)
-    thr = max(30, int(np.percentile(img, percentile)))
+    thr = int(threshold) if threshold is not None else max(
+        30, int(np.percentile(img, percentile)))
+    ox, oy = float(offset[0]), float(offset[1])
     _, bw = cv2.threshold(img, thr, 255, cv2.THRESH_BINARY)
     n, lab, stats, cent = cv2.connectedComponentsWithStats(bw, 8)
     out: list[Blob] = []
@@ -139,6 +160,8 @@ def detect_blobs(gray: np.ndarray, invert: bool = False,
     for b in out:
         if all((b.x - q.x) ** 2 + (b.y - q.y) ** 2 > 16.0 for q in kept):
             kept.append(b)
+    if ox or oy:
+        kept = [Blob(b.x + ox, b.y + oy, b.area, b.w, b.h) for b in kept]
     return kept
 
 
@@ -306,9 +329,12 @@ def assign_grid(blobs: list[Blob], lattice: Optional[np.ndarray] = None,
 
 def detect_grid(gray: np.ndarray, invert: bool = False,
                 percentile: float = 99.0,
-                refine_mode: str = "centroid") -> Optional[GridObservation]:
+                refine_mode: str = "centroid",
+                threshold: int | None = None,
+                offset: tuple[float, float] = (0.0, 0.0)) -> Optional[GridObservation]:
     blobs = detect_blobs(gray, invert=invert, percentile=percentile,
-                         refine_mode=refine_mode)
+                         refine_mode=refine_mode, threshold=threshold,
+                         offset=offset)
     obs = assign_grid(blobs)
     if obs is not None:
         return obs
@@ -316,13 +342,34 @@ def detect_grid(gray: np.ndarray, invert: bool = False,
 
 
 def detect_grid_auto(gray: np.ndarray,
-                     refine_mode: str = "centroid") -> Optional[GridObservation]:
-    """Try both polarities and several thresholds; return the best observation."""
+                     refine_mode: str = "centroid",
+                     roi: tuple[int, int, int, int] | None = None
+                     ) -> Optional[GridObservation]:
+    """Try both polarities and several thresholds; return the best observation.
+
+    ``roi`` is ``(x0, y0, x1, y1)`` in image coordinates: the heavy per-pixel
+    work then runs on that crop only, while the thresholds are still computed on
+    the **full** image and the returned coordinates are shifted back.  That makes
+    the ROI path exactly equivalent to the full-frame one inside the crop and
+    2-3x cheaper; the caller is responsible for the crop containing the plate.
+    """
+    full = gray
+    offset = (0.0, 0.0)
+    work = gray
+    if roi is not None:
+        x0, y0, x1, y1 = (int(v) for v in roi)
+        x0 = max(0, x0); y0 = max(0, y0)
+        x1 = min(gray.shape[1], x1); y1 = min(gray.shape[0], y1)
+        if x1 - x0 > 32 and y1 - y0 > 32:
+            work = np.ascontiguousarray(gray[y0:y1, x0:x1])
+            offset = (float(x0), float(y0))
     best = None
     for invert in (False, True):
         for pct in (99.0, 99.4, 98.5):
-            obs = detect_grid(gray, invert=invert, percentile=pct,
-                              refine_mode=refine_mode)
+            thr = threshold_for(full, invert=invert, percentile=pct)
+            obs = detect_grid(work, invert=invert, percentile=pct,
+                              refine_mode=refine_mode, threshold=thr,
+                              offset=offset)
             if obs is None:
                 continue
             key = (obs.n_lattice, -obs.rms)
