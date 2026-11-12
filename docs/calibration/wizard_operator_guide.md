@@ -164,3 +164,23 @@ state when none exists).
 * The existing one-axis sweep is **not** a calibration: it covers one line in
   pose space and the wizard classifies it as not ready, naming exactly what is
   missing.
+
+
+## Managing profiles from the application
+
+The launcher's **Profiles…** button opens the profile manager:
+
+* every device store found in the profile store root, with the active state
+  (`factory` or `revision N`), whether the active revision's manifest verifies,
+  and the number of revisions;
+* one row per revision with its state and verification result;
+* **Roll back to selected** / **Roll back to factory**, which call
+  `lifecycle.rollback` - the store's factory guard still applies, and a rollback
+  is not a deletion (the revision stays available).
+
+Activation of a *new* candidate remains part of the calibration flow, because it
+requires the candidate's validation verdict next to the profile; the manager is
+for inspecting and for going back.
+
+`tools/wizard/profile_view.py` provides the read-only description used by the
+window, so the same facts can be checked from a script.
