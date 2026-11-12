@@ -126,6 +126,38 @@ up to 30.7 mm, over 19 pairs.  So:
 This is why the fusion quality signal must not be inferred from a thin plate
 model: a scan of a wall would look perfect while the pose chain slid along it.
 
+## Drift bounding: implemented, measured, and *not* enabled
+
+Because chaining lets error accumulate in directions a plane cannot see,
+`track_sequence` gained an optional keyframe mode: every N-th frame becomes a
+keyframe, each later frame is also aligned directly to it, and when the direct
+pose disagrees with the chained one beyond a threshold the direct pose is used
+and the event is recorded.
+
+The mechanics are tested, but the **evidence does not support enabling it**.
+Two measurements on the long sequence:
+
+| metric (20 frames) | chain only | direct to frame 0 | keyframe every 8 |
+|---|---|---|---|
+| cross-frame surface consistency (median) | **1.10 mm** | 1.27 mm | 1.14 mm |
+
+The cross-frame metric transforms every frame into the reference frame and
+measures each point's distance to the union of the other frames — unlike
+thickness, it *is* sensitive to tangential error.  The plain chain wins: the
+keyframe path makes larger-baseline ICP calls, which are individually less
+accurate than a chain of small steps over this length.
+
+On 60 frames the divergence between a chain and direct-to-reference poses grows
+to a median 68 mm (max 119 mm), and keyframe re-anchoring reduces it (16-20 mm
+median, 27-31 mm max) — but divergence from a reference that is itself
+estimated is not ground truth, so that is not evidence that the re-anchored
+poses are more accurate.
+
+Conclusion: **keep the chain as the default**, keep the keyframe mode available
+and documented, and stop short of claiming an improvement the data does not
+show.  Deciding between them needs a 3-D object with a measured trajectory —
+the same missing reference as everywhere else in this project.
+
 ## What is still missing for the production tracker
 
 1. **Projective association on the organised depth map** instead of KD-tree

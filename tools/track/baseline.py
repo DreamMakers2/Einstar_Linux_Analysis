@@ -364,21 +364,89 @@ def compose(transforms: Sequence[np.ndarray]) -> list[np.ndarray]:
     return poses
 
 
-def track_sequence(clouds: Sequence[Cloud], **kwargs) -> dict:
-    """Align every consecutive pair; report per-pair quality and drift."""
+def _difference(T1: np.ndarray, T2: np.ndarray) -> tuple[float, float]:
+    dt = float(np.linalg.norm(np.asarray(T1, float)[:3, 3] - np.asarray(T2, float)[:3, 3]))
+    dR = np.asarray(T1, float)[:3, :3].T @ np.asarray(T2, float)[:3, :3]
+    return dt, _rotation_angle_deg(dR)
+
+
+def track_sequence(clouds: Sequence[Cloud], *, keyframe_every: int = 0,
+                   drift_threshold_mm: float = 5.0,
+                   drift_threshold_deg: float = 1.5,
+                   anchors: Sequence[np.ndarray] | None = None,
+                   **kwargs) -> dict:
+    """Align consecutive clouds and bound drift against keyframes.
+
+    Chaining every pair lets error accumulate, and on a planar target the error
+    lies *along* the surface where neither the residual nor the model thickness
+    can see it (measured: chained and direct-to-reference poses diverge by up to
+    30 mm over 19 pairs while the fused plate stays equally thin).
+
+    With ``keyframe_every > 0`` every N-th frame becomes a keyframe, and each
+    later frame is also aligned **directly** to the last keyframe.  If that
+    direct pose disagrees with the chained one by more than the thresholds, the
+    direct pose is used and the frame is recorded as re-anchored.  Drift is then
+    bounded by the keyframe spacing instead of the sequence length.
+
+    ``anchors`` supplies a pose per cloud (e.g. direct-to-reference poses from a
+    calibration run) so the divergence of a chain can be measured, not guessed.
+    """
     pairs: list[PairResult] = []
     t0 = time.time()
+    reanchored: list[dict] = []
+    keyframe_checks: list[dict] = []
+    poses: list[np.ndarray] = []
+    current = np.eye(4)
+    keyframe_pose = np.eye(4)
+    keyframe_index = 0
     for i in range(1, len(clouds)):
-        pairs.append(align_point_to_plane(clouds[i - 1], clouds[i], **kwargs))
-    transforms = [p.transform for p in pairs]
-    poses = compose(transforms)
+        pair = align_point_to_plane(clouds[i - 1], clouds[i], **kwargs)
+        pairs.append(pair)
+        chained = current @ np.linalg.inv(pair.transform) if pair.ok else current.copy()
+        used = chained
+        if keyframe_every and pair.ok:
+            if (i - keyframe_index) >= int(keyframe_every):
+                keyframe_index = i
+                keyframe_pose = chained
+                current = chained
+                poses.append(current.copy())
+                keyframe_checks.append({"frame": i, "kind": "new_keyframe",
+                                        "drift_mm": 0.0, "drift_deg": 0.0})
+                continue
+            direct = align_point_to_plane(clouds[keyframe_index], clouds[i],
+                                          **kwargs)
+            if direct.ok:
+                candidate = keyframe_pose @ np.linalg.inv(direct.transform)
+                dt, dr = _difference(candidate, chained)
+                kind = "ok"
+                if dt > drift_threshold_mm or dr > drift_threshold_deg:
+                    used = candidate
+                    kind = "reanchored"
+                    reanchored.append({"frame": i, "drift_mm": dt,
+                                       "drift_deg": dr})
+                keyframe_checks.append({"frame": i, "kind": kind,
+                                        "drift_mm": dt, "drift_deg": dr})
+        current = used
+        poses.append(current.copy())
     steps_t = [p.translation_mm for p in pairs if p.ok]
     steps_r = [p.rotation_deg for p in pairs if p.ok]
     path_mm = float(np.sum(steps_t))
     total_t = float(np.linalg.norm(poses[-1][:3, 3])) if poses else 0.0
     total_r = _rotation_angle_deg(poses[-1][:3, :3]) if poses else 0.0
+    divergence = []
+    if anchors is not None:
+        for i, pose in enumerate(poses, start=1):
+            if i < len(anchors):
+                a = np.asarray(anchors[i], float)
+                if a.shape == (4, 4):
+                    divergence.append(_difference(pose, a)[0])
     return {
         "n_frames": len(clouds),
+        "reanchored": reanchored,
+        "keyframe_checks": keyframe_checks,
+        "divergence_mm_median": (float(np.median(divergence)) if divergence else None),
+        "divergence_mm_max": (float(np.max(divergence)) if divergence else None),
+        "divergence_n": len(divergence),
         "n_pairs": len(pairs),
         "n_ok": sum(1 for p in pairs if p.ok),
         "pairs": [p.as_dict() for p in pairs],

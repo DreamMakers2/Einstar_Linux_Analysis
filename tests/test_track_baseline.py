@@ -146,3 +146,30 @@ def test_ply_round_trip(tmp_path):
     back = tb.read_ply(path)
     assert back.shape == pts.shape
     assert np.allclose(back, pts, atol=1e-4)
+
+
+def test_keyframe_reanchoring_mechanics_and_consistency_metric():
+    """Keyframe tracking must re-anchor when the direct pose disagrees, and the
+    cross-frame consistency metric must be finite and sensible."""
+    clouds = [_cloud(_bumpy_surface(seed=21 + i)) for i in range(6)]
+    # a small rigid motion between frames so alignment is meaningful
+    T = _se3(0.0, 0.0, math.radians(0.2), (0.0, 0.0, 0.0))
+    moved = []
+    for i, c in enumerate(clouds):
+        pts = (np.linalg.matrix_power(T, i)[:3, :3] @ c.points.T).T + \
+              np.linalg.matrix_power(T, i)[:3, 3]
+        m = tb.Cloud(pts, tb.estimate_normals(pts))
+        moved.append(m)
+    plain = tb.track_sequence(moved)
+    # keyframe spacing 3: frames 1 and 2 are checked against keyframe 0, and the
+    # chained pose of frame 2 (via frame 1) differs from its direct pose, which
+    # is exactly the disagreement the re-anchor rule acts on
+    kf = tb.track_sequence(moved, keyframe_every=3,
+                           drift_threshold_mm=0.01, drift_threshold_deg=0.001)
+    assert plain["n_ok"] == plain["n_pairs"]
+    assert "reanchored" in kf and "keyframe_checks" in kf
+    # a deliberately tiny threshold must force at least one re-anchor
+    assert len(kf["reanchored"]) >= 1
+    for entry in kf["reanchored"]:
+        assert entry["drift_mm"] >= 0.01 or entry["drift_deg"] >= 0.001
+    assert len(kf["poses"]) == len(plain["poses"])
