@@ -218,6 +218,36 @@ The episode also exposed a trap in the consistency metric: a pose set that
 barely moves scores *better* on "distance to the union of other frames", so
 consistency alone would have endorsed a tracker that is nearly frozen.
 
+## Synthetic end-to-end resolution: 1.19 mm / 0.269 deg
+
+The idea was to validate tracking with *known* motion: render the plate at two
+poses for both IR cameras, reconstruct through the real engine, track, and
+compare against the truth.  The first measurement is the resolution of that
+chain - two renders of the **same pose** with different noise seeds:
+
+```
+same pose, different render noise -> 1.19 mm / 0.269 deg
+```
+
+That is the floor.  Against it, the small-motion attempts are inconclusive:
+
+| truth | measured |
+|---|---|
+| 2.0 mm closer (z) | 3.31 mm / 0.79 deg |
+| 1.0 deg tilt | 2.36 mm / 2.03 deg |
+
+The 2 mm case sits inside the floor (2.0 +/- 1.2 mm), so it proves nothing
+either way.  The 1 deg case measured 2.03 deg, which is ~4 sigma outside the
+floor: either my harness applies the rotation in a different convention than the
+renderer, or ICP has a real tilt bias on this surface.  **I could not separate
+those two in this round**, so no validation test was shipped from it.
+
+What this establishes is narrower but useful: the synthetic - render ->
+reconstruct -> track - chain resolves about 1.2 mm and 0.27 deg, so any future
+validation of sub-millimetre tracking needs better synthetic renders (texture,
+sub-pixel disparity ground truth) or a real rigid-target sequence.  Claiming a
+tracker validated on motions near that floor would be meaningless.
+
 ## What is still missing for the production tracker
 
 1. **Projective association on the organised depth map** instead of KD-tree
