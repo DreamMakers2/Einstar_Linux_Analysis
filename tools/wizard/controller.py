@@ -770,6 +770,15 @@ class WizardController:
             return None
         return (rx0, ry0, rx1, ry1)
 
+    @staticmethod
+    def _early_lattice() -> int:
+        """Marker count that counts as "the whole lattice" for the early exit."""
+        try:
+            from calib import plate
+            return len(plate.lattice_uv())
+        except Exception:
+            return 40
+
     def _note_box(self, key: str, observation) -> None:
         if observation is None or not observation.points:
             getattr(self, "_last_box", {}).pop(key, None)

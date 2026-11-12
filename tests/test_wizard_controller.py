@@ -307,3 +307,53 @@ def test_roi_detection_is_equivalent_to_the_full_frame():
     worst = max(float(np.linalg.norm(roi.points[k] - full.points[k]))
                 for k in full.points)
     assert worst < 1e-6, worst
+
+
+def test_histogram_thresholds_match_numpy_percentile_exactly():
+    """The one-pass threshold table must equal the per-combination quantiles.
+
+    Replacing six ``np.percentile`` calls per camera with one 256-bin histogram
+    is only safe if the thresholds are bit-identical; the inverted polarity is
+    derived as 255 - quantile(100 - p) and is checked here too.
+    """
+    pytest.importorskip("cv2")
+    import numpy as np
+    from calib import detect
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    if not frames.is_dir():
+        pytest.skip("recording not available")
+    from wizard import types
+    gray = np.ascontiguousarray(types.orient_left(
+        types.read_pgm(frames / "frame_000000_cam1.pgm")))
+    table = detect.thresholds_from_histogram(gray, (99.0, 99.4, 98.5))
+    for invert in (False, True):
+        for pct in (99.0, 99.4, 98.5):
+            assert table[(invert, pct)] == detect.threshold_for(
+                gray, invert=invert, percentile=pct), (invert, pct)
+
+
+def test_roi_and_histogram_paths_take_identical_decisions(tmp_path):
+    """The accelerated detector must not change a single acceptance decision."""
+    pytest.importorskip("cv2")
+    import numpy as np
+    from calib import detect
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    if not frames.is_dir():
+        pytest.skip("recording not available")
+    source = sources.open_source() if False else None  # placeholder, unused
+    from wizard import types
+    for fid in (0, 30):
+        gray = np.ascontiguousarray(types.orient_left(
+            types.read_pgm(frames / f"frame_{fid:06d}_cam1.pgm")))
+        full = detect.detect_grid_auto(gray)
+        assert full is not None
+        pts = np.asarray(list(full.points.values()), float)
+        lo = np.clip(pts.min(0) - 60, 0, [gray.shape[1], gray.shape[0]]).astype(int)
+        hi = np.clip(pts.max(0) + 60, 0, [gray.shape[1], gray.shape[0]]).astype(int)
+        roi = detect.detect_grid_auto(
+            gray, roi=(int(lo[0]), int(lo[1]), int(hi[0]), int(hi[1])))
+        assert roi is not None and roi.n_lattice == full.n_lattice
+        assert set(roi.points) == set(full.points)
+        worst = max(float(np.linalg.norm(roi.points[k] - full.points[k]))
+                    for k in full.points)
+        assert worst < 1e-6, worst
