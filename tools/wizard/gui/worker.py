@@ -70,6 +70,53 @@ class DecisionRunner(QtCore.QThread):
                     self.busy = False
 
 
+class FinishWorker(QtCore.QThread):
+    """Runs the final solve and the validation gates off the GUI thread.
+
+    ``controller.finish()`` is the heaviest single operation in the wizard:
+    measured 38.3 s at 35 accepted views (10 solver passes, one of which is a
+    22.6 s identifiability analysis).  Run inline it froze the window for that
+    whole time with no repaint and no feedback, which is indistinguishable from
+    a crash.  This thread owns it; the window keeps painting and shows elapsed
+    time.
+    """
+
+    done = QtCore.Signal(dict)
+    failed = QtCore.Signal(str)
+    #: emitted once per second so the UI can show that work is still happening
+    progress = QtCore.Signal(float)
+
+    def __init__(self, controller, session_worker=None, parent=None):
+        super().__init__(parent)
+        self.controller = controller
+        self.session_worker = session_worker
+        self._stop = threading.Event()
+
+    def run(self) -> None:  # noqa: D401
+        started = time.monotonic()
+        try:
+            worker = self.session_worker
+            if worker is not None and worker.isRunning():
+                # stopping the ingest worker must not block the GUI thread
+                worker.request_stop()
+                while worker.isRunning() and not self._stop.is_set():
+                    if time.monotonic() - started > 30.0:
+                        break
+                    self.progress.emit(time.monotonic() - started)
+                    time.sleep(0.1)
+            try:
+                result = self.controller.finish()
+            except Exception as exc:            # surface, never crash the UI
+                self.failed.emit(f"{type(exc).__name__}: {exc}")
+                return
+            self.done.emit(dict(result or {}))
+        finally:
+            pass
+
+    def request_stop(self) -> None:
+        self._stop.set()
+
+
 class SessionWorker(QtCore.QThread):
     """Runs the capture loop off the UI thread."""
 

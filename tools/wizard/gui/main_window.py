@@ -118,6 +118,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._zero_fps_since = 0.0
         self._stall_logged = False
         self._last_3d_at = 0.0
+        self._finish_worker = None
+        self._finish_started_at = 0.0
         self._3d_interval_s = 0.1        # 10 Hz upper bound
         self._3d_intrinsics_set = False
 
@@ -201,17 +203,41 @@ class MainWindow(QtWidgets.QMainWindow):
         self.log.insertItem(0, QtWidgets.QListWidgetItem("▶ resumed"))
 
     def _on_finish(self) -> None:
-        if self.worker is not None and self.worker.isRunning():
-            self.worker.request_stop()
-            self.worker.wait(4000)
-        self.controls.setEnabled(False)
-        QtWidgets.QApplication.processEvents()
-        try:
-            result = self.controller.finish()
-        except Exception as exc:
-            self._fail(f"finish failed: {type(exc).__name__}: {exc}")
-            self.controls.setEnabled(True)
+        """Start the final solve on its own thread and keep the window alive.
+
+        Measured 38.3 s at 35 views.  Running it here froze the UI completely -
+        no repaint, no cursor change, no feedback - which is why pressing Finish
+        looked like a hang.  The buttons are disabled for the duration, the
+        status line shows elapsed time, and closing the window waits for it.
+        """
+        if self._finish_worker is not None and self._finish_worker.isRunning():
             return
+        self._finish_started_at = time.time()
+        self._finish_worker = worker.FinishWorker(self.controller, self.worker,
+                                                  parent=self)
+        self._finish_worker.progress.connect(self._on_finish_progress)
+        self._finish_worker.done.connect(self._on_finish_done)
+        self._finish_worker.failed.connect(self._on_finish_failed)
+        self.controls.setEnabled(False)
+        self.guidance.show_feedback("⏳ building the profile…", theme.WARN)
+        self.log.insertItem(0, QtWidgets.QListWidgetItem(
+            "⏳ finish started — solving and validating; the window stays live"))
+        self._finish_worker.start()
+
+    def _on_finish_progress(self, elapsed: float) -> None:
+        self.status.showMessage(f"building the profile… {elapsed:.0f} s")
+        self.guidance.show_feedback(f"⏳ building the profile… {elapsed:.0f} s",
+                                    theme.WARN)
+
+    def _on_finish_failed(self, message: str) -> None:
+        self._finish_worker = None
+        self._fail(f"finish failed: {message}")
+        self.controls.setEnabled(True)
+        self.refresh()
+
+    def _on_finish_done(self, result: dict) -> None:
+        self._finish_worker = None
+        self.controls.setEnabled(True)
         ok = bool(result.get("ok"))
         prof = result.get("profile") or {}
         text = ("✅ session finished — candidate profile written (validation: pending)"
@@ -452,6 +478,16 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self._closing = True
         self._timer.stop()
+        finisher = self._finish_worker
+        if finisher is not None and finisher.isRunning():
+            # same rule as the ingest worker: never destroy a running QThread
+            deadline = time.time() + float(timeout_s)
+            while finisher.isRunning() and time.time() < deadline:
+                QtWidgets.QApplication.processEvents()
+                time.sleep(0.01)
+            if finisher.isRunning():
+                return False
+            self._finish_worker = None
         worker = self.worker
         if worker is None or not worker.isRunning():
             return True
@@ -471,13 +507,17 @@ class MainWindow(QtWidgets.QMainWindow):
         shortly while the window stays responsive.
         """
         worker = self.worker
-        if worker is not None and worker.isRunning():
+        finisher = self._finish_worker
+        finishing = finisher is not None and finisher.isRunning()
+        if finishing or (worker is not None and worker.isRunning()):
             self._closing = True
             self._timer.stop()
-            worker.request_stop()
+            if worker is not None and worker.isRunning():
+                worker.request_stop()
             event.ignore()
             self.status.showMessage(
-                "stopping: waiting for the optimisation to finish…", 0)
+                "stopping: waiting for the final solve to finish…" if finishing
+                else "stopping: waiting for the optimisation to finish…", 0)
             QtCore.QTimer.singleShot(200, self.close)
             return
         self._closing = True

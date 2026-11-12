@@ -315,7 +315,15 @@ def open_source(kind: str, *, frames: str | None = None, recording: str | None =
     if kind == "recording":
         return sources.RecordingSource(recording)
     if kind == "synthetic":
-        return sources.SyntheticSource(scene or "default")
+        # SyntheticSource takes a SyntheticSpec, not a pattern name: passing the
+        # string straight through raised "'str' object has no attribute
+        # 'cameras'" on every --source synthetic launch
+        from wizard.sources import SyntheticSpec
+        if isinstance(scene, SyntheticSpec):
+            spec = scene
+        else:
+            spec = SyntheticSpec(pattern=str(scene or "diverse"))
+        return sources.SyntheticSource(spec)
     if kind == "live":
         # Keep the newest 120 groups on disk (12 s at 10 Hz, ~470 MB); the
         # controller copies accepted triplets into SESSION/groups and the raw

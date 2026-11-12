@@ -232,3 +232,64 @@ def test_end_to_end_rehearsal_refuses_an_insufficient_session(tmp_path):
     assert "state done" in out, out
     assert "passed False" in out, out
     assert "reasons " in out and "reasons 0" not in out, out
+
+
+def test_finish_does_not_freeze_the_window(tmp_path):
+    """The final solve runs on its own thread; the UI keeps painting.
+
+    Measured 38.3 s at 35 views.  Run inline it froze the window for the whole
+    time - no repaint, no feedback - which is indistinguishable from a crash.
+    """
+    script = tmp_path / "finish.py"
+    script.write_text(textwrap.dedent('''
+        import sys, time
+        sys.path.insert(0, "tools"); sys.path.insert(0, ".")
+        from PySide6 import QtCore, QtWidgets
+        app = QtWidgets.QApplication([])
+        from tools.wizard.gui import controller_adapter
+        from tools.wizard.gui import main_window as mw
+
+        class SlowController(controller_adapter.DemoController):
+            def finish(self):
+                time.sleep(3.0)                  # a stand-in for the real solve
+                return {"ok": True, "profile": {"path": "x"}}
+
+        ctl = SlowController(factory_profile="demo", session_dir="demo",
+                             source_kind="replay")
+        src = controller_adapter.open_source("synthetic", scene="diverse")
+        win = mw.MainWindow(ctl, src, headless=True)
+        win.show(); app.processEvents()
+
+        ticks = {"n": 0}
+        timer = QtCore.QTimer()
+        timer.timeout.connect(lambda: ticks.__setitem__("n", ticks["n"] + 1))
+        timer.start(50)
+
+        win._on_finish()
+        t0 = time.time()
+        while time.time() - t0 < 2.0:
+            app.processEvents(); time.sleep(0.01)
+        during = ticks["n"]
+        running = win._finish_worker is not None and win._finish_worker.isRunning()
+        print("ticks-during", during)
+        print("worker-running", running)
+        deadline = time.time() + 20
+        while time.time() < deadline and win._finish_worker is not None:
+            app.processEvents(); time.sleep(0.01)
+        print("ticks-after", ticks["n"])
+        print("controls-enabled", win.controls.isEnabled())
+        win.shutdown(); win.close()
+    '''))
+    env = dict(os.environ)
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    env.pop("DISPLAY", None)
+    proc = subprocess.run([str(PYTHON), str(script)], cwd=str(REPO), env=env,
+                          capture_output=True, text=True, timeout=180)
+    assert proc.returncode == 0, proc.stderr[-1500:]
+    out = proc.stdout
+    during = int(out.split("ticks-during")[1].split()[0])
+    after = int(out.split("ticks-after")[1].split()[0])
+    assert during >= 20, out          # 2 s at 50 ms -> ~40 ticks if responsive
+    assert "worker-running True" in out, out
+    assert after > during, out
+    assert "controls-enabled True" in out, out
