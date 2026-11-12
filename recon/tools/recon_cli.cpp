@@ -29,7 +29,7 @@ void usage() {
       "              [--scale 0.5] [--min-depth 150] [--max-depth 800]\n"
       "              [--block 5] [--equalize] [--no-color] [--ascii-ply]\n"
       "              [--min-confidence 0..1] [--maps full|depth|none]\n"
-      "              [--min-depth MM] [--max-depth MM]\n"
+      "              [--min-depth MM] [--max-depth MM] [--no-lr]\n"
       "              [--prefix recon]\n"
       "  synthetic --profile FILE --out DIR [--depth 350] [--seed 1]\n"
       "  bench     --frames DIR --ids 0,1,2 --profile FILE [--repeat 3]\n";
@@ -101,6 +101,7 @@ int main(int argc, char** argv) {
       o.stereo.scale = std::stod(arg(argc, argv, "--scale", "0.5"));
       o.stereo.min_depth_mm = std::stod(arg(argc, argv, "--min-depth", "150"));
       o.stereo.max_depth_mm = std::stod(arg(argc, argv, "--max-depth", "800"));
+      o.stereo.left_right_check = !flag(argc, argv, "--no-lr");
       o.stereo.block_size = std::stoi(arg(argc, argv, "--block", "5"));
       o.stereo.equalize = flag(argc, argv, "--equalize");
       {
@@ -118,6 +119,7 @@ int main(int argc, char** argv) {
       // does not need the 150 mm lower bound
       o.stereo.min_depth_mm = std::stod(arg(argc, argv, "--min-depth", "150"));
       o.stereo.max_depth_mm = std::stod(arg(argc, argv, "--max-depth", "800"));
+      o.stereo.left_right_check = !flag(argc, argv, "--no-lr");
       fs::create_directories(out);
       if (cmd == "rectify") {
         auto pair = rectify(frames, p, o.rectify);

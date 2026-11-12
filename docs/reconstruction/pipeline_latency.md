@@ -152,3 +152,23 @@ count (22 883 -> 23 358) and the same valid fraction.
 
 `recon_cli` exposes `--min-depth`/`--max-depth`; `ScanConfig.min_depth_mm`
 defaults to 250 mm.  With this the measured loop is **1.58 fps**.
+
+### Left-right consistency: measured, and kept on
+
+Matching runs twice - once on the rectified pair and once on the mirrored pair -
+so the right-view disparity can reject occluded pixels.  `--no-lr` skips the
+second pass and is **not** enabled, because the trade is bad:
+
+| | time | valid | points | occluded | tracking RMS |
+|---|---|---|---|---|---|
+| with LR (default) | 201 ms | 42.9 % | 140 520 | 11.2 % | **0.095 mm** |
+| `--no-lr` | 178 ms | 53.7 % | 175 817 | 0.0 % | **0.216 mm** |
+
+Skipping the check buys 11 % of the reconstruction time and admits 25 % more
+points, but those points are unverified - the tracker's residual more than
+doubles (0.095 -> 0.216 mm) on the same pair.  That is exactly the "more
+reconstructed pixels do not automatically mean greater accuracy" trap, measured
+here rather than assumed.
+
+The flag stays available for anyone who needs the 23 ms and accepts the noise,
+but the default keeps the check.

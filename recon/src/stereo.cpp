@@ -364,12 +364,14 @@ StereoResult compute_stereo(const RectifiedPair& pair, const StereoOptions& opti
     // Right-view disparity from the mirrored pair: flip(right) becomes the
     // "left" image and flip(left) the "right" one, so the mirror matcher's
     // u_l' - u_r' equals u_l - u_r of the original pair.
-    cv::Mat flipped_right, flipped_left;
-    cv::flip(right, flipped_right, 1);
-    cv::flip(left, flipped_left, 1);
-    cv::Mat mirrored = match_padded(flipped_right, flipped_left, window.min_disparity,
-                                    window.num_disparities, options, block);
-    cv::flip(mirrored, disp_right, 1);
+    if (options.left_right_check) {
+      cv::Mat flipped_right, flipped_left;
+      cv::flip(right, flipped_right, 1);
+      cv::flip(left, flipped_left, 1);
+      cv::Mat mirrored = match_padded(flipped_right, flipped_left, window.min_disparity,
+                                      window.num_disparities, options, block);
+      cv::flip(mirrored, disp_right, 1);
+    }
   } catch (const cv::Exception& e) {
     return fail(std::string("SGBM failed: ") + e.what());
   } catch (const std::exception& e) {
@@ -378,7 +380,7 @@ StereoResult compute_stereo(const RectifiedPair& pair, const StereoOptions& opti
 
   if (options.subpixel) {
     refine_subpixel(disp_left);
-    refine_subpixel(disp_right);
+    if (!disp_right.empty()) refine_subpixel(disp_right);
   }
   // The right view is only defined where the right image has real samples.
   for (int v = 0; v < disp_right.rows; ++v) {
@@ -435,9 +437,17 @@ StereoResult compute_stereo(const RectifiedPair& pair, const StereoOptions& opti
       if (d <= 0.0f || !ml[u]) continue;
       const float ur = static_cast<float>(u) - d;
       float dr_value = 0.0f;
-      const bool have_right = sample_disparity(disp_right, ur, static_cast<float>(v), dr_value);
-      const double diff = have_right ? std::abs(static_cast<double>(d) - dr_value) : 0.0;
-      const bool consistent = have_right && diff <= options.lr_tolerance_px;
+      bool have_right = false;
+      double diff = 0.0;
+      if (options.left_right_check) {
+        have_right = sample_disparity(disp_right, ur, static_cast<float>(v), dr_value);
+        diff = have_right ? std::abs(static_cast<double>(d) - dr_value) : 0.0;
+      }
+      // without the mirrored pass there is no occlusion information, so a
+      // matched pixel is accepted rather than rejected as unverifiable
+      const bool consistent = options.left_right_check
+                                  ? (have_right && diff <= options.lr_tolerance_px)
+                                  : true;
       if (!consistent) {
         // Either occluded in the left view (the right camera sees the
         // background) or unverifiable because the right sample falls outside

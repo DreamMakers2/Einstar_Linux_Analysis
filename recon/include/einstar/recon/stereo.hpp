@@ -28,6 +28,9 @@ struct StereoOptions {
   double min_depth_mm = 150.0;
   double max_depth_mm = 800.0;
   double lr_tolerance_px = 1.0;     // left-right consistency threshold
+  bool left_right_check = true;     // false skips the mirrored second pass
+                                    // (half the matching cost, no occlusion
+                                    // rejection -- measured, opt-in only)
   bool compute_confidence = true;
   bool subpixel = true;             // SGBM already returns 1/16 px
 };
