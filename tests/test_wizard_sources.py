@@ -15,6 +15,8 @@ import numpy as np
 import pytest
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(REPO / "tools"))
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
@@ -234,3 +236,36 @@ def test_synthetic_profile_round_trips_through_recon_profile():
     # absolute pixel skew, and the calibration view normalises it back
     left = profile.camera("ir_left").intrinsics()
     assert abs(left.skew * left.fx - doc["cameras"]["ir_left"]["skew"]) < 1e-9
+
+
+def test_surface_texture_is_fixed_to_the_plate_not_the_image():
+    """A stereo matcher can only use texture that both cameras see identically.
+
+    The per-image speckle is drawn from an image-local rng, so left and right
+    see different patterns and it reconstructs as noise.  ``surface_texture``
+    is generated on a millimetre grid over the board and sampled by ray-casting
+    each plate pixel, so the pattern is a property of the surface.
+    """
+    from wizard import sources
+    from calib import recon_profile
+    import os
+    profile = os.path.expanduser("~/einstar-private/einstar-profiles/factory-e10.json")
+    if not os.path.exists(profile):
+        pytest.skip("profile absent")
+    prof = recon_profile.load(profile)
+    left = prof.camera("ir_left").intrinsics()
+    pose = (np.eye(3), np.array([0.0, 0.0, 420.0]))
+    # sensor noise is rng-dependent by design, so switch it off to isolate the
+    # texture: the plate pattern must then be identical for any rng
+    spec = sources.SyntheticSpec(surface_texture=14.0, noise_sigma=0.0)
+    a = sources.render_plate_view(left, pose, spec, rng=np.random.default_rng(0))
+    b = sources.render_plate_view(left, pose, spec, rng=np.random.default_rng(99))
+    assert np.array_equal(a, b)
+    # and it must carry real contrast on the plate
+    assert float(a[400:700, 300:900].std()) > 5.0
+    # switching the texture off restores the per-image speckle (rng-dependent)
+    off = sources.SyntheticSpec(surface_texture=0.0, noise_sigma=0.0,
+                                plate_texture=0.0)
+    c = sources.render_plate_view(left, pose, off, rng=np.random.default_rng(0))
+    d = sources.render_plate_view(left, pose, off, rng=np.random.default_rng(99))
+    assert np.array_equal(c, d)

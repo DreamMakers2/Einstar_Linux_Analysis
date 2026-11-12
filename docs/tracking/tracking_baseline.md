@@ -257,10 +257,33 @@ parts of the rendered plate give the matcher nothing to lock onto, so the
 reconstructed surface is speckled.
 
 Conclusion: the synthetic chain can validate motions well above ~1.2 mm and
-~0.3 deg, and nothing below.  Validating the *trackers* against each other needs
-either a textured synthetic target (a renderer change that would also affect the
-calibration renders) or a real rigid-target sequence, which needs physical
-handling.
+~0.3 deg, and nothing below.
+
+### Root cause: the synthetic scene is not stereo-consistent
+
+A textured-target change was tried (`SyntheticSpec.surface_texture`: a pattern
+generated once on a millimetre grid over the board and sampled by ray-casting
+each plate pixel, so both cameras see the same surface).  It renders correctly
+and is now in the renderer, but it does **not** make the chain usable, and the
+reason is decisive:
+
+```
+plate at 420 mm, rendered, reconstructed at scale 1.0
+  plate centre pixel            -> depth 0.0 mm (invalid)
+  valid-depth percentiles       -> p05 356, p50 709, p95 791 mm
+  plate moved 2 mm closer       -> median plate depth changes by -0.11 mm
+  plate tilted 1 deg            -> median plate depth changes by -0.02 mm
+```
+
+The rendered plate reconstructs as **sparse marker fragments plus noise on the
+flat background**, with the plate's interior mostly invalid, and it does not
+move in depth when the plate moves.  The synthetic renderer is a
+detection/geometry fixture - it produces correct *images* (PnP recovers the
+requested pose to 0.1 deg) but not a stereo-consistent *scene*.
+
+That closes the synthetic route for tracking validation for good: no tracker can
+be validated against a reconstruction that ignores the motion.  A real
+rigid-target sequence is the only honest option, and it needs physical handling.
 
 What this establishes is narrower but useful: the synthetic - render ->
 reconstruct -> track - chain resolves about 1.2 mm and 0.27 deg, so any future

@@ -782,6 +782,14 @@ class SyntheticSpec:
     background: int = 20
     plate_grey: int = 52
     plate_texture: float = 55.0     # broad illumination field on the plate
+    #: fine texture that is a property of the PLATE SURFACE (not of one image):
+    #: it is generated once on a millimetre grid and sampled by ray-casting each
+    #: plate pixel onto the board, so every camera sees the same pattern and a
+    #: stereo matcher has something real to lock onto.  Amplitude in grey
+    #: levels, 0 = off (then the per-image speckle above is used).
+    surface_texture: float = 0.0
+    surface_texture_seed: int = 20261112
+    surface_texture_cell_mm: float = 1.5
     marker_grey: int = 245
     big_marker_grey: int = 255
     cameras: Mapping[str, Any] | None = None   # CameraIntrinsics per key
@@ -863,6 +871,42 @@ def _lateral_offsets(spec: SyntheticSpec, count: int) -> list[tuple[float, float
     return out
 
 
+def _surface_texture(K, kc, R, t, mask, spec, hu, hv, pitch, plate_mod):
+    """Deterministic texture fixed to the plate surface.
+
+    Every pixel inside the plate quad is cast back onto the board plane, so the
+    grey level depends on *board coordinates* rather than on the image.  Left
+    and right cameras therefore see the same pattern, which is what a stereo
+    matcher needs -- per-image speckle cannot be matched and reconstructs as
+    noise.
+    """
+    h, w = mask.shape
+    uu, vv = np.mgrid[0:h, 0:w]
+    pix = np.stack([uu[mask > 0], vv[mask > 0]], axis=1).astype(np.float64)
+    fx, fy = float(K[0, 0]), float(K[1, 1])
+    cx, cy = float(K[0, 2]), float(K[1, 2])
+    rays = np.stack([(pix[:, 0] - cx) / fx, (pix[:, 1] - cy) / fy,
+                     np.ones(len(pix))], axis=1)
+    Rb = np.asarray(R, float)
+    tb = np.asarray(t, float)
+    n = Rb[:, 2]
+    d = float(n @ tb)
+    denom = rays @ n
+    denom[np.abs(denom) < 1e-9] = 1e-9
+    scale = d / denom
+    Xc = rays * scale[:, None]
+    Xb = (Rb.T @ (Xc - tb).T).T
+    cell = max(1e-3, float(spec.surface_texture_cell_mm))
+    iu = np.clip(np.floor(Xb[:, 0] / cell).astype(np.int64) + 4096, 0, 8191)
+    iv = np.clip(np.floor(Xb[:, 1] / cell).astype(np.int64) + 4096, 0, 8191)
+    rng = np.random.default_rng(int(spec.surface_texture_seed))
+    field = rng.normal(0.0, 1.0, (8192, 8192)).astype(np.float32)
+    grey = float(spec.plate_grey) + float(spec.surface_texture) * field[iv, iu]
+    out = np.full((h, w), int(spec.plate_grey), np.uint8)
+    out[mask > 0] = np.clip(grey, 0, 200).astype(np.uint8)
+    return out
+
+
 def _layout_fn(name: str):
     """Map canonical marker labels to the *printed* plate layout."""
     umax, vmax = 7.0, 4.0
@@ -919,7 +963,10 @@ def render_plate_view(camera: Any, pose: tuple[np.ndarray, np.ndarray],
         if cv2.contourArea(poly) > 200:
             mask = np.zeros((h, w), np.uint8)
             cv2.fillConvexPoly(mask, poly, 255)
-            if spec.plate_texture > 0:
+            if spec.surface_texture > 0:
+                plate_px = _surface_texture(K, kc, R, t, mask,
+                                            spec, hu, hv, pitch, plate)
+            elif spec.plate_texture > 0:
                 # per-pixel speckle: the 99th percentile stays between the
                 # plate and the markers (the real corpus behaves the same
                 # way), and the few above-threshold plate pixels are isolated
