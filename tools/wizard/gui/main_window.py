@@ -274,6 +274,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._error:
             snap["error"] = self._error
         snap["processing_fps"] = self.processing_fps()
+        if self._closing:
+            return
         latest = self.worker.latest if self.worker is not None else None
         detections = snap.get("detections") or {}
 

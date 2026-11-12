@@ -186,6 +186,13 @@ class ProgressPanel(QtWidgets.QFrame):
         self.coverage_text.setObjectName("muted")
         lay.addWidget(self.coverage_text)
 
+        # readiness is a verdict, not a percentage: the operator must never read
+        # "80%" as "nearly done" when a whole dimension is missing
+        self.readiness = QtWidgets.QLabel("NOT READY")
+        self.readiness.setObjectName("value")
+        self.readiness.setWordWrap(True)
+        lay.addWidget(self.readiness)
+
         self.dims = QtWidgets.QListWidget()
         self.dims.setMaximumHeight(150)
         self.dims.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
@@ -231,8 +238,27 @@ class ProgressPanel(QtWidgets.QFrame):
             self.dims.addItem(item)
         src = snap.get("source") or {}
         cap = snap.get("capture") or {}
+        read = snap.get("readiness") or {}
+        ready = bool(read.get("ready"))
+        missing = [str(m) for m in (read.get("missing") or [])]
+        if ready:
+            self.readiness.setText("READY — press Finish to build the profile")
+            self.readiness.setStyleSheet(f"color: {theme.OK}; font-weight: 700;")
+        elif missing:
+            shown = ", ".join(m.replace("_", " ") for m in missing[:2])
+            more = f" (+{len(missing) - 2} more)" if len(missing) > 2 else ""
+            self.readiness.setText(f"NOT READY — missing {shown}{more}")
+            self.readiness.setStyleSheet(f"color: {theme.WARN};")
+        else:
+            self.readiness.setText("NOT READY")
+            self.readiness.setStyleSheet(f"color: {theme.WARN};")
+        rate = _num(snap.get("processing_fps"))
+        src_kind = src.get("kind") or "replay"
+        rate_bit = (f"{_num(cap.get('fps')) or 0.0:.1f} fps"
+                    if str(src_kind) == "live" else
+                    (f"{rate:.1f} decisions/s" if rate is not None else "—"))
         self.footer.setText(
-            f"{src.get('kind','—')}  ·  {_num(cap.get('fps')) or 0.0:.1f} fps  ·  "
+            f"{src_kind}  ·  {rate_bit}  ·  "
             f"{_num(snap.get('session',{}).get('elapsed_s')) or 0.0:.0f} s  ·  "
             f"drops {cap.get('drops', 0)}")
 

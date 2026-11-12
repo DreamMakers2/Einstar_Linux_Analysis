@@ -171,3 +171,64 @@ def test_closing_a_window_during_a_long_solve_never_aborts(tmp_path):
     assert "close-took 0.0" in out or "close-took 0.1" in out, out
     assert "visible-after-close True" in out, out
     assert "worker-finished True" in out, out
+
+
+def test_end_to_end_rehearsal_refuses_an_insufficient_session(tmp_path):
+    """Start, capture, finish: a candidate is written and correctly refused.
+
+    The factory profile must stay byte-identical, and the refusal must name the
+    missing dimensions rather than a percentage.
+    """
+    import hashlib
+    script = tmp_path / "e2e.py"
+    script.write_text(textwrap.dedent('''
+        import hashlib, json, sys, time
+        sys.path.insert(0, "tools"); sys.path.insert(0, ".")
+        from PySide6 import QtWidgets
+        app = QtWidgets.QApplication([])
+        from tools.wizard.gui import controller_adapter
+        from tools.wizard.gui.main_window import MainWindow
+        import os, shutil
+        frames = os.path.expanduser("~/einstar-private/sweep-b/frames")
+        factory = os.path.expanduser(
+            "~/einstar-private/einstar-profiles/factory-e10.json")
+        session = sys.argv[1]
+        shutil.rmtree(session, ignore_errors=True)
+        before = hashlib.sha256(open(factory, "rb").read()).hexdigest()
+        src = controller_adapter.open_source("replay", frames=frames)
+        ctl = controller_adapter.make_controller(
+            factory_profile=factory, session_dir=session,
+            mode="standard", source_kind="replay")
+        win = MainWindow(ctl, src, headless=True, max_groups=30)
+        win.show(); app.processEvents(); win._on_start()
+        t0 = time.time()
+        while time.time() - t0 < 180 and win.worker and win.worker.isRunning():
+            app.processEvents(); time.sleep(0.01)
+        app.processEvents()
+        win._on_finish(); app.processEvents()
+        cand = ctl.paths.candidate_dir
+        files = sorted(p.name for p in cand.glob("*")) if cand.is_dir() else []
+        after = hashlib.sha256(open(factory, "rb").read()).hexdigest()
+        v = {}
+        if (cand / "validation.json").is_file():
+            v = json.loads((cand / "validation.json").read_text())
+        print("files", files)
+        print("factory-identical", before == after)
+        print("state", ctl.snapshot().get("state"))
+        print("passed", v.get("passed"))
+        print("reasons", len(v.get("reasons") or []))
+        win.shutdown(); win.close()
+    '''))
+    env = dict(os.environ)
+    env.setdefault("QT_QPA_PLATFORM", "offscreen")
+    env.pop("DISPLAY", None)
+    proc = subprocess.run([str(PYTHON), str(script), str(tmp_path / "session")],
+                          cwd=str(REPO), env=env, capture_output=True, text=True,
+                          timeout=300)
+    assert proc.returncode == 0, proc.stderr[-1500:]
+    out = proc.stdout
+    assert "profile.json" in out and "validation.json" in out, out
+    assert "factory-identical True" in out, out
+    assert "state done" in out, out
+    assert "passed False" in out, out
+    assert "reasons " in out and "reasons 0" not in out, out
