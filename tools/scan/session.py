@@ -539,7 +539,8 @@ class ScanSession:
                 comment="einstar scan", colors=colours)
             result = {"obj": written.get("obj"), "ply": written.get("ply"),
                       "stl": written.get("stl"),
-                      "vertices": int(len(verts)), "faces": int(len(faces))}
+                      "vertices": int(len(verts)), "faces": int(len(faces)),
+                      "mesh_stats": tsdf.mesh_stats(verts, faces)}
             self._mesh = (verts, faces)
         out.update(result)
         if self._recoveries:

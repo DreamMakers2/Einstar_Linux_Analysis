@@ -183,6 +183,27 @@ It is a **hint, not a proof**: nothing here checks closure or holes, and the
 model may still be missing surfaces the operator never pointed at.  A stricter
 threshold keeps it "adding" - which is the honest behaviour and is tested.
 
+### Open-boundary fraction: a model-level hint
+
+Novelty is a volume measure; a scan can stop learning new voxels while the
+surface is still wide open.  The report therefore also carries
+`mesh_stats`: vertices, faces, edges, **boundary edges** (shared by one triangle),
+non-manifold edges (shared by more than two) and the boundary fraction.
+
+Measured on an 8-frame scan of the recorded scene:
+
+```
+vertices 23 358   faces 43 257   edges 66 686
+boundary edges 3 601 (5.4 %)     non-manifold 0
+```
+
+A closed tetrahedron reports 0 boundary edges and a single triangle reports
+100 %, so the range is meaningful.  The caveat matters: **an object resting on a
+table always has an open boundary where it meets the table**, and a scene scan
+includes the room's own edges, so the fraction is only interpretable for a
+scanned object in isolation - it is a hint that the surface ends somewhere, not
+a closure test.
+
 ## Tracking loss and recovery
 
 A frame whose alignment fails is rejected, never integrated, and **the reference

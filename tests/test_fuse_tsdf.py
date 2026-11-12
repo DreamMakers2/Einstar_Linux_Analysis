@@ -157,3 +157,31 @@ def test_coloured_export_round_trip(tmp_path):
     parts = v[0].split()
     assert len(parts) == 7, parts            # x y z r g b
     assert abs(float(parts[4]) - 1.0) < 1e-6  # red channel = 1.0
+
+
+def test_mesh_stats_boundary_and_manifold():
+    """Closed surface -> no boundary edges; open surface -> all of them."""
+    from tools.fuse.tsdf import mesh_stats
+
+    tetra_v = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]], float)
+    tetra_f = np.array([[0, 2, 1], [0, 1, 3], [1, 2, 3], [2, 0, 3]])
+    closed = mesh_stats(tetra_v, tetra_f)
+    assert closed["edges"] == 6
+    assert closed["boundary_edges"] == 0
+    assert closed["boundary_fraction"] == 0.0
+    assert closed["nonmanifold_edges"] == 0
+
+    tri = mesh_stats(np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]], float),
+                     np.array([[0, 1, 2]]))
+    assert tri["boundary_edges"] == 3
+    assert tri["boundary_fraction"] == 1.0
+
+    # an edge shared by three triangles is non-manifold, not boundary
+    weird_v = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1]],
+                       float)
+    weird_f = np.array([[0, 1, 2], [0, 1, 3], [0, 1, 4]])
+    weird = mesh_stats(weird_v, weird_f)
+    assert weird["nonmanifold_edges"] >= 1
+
+    empty = mesh_stats(np.zeros((0, 3)), np.zeros((0, 3), np.int64))
+    assert empty["faces"] == 0 and empty["boundary_edges"] == 0

@@ -286,6 +286,12 @@ class ScanWindow(QtWidgets.QMainWindow):
         if last_new is not None:
             self.log.appendPlainText(
                 f"new surface on the last frame: {100.0 * last_new:.1f}%")
+        stats = report.get("mesh_stats") or {}
+        if stats.get("edges"):
+            self.log.appendPlainText(
+                f"surface: {100.0 * float(stats['boundary_fraction']):.1f}% of "
+                f"edges are open (boundary), "
+                f"{stats['nonmanifold_edges']} non-manifold")
         self.log.appendPlainText(f"mesh: {report.get('obj')}")
         self.load_mesh_file(report.get("ply") or report.get("obj"))
         self.btn_start.setEnabled(True)

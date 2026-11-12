@@ -184,6 +184,40 @@ def integrate(volume: Volume, points: np.ndarray, normals: np.ndarray,
             "radius_voxels": radius}
 
 
+def mesh_stats(vertices: np.ndarray, faces: np.ndarray) -> dict:
+    """Boundary and manifold statistics of a triangle mesh.
+
+    A surface that closes on itself has almost no boundary edges; a partial scan
+    ends in open edges wherever the object was cut off by the field of view or
+    by missing data.  The boundary fraction is therefore a *completeness hint*
+    that is independent of the new-surface measure: a scan can stop learning new
+    voxels while the surface is still wide open, and that is exactly the state
+    an operator wants to see.
+    """
+    tris = np.asarray(faces, np.int64).reshape(-1, 3)
+    verts = np.asarray(vertices, float).reshape(-1, 3)
+    n_v = len(verts)
+    if len(tris) == 0:
+        return {"vertices": n_v, "faces": 0, "edges": 0, "boundary_edges": 0,
+                "boundary_fraction": float("nan"), "nonmanifold_edges": 0,
+                "boundary_vertices": 0}
+    e = np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]])
+    e = np.sort(e, axis=1)
+    uniq, counts = np.unique(e, axis=0, return_counts=True)
+    boundary = uniq[counts == 1]
+    nonmanifold = uniq[counts > 2]
+    boundary_vertices = int(len(np.unique(boundary))) if len(boundary) else 0
+    return {
+        "vertices": int(n_v),
+        "faces": int(len(tris)),
+        "edges": int(len(uniq)),
+        "boundary_edges": int(len(boundary)),
+        "boundary_fraction": float(len(boundary) / max(1, len(uniq))),
+        "nonmanifold_edges": int(len(nonmanifold)),
+        "boundary_vertices": boundary_vertices,
+    }
+
+
 def extract_mesh(volume: Volume, *, level: float = 0.0, fill_unobserved: bool = True,
                  points: np.ndarray | None = None,
                  normals: np.ndarray | None = None,
