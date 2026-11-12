@@ -42,7 +42,7 @@ class GuidancePanel(QtWidgets.QFrame):
         self.instruction = QtWidgets.QLabel("Waiting for the plate…")
         self.instruction.setObjectName("huge")
         self.instruction.setWordWrap(True)
-        self.instruction.setMinimumHeight(84)
+        self.instruction.setMinimumHeight(104)
         lay.addWidget(self.instruction)
 
         self.detail = QtWidgets.QLabel("")
@@ -71,6 +71,12 @@ class GuidancePanel(QtWidgets.QFrame):
         guide = snap.get("guidance") or {}
         instr = guide.get("instruction") or "Waiting for the plate…"
         self.instruction.setText(instr)
+        # scale the headline to the text: a long instruction at 34 px wraps to
+        # three lines and overlaps the detail line below it
+        budget = len(instr)
+        size = 34 if budget <= 20 else (26 if budget <= 40 else (20 if budget <= 64 else 17))
+        self.instruction.setStyleSheet(
+            f"font-size: {size}px; font-weight: 700;")
         self.detail.setText(guide.get("detail") or "")
         prio = guide.get("priority") or "—"
         self.priority.setText(str(prio))
@@ -277,22 +283,43 @@ class CapturePanel(QtWidgets.QFrame):
         cap = snap.get("capture") or {}
         src = snap.get("source") or {}
         sess = snap.get("session") or {}
+        # a replay source has no capture process: the controller still reports a
+        # capture dict (state idle, 0 fps), which reads as a dead scanner
+        is_live = str(src.get("kind", "")).lower() == "live"
+        if not is_live:
+            cap = {}
         if not cap:
-            # replay/synthetic sources have no capture process
-            state = f"{src.get('kind','replay')} source"
+            # replay/synthetic sources have no capture process: report the
+            # *processing* rate rather than a capture rate of 0.00 fps, which
+            # reads as a stalled scanner
+            state = f"{src.get('kind') or 'replay'} source"
         else:
             state = cap.get("state") or snap.get("state", "—")
         self.rows["state"].setText(str(state))
         colour = {"running": theme.OK, "paused": theme.WARN,
                   "stopped": theme.MUTED}.get(str(state), theme.INFO)
         self.rows["state"].setStyleSheet(f"color: {colour};")
-        self.rows["rate"].setText(f"{_num(cap.get('fps')) or 0.0:.2f} fps · "
-                                  f"{_num(cap.get('throughput_mbps')) or 0.0:.1f} MB/s")
-        self.rows["groups"].setText(f"{cap.get('groups_written', 0)} written · "
-                                    f"{cap.get('groups_on_disk', 0)}/{cap.get('ring_size', 0)} on disk")
+        if is_live and cap:
+            self.rows["rate"].setText(f"{_num(cap.get('fps')) or 0.0:.2f} fps · "
+                                      f"{_num(cap.get('throughput_mbps')) or 0.0:.1f} MB/s")
+            self.rows["groups"].setText(
+                f"{cap.get('groups_written', 0)} written · "
+                f"{cap.get('groups_on_disk', 0)}/{cap.get('ring_size', 0)} on disk")
+        else:
+            counts = snap.get("counts") or {}
+            rate = _num(snap.get("processing_fps"))
+            self.rows["rate"].setText(
+                f"{rate:.1f} decisions/s" if rate is not None else "—")
+            self.rows["groups"].setText(
+                f"{counts.get('accepted', 0)} accepted · "
+                f"{counts.get('rejected', 0)} rejected")
         stop = cap.get("stop_reason")
         self.rows["drops"].setText(f"{cap.get('drops', 0)}" + (f" · stop: {stop}" if stop else ""))
-        self.rows["disk"].setText(f"{_num(cap.get('disk_free_gb')) or 0.0:.1f} GB free")
+        if is_live and cap:
+            self.rows["disk"].setText(
+                f"{_num(cap.get('disk_free_gb')) or 0.0:.1f} GB free")
+        else:
+            self.rows["disk"].setText("—")
         rec = sess.get("raw_recording") or "—"
         self.rows["recording"].setText(_elide(rec, 34))
         self.rows["device"].setText(

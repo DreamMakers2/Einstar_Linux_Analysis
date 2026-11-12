@@ -217,6 +217,18 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
+def _pose_rt(pose: tuple[np.ndarray, np.ndarray] | None) -> dict | None:
+    """Full R/t of the board pose, for the 3-D preview (not just summaries)."""
+    if pose is None:
+        return None
+    try:
+        R = np.asarray(pose[0], float).reshape(3, 3)
+        t = np.asarray(pose[1], float).reshape(3)
+    except Exception:
+        return None
+    return {"R": [float(x) for x in R.ravel()], "t": [float(x) for x in t]}
+
+
 def _pose_summary(pose: tuple[np.ndarray, np.ndarray] | None) -> dict | None:
     """Distance/tilt/yaw/roll of a board pose in the left-camera frame."""
     if pose is None:
@@ -2814,6 +2826,14 @@ class WizardController:
                 "views": len(session.obs), "next_view": session._next_view,
                 "solved": solved}
 
+    def _left_intrinsics_dict(self) -> dict | None:
+        try:
+            cam = self.profile.cameras["left"]
+            return {"fx": float(cam.fx), "fy": float(cam.fy),
+                    "cx": float(cam.cx), "cy": float(cam.cy)}
+        except Exception:
+            return None
+
     def _manifest_sha256(self) -> str | None:
         try:
             if self.paths.manifest_json.is_file():
@@ -3143,6 +3163,8 @@ class WizardController:
             },
             "last_decision": copy.deepcopy(self._last_decision),
             "last_pose": _pose_summary(self._last_pose),
+            "pose_rt": _pose_rt(self._last_pose),
+            "camera_left": self._left_intrinsics_dict(),
             "detections": copy.deepcopy(self._last_detections),
             "markers": dict(self._last_markers),
             "shared_markers_ir": int(self._last_shared),

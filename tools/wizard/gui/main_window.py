@@ -5,7 +5,8 @@ import time
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import controller_adapter, panels, status as status_rules, theme, tiles, worker
+from . import (controller_adapter, panels, plate3d, status as status_rules,
+               theme, tiles, worker)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -54,10 +55,28 @@ class MainWindow(QtWidgets.QMainWindow):
         middle.setSpacing(8)
         self.guidance = panels.GuidancePanel()
         self.progress = panels.ProgressPanel()
+        self.plate3d = plate3d.PlatePreview()
+        self.plate3d.setMinimumHeight(230)
+        # engineering detail lives behind a disclosure: the operator needs the
+        # instruction and the progress, not the covariance matrix
+        # a disclosure that starts closed: the operator sees the instruction
+        # and the progress; the covariance table is one click away
+        self.diagnostics = QtWidgets.QGroupBox("Advanced diagnostics")
+        self.diagnostics.setObjectName("panel")
+        self.diagnostics.setCheckable(True)
+        self.diagnostics.setChecked(False)
+        diag_lay = QtWidgets.QVBoxLayout(self.diagnostics)
+        diag_lay.setContentsMargins(6, 6, 6, 6)
         self.observability = panels.ObservabilityPanel()
+        diag_lay.addWidget(self.observability)
+        self.diagnostics.toggled.connect(
+            lambda shown: (self.observability.setVisible(bool(shown)),
+                           self.diagnostics.adjustSize()))
+        self.observability.setVisible(False)
         middle.addWidget(self.guidance, 0)
         middle.addWidget(self.progress, 0)
-        middle.addWidget(self.observability, 1)
+        middle.addWidget(self.plate3d, 1)
+        middle.addWidget(self.diagnostics, 0)
         mid_host = QtWidgets.QWidget()
         mid_host.setLayout(middle)
         mid_host.setMinimumWidth(380)
@@ -98,6 +117,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self._last_decision_at = 0.0
         self._zero_fps_since = 0.0
         self._stall_logged = False
+        self._last_3d_at = 0.0
+        self._3d_interval_s = 0.1        # 10 Hz upper bound
+        self._3d_intrinsics_set = False
 
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.refresh)
@@ -249,6 +271,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         if self._error:
             snap["error"] = self._error
+        snap["processing_fps"] = self.processing_fps()
         latest = self.worker.latest if self.worker is not None else None
         detections = snap.get("detections") or {}
 
@@ -278,6 +301,11 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             fps_reported = None if fps_reported is None else float(fps_reported)
         except (TypeError, ValueError):
+            fps_reported = None
+        # only a live capture can report "0 fps"; a replay source has no capture
+        # process, and judging it by a capture rate produced false stalls
+        source_kind = str((snap.get("source") or {}).get("kind", "")).lower()
+        if source_kind != "live":
             fps_reported = None
         now = time.time()
         if fps_reported is not None and fps_reported <= 0.05:
@@ -319,6 +347,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.guidance.update_from(snap)
         self.progress.update_from(snap)
+        self._update_plate3d(snap)
         self.observability.update_from(snap)
         self.capture.update_from(snap)
         self.controls.update_from(snap)
@@ -328,6 +357,47 @@ class MainWindow(QtWidgets.QMainWindow):
         elif capture.get("state"):
             self._status_right.setText(
                 f"{capture.get('state')}  ·  {self._decision_count} decisions")
+
+    def _update_plate3d(self, snap: dict) -> None:
+        """Refresh the 3-D preview at most every ``_3d_interval_s``.
+
+        It is a *preview*: when the pipeline is behind (the measured decision
+        rate drops or a stall is showing) the interval is lengthened, and when
+        the window is closing it is skipped entirely, so the drawing can never
+        take time from acquisition or the calibration.
+        """
+        if self._closing:
+            return
+        now = time.time()
+        rate = self.processing_fps()
+        self._3d_interval_s = 0.1 if rate >= 2.0 else 0.2
+        if now - self._last_3d_at < self._3d_interval_s:
+            return
+        self._last_3d_at = now
+        camera = snap.get("camera_left") or {}
+        if not self._3d_intrinsics_set and camera:
+            self.plate3d.set_intrinsics(camera.get("fx", 1150.0),
+                                        camera.get("fy", 1150.0),
+                                        camera.get("cx", 640.0),
+                                        camera.get("cy", 512.0))
+            self._3d_intrinsics_set = True
+        pose = snap.get("pose_rt")
+        if not pose:
+            self.plate3d.set_status("waiting for the plate…")
+            return
+        self.plate3d.set_pose(pose.get("R"), pose.get("t"))
+        summary = snap.get("last_pose") or {}
+        dist = summary.get("distance_mm")
+        tilt = summary.get("tilt_deg")
+        roll = summary.get("roll_deg")
+        bits = []
+        if dist is not None:
+            bits.append(f"{float(dist):.0f} mm")
+        if tilt is not None:
+            bits.append(f"tilt {float(tilt):.0f}°")
+        if roll is not None:
+            bits.append(f"roll {float(roll):.0f}°")
+        self.plate3d.set_status("  ·  ".join(bits) or "pose available")
 
     # -- small snapshot helpers (tolerant of missing keys) --------------
     def _axes_from_snapshot(self, snap: dict, camera: str):
