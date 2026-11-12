@@ -2827,8 +2827,9 @@ class WizardController:
                 "solved": solved}
 
     def _left_intrinsics_dict(self) -> dict | None:
+        """Left IR intrinsics for the 3-D preview (calibration happens on it)."""
         try:
-            cam = self.profile.cameras["left"]
+            cam = self.profile.cameras["ir_left"]
             return {"fx": float(cam.fx), "fy": float(cam.fy),
                     "cx": float(cam.cx), "cy": float(cam.cy)}
         except Exception:
