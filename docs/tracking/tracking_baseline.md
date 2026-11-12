@@ -237,10 +237,30 @@ That is the floor.  Against it, the small-motion attempts are inconclusive:
 | 1.0 deg tilt | 2.36 mm / 2.03 deg |
 
 The 2 mm case sits inside the floor (2.0 +/- 1.2 mm), so it proves nothing
-either way.  The 1 deg case measured 2.03 deg, which is ~4 sigma outside the
-floor: either my harness applies the rotation in a different convention than the
-renderer, or ICP has a real tilt bias on this surface.  **I could not separate
-those two in this round**, so no validation test was shipped from it.
+either way.  For the tilt case the first suspect is the harness, so it was
+checked against the renderer directly: detect the plate in the rendered image
+and solve its pose (no reconstruction involved).
+
+```
+requested tilt 0.0 deg -> PnP 179.95 deg     (the board faces the camera)
+requested tilt 1.0 deg -> PnP 178.82 deg     relative 1.12 deg
+requested tilt 2.0 deg -> PnP 177.57 deg     relative 2.38 deg
+```
+
+So the harness applies the rotation as intended and the renderer honours it.
+
+Re-running the pair gave yet another answer - cloud tracker 0.85 deg,
+projective 0.40 deg, against a 1.1 deg reference - so the spread between repeats
+is of the same order as the signal.  The cause is the reconstruction on synthetic
+renders, not the convention: only ~30 % of pixels get valid depth, and the flat
+parts of the rendered plate give the matcher nothing to lock onto, so the
+reconstructed surface is speckled.
+
+Conclusion: the synthetic chain can validate motions well above ~1.2 mm and
+~0.3 deg, and nothing below.  Validating the *trackers* against each other needs
+either a textured synthetic target (a renderer change that would also affect the
+calibration renders) or a real rigid-target sequence, which needs physical
+handling.
 
 What this establishes is narrower but useful: the synthetic - render ->
 reconstruct -> track - chain resolves about 1.2 mm and 0.27 deg, so any future
