@@ -434,6 +434,8 @@ class WizardController:
         self._observability_error: str | None = None
         self._reason_counts: dict[str, int] = {}
         self._n_materialised = 0
+        self._skipped_recorded = 0
+        self._last_recorded = -1
         self._views: list[dict] = []
         self._decisions: list[dict] = []
         self._last_decision: dict | None = None
@@ -954,6 +956,24 @@ class WizardController:
     # ------------------------------------------------------------------
     # ingest
     # ------------------------------------------------------------------
+    def record_only(self, group: types.FrameGroup) -> dict:
+        """Record a group without spending detection time on it.
+
+        A group skipped by the adaptive scheduler is *not* copied to the session
+        ring: the complete frame record already exists (the capture tool's raw
+        recording in a live session, or the source files in a replay), and
+        duplicating it cost 3.9 MB per group - measured at 10 Hz that is
+        39 MB/s of extra writes, which is what kept the loop at 7.5 groups/s
+        instead of keeping up.  Accepted and rejected-by-decision frames are
+        still materialised exactly as before.
+        """
+        with self._lock:
+            self._skipped_recorded += 1
+            self._last_recorded = int(group.index)
+        return {"recorded": True, "skipped": True, "index": int(group.index),
+                "device_group": group.device_group,
+                "timestamp_s": float(group.timestamp_s)}
+
     def ingest(self, group: types.FrameGroup) -> Any:
         # A source may declare its own continuity (still collections have no
         # cadence).  Adopt it before the first decision so the motion gate never
@@ -2975,6 +2995,7 @@ class WizardController:
                 "raw_recording": str(self.paths.raw_recording),
                 "groups_dir": str(self.paths.groups_dir),
                 "n_materialised": int(self._n_materialised),
+                "recorded_only": int(self._skipped_recorded),
             },
             "counts": {
                 "accepted": len(self.session.accepted),

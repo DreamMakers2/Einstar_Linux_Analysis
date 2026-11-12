@@ -21,12 +21,20 @@ class SessionWorker(QtCore.QThread):
     finished_ok = QtCore.Signal(dict)
 
     def __init__(self, controller, source, *, pace_hz: float = 0.0,
-                 max_groups: int = 0, parent=None):
+                 max_groups: int = 0, parent=None,
+                 min_decision_interval_s: float = 0.0):
         super().__init__(parent)
         self.controller = controller
         self.source = source
         self.pace_hz = float(pace_hz)
         self.max_groups = int(max_groups)
+        #: adaptive spacing between full decisions.  0 analyses every group.
+        #: The record-only path keeps every frame on disk either way.
+        self.min_decision_interval_s = float(min_decision_interval_s)
+        self._last_decision_at: float | None = None
+        self._last_ingest_s = 0.0
+        self.recorded_only = 0
+        self.groups_seen = 0
         self._stop = threading.Event()
         self._pause = threading.Event()
         self._lock = threading.Lock()
@@ -57,6 +65,21 @@ class SessionWorker(QtCore.QThread):
     def run(self) -> None:  # noqa: D401
         period = 1.0 / self.pace_hz if self.pace_hz > 0 else 0.0
         next_at = time.monotonic()
+        def pace() -> None:
+            """Sleep the *remainder* of one stream period for this iteration.
+
+            An absolute schedule silently loses catch-up time whenever a
+            decision overruns the period (measured: the loop settled at 7.3 of
+            10 groups/s even though it was only ~50 % busy).  Sleeping
+            ``period - elapsed`` keeps the average at the stream rate whenever
+            the average work fits, and never sleeps more than the period.
+            """
+            if not period:
+                return
+            delay = period - (time.monotonic() - iteration_started)
+            if delay > 0:
+                time.sleep(delay)
+
         try:
             for group in self.source:
                 if self._stop.is_set():
@@ -65,8 +88,30 @@ class SessionWorker(QtCore.QThread):
                     time.sleep(0.02)
                 if self._stop.is_set():
                     break
+                self.groups_seen += 1
+                iteration_started = time.monotonic()
+                now = iteration_started
+                # adaptive scheduling on measured cost, not on stream time: the
+                # decision interval is the time one decision actually takes, so
+                # the loop spends at most ~1/1.25 of its time deciding and always
+                # remains able to consume every arriving group.
+                # opt-in: with the default 0 the loop decides every group
+                # exactly as before.  Enabling it trades decision rate for
+                # keeping up with the stream, which changes *which* frames are
+                # analysed - so it must never switch itself on.
+                interval = (max(self.min_decision_interval_s,
+                                1.25 * self._last_ingest_s)
+                            if self.min_decision_interval_s > 0 else 0.0)
+                if (interval > 0.0 and self._last_decision_at is not None
+                        and now - self._last_decision_at < interval):
+                    self.controller.record_only(group)
+                    self.recorded_only += 1
+                    pace()
+                    continue
                 started = time.monotonic()
                 decision = self.controller.ingest(group)
+                self._last_ingest_s = time.monotonic() - started
+                self._last_decision_at = time.monotonic()
                 payload = decision.as_dict() if hasattr(decision, "as_dict") else dict(decision)
                 with self._lock:
                     self._latest = {
@@ -83,12 +128,8 @@ class SessionWorker(QtCore.QThread):
                 self._count += 1
                 if self.max_groups and self._count >= self.max_groups:
                     break
-                if period:
-                    next_at += period
-                    delay = next_at - time.monotonic()
-                    if delay > 0:
-                        time.sleep(delay)
-                elif time.monotonic() - started > 5.0:
+                pace()
+                if time.monotonic() - started > 5.0 and not period:
                     # never let an unexpected stall look like a hang
                     self.error.emit("ingest took > 5 s for one group")
         except Exception as exc:  # pragma: no cover - surface to the UI

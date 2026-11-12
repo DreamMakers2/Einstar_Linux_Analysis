@@ -107,6 +107,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self._pace_hz = pace_hz
         else:
             self._pace_hz = 0.0
+        #: minimum spacing between full decisions in stream time; the worker
+        #: also raises it automatically when a decision costs longer than the
+        #: spacing.  Every group is recorded either way.
+        self._min_decision_interval_s = 0.0
         self._max_groups = max_groups
         self._closing = False
 
@@ -145,9 +149,10 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self._started_at = time.time()
         self._error = None
-        self.worker = worker.SessionWorker(self.controller, self.source,
-                                           pace_hz=self._pace_hz,
-                                           max_groups=self._max_groups, parent=self)
+        self.worker = worker.SessionWorker(
+            self.controller, self.source, pace_hz=self._pace_hz,
+            max_groups=self._max_groups, parent=self,
+            min_decision_interval_s=getattr(self, "_min_decision_interval_s", 0.0))
         self.worker.decision.connect(self._on_decision)
         self.worker.error.connect(self._fail)
         self.worker.finished_ok.connect(self._on_worker_done)
