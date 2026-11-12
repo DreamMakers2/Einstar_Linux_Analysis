@@ -158,6 +158,39 @@ and documented, and stop short of claiming an improvement the data does not
 show.  Deciding between them needs a 3-D object with a measured trajectory —
 the same missing reference as everywhere else in this project.
 
+## Projective association: implemented, and it fails its own check
+
+`tools/track/projective.py` implements the standard organised-depth variant:
+a source point projects to a *pixel*, so the correspondence is a lookup, the
+target normal comes from adjacent depth samples, and the step is vectorised.
+The engine already writes `recon_depth_mm.tiff`, so the input exists.
+
+It looked promising — on six frames it gave a cross-frame consistency of
+0.25 mm against 0.83 mm for the cloud chain, and per-pair RMS 0.37-0.46 mm.  It
+was **not** integrated, because an independent check contradicted that:
+
+| pair | plate PnP motion (rigid-reference truth) | projective ICP | cloud chain |
+|---|---|---|---|
+| 0→5 | 3.37 mm | 0.23 mm | ~1.6 mm |
+| 5→10 | 3.32 mm | 0.18 mm | — |
+| 10→15 | 3.37 mm | 0.09 mm | — |
+| 15→20 | 3.12 mm | 0.29 mm | — |
+
+The plate is a rigid target whose motion is measurable from its own markers, so
+this is a real reference.  The projective path reports a tenth of the true
+motion: it is under-estimating, not merely imprecise.
+
+It also exposes a trap in the consistency metric: a pose set that barely moves
+scores *better* on "distance to the union of other frames", so consistency alone
+would have endorsed a tracker that is nearly frozen.  That metric is fine for
+comparing equally-moving pose sets, not for validating one on its own.
+
+Status: the module and its unit tests stay (synthetic recovery, normals,
+degeneracy, consistency), the independent check is kept as a **strict xfail**
+so the failure is visible in every test run and the test will fail loudly when
+someone "fixes" it by loosening it.  The scan session keeps the cloud tracker,
+and `ScanConfig.tracking` documents why.
+
 ## What is still missing for the production tracker
 
 1. **Projective association on the organised depth map** instead of KD-tree

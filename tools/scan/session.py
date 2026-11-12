@@ -41,6 +41,7 @@ from tools.fuse import tsdf
 from tools.scan import color as scan_color
 from tools.scan import export as scan_export
 from tools.track import baseline as track
+from tools.track import projective as track_proj
 
 __all__ = ["ScanConfig", "ScanSession", "FrameStatus"]
 
@@ -65,6 +66,11 @@ class ScanConfig:
     min_confidence: float = 0.0
     #: grey-world white balance on the highlight set (measured cast 29 % -> 2.5 %)
     white_balance: bool = True
+    #: "projective" would track on the engine's depth maps, but that path is NOT
+    #: validated: on real frames it reports 0.1-0.3 mm steps where the plate's
+    #: own PnP motion is 3.1-3.4 mm (see docs/tracking/tracking_baseline.md), so
+    #: it is off until it passes that check.  "cloud" is the KD-tree path.
+    tracking: str = "cloud"
     max_frames: int | None = None
     keep_frames: bool = True
     ascii_ply: bool = True
@@ -163,6 +169,8 @@ class ScanSession:
         self._last_cloud = None
         self._last_cloud_for_track = None
         self._colour: dict | None = None
+        self._prev_depth = None
+        self._intrinsics = None
         #: when set (reprocessing), these poses are used instead of tracking
         self.replay_poses: list[np.ndarray] | None = None
         self.replay_order: list[int] | None = None
@@ -247,6 +255,17 @@ class ScanSession:
         return verts[used], remap[faces]
 
     # -- internals --------------------------------------------------------
+    def _left_intrinsics(self):
+        if self._intrinsics is None:
+            try:
+                from calib import recon_profile
+                prof = recon_profile.load(self.config.profile)
+                cam = prof.camera("ir_left").intrinsics()
+                self._intrinsics = np.asarray(cam.K, float)
+            except Exception:
+                self._intrinsics = False
+        return None if self._intrinsics is False else self._intrinsics
+
     def _reconstruct(self, index: int) -> tuple[Path, dict]:
         out = self._work / f"recon_{index:06d}"
         out.mkdir(parents=True, exist_ok=True)
@@ -318,6 +337,40 @@ class ScanSession:
             status.tracking_reason = "replayed pose"
             self._integrate(cloud, pose, status)
             return status
+        depth_frame = None
+        if str(getattr(cfg, "tracking", "projective")) == "projective":
+            K = self._left_intrinsics()
+            depth_path = ply.parent / "recon_depth_mm.tiff"
+            if K is not None and depth_path.is_file():
+                try:
+                    depth_frame = track_proj.load_depth(depth_path, K)
+                except Exception:
+                    depth_frame = None
+        if depth_frame is not None and self._prev_depth is not None:
+            t1 = time.time()
+            r = track_proj.align_projective(self._prev_depth, depth_frame)
+            status.tracking_seconds = time.time() - t1
+            status.tracking_ok = bool(r["ok"])
+            status.tracking_reason = str(r["reason"])
+            status.translation_mm = float(r["translation_mm"])
+            status.rotation_deg = float(r["rotation_deg"])
+            status.rms_mm = float(r["rms_mm"])
+            status.condition = float(r["condition"])
+            status.inlier_ratio = float(r["inliers"]) / max(
+                1.0, float(len(depth_frame.points()[0])))
+            if r["ok"]:
+                pose = self._poses[-1] @ np.linalg.inv(np.asarray(r["transform"], float))
+            else:
+                status.reason = f"tracking lost: {r['reason']}"
+                self._rejected += 1
+                self._prev_depth = depth_frame
+                self._statuses.append(status)
+                return status
+            self._prev_depth = depth_frame
+            self._integrate(cloud, pose, status)
+            return status
+        if depth_frame is not None:
+            self._prev_depth = depth_frame
         if self._last_cloud_for_track is not None:
             t1 = time.time()
             pair = track.align_point_to_plane(self._last_cloud_for_track, cloud)
