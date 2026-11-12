@@ -533,7 +533,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
     def __init__(self, controller, source, *, pace_hz: float = 0.0,
                  headless: bool = False, max_groups: int = 0,
                  autostart: bool = False, auto_exposure: bool = True,
-                 parent=None):
+                 parent=None, async_decisions: bool | None = None):
         super().__init__(parent)
         self.controller = controller
         self.source = source
@@ -564,6 +564,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._show_markers = False
         self._ready = False
         self._auto_exposure_enabled = bool(auto_exposure)
+        self._async_decisions = async_decisions
         self._auto_exposure = exposure_mod.AutoExposure()
         self._last_ir_image = None
         self._last_rgb_image = None
@@ -934,9 +935,12 @@ class ModernMainWindow(QtWidgets.QMainWindow):
 
     # -- controls --------------------------------------------------------
     def _make_worker(self) -> worker.SessionWorker:
+        kwargs = {}
+        if self._async_decisions is not None:
+            kwargs["async_decisions"] = bool(self._async_decisions)
         w = worker.SessionWorker(
             self.controller, self.source, pace_hz=self._pace_hz,
-            max_groups=self._max_groups, parent=self)
+            max_groups=self._max_groups, parent=self, **kwargs)
         w.preview.connect(self._on_preview)
         w.decision.connect(self._on_decision)
         w.error.connect(self._fail)

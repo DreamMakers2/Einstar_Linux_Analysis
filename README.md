@@ -40,8 +40,10 @@ verified cleanup. The 35-view finish remains 3.61 s at 0.33037 px RMS.
 
 The complete READY/validated sessions are diverse synthetic still sequences.
 A 30 s replay of the real moving-plate sweep processed 115 groups and accepted
-8 at 3.8 Hz, but stayed at 1/8 coverage; replay uses the synchronous decision
-path. A physical moving-plate calibration remains the main unverified step.
+8 at 3.8 Hz on the default synchronous path. With the opt-in split path
+(`--async-decisions`) it held **10.0 Hz preview (p95 114 ms)** and 3.7
+decisions/s, but still reached only **2/8 coverage**. A physical moving-plate
+calibration remains the main unverified step.
 
 * [Performance and architecture report](docs/calibration/performance_overhaul_2026-11-12.md)
 * [Operator UI](docs/calibration/modern_ui.md)

@@ -380,9 +380,9 @@ timeout count. The Qt fix passed focused exit-code loops; the sanitized public
 suite still needs its post-export run.
 
 A 30 s replay of the real moving-plate sweep (`sweep-b`, 350 groups) processed
-115 groups and accepted 8 at 3.8 Hz, but stayed at 1/8 coverage. Replay uses the
-synchronous deterministic decision path, so preview is tied to decision rate;
-live uses the split path and held 9.7 Hz. The complete READY/validated runs are
-synthetic still collections, not a physical moving plate. This is the main
-remaining acceptance gap and is not presented as a passing moving-plate
-calibration.
+115 groups and accepted 8 at 3.8 Hz on the default synchronous path, but stayed
+at 1/8 coverage. With the new opt-in split path (`--async-decisions`) the same
+recording held **10.0 Hz preview (p95 114 ms)** and 3.7 decisions/s, accepting
+16 views but only 2/8 coverage. The complete READY/validated runs are synthetic
+still collections, not a physical moving plate. This is the main remaining
+acceptance gap and is not presented as a passing moving-plate calibration.

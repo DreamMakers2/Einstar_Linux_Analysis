@@ -106,3 +106,14 @@ Open usability work: the coverage card still has unused width, the target
 region is described but not highlighted in the feed, and Advanced does not yet
 show the final validation reasons. These are recorded as remaining polish, not
 as accepted correctness claims.
+
+## Moving replay responsiveness
+
+Replay normally uses the deterministic synchronous decision path so accepted
+views are reproducible; preview then follows decision rate (3.8 Hz on the real
+sweep). The opt-in `--async-decisions` flag uses the same reader/one-slot-queue
+/decision-runner split as live acquisition. On a 30 s real moving-plate replay
+it held **10.0 Hz preview (p95 114 ms)** while decisions ran at 3.7/s and 301
+groups were read; 193 were recorded-only, i.e. the newest frame won instead of
+blocking the display. The recording still reaches only 2/8 coverage, so this is
+a responsiveness result, not a complete moving-plate calibration.

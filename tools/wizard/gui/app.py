@@ -37,6 +37,8 @@ def parse(argv=None):
                     help="synthetic image noise sigma (default: source)")
     ap.add_argument("--seed", type=int, default=0,
                     help="synthetic scene seed")
+    ap.add_argument("--async-decisions", action="store_true",
+                    help="replay/synthetic: split preview from decisions")
     ap.add_argument("--session-dir", default=str(Path.home() / "einstar-calibration"))
     ap.add_argument("--profile", default=str(Path.home() / "einstar-private" /
                                              "einstar-profiles" / "factory-e10.json"))
@@ -106,7 +108,8 @@ def main(argv=None) -> int:
                      headless=args.headless, max_groups=args.max_groups,
                      autostart=(args.autostart or
                                 (not args.headless and args.source == "live")),
-                     auto_exposure=not args.no_auto_exposure)
+                     auto_exposure=not args.no_auto_exposure,
+                     async_decisions=(True if args.async_decisions else None))
     win.show()
     win.maybe_autostart()
 
