@@ -624,6 +624,9 @@ class LiveSource:
         #: keeps every group in order (used by tests that need completeness)
         self.max_lag = int(max_lag)
         self.dropped_for_lag = 0
+        #: groups dropped by the lag bound (recorded for diagnostics; the frames
+        #: themselves stay in the capture tool's raw recording)
+        self.skipped: list[dict] = []
         self.final_verdict: dict | None = None
         self._started = False
         self._closed = False

@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import sys
 
+import time
+
 import numpy as np
 import pytest
 
@@ -295,3 +297,85 @@ def test_live_source_lag_bound_is_configurable():
     from wizard import sources
     sig = inspect.signature(sources.LiveSource.__init__)
     assert sig.parameters["max_lag"].default == 1
+
+
+def test_live_source_ends_cleanly_when_the_capture_is_killed(tmp_path):
+    """A dying capture must end the iteration, not hang the wizard.
+
+    This is the USB-interruption path: the capture process disappears mid-run,
+    the source drains what exists and stops.  The window then reports the stall
+    instead of waiting forever.
+    """
+    import os
+    import signal
+    import time
+    pytest.importorskip("cv2")
+    capture_binary = REPO / "build" / "driver" / "einstar-capture-frames"
+    if not capture_binary.is_file():
+        pytest.skip("capture binary missing")
+    from wizard import sources
+
+    src = sources.LiveSource(
+        tmp_path / "live",
+        capture_args={"backend": "simulated", "ring": 30, "binary": str(capture_binary)})
+    seen = []
+    started = time.time()
+    try:
+        for group in src:
+            seen.append(group.index)
+            if len(seen) == 2:
+                proc = getattr(src.capture, "process", None)
+                assert proc is not None and proc.poll() is None
+                os.kill(proc.pid, signal.SIGKILL)
+                break
+    finally:
+        src.close()
+    assert len(seen) == 2
+    assert time.time() - started < 120.0
+
+
+def test_worker_pauses_and_resumes(tmp_path):
+    """Pause must stop processing; resume must continue it."""
+    pytest.importorskip("cv2")
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    if not (frames.is_dir() and factory.is_file()):
+        pytest.skip("recording or factory profile not available")
+    from tools.wizard.gui import controller_adapter, worker as worker_mod
+    pytest.importorskip("PySide6")
+    from PySide6 import QtCore, QtWidgets
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    src = controller_adapter.open_source("replay", frames=str(frames))
+    ctl = controller_adapter.make_controller(factory_profile=str(factory),
+                                             session_dir=str(tmp_path / "s"),
+                                             mode="standard", source_kind="replay")
+    w = worker_mod.SessionWorker(ctl, src, max_groups=0)
+    w.start()
+    deadline = time.time() + 30
+    while time.time() < deadline and w.groups_seen < 3:
+        app.processEvents(); time.sleep(0.01)
+    w.request_pause()
+    time.sleep(0.4)
+    paused_at = w.groups_seen
+    time.sleep(1.2)
+    assert w.groups_seen <= paused_at + 1, (paused_at, w.groups_seen)
+    w.request_resume()
+    weekend = time.time() + 20
+    while time.time() < weekend and w.groups_seen <= paused_at:
+        app.processEvents(); time.sleep(0.01)
+    assert w.groups_seen > paused_at
+    w.request_stop(); w.wait(15000)
+
+
+def test_live_lag_bound_drops_old_groups(tmp_path):
+    """When the wizard falls behind, the live source keeps only the newest."""
+    from wizard import sources
+    src = sources.LiveSource(tmp_path / "live",
+                             capture_args={"backend": "simulated",
+                                           "binary": str(REPO / "build" / "driver" /
+                                                         "einstar-capture-frames")},
+                             max_lag=1)
+    assert src.max_lag == 1 and src.skipped == []
+    assert src.dropped_for_lag == 0
+    src.close()
