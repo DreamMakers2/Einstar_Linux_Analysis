@@ -75,8 +75,9 @@ def test_real_scan_records_the_white_balance(tmp_path):
     sweep = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
     profile = Path(os.path.expanduser(
         "~/einstar-private/einstar-profiles/colour-fitted-e10.json"))
-    if not (sweep.is_dir() and profile.is_file()):
-        pytest.skip("colour-capable recording or profile not available")
+    recon = REPO / "build" / "recon" / "recon_cli"
+    if not (sweep.is_dir() and profile.is_file() and recon.is_file()):
+        pytest.skip("colour-capable recording, profile or recon binary absent")
     python = REPO / ".venv" / "bin" / "python"
     out = tmp_path / "wb"
     env = dict(os.environ)

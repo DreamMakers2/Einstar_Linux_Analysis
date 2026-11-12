@@ -125,8 +125,15 @@ def test_start_refuses_while_another_capture_process_is_alive(tmp_path):
     proc = _fake_capture_process(tmp_path)
     try:
         time.sleep(0.2)
+        # the "already running" guard must be reachable without a built binary;
+        # provide a stub so the test is independent of the C++ build
+        stub = tmp_path / "bin" / "einstar-capture-frames"
+        stub.parent.mkdir(parents=True, exist_ok=True)
+        stub.write_text("#!/bin/sh\nexit 0\n")
+        stub.chmod(0o755)
         config = capture.CaptureConfig(session_dir=tmp_path / "session",
-                                       backend="simulated")
+                                       backend="simulated",
+                                       binary=str(stub))
         supervisor = capture.LiveCaptureProcess(config)
         with pytest.raises(capture.CaptureError) as excinfo:
             supervisor.start()
