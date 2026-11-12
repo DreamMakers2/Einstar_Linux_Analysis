@@ -436,6 +436,10 @@ class WizardController:
         self._n_materialised = 0
         self._skipped_recorded = 0
         self._last_recorded = -1
+        #: session.json is rewritten at most this often while recording, so a
+        #: crash loses at most this much progress
+        self.autosave_interval_s = 2.0
+        self._last_autosave_s = 0.0
         self._views: list[dict] = []
         self._decisions: list[dict] = []
         self._last_decision: dict | None = None
@@ -1115,6 +1119,7 @@ class WizardController:
                        "assignment_ok": self._last_assignment_ok,
                        "status": decision.status})
         self._append_decision(record)
+        self._autosave_if_due()
         self._last_decision = {
             "accepted": False, "reasons": [reason], "predicted_gain": None,
             "view_id": None, "quality": quality, "status": decision.status,
@@ -1277,6 +1282,14 @@ class WizardController:
             "n_observations": len(self.session.obs),
             "n_solves": int(getattr(self.session, "_solves", 0)),
         }
+
+    def _autosave_if_due(self) -> None:
+        """Persist the resumable state every ``autosave_interval_s``."""
+        now = __import__("time").monotonic()
+        if self._last_autosave_s and now - self._last_autosave_s < self.autosave_interval_s:
+            return
+        self._last_autosave_s = now
+        self._write_session_json()
 
     def _append_decision(self, record: dict) -> None:
         self._decisions.append(record)
@@ -2676,6 +2689,7 @@ class WizardController:
                     "candidate": str(self.paths.candidate_dir),
                 },
                 "error": self.error,
+                "resume": self._resume_payload(),
             }
             # keep whatever the sibling session_io module created
             for key in ("created_utc", "spec", "config_sha256", "history"):
@@ -2686,6 +2700,119 @@ class WizardController:
             types.atomic_write_json(self.paths.session_json, _jsonable(payload))
         except OSError as exc:
             self.error = f"cannot write session.json: {exc}"
+
+    def _resume_payload(self) -> dict:
+        """Everything a new process needs to continue this session.
+
+        Observations are stored explicitly (40 lattice points per camera per
+        accepted view, ~1 KB) so a resume does not have to re-detect the frames
+        that were already accepted: detection is the expensive half, and
+        re-running it could in principle produce different marker centres.
+        """
+        views = []
+        for o in self.session.obs:
+            views.append({"camera": o.camera, "view": int(o.view),
+                          "uv": [[float(k[0]), float(k[1]),
+                                  float(np.asarray(v)[0]), float(np.asarray(v)[1])]
+                                 for k, v in o.uv.items()]})
+        accepted = []
+        for a in self.session.accepted:
+            try:
+                R = np.asarray(a.pose[0], float).tolist()
+                t = np.asarray(a.pose[1], float).tolist()
+            except Exception:
+                continue
+            accepted.append({"view_id": int(a.view_id), "R": R, "t": t,
+                             "timestamp": float(a.timestamp),
+                             "predicted_gain": float(a.predicted_gain or 0.0),
+                             "holdout_rms_px": (None if a.holdout_rms_px is None
+                                                else float(a.holdout_rms_px)),
+                             "n_markers": dict(a.n_markers or {}),
+                             "label": str(a.label or ""),
+                             "quality": dict(a.quality or {})})
+        return {
+            "schema": "einstar.wizard.resume/1",
+            "state": self.state,
+            "factory_sha256": self.factory_sha256,
+            "pitch_mm": float(self.pitch_mm),
+            "next_view": int(self.session._next_view),
+            "views": views,
+            "accepted": accepted,
+            "counters": {"decisions": len(self._decisions),
+                         "rejected": len(self.session.rejected),
+                         "n_materialised": int(self._n_materialised)},
+        }
+
+    def resume_available(self) -> dict | None:
+        """The stored resume block when this directory can be continued."""
+        try:
+            payload = types.read_json(self.paths.session_json, default=None)
+        except Exception:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        block = payload.get("resume")
+        if not isinstance(block, dict) or not block.get("accepted"):
+            return None
+        if block.get("factory_sha256") != self.factory_sha256:
+            return None            # a different calibration: never mix sessions
+        return block
+
+    def resume(self) -> dict:
+        """Rebuild the session state from disk and continue in place."""
+        block = self.resume_available()
+        if block is None:
+            return {"resumed": False, "reason": "no resumable session"}
+        from calib.calibrate import Observation
+        from calib.session import AcceptedView
+        session = self.session
+        session.obs = []
+        for entry in block.get("views") or []:
+            uv = {(float(row[0]), float(row[1])): np.asarray(row[2:4], float)
+                  for row in entry.get("uv") or []}
+            session.obs.append(Observation(str(entry["camera"]),
+                                           int(entry["view"]), uv))
+        session.accepted = []
+        for entry in block.get("accepted") or []:
+            session.accepted.append(AcceptedView(
+                int(entry["view_id"]),
+                (np.asarray(entry["R"], float), np.asarray(entry["t"], float)),
+                float(entry["timestamp"]), dict(entry.get("quality") or {}),
+                float(entry.get("predicted_gain") or 0.0),
+                entry.get("holdout_rms_px"), dict(entry.get("n_markers") or {}),
+                str(entry.get("label") or "")))
+        session._next_view = int(block.get("next_view") or
+                                 (max((a.view_id for a in session.accepted),
+                                      default=-1) + 1))
+        # restore the *rejected count* without inventing history: a resumed
+        # session must not pretend to remember decisions it never saw
+        session.rejected = [{"resumed": True, "reasons": ["before resume"]}
+                            ] * int((block.get("counters") or {}).get("rejected", 0))
+        self._n_materialised = int((block.get("counters") or {}).get(
+            "n_materialised", 0))
+        # a resumed session must come back with the calibration it had, or the
+        # estimator restarts in bootstrap and accepts views the first run had
+        # already rejected (measured: 9 accepted against 8 in a clean run)
+        session.result = None
+        session._task_cache = {}
+        solved = False
+        saved_every = session.policy.get("solve_every", 1)
+        try:
+            # _maybe_solve skips unless the accepted count divides the interval;
+            # a resume must solve once, immediately, so force it
+            session.policy["solve_every"] = 1
+            solved = bool(session.solve_now())
+        except Exception as exc:            # keep the session usable regardless
+            self.error = f"resume solve failed: {type(exc).__name__}: {exc}"
+        finally:
+            session.policy["solve_every"] = saved_every
+        self.state = "paused"
+        self._refresh_derived(force=True)
+        self._write_session_json()
+        self._publish()
+        return {"resumed": True, "accepted": len(session.accepted),
+                "views": len(session.obs), "next_view": session._next_view,
+                "solved": solved}
 
     def _manifest_sha256(self) -> str | None:
         try:

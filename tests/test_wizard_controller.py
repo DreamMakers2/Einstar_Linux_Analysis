@@ -357,3 +357,41 @@ def test_roi_and_histogram_paths_take_identical_decisions(tmp_path):
         worst = max(float(np.linalg.norm(roi.points[k] - full.points[k]))
                     for k in full.points)
         assert worst < 1e-6, worst
+
+
+def test_autosave_writes_a_resumable_state(tmp_path):
+    """A session persists enough to continue after a crash."""
+    import time
+    pytest.importorskip("cv2")
+    frames = Path(os.path.expanduser("~/einstar-private/sweep-b/frames"))
+    if not frames.is_dir():
+        pytest.skip("recording not available")
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    if not factory.is_file():
+        pytest.skip("factory profile not available")
+    ctl = controller.WizardController(factory_profile=str(factory),
+                                      session_dir=str(tmp_path / "s"),
+                                      mode="standard")
+    ctl.autosave_interval_s = 0.0          # every decision
+    ctl.begin()
+    src = sources.ReplayDirSource(frames, limit=12, lazy_colour=True)
+    for group in src:
+        ctl.ingest(group)
+    payload = json.loads(ctl.paths.session_json.read_text())
+    block = payload.get("resume") or {}
+    assert block.get("schema") == "einstar.wizard.resume/1"
+    assert block["factory_sha256"] == ctl.factory_sha256
+    assert len(block["accepted"]) == len(ctl.session.accepted)
+    assert len(block["views"]) == len(ctl.session.obs)
+    # a fresh controller on the same directory can resume it
+    other = controller.WizardController(factory_profile=str(factory),
+                                        session_dir=str(tmp_path / "s"),
+                                        mode="standard")
+    assert other.resume_available() is not None
+    info = other.resume()
+    assert info["resumed"] is True
+    assert info["accepted"] == len(ctl.session.accepted)
+    assert info["solved"] is True
+    assert len(other.session.accepted) == len(ctl.session.accepted)
+    assert len(other.session.obs) == len(ctl.session.obs)

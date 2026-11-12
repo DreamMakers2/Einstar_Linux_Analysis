@@ -41,6 +41,8 @@ def parse(argv=None):
     ap.add_argument("--max-groups", type=int, default=0)
     ap.add_argument("--demo", action="store_true",
                     help="use the deterministic demo controller (layout/snapshot tests)")
+    ap.add_argument("--resume", action="store_true",
+                    help="continue the session already in --session-dir")
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--duration", type=float, default=8.0)
     ap.add_argument("--snapshot-out", default="")
@@ -76,6 +78,9 @@ def main(argv=None) -> int:
             factory_profile=args.profile, session_dir=args.session_dir,
             mode=args.mode, source_kind=args.source)
 
+    if args.resume:
+        info = controller.resume()
+        print(f"wizard: resume {info}")
     win = MainWindow(controller, source, pace_hz=args.pace,
                      headless=args.headless, max_groups=args.max_groups)
     win.show()
