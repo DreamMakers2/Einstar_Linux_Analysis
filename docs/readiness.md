@@ -1,7 +1,7 @@
-# Readiness
+# Readiness assessment — can the new backend replace libeinstar?
 
 > The one-page summary of what is built, measured and unknown is
-> [STATUS.md](STATUS.md). assessment — can the new backend replace libeinstar?
+> [STATUS.md](STATUS.md).
 
 Status: 2026-11-11. The scanner is **attached and has been exercised**. This
 document separates four states:
