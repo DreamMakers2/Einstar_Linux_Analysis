@@ -253,6 +253,9 @@ class ScanWindow(QtWidgets.QMainWindow):
         vol = snap.get("volume") or {}
         novelty = snap.get("novelty")
         new = "" if novelty is None else f"  new surface {100.0 * novelty:.0f}%"
+        coverage = snap.get("coverage") or {}
+        if coverage.get("state") == "converged":
+            new += "  · converged (nothing new for a while)"
         caption = (f"frames {snap['frames_integrated']}  rejected {snap['frames_rejected']}"
                    f"  voxels {vol.get('observed', 0):,}{new}"
                    f"   drag to orbit, wheel to zoom")

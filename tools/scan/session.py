@@ -242,8 +242,36 @@ class ScanSession:
             "cloud": cloud,
             "volume": volume,
             "novelty": last.get("novelty"),
+            "coverage": self.coverage_verdict(),
             "finished": self._finished is not None,
         }
+
+    def coverage_verdict(self, *, window: int = 5,
+                         threshold: float = 0.02) -> dict:
+        """Is the scan still adding information?
+
+        Reports ``converged`` when the last ``window`` integrated frames each
+        brought less than ``threshold`` new surface on average.  This is a
+        *stop recommendation*, not a completeness proof: the model may still be
+        missing surfaces the operator never pointed at, and nothing here checks
+        closure or holes.
+        """
+        recent = [float(s.novelty) for s in self._statuses
+                  if getattr(s, "integrated", False) and s.novelty is not None]
+        # the first integrated frame is the bootstrap: every voxel is new by
+        # definition, so including its 100 % would keep the trend "adding"
+        recent = recent[1:]
+        recent = recent[-int(max(1, window)):]
+        info = {"window": int(max(1, window)), "threshold": float(threshold),
+                "recent_novelty": [round(v, 4) for v in recent]}
+        if len(recent) < int(max(1, window)):
+            info["state"] = "insufficient"
+            info["observed"] = len(recent)
+            return info
+        mean = float(np.mean(recent))
+        info["mean_novelty"] = round(mean, 4)
+        info["state"] = "converged" if mean < float(threshold) else "adding"
+        return info
 
     def preview_mesh(self, target_faces: int = 6000):
         """A decimated mesh of the fused volume, for the live 3-D view.
@@ -468,7 +496,8 @@ class ScanSession:
             return dict(self._finished)
         out: dict = {"frames": len(self._frames),
                      "rejected": int(self._rejected),
-                     "elapsed_s": round(self.elapsed_s(), 2)}
+                     "elapsed_s": round(self.elapsed_s(), 2),
+                     "coverage": self.coverage_verdict()}
         result: dict = {}
         if mesh and self._volume is not None:
             pts = np.vstack([np.asarray(c.points, float) for c in self._frames]) \

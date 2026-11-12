@@ -162,8 +162,26 @@ frames are adding nothing.  On widely spaced frames (0, 40, 80, 120) it reads
 100 %, 25.2 %, 18.4 %, 1.2 %, tracking how much new surface each view brings.
 
 This is deliberately a *voxel* measure, so it says "you have seen this volume
-before", not "your model is complete" - a fully covered object still needs an
-exit condition based on the model, and that remains open.
+before", not "your model is complete".
+
+**Stop recommendation.** `ScanSession.coverage_verdict(window=5, threshold=0.02)`
+reports `converged` when the last five integrated frames each brought less than
+2 % new surface on average.  The bootstrap frame is excluded - every voxel is new
+by definition on frame 0, so including its 100 % would keep the verdict at
+"adding" forever.  Measured on eight frames of a near-stationary segment:
+
+```
+frame  0    1     2     3     4     5     6     7
+new  100%  1.7%  1.3%  0.2%  0.4%  0.2%  0.3%  1.0%?
+verdict: insufficient ... converged (window 5, mean 0.31 %)
+```
+
+The window shows up in the report as `coverage`, and the window caption says
+`converged (nothing new for a while)` while the scan is running.
+
+It is a **hint, not a proof**: nothing here checks closure or holes, and the
+model may still be missing surfaces the operator never pointed at.  A stricter
+threshold keeps it "adding" - which is the honest behaviour and is tested.
 
 ## Tracking loss and recovery
 

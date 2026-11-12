@@ -503,3 +503,26 @@ def test_scan_reports_novelty_per_frame(tmp_path):
         assert snapshot["novelty"] == pytest.approx(second.novelty, abs=1e-3)
     finally:
         session.close()
+
+
+def test_coverage_verdict_ignores_the_bootstrap_and_converges(tmp_path):
+    """The stop *recommendation*: repeated views add nothing -> converged."""
+    session = scan_session.ScanSession(_config(tmp_path, scale=0.5))
+    try:
+        assert session.coverage_verdict(window=3)["state"] == "insufficient"
+        for i in range(5):
+            status = session.process(i)
+            assert status.ok
+        verdict = session.coverage_verdict(window=2, threshold=0.02)
+        # the near-identical frames add almost nothing, so the recommendation is
+        # "converged" - explicitly a stop hint, not a completeness proof
+        assert verdict["state"] == "converged", verdict
+        assert verdict["mean_novelty"] < 0.02
+        assert verdict["recent_novelty"] and all(
+            v <= 1.0 for v in verdict["recent_novelty"])
+        # a strict threshold keeps it "adding", which is the honest behaviour
+        strict = session.coverage_verdict(window=2, threshold=1e-6)
+        assert strict["state"] == "adding", strict
+        assert "coverage" in session.snapshot()
+    finally:
+        session.close()
