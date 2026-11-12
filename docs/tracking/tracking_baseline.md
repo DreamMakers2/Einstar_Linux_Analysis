@@ -244,6 +244,43 @@ structure, which has no independent reference here.
 This is the first positive tracking validation in several rounds, and it came
 from matching the measurement to what the geometry can actually observe.
 
+### The two trackers, measured against the same reference
+
+Five real frames, every eighth, reconstructed at scale 1.0 and masked to the
+plate (median absolute tilt error against the plate's PnP pose):
+
+| pair | plate PnP | projective (err) | cloud (err) |
+|---|---|---|---|
+| 0→8 | 0.80° | 0.83° (0.03) | 0.34° (0.46) |
+| 8→16 | 0.74° | 0.81° (0.07) | 0.28° (0.47) |
+| 16→24 | 0.62° | 0.54° (0.08) | 0.09° (0.53) |
+| 24→32 | 0.03° | 0.04° (0.01) | 0.01° (0.01) |
+| **median** | | **0.048°** | **0.464°** |
+
+The cloud path *under-reports* tilt systematically (0.34 against 0.80): 5 mm
+voxel downsampling flattens the surface and the trimmed solve shrinks the
+rotation.  Projective association keeps the pixels and gets it right.
+
+### Cost decides where each one is used
+
+| scale | reconstruction | projective ICP | depth sigma |
+|---|---|---|---|
+| 0.25 | 158 ms | 105 ms (33 k px) | 1.70 mm |
+| 0.5 | 259 ms | 409 ms (115 k px) | 0.34 mm |
+| 1.0 | 1384 ms | 1634 ms (418 k px) | 0.17 mm |
+
+The live loop at scale 0.5 would go from ~4 fps to ~1.3 fps if the projective
+path were used on the full depth map (259 + 409 + ~100 ms of fusion).  Its
+advantage at that scale is small (0.32° against 0.46° on a masked pair), so the
+split is:
+
+* **live capture keeps the cloud tracker** - it fits the frame budget;
+* **reprocessing and offline work can use the projective path** at scale >= 0.5,
+  where the measured accuracy is much better and time is not the constraint.
+
+`align_projective(..., max_points=N)` subsamples by stride for that tradeoff
+(measured: 6 k points give 32 ms at scale 0.5 masked, 0.43° error).
+
 ## Synthetic end-to-end resolution: 1.19 mm / 0.269 deg
 
 The idea was to validate tracking with *known* motion: render the plate at two

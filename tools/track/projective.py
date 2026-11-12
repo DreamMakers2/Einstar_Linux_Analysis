@@ -142,7 +142,8 @@ def align_projective(source: DepthFrame, target: DepthFrame,
                      max_iterations: int = 20,
                      trim: float = 0.85,
                      distance_threshold_mm: float = 20.0,
-                     tolerance_mm: float = 1e-4) -> dict:
+                     tolerance_mm: float = 1e-4,
+                     max_points: int = 0) -> dict:
     """Projective point-to-plane ICP of ``source`` onto ``target``."""
     t0 = time.time()
     h, w = source.depth_mm.shape
@@ -150,6 +151,13 @@ def align_projective(source: DepthFrame, target: DepthFrame,
         raise ValueError("source and target depth maps must have the same size")
     K = source.K
     pts, uv = source.points()
+    if max_points and len(pts) > int(max_points):
+        # stride sampling: the plane/rotation estimate does not need every pixel,
+        # and the cost is linear in the point count (measured: 409 ms at scale
+        # 0.5 with 115k points against ~100 ms with 29k)
+        stride = int(np.ceil(len(pts) / float(max_points)))
+        pts = pts[::stride]
+        uv = uv[::stride]
     if len(pts) < 500:
         return {"ok": False, "reason": "too few valid pixels", "transform": np.eye(4),
                 "rms_mm": float("nan"), "inliers": 0, "iterations": 0,
