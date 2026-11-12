@@ -148,6 +148,22 @@ The object was stationary, so a near-zero step is the correct answer rather
 than a tracking failure — the same run before the projective default reported
 0.45-1.6 mm steps on replay data with real motion.
 
+**Live run with the full signal set** (10 groups, scale 0.5, colour-fitted
+profile), verifying that novelty, the stop recommendation and the mesh
+statistics all work on hardware:
+
+```
+frames 10  rejected 0  vertices 15 766  colour on  elapsed 9.2 s
+novelty   100, 3.7, 0.76, 0.58, 0.19, 0.18, 0.06, 0.21, 0.00, 0.05 %
+coverage  converged (window 5, mean 0.10 %)
+mesh      28 674 faces, 44 439 edges, 2 856 boundary (6.4 %), 0 non-manifold
+recoveries 0
+after exit: trigger counts 0/0, illuminator 0 %
+```
+
+The scene was static, so novelty falls to zero and the verdict says converged;
+that is the correct reading, not a failure of the signal.
+
 ## New-surface feedback
 
 The scan view reports how much of each frame is **new surface** - the fraction
