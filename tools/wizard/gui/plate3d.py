@@ -153,6 +153,20 @@ class PlatePreview(QtWidgets.QFrame):
         usable = [p for p in raw if p is not None]
         if len(usable) < 4:
             return raw, None
+        if self.mode == "scanner":
+            # Fixed image-to-widget mapping: the camera frame is 1280x1024.
+            # Auto-fitting the board's bbox made translation and distance
+            # invisible (the plate always filled the card).
+            margin = 24.0
+            sx = (rect.width() - 2 * margin) / 1280.0
+            sy = (rect.height() - 2 * margin - 22.0) / 1024.0
+            scale = max(1e-6, min(sx, sy))
+            ox = rect.center().x()
+            oy = rect.center().y() + 4.0
+            mapped = [(None if p is None else
+                       (ox + (p[0] - 640.0) * scale,
+                        oy + (p[1] - 512.0) * scale)) for p in raw]
+            return mapped, scale
         us = np.array([p[0] for p in usable])
         vs = np.array([p[1] for p in usable])
         span_u = max(float(us.max() - us.min()), 1e-6)

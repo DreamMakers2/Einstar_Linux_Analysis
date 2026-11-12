@@ -27,6 +27,22 @@ after a first soak exhausted a tmpfs, capture now stops at 2 GB free. Killing
 the capture child makes the parent run a volatile-only `--safe-off` recovery
 (trigger and illuminator readback 0) and surface the failure.
 
+The acceptance round then closed three gaps. The intermittent Qt exit crash
+was reproduced (focused test 37 %) and proven to be an unparented dialog kept
+alive by self-capturing lambdas; the use-after-free at PySide shutdown is fixed
+and an 8-process exit-code regression passes. A 36-view synthetic session
+through the real operator window reached **8/8 READY and a validated candidate**
+(33 accepted, 41 s, 8.3 cores, 642 MB); a 60-view run validated **54 accepted**
+views in 72.6 s. The incomplete vendor still collection is refused with no
+candidate. Pause/resume was broken by a shadowed `resume()` method (capture
+stayed paused); it is fixed and verified on hardware at 32.65 MB/s with
+verified cleanup. The 35-view finish remains 3.61 s at 0.33037 px RMS.
+
+The complete READY/validated sessions are diverse synthetic still sequences.
+A 30 s replay of the real moving-plate sweep processed 115 groups and accepted
+8 at 3.8 Hz, but stayed at 1/8 coverage; replay uses the synchronous decision
+path. A physical moving-plate calibration remains the main unverified step.
+
 * [Performance and architecture report](docs/calibration/performance_overhaul_2026-11-12.md)
 * [Operator UI](docs/calibration/modern_ui.md)
 * [Safe automatic exposure](docs/calibration/auto_exposure.md)

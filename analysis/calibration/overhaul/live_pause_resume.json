@@ -1,0 +1,34 @@
+{
+ "date": "2026-11-12",
+ "limitations": [
+  "The USB transfer-timeout count rises during a stop/start streaming cycle (24 vs 8); no data loss or dropped frame was observed in the 22.8 s pause run.",
+  "Optical darkness is not verified; readback only."
+ ],
+ "mode": "quick",
+ "root_cause": "WizardController.resume (persisted-session API) shadowed the pause-resume method of the same name. The GUI reported 'Resumed' but the controller stayed paused; the fix adds unpause() and a regression test.",
+ "schema": "einstar-live-pause/1",
+ "with_pause_resume": {
+  "cleanup_verified": true,
+  "duration_s": 22.78,
+  "frames_dropped": 0,
+  "groups": 188,
+  "laser_percent": 0,
+  "preview_hz": 7.71,
+  "preview_p95_ms": 144.3,
+  "throughput_mbps": 32.65,
+  "transfer_timeouts": 24,
+  "trigger_counts": {
+   "mono": 0,
+   "rgb": 0
+  }
+ },
+ "without_pause": {
+  "duration_s": 21.48,
+  "frames_dropped": 1,
+  "groups": 209,
+  "preview_hz": 9.7,
+  "preview_p95_ms": 118.0,
+  "throughput_mbps": 38.36,
+  "transfer_timeouts": 8
+ }
+}

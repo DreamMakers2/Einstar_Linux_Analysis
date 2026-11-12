@@ -208,6 +208,22 @@ class InstructionCard(QtWidgets.QFrame):
         t = str(text or "").lower()
         if not t.strip():
             return "Place the plate in front of the scanner"
+        if "press start" in t:
+            return "Press Start to begin"
+        if t.startswith("paused") or "paused —" in t:
+            return "Paused — resume to continue"
+        if "source ended" in t:
+            return "Not enough coverage"
+        if "recording complete" in t:
+            return "Recording complete — finish"
+        if "validated profile" in t:
+            return "Validated profile written"
+        if "candidate written" in t:
+            return "Candidate not validated"
+        if "building the profile" in t:
+            return "Building profile"
+        if "needs attention" in t:
+            return "Needs attention — see message"
         if "hold still" in t or "too fast" in t:
             return "Hold still for a moment"
         if "closer" in t:
@@ -261,7 +277,7 @@ class InstructionCard(QtWidgets.QFrame):
             self.ready_pill.setText("READY TO FINISH")
             self.ready_pill.setStyleSheet(
                 f"color: {theme.OK}; border-color: {theme.OK};")
-            self.kicker.setText("CALIBRATION COVERAGE COMPLETE")
+            self.kicker.setText("COVERAGE COMPLETE")
         else:
             self.ready_pill.setText("CAPTURING")
             self.ready_pill.setStyleSheet(
@@ -273,8 +289,27 @@ class InstructionCard(QtWidgets.QFrame):
         serial = self._feedback_serial
         self.feedback.setText(text)
         self.feedback.setStyleSheet(f"color: {colour}; font-size: 14px; font-weight: 600;")
-        QtCore.QTimer.singleShot(ms, lambda: (
-            self.feedback.setText("") if serial == self._feedback_serial else None))
+        # A parented timer is destroyed with the card; a raw singleShot lambda
+        # can fire after the C++ label is gone during window teardown.
+        timer = getattr(self, "_feedback_timer", None)
+        if timer is None:
+            timer = QtCore.QTimer(self)
+            timer.setSingleShot(True)
+            self._feedback_timer = timer
+            timer.timeout.connect(self._clear_feedback_serial)
+        self._feedback_pending_serial = serial
+        timer.start(max(0, int(ms)))
+
+    def _clear_feedback_serial(self) -> None:
+        if getattr(self, "_feedback_pending_serial", None) == self._feedback_serial:
+            self.feedback.setText("")
+
+    def clear_feedback(self) -> None:
+        self._feedback_serial += 1
+        timer = getattr(self, "_feedback_timer", None)
+        if timer is not None:
+            timer.stop()
+        self.feedback.setText("")
 
 
 class MovementIcon(QtWidgets.QWidget):
@@ -293,17 +328,18 @@ class MovementIcon(QtWidgets.QWidget):
         elif any(k in t for k in ("rotate", "turn the plate")):
             self._mode = "rotate"
         elif "closer" in t or "toward" in t:
-            self._angle = 90.0
+            # Depth is not a screen direction; keep it distinct from up/down.
+            self._mode = "toward"
         elif "farther" in t or "further" in t or "away" in t:
-            self._angle = -90.0
+            self._mode = "away"
         elif "left" in t:
             self._angle = 180.0
         elif "right" in t:
             self._angle = 0.0
         elif "up" in t:
-            self._angle = 0.0
+            self._angle = -90.0
         elif "down" in t:
-            self._angle = 180.0
+            self._angle = 90.0
         elif "corner" in t or "edge" in t:
             self._mode = "target"
         elif "ready" in t:
@@ -349,6 +385,19 @@ class MovementIcon(QtWidgets.QWidget):
                        QtCore.QPointF(c.x() - r * 0.55, c.y()))
             p.drawLine(QtCore.QPointF(c.x() + r * 0.55, c.y()),
                        QtCore.QPointF(c.x() + r, c.y()))
+        elif self._mode in ("toward", "away"):
+            # Depth is not a screen direction: draw a plate between two
+            # chevrons that point inward (closer) or outward (farther).
+            sign = 1.0 if self._mode == "toward" else -1.0
+            p.drawRect(QtCore.QRectF(c.x() - r * 0.28, c.y() - r * 0.55,
+                                     r * 0.56, r * 1.1))
+            for side in (-1.0, 1.0):
+                tip = c.x() + side * sign * r * 0.10
+                base = c.x() + side * sign * r * 0.72
+                p.drawLine(QtCore.QPointF(base, c.y() - r * 0.45),
+                           QtCore.QPointF(tip, c.y()))
+                p.drawLine(QtCore.QPointF(base, c.y() + r * 0.45),
+                           QtCore.QPointF(tip, c.y()))
         elif self._mode == "check":
             p.drawLine(QtCore.QPointF(c.x() - r, c.y()),
                        QtCore.QPointF(c.x() - r * 0.2, c.y() + r * 0.7))
@@ -418,11 +467,15 @@ class ProgressStrip(QtWidgets.QFrame):
             lab.setProperty("ok", ok)
             lab.style().unpolish(lab); lab.style().polish(lab)
             lab.setToolTip(str(node.get("hint") or DIMENSIONS[key][1]))
-        missing = (snap.get("readiness") or {}).get("missing") or []
-        self.hint.setText("All pose families covered — you can finish"
-                          if not missing else
-                          "Missing: " + ", ".join(str(m).replace("_", " ")
-                                                  for m in missing[:2]))
+        read = snap.get("readiness") or {}
+        missing = read.get("missing") or []
+        if read.get("ready"):
+            self.hint.setText("All pose families covered — you can finish")
+        elif missing:
+            self.hint.setText("Missing: " + ", ".join(
+                str(m).replace("_", " ") for m in missing[:2]))
+        else:
+            self.hint.setText("Coverage is starting — keep capturing")
 
 
 class AdvancedDialog(QtWidgets.QDialog):
@@ -484,6 +537,17 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         super().__init__(parent)
         self.controller = controller
         self.source = source
+        # Still collections (synthetic/vendor) must not be judged by a video
+        # motion rate.  The source's own continuous flag is authoritative.
+        try:
+            value = getattr(source, "continuous", None)
+            if value is None:
+                value = getattr(getattr(source, "info", None), "continuous", True)
+            continuous = bool(value)
+            controller._continuous_override = continuous
+            controller.controller.continuous = continuous
+        except Exception:
+            pass
         self.headless = headless
         self._pace_hz = float(pace_hz)
         self._max_groups = int(max_groups)
@@ -506,6 +570,11 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._last_exposure_eval = 0.0
         self._exposure_log_path = None
         self._ui_error = None
+        self._display_state: str | None = None
+        self._result_validated = False
+        self._source_ended = False
+        self._feedback_hold_until = 0.0
+        self._shutdown_done = False
 
         self.setWindowTitle("Einstar Calibration")
         self.resize(1640, 1000)
@@ -565,12 +634,15 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         side_host = QtWidgets.QWidget()
         side_host.setLayout(side)
         side_host.setFixedWidth(400)
+        self._side_host = side_host
         body.addWidget(side_host, 0)
         root.addLayout(body, 1)
 
         root.addWidget(self._footer())
         self.error_banner = QtWidgets.QLabel("")
         self.error_banner.setObjectName("errorBanner")
+        self.error_banner.setWordWrap(True)
+        self.error_banner.setMinimumHeight(30)
         self.error_banner.setVisible(False)
         root.addWidget(self.error_banner)
 
@@ -664,7 +736,8 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         lay.addStretch(1)
         card = QtWidgets.QFrame()
         card.setObjectName("card")
-        card.setMaximumWidth(520)
+        card.setMinimumWidth(500)
+        card.setMaximumWidth(560)
         cl = QtWidgets.QVBoxLayout(card)
         cl.setContentsMargins(28, 24, 28, 24)
         cl.setSpacing(10)
@@ -675,6 +748,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             "The window stays responsive.")
         self.finish_text.setObjectName("muted")
         self.finish_text.setWordWrap(True)
+        self.finish_text.setMinimumHeight(44)
         self.finish_progress = QtWidgets.QProgressBar()
         self.finish_progress.setRange(0, 0)
         cl.addWidget(self.finish_title)
@@ -691,28 +765,125 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         if self._advanced is not None and self._advanced.isVisible():
             self._advanced.log.setPlainText("\n".join(self._events[-300:]))
 
+    def _set_pill(self, text: str, colour: str) -> None:
+        self.status_pill.setText(text)
+        self.status_pill.setStyleSheet(
+            f"color: {colour}; border-color: {colour};")
+
+    def _source_kind(self) -> str:
+        try:
+            return str((getattr(self.source, "info", None).kind
+                        if getattr(self.source, "info", None) is not None
+                        else getattr(self.source, "kind", "")) or "")
+        except Exception:
+            return ""
+
+    def _set_feed_status(self, state: str) -> None:
+        kind = self._source_kind().lower()
+        if state == "recording":
+            label = "LIVE" if kind == "live" else (
+                "REPLAY" if kind == "replay" else "SYNTHETIC")
+        elif state == "paused":
+            label = "PAUSED"
+        elif state == "finishing":
+            label = "FINISHING"
+        elif state in ("done", "ended"):
+            label = "ENDED"
+        elif state == "error":
+            label = "ERROR"
+        else:
+            label = "IDLE"
+        for feed in (self.feed_left, self.feed_right, self.feed_colour):
+            if hasattr(feed, "set_status"):
+                feed.set_status(label)
+
     def _apply_state(self, state: str) -> None:
+        terminal = state in ("done", "error", "ended", "finishing")
+        if terminal:
+            self._display_state = state
+        elif state in ("recording", "paused", "idle", "cancelled"):
+            self._display_state = None
+        self._session_state = state
         recording = state == "recording"
         paused = state == "paused"
         finishing = state == "finishing"
-        idle = state in ("idle", "cancelled", "done", "error")
-        self.btn_start.setVisible(idle and not finishing)
-        self.btn_pause.setVisible(not idle and not finishing)
-        self.btn_finish.setVisible(bool(self._ready) and not idle and not finishing)
+        self.btn_start.setVisible(state in ("idle", "cancelled"))
+        self.btn_pause.setVisible(state in ("recording", "paused"))
+        self.btn_finish.setVisible(bool(self._ready)
+                                   and state in ("recording", "paused", "ended"))
+        self.btn_finish.setEnabled(bool(self._ready)
+                                   and state in ("recording", "paused", "ended"))
         self.btn_pause.setText("Resume" if paused else "Pause")
-        self.btn_cancel.setEnabled(not finishing)
+        self.btn_cancel.setEnabled(state in ("recording", "paused"))
+        self.btn_cancel.setVisible(state in ("recording", "paused"))
         self.btn_advanced.setEnabled(True)
         if state == "done":
-            self.status_pill.setText("●  CALIBRATION READY")
+            if self._result_validated:
+                self._set_pill("●  CALIBRATION VALIDATED", theme.OK)
+            else:
+                self._set_pill("●  CANDIDATE WRITTEN", theme.WARN
+                               if hasattr(theme, "WARN") else theme.MUTED)
         elif state == "error":
-            self.status_pill.setText("●  NEEDS ATTENTION")
+            self._set_pill("●  NEEDS ATTENTION", theme.ERROR
+                           if hasattr(theme, "ERROR") else theme.MUTED)
+        elif state == "ended":
+            self._set_pill("●  SOURCE ENDED", theme.WARN
+                           if hasattr(theme, "WARN") else theme.MUTED)
+        elif finishing:
+            self._set_pill("●  BUILDING PROFILE", theme.INFO)
         elif recording:
-            self.status_pill.setText("●  CAPTURING")
+            self._set_pill("●  CAPTURING", theme.INFO)
         elif paused:
-            self.status_pill.setText("●  PAUSED")
+            self._set_pill("●  PAUSED", theme.WARN
+                           if hasattr(theme, "WARN") else theme.MUTED)
+        elif state == "cancelled":
+            self._set_pill("●  STOPPED", theme.MUTED)
         else:
-            self.status_pill.setText("●  SCANNER READY")
+            self._set_pill("●  NOT STARTED", theme.MUTED)
+        self._set_feed_status(state)
         self.finish_overlay.setVisible(finishing)
+        if not recording:
+            self.instruction.clear_feedback()
+        if state == "idle":
+            self.instruction.set_instruction("Press Start to begin", "")
+            self.instruction.set_ready(False, [])
+        elif paused:
+            self.instruction.set_instruction("Paused — resume to continue", "")
+        elif finishing:
+            self.instruction.set_instruction("Building the profile", "")
+        elif state == "ended":
+            if self._ready:
+                self.instruction.set_instruction(
+                    "Recording complete — finish to build the profile", "")
+            else:
+                self.instruction.set_instruction(
+                    "Source ended — not enough coverage for a profile", "")
+        elif state == "done":
+            self.instruction.set_instruction(
+                "Validated profile written" if self._result_validated
+                else "Candidate written — validation did not pass", "")
+        elif state == "error":
+            self.instruction.set_instruction("Needs attention — see the message", "")
+        if state != "recording":
+            if state in ("idle", "cancelled"):
+                self.instruction.ready_pill.setText("NOT READY")
+                self.instruction.kicker.setText("PRESS START")
+            elif state == "paused":
+                self.instruction.ready_pill.setText("PAUSED")
+                self.instruction.kicker.setText("PAUSED")
+            elif state == "finishing":
+                self.instruction.ready_pill.setText("BUILDING")
+                self.instruction.kicker.setText("FINAL VALIDATION")
+            elif state == "ended":
+                self.instruction.ready_pill.setText("ENDED")
+                self.instruction.kicker.setText("CAPTURE COMPLETE")
+            elif state == "done":
+                self.instruction.ready_pill.setText(
+                    "VALIDATED" if self._result_validated else "NOT VALIDATED")
+                self.instruction.kicker.setText("SESSION COMPLETE")
+            elif state == "error":
+                self.instruction.ready_pill.setText("NEEDS ATTENTION")
+                self.instruction.kicker.setText("CHECK THE MESSAGE")
 
     def _tick(self) -> None:
         if (self._finish_worker is not None and self._finish_worker.isRunning()
@@ -721,20 +892,23 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self.finish_text.setText(
                 f"Optimising and validating… {elapsed:.1f} s. "
                 "The window stays responsive.")
-        cap = {}
-        try:
-            snap = self.controller.snapshot()
-            cap = snap.get("capture") or {}
-        except Exception:
-            snap = {}
-        fps = _num(cap.get("fps"))
-        if fps is not None:
-            self.fps_label.setText(f"{fps:.1f} fps")
-            self.feed_left.set_status("LIVE")
-            self.feed_right.set_status("LIVE")
-            self.feed_colour.set_status("LIVE")
-        elif self.headless:
+        state = getattr(self, "_session_state", "idle")
+        if state != "recording":
             self.fps_label.setText("— fps")
+            return
+        hz = None
+        try:
+            metrics = self.worker.metrics() if self.worker is not None else {}
+            hz = _num((metrics.get("preview") or {}).get("hz"))
+        except Exception:
+            hz = None
+        if hz is None:
+            try:
+                hz = _num(((self.controller.snapshot().get("capture") or {})
+                           .get("fps")))
+            except Exception:
+                hz = None
+        self.fps_label.setText(f"{hz:.1f} fps" if hz is not None else "— fps")
 
     # -- feed ------------------------------------------------------------
     def _on_preview(self, payload: dict) -> None:
@@ -771,6 +945,13 @@ class ModernMainWindow(QtWidgets.QMainWindow):
     def _on_start(self) -> None:
         if self.worker is not None and self.worker.isRunning():
             return
+        try:
+            if str(getattr(self.controller, "state", "")) in ("done", "cancelled"):
+                self._fail("this session is finished; start a new application "
+                           "session to calibrate again")
+                return
+        except Exception:
+            pass
         # PR_SET_PDEATHSIG is tied to the *thread* that created the child.
         # Start the capture on the long-lived GUI thread; starting it inside
         # the reader thread would make that thread's normal exit deliver
@@ -798,6 +979,10 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             return
         self._started_at = time.time()
         self._ui_error = None
+        self._display_state = None
+        self._source_ended = False
+        self.error_banner.setVisible(False)
+        self.error_banner.setText("")
         self.worker = self._make_worker()
         self.worker.finished_ok.connect(self._on_worker_done)
         self.worker.start()
@@ -810,7 +995,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         if self.worker.paused:
             self.worker.request_resume()
             try:
-                self.controller.resume()
+                self.controller.unpause()
             except Exception as exc:
                 self._fail(str(exc))
             self._apply_state("recording")
@@ -825,25 +1010,54 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._event("paused")
 
     def _on_decision(self, payload: dict) -> None:
+        now = time.time()
         if payload.get("accepted"):
             self._auto_exposure.freeze()
         text, colour_name = panels.feedback_text(payload)
         colour = getattr(theme, colour_name, theme.MUTED)
         if payload.get("accepted"):
-            self.instruction.show_feedback(text, colour)
+            self._feedback_hold_until = now + 1.8
+            self.instruction.show_feedback(text, colour, 3000)
         elif text:
-            self.instruction.show_feedback(text, colour)
+            # A rejection arrives at 4-10 Hz and would otherwise erase the
+            # accepted-view confirmation before the operator can see it.
+            if now >= getattr(self, "_feedback_hold_until", 0.0):
+                self.instruction.show_feedback(text, colour, 1800)
         self._event(("captured " if payload.get("accepted") else "rejected ")
                     + str(payload.get("view_id") if payload.get("accepted") else
                           "; ".join(str(r) for r in (payload.get("reasons") or []))))
 
     def _on_worker_done(self, info: dict) -> None:
-        self._event(f"acquisition stopped ({info.get('groups_ingested', 0)} groups)")
+        groups = int(info.get("groups_ingested", 0) or 0)
+        self._event(f"acquisition stopped ({groups} groups)")
+        state = str(getattr(self, "_session_state", ""))
+        if state in ("finishing", "done", "error"):
+            return
+        self._source_ended = True
+        self._apply_state("ended")
+        if self._ready:
+            self.footer_note.setText(
+                "Recording complete. Press Finish to build and validate the profile.")
+        else:
+            self.footer_note.setText(
+                "Recording ended with incomplete coverage; no profile can be built.")
 
     def _on_finish(self) -> None:
         if self._finish_worker is not None and self._finish_worker.isRunning():
             return
+        state = str(getattr(self, "_session_state", ""))
+        if not self._ready:
+            self.instruction.show_feedback(
+                "Finish is locked until coverage is complete", theme.MUTED, 2500)
+            self._event("finish refused: coverage not ready")
+            return
+        if state not in ("recording", "paused", "ended"):
+            self.instruction.show_feedback(
+                "Finish is only available for an active or completed capture",
+                theme.MUTED, 2500)
+            return
         self._finished_result = None
+        self._result_validated = False
         self._finish_started_at = time.time()
         self._apply_state("finishing")
         self.finish_title.setText("Building your calibration")
@@ -867,34 +1081,70 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._finish_worker = None
         self._finished_result = dict(result or {})
         ok = bool(result.get("ok"))
+        validation = result.get("validation") or {}
+        verdict = (validation.get("verdict")
+                   if isinstance(validation, dict) else None) or {}
+        passed = (validation.get("passed") is True
+                  or verdict.get("would_activate") is True)
+        self._result_validated = bool(ok and passed)
         self.finish_overlay.setVisible(False)
-        self._apply_state("done" if ok else "error")
-        if ok:
-            self.instruction.show_feedback("✓ Profile built and validated", theme.OK, 8000)
-            self._event("candidate profile written; validation pending")
+        if not ok:
+            self._display_state = "error"
+            self._apply_state("error")
+            self._fail(str(result.get("reason") or result.get("error")
+                           or "the final solve failed"))
+            self.refresh()
+            return
+        self._apply_state("done")
+        reasons = [str(r) for r in (verdict.get("reasons") or [])]
+        if self._result_validated:
+            gates = verdict.get("gates") or {}
+            quality = str(gates.get("quality_status") or "").lower()
+            if quality and quality != "pass":
+                self.instruction.show_feedback(
+                    "✓ Profile validated — quality advisory", theme.OK, 10000)
+                self._event("candidate validated; quality report has a warning")
+                self.footer_note.setText(
+                    "Independent gates passed; the quality report has an advisory "
+                    "warning. Factory calibration was not modified.")
+            else:
+                self.instruction.show_feedback(
+                    "✓ Profile validated by all gates", theme.OK, 10000)
+                self._event("candidate profile written; validation passed")
+                self.footer_note.setText(
+                    "Validated candidate written. Factory calibration was not modified.")
         else:
-            self._fail(str(result.get("reason") or result.get("error") or
-                           "the session did not pass validation"))
+            reason = reasons[0] if reasons else "validation did not activate"
+            self.instruction.show_feedback(
+                "Candidate written — validation did not pass", theme.MUTED, 10000)
+            self._event("candidate profile written; validation failed: " + reason)
+            self.footer_note.setText(
+                "Candidate saved for inspection; validation failed — " + reason)
         self.refresh()
 
     def _on_finish_failed(self, message: str) -> None:
         self._finish_worker = None
         self.finish_overlay.setVisible(False)
+        self._display_state = "error"
         self._apply_state("error")
         self._fail(f"finish failed: {message}")
         self._event(f"finish failed: {message}")
 
     def _on_cancel(self) -> None:
-        if self.worker is not None and self.worker.isRunning():
-            self.worker.request_stop()
+        if str(getattr(self, "_session_state", "")) not in ("recording", "paused"):
+            return
+        w = self.worker
+        if w is not None and w.isRunning():
+            w.request_stop()
             deadline = time.time() + 6.0
-            while self.worker.isRunning() and time.time() < deadline:
+            while w.isRunning() and time.time() < deadline:
                 QtWidgets.QApplication.processEvents()
                 time.sleep(0.01)
         try:
             self.controller.cancel()
         except Exception as exc:
             self._fail(str(exc))
+        self._display_state = None
         self._apply_state("cancelled")
         self._event("stopped; all recorded data kept")
 
@@ -911,7 +1161,12 @@ class ModernMainWindow(QtWidgets.QMainWindow):
 
     def _fail(self, message: str) -> None:
         self._ui_error = str(message)
-        self.error_banner.setText(message)
+        self.error_banner.setText(str(message))
+        self.error_banner.setWordWrap(True)
+        self.error_banner.setVisible(True)
+        if not self._closing:
+            self._set_pill("●  NEEDS ATTENTION",
+                           theme.ERROR if hasattr(theme, "ERROR") else theme.MUTED)
         self.error_banner.setVisible(True)
         self._event(message)
 
@@ -1065,54 +1320,59 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         except Exception as exc:
             self._fail(f"state read failed: {type(exc).__name__}: {exc}")
             return
+        readiness = snap.get("readiness") or {}
+        ready = bool(readiness.get("ready"))
+        self._ready = ready
         state = str(snap.get("state") or "idle")
+        if getattr(self, "_display_state", None):
+            state = self._display_state
+        if getattr(self, "_source_ended", False) and state == "recording":
+            state = "ended"
         self._apply_state(state)
         guide = snap.get("guidance") or {}
-        readiness = snap.get("readiness") or {}
-        full_instruction = str(guide.get("instruction") or
-                               "Place the plate in front of the scanner")
-        short = InstructionCard.short_instruction(full_instruction)
         target = guide.get("target") or {}
-        bits = []
-        dist = _num(target.get("distance_mm"))
-        current_dist = _num((snap.get("last_pose") or {}).get("distance_mm"))
-        if dist is not None and current_dist is not None:
-            if dist < current_dist - 25.0:
-                short = "Move the plate closer"
-            elif dist > current_dist + 25.0:
-                short = "Move the plate farther away"
-        if dist is not None:
-            bits.append(f"{dist:.0f} mm")
-        tilt = target.get("tilt_deg")
-        if isinstance(tilt, (list, tuple)) and len(tilt) == 2:
-            tx, ty = _num(tilt[0]), _num(tilt[1])
-            if tx is not None and ty is not None:
-                bits.append(f"tilt {tx:+.0f}° / {ty:+.0f}°")
-        roll = _num(target.get("roll_deg"))
-        if roll is not None:
-            bits.append(f"roll {roll:+.0f}°")
-        region = target.get("region")
-        if region:
-            bits.append(str(region).replace("_", " "))
-        self.instruction.set_instruction(short, "  ·  ".join(bits))
-        self.instruction.set_ready(bool(readiness.get("ready")),
-                                   list(readiness.get("missing") or []))
+        if state == "recording":
+            full_instruction = str(guide.get("instruction") or
+                                   "Place the plate in front of the scanner")
+            short = InstructionCard.short_instruction(full_instruction)
+            bits = []
+            dist = _num(target.get("distance_mm"))
+            current_dist = _num((snap.get("last_pose") or {}).get("distance_mm"))
+            if not ready and dist is not None and current_dist is not None:
+                if dist < current_dist - 25.0:
+                    short = "Move the plate closer"
+                elif dist > current_dist + 25.0:
+                    short = "Move the plate farther away"
+            if dist is not None:
+                bits.append(f"{dist:.0f} mm")
+            tilt = target.get("tilt_deg")
+            if isinstance(tilt, (list, tuple)) and len(tilt) == 2:
+                tx, ty = _num(tilt[0]), _num(tilt[1])
+                if tx is not None and ty is not None:
+                    bits.append(f"tilt {tx:+.0f}° / {ty:+.0f}°")
+            roll = _num(target.get("roll_deg"))
+            if roll is not None:
+                bits.append(f"roll {roll:+.0f}°")
+            region = target.get("region")
+            if region:
+                bits.append(str(region).replace("_", " "))
+            self.instruction.set_instruction(short, "  ·  ".join(bits))
+            self.instruction.set_ready(ready, list(readiness.get("missing") or []))
+            if ready:
+                self.footer_note.setText(
+                    "Coverage complete. Finish when you are ready.")
+            else:
+                missing = list(readiness.get("missing") or [])
+                self.footer_note.setText(
+                    "Keep moving — " + ", ".join(str(m).replace("_", " ")
+                                                  for m in missing[:2])
+                    if missing else
+                    "Keep the plate in view; the scanner captures automatically.")
         self.progress.update_from(snap)
         self._update_coverage_map(snap)
         self.views_label.setText(f"{int((snap.get('counts') or {}).get('accepted', 0))} views")
-        ready = bool(readiness.get("ready"))
-        self._ready = ready
-        self.btn_finish.setVisible(ready and state in ("recording", "paused"))
-        self.btn_finish.setEnabled(ready and state in ("recording", "paused"))
-        if not ready:
-            missing = list(readiness.get("missing") or [])
-            self.footer_note.setText(
-                "Keep moving — " + ", ".join(str(m).replace("_", " ")
-                                              for m in missing[:2]) if missing else
-                "Keep the plate in view; the scanner captures automatically.")
-        else:
-            self.footer_note.setText("Coverage complete. Finish when you are ready.")
-        # 3-D pose at 5 Hz
+        # 3-D pose at 5 Hz.  The latest pose is deliberately retained while
+        # paused; a stale-pose marker is shown when the source has ended.
         now = time.time()
         if now - getattr(self, "_last_3d", 0.0) >= 0.2:
             self._last_3d = now
@@ -1136,25 +1396,34 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self.plate.set_status("  ·  ".join(bits) or "point the plate at the scanner")
         cap = snap.get("capture") or {}
         source = snap.get("source") or {}
+        kind = str(source.get("kind") or self._source_kind() or "")
         bits = []
-        if source.get("kind"):
-            bits.append(str(source["kind"]))
-        if source.get("serial"):
-            bits.append(str(source["serial"]))
-        if cap.get("state"):
-            bits.append(str(cap["state"]))
-        fps = _num(cap.get("fps"))
-        if fps is not None:
-            bits.append(f"{fps:.1f} fps")
-        if cap.get("groups_written") is not None:
-            bits.append(f"{int(cap['groups_written'])} groups recorded")
+        if kind:
+            bits.append(kind)
+        bits.append(state)
+        if kind == "live":
+            if source.get("serial"):
+                bits.append(str(source["serial"]))
+            if cap.get("state"):
+                bits.append(str(cap["state"]))
+            fps = _num(cap.get("fps"))
+            if fps is not None:
+                bits.append(f"{fps:.1f} fps")
+            if cap.get("groups_written") is not None:
+                bits.append(f"{int(cap['groups_written'])} groups recorded")
+        else:
+            metrics = self.worker.metrics() if self.worker is not None else {}
+            seen = int(metrics.get("groups_seen", 0) or 0)
+            bits.append(f"{seen} groups processed")
+            bits.append(f"{int((snap.get('counts') or {}).get('accepted', 0))} accepted")
         self.scanner_line.setText("  ·  ".join(bits) or "Scanner: starting…")
         elapsed = _num((snap.get("session") or {}).get("elapsed_s"))
         if elapsed is not None and elapsed > 0:
             self.session_line.setText(
                 f"Session {int(elapsed)//60:02d}:{int(elapsed)%60:02d}  ·  "
                 f"{int((snap.get('counts') or {}).get('accepted', 0))} views")
-        self._auto_expose(snap)
+        if state == "recording":
+            self._auto_expose(snap)
         if snap.get("error"):
             self._fail(str(snap["error"]))
         if self._advanced is not None and self._advanced.isVisible():
@@ -1169,9 +1438,18 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         while fw.isRunning() and time.time() < deadline:
             QtWidgets.QApplication.processEvents()
             time.sleep(0.01)
+        # The last ``done`` signal is queued from the worker thread.  Process
+        # it before returning; otherwise shutdown can write ui_metrics while
+        # the window is still in the "finishing" state even though the solve
+        # has completed.
+        for _ in range(3):
+            QtWidgets.QApplication.processEvents()
+            time.sleep(0.01)
         return not fw.isRunning()
 
     def shutdown(self, timeout_s: float = 30.0) -> bool:
+        if self._shutdown_done:
+            return True
         self._closing = True
         self._timer.stop()
         self._clock.stop()
@@ -1196,6 +1474,23 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self.controller.close()
         except Exception:
             pass
+        # QThread wrappers are Python-owned children of this window.  Delete
+        # them explicitly after they have stopped instead of relying on Qt's
+        # parent-child destruction order at interpreter shutdown (the latter
+        # can visit a parent before a child and touch freed QObject memory).
+        if w is not None:
+            try:
+                w.deleteLater()
+            except Exception:
+                pass
+            self.worker = None
+        if fw is not None:
+            try:
+                fw.deleteLater()
+            except Exception:
+                pass
+            self._finish_worker = None
+        self._shutdown_done = True
         return ok
 
     def _write_ui_metrics(self) -> None:
@@ -1215,6 +1510,15 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                     getattr(self.source, "capture", None),
                     "_safe_off_result", None),
                 "source_final_verdict": getattr(self.source, "final_verdict", None),
+                "finish": {
+                    "validated": bool(self._result_validated),
+                    "state": self._session_state,
+                    "result_present": bool(self._finished_result),
+                    "reasons": list(
+                        (((self._finished_result or {}).get("validation")
+                          if isinstance((self._finished_result or {}).get("validation"), dict)
+                          else {}) or {}).get("verdict", {}).get("reasons") or []),
+                },
                 "auto_exposure": self._auto_exposure.history,
             }
             (root / "ui_metrics.json").write_text(
@@ -1244,6 +1548,17 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, "finish_overlay"):
             self.finish_overlay.setGeometry(self.centralWidget().rect())
+        # The documented 1180-wide window must not clip the third feed.  Give
+        # the side column less room and let each feed shrink to 210 px there.
+        narrow = self.width() < 1320
+        if hasattr(self, "_side_host"):
+            self._side_host.setFixedWidth(320 if narrow else 400)
+        target = 210 if narrow else 260
+        for feed in (getattr(self, "feed_left", None),
+                     getattr(self, "feed_right", None),
+                     getattr(self, "feed_colour", None)):
+            if feed is not None:
+                feed.setMinimumWidth(target)
 
     def snapshot_png(self, path: str) -> None:
         QtWidgets.QApplication.processEvents()

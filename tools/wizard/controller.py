@@ -343,6 +343,29 @@ class _WizardSession(CalibrationSession):
             return {"accept": False, "reasons": reasons + ["no pose"]}
         if reasons:
             return {"accept": False, "reasons": reasons}
+        if self.accepted:
+            nearest = None
+            try:
+                nearest = self._nearest_pose(q.pose)
+            except Exception:
+                nearest = None
+            if nearest is not None:
+                R0, t0 = nearest
+                ang = np.degrees(np.arccos(np.clip(
+                    (np.trace(np.asarray(q.pose[0]) @ np.asarray(R0).T) - 1) / 2,
+                    -1, 1)))
+                dist = abs(float(q.pose[1][2] - t0[2]))
+                # Seed diversity is deliberately weaker than the normal
+                # 8 mm/1.5 deg rule: a slow operator must still bootstrap.
+                # It is strong enough to reject an identical or near-identical
+                # view, which was the actual corruption (five copies of one
+                # pose were accepted and used as if they were independent).
+                if ang < 0.1 and dist < 0.25:
+                    return {"accept": False,
+                            "reasons": reasons + [
+                                f"too similar to an accepted view "
+                                f"(bootstrap duplicate, {ang:.1f} deg, "
+                                f"{dist:.1f} mm)"]}
         if self.seed_count >= self.seed_cap:
             return {"accept": False,
                     "reasons": reasons + ["bootstrap solve failed"]}
@@ -1047,7 +1070,10 @@ class WizardController:
         # interval makes long sessions quadratic and stalls the live path.
         try:
             n_accepted = len(self.session.accepted)
-            self.session.policy["solve_every"] = max(1, n_accepted // 12) \
+            # ~12 solves over a 35-60-view session, not one per accepted view.
+            # The old max(1, ...) made 12-23 views solve on every accept and
+            # dominated end-to-end runtime (measured 22 solves / 69 s at 33 views).
+            self.session.policy["solve_every"] = max(2, n_accepted // 12) \
                 if n_accepted >= 12 else int(self.session.policy.get("solve_every", 1))
         except Exception:
             pass
@@ -1266,6 +1292,7 @@ class WizardController:
             "quality_passed": bool((decision.quality or {}).get("passed", True)),
             "shared_markers_ir": int(info["shared_markers_ir"]),
             "assignment": _jsonable(info["assignment"]),
+            "assignment_ok": bool(info.get("assignment_ok", True)),
             "digest": record["digest"],
             "solved": bool(decision.solved),
             "bootstrap_seed": bool(seeded),
@@ -2124,7 +2151,13 @@ class WizardController:
             self._write_session_json()
             self._publish()
 
-    def resume(self) -> None:
+    def unpause(self) -> None:
+        """Resume a paused capture.
+
+        Named ``unpause`` because ``resume`` is the persisted-session API at
+        the bottom of this class; the old duplicate definition silently
+        shadowed this method and left pause unrecoverable.
+        """
         with self._lock:
             if self.state != "paused":
                 return

@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     from tools.scan.gui import ScanWindow
     from tools.scan.session import ScanConfig
-    from PySide6 import QtWidgets
+    from PySide6 import QtCore, QtWidgets
 
     source = None
     frames = Path(args.frames)
@@ -104,6 +104,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.snapshot_out:
         window.snapshot_png(args.snapshot_out)
     window.shutdown()
+    window.close()
+    window.deleteLater()
+    app.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    app.processEvents()
     frames = snap.get("frames_integrated", 0)
     rejected = snap.get("frames_rejected", 0)
     print(f"scan: frames={frames} rejected={rejected} "

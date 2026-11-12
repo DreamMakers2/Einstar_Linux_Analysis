@@ -66,7 +66,7 @@ def test_rollback_through_the_view_lands_in_the_store(tmp_path):
 def test_profiles_dialog_lists_and_gates_the_buttons(tmp_path):
     pytest.importorskip("PySide6")
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from PySide6 import QtWidgets
+    from PySide6 import QtCore, QtWidgets
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     import tools.app as launcher
 
@@ -85,4 +85,11 @@ def test_profiles_dialog_lists_and_gates_the_buttons(tmp_path):
             bool(summary["revisions"]) and active_state != "factory")
     finally:
         dialog.close()
+        dialog.deleteLater()
+        app.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
         app.processEvents()
+        try:
+            from shiboken6 import isValid
+            assert not isValid(dialog)
+        except ImportError:
+            pass

@@ -15,6 +15,15 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__(parent)
         self.controller = controller
         self.source = source
+        try:
+            value = getattr(source, "continuous", None)
+            if value is None:
+                value = getattr(getattr(source, "info", None), "continuous", True)
+            continuous = bool(value)
+            controller._continuous_override = continuous
+            controller.controller.continuous = continuous
+        except Exception:
+            pass
         self.headless = headless
         self.setWindowTitle("Einstar calibration wizard")
         self.resize(1600, 950)
@@ -212,7 +221,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self.worker is not None:
             self.worker.request_resume()
         try:
-            self.controller.resume()
+            self.controller.unpause()
         except Exception as exc:
             self._fail(str(exc))
         self.log.insertItem(0, QtWidgets.QListWidgetItem("▶ resumed"))

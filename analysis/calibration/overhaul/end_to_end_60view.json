@@ -1,0 +1,52 @@
+{
+ "accepted": 54,
+ "coverage_satisfied": 8,
+ "coverage_total": 8,
+ "cpu_effective_cores": 9.51,
+ "cpu_sys_s": 21.62,
+ "cpu_user_s": 669.53,
+ "finish": {
+  "note": "quality is advisory; all independent lifecycle gates passed",
+  "reasons": [
+   "quality status fail"
+  ],
+  "validated": true
+ },
+ "gpu_util_percent": {
+  "idle_baseline": [
+   28,
+   36
+  ],
+  "note": "no CUDA/OpenGL calibration path; overlap with background",
+  "observed": [
+   37,
+   40,
+   38,
+   39,
+   39,
+   40
+  ]
+ },
+ "maxrss_kb": 863668,
+ "mode": "standard",
+ "numerical": {
+  "factory_unchanged": true,
+  "rms_px": 0.451
+ },
+ "process_cpu_percent_max": 970,
+ "process_cpu_percent_median": 564,
+ "ready": true,
+ "rejected": 6,
+ "schema": "einstar-e2e/1",
+ "views_rendered": 60,
+ "wall_s": 72.64,
+ "worker": {
+  "decision_hz": 1.26,
+  "decision_p50_ms": 666,
+  "decision_p95_ms": 1520,
+  "groups_seen": 60,
+  "preview_hz": 1.27,
+  "preview_p50_ms": 660,
+  "preview_p95_ms": 1526
+ }
+}

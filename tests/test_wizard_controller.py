@@ -445,3 +445,36 @@ def test_a_failing_solver_does_not_stop_the_session(tmp_path, monkeypatch):
     assert ctl.session.result is None
     assert "simulated solver failure" in (ctl.session.last_solve_error or "")
     ctl.cancel()
+
+
+def test_pause_and_unpause_are_not_shadowed_by_session_resume(tmp_path):
+    """The persisted-session ``resume`` used to override the capture resume.
+
+    That left the capture paused forever after a Resume click even though the
+    GUI reported "resumed".  Keep the two APIs separate and assert both the
+    state and the capture commands.
+    """
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    if not factory.is_file():
+        pytest.skip("factory profile not available")
+    calls = []
+
+    class Capture:
+        def pause(self):
+            calls.append("pause")
+
+        def resume(self):
+            calls.append("resume")
+
+    ctl = controller.WizardController(factory_profile=str(factory),
+                                      session_dir=str(tmp_path / "s"),
+                                      mode="quick")
+    ctl.begin()
+    ctl.capture = Capture()
+    ctl.state = "recording"
+    ctl.pause()
+    assert ctl.state == "paused" and calls == ["pause"]
+    ctl.unpause()
+    assert ctl.state == "recording" and calls == ["pause", "resume"]
+    assert callable(ctl.resume) and ctl.resume.__doc__

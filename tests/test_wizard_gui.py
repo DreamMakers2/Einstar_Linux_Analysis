@@ -102,16 +102,13 @@ def test_vendor_corpus_session_if_available(tmp_path):
     data = json.loads((out / "manifest.json").read_text())
     accepted = data.get("accepted") or data.get("views") or []
     assert len(accepted) >= 5
-    # the finish path must produce a candidate and a full gate report
-    candidate = out / "candidate" / "profile.json"
-    validation = out / "candidate" / "validation.json"
-    assert candidate.is_file() and validation.is_file()
-    profile = json.loads(candidate.read_text())
-    assert profile.get("validation") == "pending"
-    report = json.loads(validation.read_text())
-    lc = report.get("lifecycle_validate") or {}
-    assert lc.get("gates"), lc
-    assert (out / "report.md").is_file()
+    # The vendor corpus is a still collection with only 5/8 coverage
+    # dimensions on this mount.  The finish action must be refused rather than
+    # writing a candidate while the window says "validated".
+    assert summary.get("ready") == "False", summary
+    assert not (out / "candidate" / "profile.json").exists()
+    missing = str(summary.get("missing") or "")
+    assert "tilt" in missing or "region" in missing, summary
 
 
 def test_closing_a_window_during_a_long_solve_never_aborts(tmp_path):

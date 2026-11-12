@@ -1,0 +1,31 @@
+{
+ "accepted": 33,
+ "coverage_satisfied": 8,
+ "coverage_total": 8,
+ "cpu_effective_cores": 8.27,
+ "cpu_sys_s": 13.58,
+ "cpu_user_s": 339.84,
+ "finish": {
+  "reasons": [],
+  "validated": true
+ },
+ "maxrss_kb": 642308,
+ "mode": "standard",
+ "notes": "Synthetic still collection rendered through the real ModernMainWindow/SessionWorker path. The low Hz is the still-source render/detect cadence, not live acquisition.",
+ "process_cpu_percent_max": 828,
+ "process_cpu_percent_median": 468,
+ "ready": true,
+ "rejected": 3,
+ "schema": "einstar-e2e/1",
+ "views_rendered": 36,
+ "wall_s": 41.08,
+ "worker": {
+  "decision_hz": 1.35,
+  "decision_p50_ms": 660,
+  "decision_p95_ms": 1208,
+  "groups_seen": 36,
+  "preview_hz": 1.35,
+  "preview_p50_ms": 658,
+  "preview_p95_ms": 1208
+ }
+}

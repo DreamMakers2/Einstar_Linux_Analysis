@@ -1,0 +1,18 @@
+{
+ "accepted": 16,
+ "candidate_produced": false,
+ "coverage_satisfied": 5,
+ "coverage_total": 8,
+ "factory_unchanged": true,
+ "finish_refused": true,
+ "missing": [
+  "tilt x positive/negative",
+  "tilt quadrants",
+  "roll sectors",
+  "image regions"
+ ],
+ "ready": false,
+ "rejected": 9,
+ "schema": "einstar-refusal/1",
+ "source": "vendor-calib-rapid still collection"
+}

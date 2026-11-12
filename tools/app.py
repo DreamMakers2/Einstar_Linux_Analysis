@@ -161,15 +161,35 @@ class Launcher(QtWidgets.QMainWindow):
     def show_profiles(self) -> None:
         """Open the profile manager (list, active state, rollback)."""
         self._refresh_profile_text()
+        old = getattr(self, "_profiles", None)
+        if old is not None:
+            try:
+                old.close()
+                old.deleteLater()
+            except Exception:
+                pass
         self._profiles = ProfilesDialog(self.args.store, self)
+        self._profiles.setAttribute(
+            QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self._profiles.destroyed.connect(self._profiles_destroyed)
         self._profiles.show()
 
+    def _profiles_destroyed(self, *_args) -> None:
+        self._profiles = None
+
     def closeEvent(self, event) -> None:  # noqa: N802
+        profiles = getattr(self, "_profiles", None)
+        if profiles is not None:
+            try:
+                profiles.close()
+            except Exception:
+                pass
         for win in (self._wizard, self._scan):
             try:
                 if win is not None:
                     win.shutdown()
                     win.close()
+                    win.deleteLater()
             except Exception:
                 pass
         super().closeEvent(event)
@@ -223,13 +243,19 @@ class ProfilesDialog(QtWidgets.QDialog):
         lay.addLayout(buttons)
 
         self.refresh_btn.clicked.connect(self.reload)
-        self.serial_box.currentIndexChanged.connect(lambda _i: self.reload())
+        self.serial_box.currentIndexChanged.connect(self._on_serial_changed)
         self.rollback_sel.clicked.connect(self.rollback_selected)
-        self.rollback_factory.clicked.connect(lambda: self.rollback(None))
+        self.rollback_factory.clicked.connect(self._rollback_factory)
         close.clicked.connect(self.accept)
 
         self._populate_serials()
         self.reload()
+
+    def _on_serial_changed(self, _index: int) -> None:
+        self.reload()
+
+    def _rollback_factory(self) -> None:
+        self.rollback(None)
 
     # -- data ------------------------------------------------------------
     def _populate_serials(self) -> None:
@@ -311,8 +337,16 @@ def main(argv: list[str] | None = None) -> int:
     launcher.show()
     if args.headless:
         app.processEvents()
+        launcher.close()
+        launcher.deleteLater()
+        app.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+        app.processEvents()
         return 0
-    return int(app.exec())
+    rc = int(app.exec())
+    launcher.deleteLater()
+    app.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
+    app.processEvents()
+    return rc
 
 
 if __name__ == "__main__":

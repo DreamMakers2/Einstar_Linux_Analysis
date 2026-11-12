@@ -1,0 +1,17 @@
+{
+ "accepted": 8,
+ "coverage_satisfied": 1,
+ "coverage_total": 8,
+ "decision_hz": 3.86,
+ "decision_p95_ms": 598.5,
+ "duration_s": 30,
+ "groups_seen": 115,
+ "note": "Replay uses the deterministic synchronous decision path; preview is therefore tied to decision rate. Live uses the split reader/decision path and held 9.7 Hz preview at 9.7 groups/s.",
+ "preview_hz": 3.81,
+ "preview_p50_ms": 194.4,
+ "preview_p95_ms": 605.2,
+ "ready": false,
+ "rejected": 106,
+ "schema": "einstar-moving-replay/1",
+ "source": "sweep-b 350-group real moving-plate recording"
+}

@@ -1,0 +1,24 @@
+{
+ "accepted": 35,
+ "candidate": "/tmp/einstar-bench-lebi_lrj/candidate/profile.json",
+ "error": null,
+ "factory_unchanged": true,
+ "finish_s": 3.6119645399994624,
+ "ok": true,
+ "resume": {
+  "accepted": 35,
+  "next_view": 35,
+  "resumed": true,
+  "solved": true,
+  "views": 105
+ },
+ "resume_s": 0.6196168650003528,
+ "rms_px": 0.3303700309229841,
+ "schema": "einstar-bench-finalize/1",
+ "session": "<calibration-session>",
+ "solve_seconds": 1.006633996963501,
+ "solves": 2,
+ "state": "done",
+ "verdict": "pending",
+ "would_activate": false
+}

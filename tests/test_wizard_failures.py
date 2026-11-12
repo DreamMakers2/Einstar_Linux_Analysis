@@ -86,7 +86,9 @@ def test_repeated_viewpoints_are_refused(tmp_path: Path) -> None:
     assert rec["coverage"]["ready"] is False
     assert rec["candidate"]["would_activate"] is False
     assert rec["verdict"] == "correctly refused"
-    assert rec["validation"]["passed"] is False
+    # Coverage not ready means the UI refuses to start a final solve; if a
+    # caller forces one, validation must still not report a pass.
+    assert (rec.get("validation") or {}).get("passed") is not True
 
 
 # ---------------------------------------------------------------------------

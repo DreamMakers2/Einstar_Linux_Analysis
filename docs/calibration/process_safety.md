@@ -195,3 +195,15 @@ headroom at 39 MB/s). This prevents the failure observed in the first soak
 attempt: a 32 GB tmpfs filled to 5.5 MB, the writer stopped and the final status
 was lost. The guard is tested as a pure decision (`disk_guard_reason`) and the
 subsequent 120 s live run used 24 GB free and finished with verified cleanup.
+
+## Pause/resume API collision (found 2026-11-12)
+
+`WizardController` had two methods named `resume`: the pause-resume action and
+the persisted-session restore. The later definition shadowed the former, so a
+Resume click set the worker's flag and changed the GUI, but never sent the
+capture `resume` command. The capture stayed paused (2.6 groups/s, 152 transfer
+timeouts in a 26 s run). Fixed by adding `unpause()` for the capture action;
+`test_pause_and_unpause_are_not_shadowed_by_session_resume` asserts both the
+state and the capture commands. After the fix, 22.8 s pause/resume: 188 groups,
+32.65 MB/s, preview 7.7 Hz p95 144 ms, cleanup verified. The USB timeout count
+(24 vs 8 without pause) is reported, not hidden.

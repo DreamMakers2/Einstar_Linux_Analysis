@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-12.  This working tree: **422 Python tests**, 13/13 driver
+Date: 2026-11-12.  This working tree: **429 Python tests**, 13/13 driver
 C++ tests, 1/1 reconstruction C++ tests, plus 8 real parent/child process-safety
 tests.  The previous published HEAD was `aa030c7`; this milestone is committed
 separately.
@@ -24,6 +24,11 @@ separately.
 | auto exposure | IR 1200→2343 µs, RGB 5000→9765 µs in 12 s; volatile only; every change logged | `docs/calibration/auto_exposure.md` |
 | process death | GUI `SIGKILL` → capture stops, trigger 0/0, illuminator readback 0, `cleanup_verified` | `docs/calibration/process_safety.md` |
 | child death | capture-child `SIGKILL` → parent runs volatile `--safe-off`, trigger readback 0/0 and illuminator readback 0 verified, GUI error surfaced, no orphan | same, `analysis/calibration/overhaul/capture_child_sigkill.json` |
+| Qt teardown | proven unparented-dialog/lambda cycle; fixed deletion + bound methods; 8/8 fresh-process exit checks | `analysis/calibration/overhaul/qt_teardown_root_cause.md` |
+| realistic E2E | 33 accepted, 8/8 READY, **would_activate true**, 41.1 s, 8.3 cores, 642 MB | `analysis/calibration/overhaul/end_to_end_33view.json` |
+| 54-view E2E | 54 accepted, 8/8, validated with quality advisory, 72.6 s, 864 MB | `analysis/calibration/overhaul/end_to_end_60view.json` |
+| refusal | vendor stills 16 accepted, 5/8, no candidate written | `analysis/calibration/overhaul/vendor_refusal.json` |
+| pause/resume | shadowed `resume` fixed; 188 groups, 32.65 MB/s, cleanup verified | `analysis/calibration/overhaul/live_pause_resume.json` |
 | 120 s soak | 9.96 groups/s, 39.2 MB/s, 0 transfer timeouts, 3 startup drops, preview 9.96 Hz p95 117 ms, cleanup verified | `analysis/calibration/overhaul/sustained_soak_120s.json` |
 | auto-exposure stability | 3 changes in 60 s and 120 s, then fixed; plate-ROI metering removed the 55-change oscillation | `docs/calibration/auto_exposure.md` |
 | 49–60-view scaling | 60-view solve 2.53 s; 49-accepted synthetic finish 4.96 s, RMS 0.413 px | `analysis/calibration/overhaul/solver_scaling_20_60.json`, `synthetic_finish_49view.json` |

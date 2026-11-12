@@ -293,3 +293,96 @@ PYTHONPATH="$PWD/tools:$PWD" \
 EINSTAR_CAPTURE_TEST_BINARY="$PWD/build/driver/einstar-capture-frames" \
 bash scripts/verify_all.sh
 ```
+
+## 2. Acceptance round (2026-11-12, later)
+
+### 2.1 Qt teardown crash
+
+Root cause proven and fixed: an unparented `ProfilesDialog` kept alive by two
+self-capturing lambdas in `tools/app.py`; PySide6's shutdown visitor freed the
+dialog's children before the binding manager visited their wrappers. A focused
+test reproduced 22/60; the fix removes the cycle, deletes the dialog, deletes
+stopped QThreads, and an 8-process exit-code regression now passes. Details:
+`analysis/calibration/overhaul/qt_teardown_root_cause.md`.
+
+### 2.2 Realistic diverse-view calibration (synthetic, full application)
+
+36 rendered views (`coverage-mid`, seed 7, 1.5 px factory perturbation) through
+`ModernMainWindow` -> `SessionWorker` -> `WizardController`:
+
+| metric | result |
+|---|---:|
+| accepted / rejected | **33 / 3** |
+| coverage | **8/8**, READY |
+| wall time | **41.1 s** |
+| CPU user / effective cores | 339.8 s / **8.27** |
+| peak RSS | **642 MB** |
+| finish verdict | **would_activate true**, all independent gates pass |
+| factory profile | byte-identical |
+
+A larger 60-view run accepted **54** views, reached 8/8, and validated in
+**72.6 s** (669.5 s CPU, 9.51 effective cores, 864 MB peak RSS; GPU observed
+37–40 % vs 28–36 % idle, no calibration GPU path). The 33-view run finished
+with no quality advisory; the 54-view run passed all independent gates with a
+quality-report advisory (displayed as such, not as "all gates").
+
+The vendor still corpus (16 accepted, 5/8 coverage) is refused: no candidate is
+written. Evidence: `analysis/calibration/overhaul/end_to_end_33view.json`,
+`end_to_end_60view.json`, `vendor_refusal.json`.
+
+### 2.3 35-view numerical acceptance
+
+`bench_finalize` on the preserved 35-view session:
+
+| metric | before | after |
+|---|---:|---:|
+| finish wall | 38.94 s | **3.61 s** (10.8×) |
+| held-out RMS | 0.33044 px | **0.33037 px** |
+| accepted views | 35 | 35 |
+| factory SHA | unchanged | unchanged |
+
+The 3.61 s run is within run-to-run noise of the previous 3.47 s; no numerical
+regression is claimed beyond the measured residual. Parameter/covariance
+equivalence remains covered by `tests/test_solver_equivalence.py`.
+
+### 2.4 Live pause/resume defect found and fixed
+
+The live harness initially showed 2.6 groups/s, 152 transfer timeouts and a
+capture stuck in `paused` after Resume. Root cause: `WizardController` defined
+`resume()` twice; the persisted-session method shadowed the capture-resume
+method, so the GUI changed the worker flag but never wrote the capture `resume`
+command. Added `unpause()` with a regression test (`test_pause_and_unpause...`).
+
+After the fix, a 22.8 s pause/resume run produced **188 groups**, 32.65 MB/s,
+preview 7.7 Hz p95 144 ms, 24 transfer timeouts, zero dropped frames, verified
+cleanup and trigger/illuminator readback 0. A no-pause control produced
+9.70 Hz/38.36 MB/s/8 timeouts. Pause costs some USB transfers; it is not a
+zero-timeout operation, but it recovers and records correctly.
+
+### 2.5 GUI trust fixes
+
+The operator window now distinguishes idle, recording, paused, finishing,
+source-ended, validated, unvalidated and error states; it no longer says
+"validated" for a pending candidate, no longer offers Start after a finished
+session, disables Stop outside recording, holds accepted-view confirmation over
+rejections, reports replay FPS from the worker rather than 0.0, suppresses
+guidance when not recording, and supports the 1180-wide layout by shrinking the
+side column and feeds. The 3-D scanner view now uses a fixed sensor mapping so
+translation/distance change the drawing. See `modern_ui.md`.
+
+### 2.6 Remaining limits
+
+The positive sessions are still synthetic stills, not a physical moving plate;
+the preserved real sweep reaches only 2/8 coverage and the complete real
+35-view ring cannot be replayed beyond 12 s. A full operator calibration is
+still required for absolute accuracy. Pause/resume leaves a nonzero USB
+timeout count. The Qt fix passed focused exit-code loops; the sanitized public
+suite still needs its post-export run.
+
+A 30 s replay of the real moving-plate sweep (`sweep-b`, 350 groups) processed
+115 groups and accepted 8 at 3.8 Hz, but stayed at 1/8 coverage. Replay uses the
+synchronous deterministic decision path, so preview is tied to decision rate;
+live uses the split path and held 9.7 Hz. The complete READY/validated runs are
+synthetic still collections, not a physical moving plate. This is the main
+remaining acceptance gap and is not presented as a passing moving-plate
+calibration.
