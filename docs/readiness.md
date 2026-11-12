@@ -116,7 +116,7 @@ plate alone.
 |---|---|
 | live scanning on hardware | **verified**: 4/4 frames captured, tracked and fused from the physical device, capture stopped cleanly, trigger 0/0 and illuminator 0 % afterwards |
 | depth reconstruction | 35 ms/frame at scale 0.25, 132 ms at 0.5 (C++ engine) |
-| tracking | robust point-to-plane ICP, 31 ms/pair on the sweep, degeneracy signal reported |
+| tracking | **projective ICP on the engine's depth maps is the scanner default**: near-object depth mask, 0.24 deg median tilt error at scale 0.5 against the plate's own PnP pose (cloud path 0.58 deg), 0.06 deg at scale 1.0; falls back to the cloud tracker when depth maps are unavailable; degeneracy and loss signals reported |
 | fusion + meshing | TSDF + marching cubes; sphere recovered to 0.03 mm p95; fused plate 0.60 mm thick across 12 independent poses |
 | colour registration | **geometry fixed**: shipped record 461 px, re-fitted to 0.34 px held-out and 0.32 px on an independent session; engine reports `color ok`, colour_fraction 1.00. **White balance** removes a measured 29.2 % cast to 2.5 % (recorded per scan). Photometry still needs a colour-lit scene: ambient-only at the 10 ms exposure limit reaches p99 luminance 37/255. |
 | export | OBJ, PLY, STL and a reopenable project document |

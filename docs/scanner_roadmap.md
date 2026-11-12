@@ -128,5 +128,11 @@ Extend the existing Qt application rather than writing a second one:
   report must say so.
 * The plate pitch (28 mm) and the ~1 % scale discrepancy remain unresolved; a
   profile may be geometrically validated and still carry that scale.
-* Tracking accuracy cannot be validated on a one-axis sweep alone.
-* The colour extrinsic is stale until a colour session is recorded.
+* Tracking *rotation* is validated on the sweep against the plate's own PnP pose
+  (0.06 deg at scale 1.0, 0.24 deg at 0.5); in-plane translation is not, because
+  a plane cannot observe it and the background has no independent reference.
+  A rigid-target sequence with measured motion would close it.
+* The colour *extrinsic* is fixed and cross-session validated (0.32 px); colour
+  *photometry* needs a lit scene (ambient reaches p99 luminance 37/255 at the
+  10 ms exposure limit), and white balance removes a measured 29 % cast but is
+  not colorimetric calibration.

@@ -328,6 +328,15 @@ split is:
 * **reprocessing and offline work can use the projective path** at scale >= 0.5,
   where the measured accuracy is much better and time is not the constraint.
 
+**Update (later round):** the shipped default is now `tracking="projective"`.
+The cost estimate above assumed the *unmasked* depth map (409 ms at scale 0.5);
+with the near-object mask the ICP drops to ~55-200 ms, and the end-to-end scan
+loop is only ~13 % slower (~3.5 fps against ~4 fps).  Measured against the
+plate's PnP pose on real frames the median tilt error is 0.24 deg at scale 0.5
+against 0.58 deg for the cloud path, so the accuracy is worth that cost.  The
+cloud path remains as the fallback when a depth map or its rectified intrinsics
+are unavailable.
+
 `align_projective(..., max_points=N)` subsamples by stride for that tradeoff
 (measured: 6 k points give 32 ms at scale 0.5 masked, 0.43° error).
 
