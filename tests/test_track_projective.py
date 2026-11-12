@@ -214,8 +214,10 @@ def test_real_frames_beat_the_cloud_baseline_on_the_same_points():
 def test_projective_tilt_matches_the_plate_reference_on_real_frames(tmp_path):
     """The plate is a rigid target: its PnP tilt is an independent reference.
 
-    The depth map is masked to the plate polygon, so the comparison is
-    like-for-like.  Tilt is the *observable* component on a plane; in-plane
+    The depth map is masked with ``object_mask`` - the near-depth band, which
+    uses **no plate detection and no pose** - so the comparison is not
+    circular: the mask comes from depth alone and the reference comes from the
+    markers.  Tilt is the *observable* component on a plane; in-plane
     translation is not, which is why only the rotation is asserted.
 
     Resolution matters and is measured: at scale 1.0 the depth noise is ~0.17 mm
@@ -262,17 +264,12 @@ def test_projective_tilt_matches_the_plate_reference_on_real_frames(tmp_path):
             pytest.skip("full-resolution reconstruction unavailable")
         outdirs.append(out)
 
-    def masked(path, hull):
+    def masked(path):
         frame = pj.load_depth(path)
-        d = frame.depth_mm.copy()
-        m = np.zeros(d.shape, np.uint8)
-        cv2.fillConvexPoly(m, hull, 255)
-        m = cv2.erode(m, np.ones((9, 9), np.uint8))
-        d[m == 0] = 0
-        return pj.DepthFrame(d, frame.K, frame.confidence)
+        return pj.mask_to_object(frame, pj.object_mask(frame))
 
-    frames = [masked(d / "recon_depth_mm.tiff", h) for d, h in zip(outdirs, hulls)]
-    assert all(int(f.valid.sum()) > 10000 for f in frames), \
+    frames = [masked(d / "recon_depth_mm.tiff") for d in outdirs]
+    assert all(int(f.valid.sum()) > 50000 for f in frames), \
         [int(f.valid.sum()) for f in frames]
     diffs = []
     for i in range(1, len(ids)):
@@ -282,3 +279,26 @@ def test_projective_tilt_matches_the_plate_reference_on_real_frames(tmp_path):
         got = float(pj.align_projective(frames[i - 1], frames[i])["rotation_deg"])
         diffs.append(abs(got - ref))
     assert max(diffs) < 0.25, diffs
+
+
+def test_object_mask_selects_the_near_surface_without_a_plate():
+    """Depth-only segmentation: near band, no detection, no pose.
+
+    Connected components were tried and rejected (they fragment on ~30 % valid
+    depth); this asserts the band rule keeps a whole near surface and leaves the
+    far background out.
+    """
+    h, w = 240, 256
+    near = np.full((h // 2, w), 400.0, np.float32)
+    far = np.full((h // 2, w), 900.0, np.float32)
+    depth = np.vstack([near, far])
+    frame = pj.DepthFrame(depth, K)
+    mask = pj.object_mask(frame, band_mm=200.0)
+    assert mask[: h // 2].mean() > 0.99
+    assert mask[h // 2:].mean() < 0.01
+    masked = pj.mask_to_object(frame, mask)
+    assert int(masked.valid.sum()) == (h // 2) * w
+    # a sparse frame falls back to "everything valid" instead of failing
+    sparse = np.zeros((h, w), np.float32)
+    sparse[::20, ::20] = 400.0
+    assert pj.object_mask(pj.DepthFrame(sparse, K)).sum() == (sparse > 0).sum()

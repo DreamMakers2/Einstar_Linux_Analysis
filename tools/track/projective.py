@@ -31,8 +31,8 @@ try:
 except Exception:  # pragma: no cover
     cv2 = None
 
-__all__ = ["DepthFrame", "load_depth", "normals_from_depth",
-           "align_projective", "surface_consistency"]
+__all__ = ["DepthFrame", "load_depth", "normals_from_depth", "object_mask",
+           "mask_to_object", "align_projective", "surface_consistency"]
 
 
 @dataclass
@@ -106,6 +106,42 @@ def load_depth(path, K: np.ndarray | None = None, confidence_path=None, *,
                 conf = conf[..., 0]
             conf = np.asarray(conf, np.float32)
     return DepthFrame(depth, np.asarray(K, float), conf)
+
+
+def object_mask(frame: DepthFrame, *, near_percentile: float = 5.0,
+                band_mm: float = 200.0, min_pixels: int = 500) -> np.ndarray:
+    """A depth-only mask for the surface nearest the sensor.
+
+    A static background damps a moving object's motion (measured: tilt 0.47 deg
+    over the whole cloud against 0.06 deg with the near band), so the tracker
+    needs to know what it is tracking.  This selects everything within
+    ``band_mm`` of the near depth percentile: no plate detection, no pose, no
+    connected-component labelling.
+
+    Connected components were tried first and were **worse**: with ~30 % valid
+    depth the plate fragments into many small components, so picking "the
+    component containing the nearest pixels" selected only ~1 500 px of a
+    ~230 000 px near surface, and the recovered tilt was 0.68 deg median with a
+    7.9 deg outlier.  The plain band keeps the surface whole.
+
+    Returns an all-valid mask when the frame is too sparse to band.
+    """
+    d = np.asarray(frame.depth_mm, np.float32)
+    valid = np.isfinite(d) & (d > 0)
+    if int(valid.sum()) < int(min_pixels):
+        return valid
+    near = float(np.percentile(d[valid], float(near_percentile)))
+    band = valid & (d <= near + float(band_mm))
+    if int(band.sum()) < int(min_pixels):
+        return valid
+    return band
+
+
+def mask_to_object(frame: DepthFrame, mask: np.ndarray) -> DepthFrame:
+    """Return a frame with the unmasked pixels invalidated."""
+    d = np.array(frame.depth_mm, copy=True)
+    d[~np.asarray(mask, bool)] = 0
+    return DepthFrame(d, frame.K, frame.confidence)
 
 
 def normals_from_depth(depth: np.ndarray, K: np.ndarray) -> np.ndarray:

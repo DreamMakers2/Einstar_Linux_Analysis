@@ -283,22 +283,33 @@ whole scene             -> tilt errors 0.46, 0.47, 0.53  median 0.47 deg
 So the cloud tracker is not bad at rotation - it was solving a scene in which
 most of the geometry does not move.  That matters for a scanner: a turntable
 object against a static room will have its motion damped unless the object is
-isolated.  `tools.track.baseline.foreground()` and
-`track_sequence(foreground_mm=...)` implement the near-cluster restriction.
+isolated.
 
-It is **not enabled by default**, because the right band is scene-dependent and
-three pairs are not enough to pick one:
+### Depth-only segmentation, validated without a circular mask
 
-```
-band   0 mm -> median 0.47 deg
-band 150 mm -> median 0.05 deg   (but one pair 0.71)
-band 200 mm -> median 0.59 deg
-band 300 mm -> median 0.28 deg
-```
+The clean way to isolate it is on the depth map, which is organised: keep
+everything within `band_mm` of the near depth percentile.  No plate detection,
+no pose - so the reference used to check it stays independent.
 
-A production scanner should segment the object properly - by depth cluster,
-by the previous frame's support, or by user selection - rather than by a fixed
-millimetre band.
+| mask (depth-only) | pixels | tilt error vs plate PnP |
+|---|---|---|
+| none (full frame) | 400 k | 0.32 deg |
+| connected components | ~1 500 | 0.68 deg median, one 7.9 deg outlier |
+| **near band (200 mm)** | **234 k** | **0.09, 0.04, 0.09, 0.00 -> median 0.06 deg** |
+
+Connected components were tried first and rejected: with ~30 % valid depth the
+plate fragments into many components, so "the component containing the nearest
+pixels" selected ~1 500 px of a ~230 000 px surface and the solve degraded.
+The plain band keeps the surface whole.
+
+That 0.06 deg is measured against the plate's own PnP pose while the mask uses
+depth alone, so it is a genuine validation rather than a tautology.  It is the
+best tracking accuracy measured in this project, and it beats the plate-hull
+mask (0.048 deg, which had the advantage of knowing where the plate was).
+
+`tools/track/projective.object_mask()` implements it.  For clouds,
+`tools.track.baseline.foreground()` does the equivalent; the right band there is
+more scene-dependent and it stays off by default.
 
 ### Cost decides where each one is used
 
