@@ -1,0 +1,20 @@
+{
+ "action": "SIGKILL of the capture child while the GUI stayed alive",
+ "capture_safe_off": {
+  "attempted": true,
+  "ok": true,
+  "readback": "trigger readback 0/0, illuminator readback 0 (volatile only)",
+  "returncode": 0,
+  "tool_mode": "einstar-capture-frames --backend libusb --safe-off"
+ },
+ "gui_exit_code": 0,
+ "limitations": [
+  "The child status file remains stale.",
+  "Direct SIGKILL of the child is not a graceful recording finalization.",
+  "Kernel/power loss is out of scope."
+ ],
+ "orphan_capture_processes": 0,
+ "schema": "einstar-capture-child-failure/1",
+ "stale_status_note": "The killed child could not publish a stopped status; the parent recovery is the authority for the volatile off commands. Optical darkness is not verified.",
+ "ui_error": "acquisition reader: SourceError: capture process exited unexpectedly: emergency safe-off verified (volatile readback)"
+}

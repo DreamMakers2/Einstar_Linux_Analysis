@@ -1,0 +1,12 @@
+{
+ "accepted": 49,
+ "candidate_validation": "pending",
+ "finish_s": 4.96,
+ "note": "No hardware; synthetic ground truth. The 35-view real session remains the primary finish benchmark; this shows 49-view scaling.",
+ "ok": true,
+ "rms_px": 0.413002,
+ "schema": "einstar-bench-synthetic-finish/1",
+ "source": "calib.synth + SyntheticSource, 60 diverse poses seeded 7; 49 accepted",
+ "state": "done",
+ "views_requested": 60
+}

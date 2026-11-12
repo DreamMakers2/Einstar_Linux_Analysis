@@ -91,3 +91,23 @@ gated on a valid colour extrinsic; auto exposure does not change that gate.
   prefers exposure/gain first.
 * `laser_percent` 0 after stop is a command/readback result. Optical darkness
   cannot be proven from software.
+
+## Plate-ROI metering (fix for hunting)
+
+The first 180 s soak changed exposure **55 times**, oscillating IR between
+2340 and 2925 µs. The cause was metering the whole frame: the dark background
+dominated the median, so the advisor kept raising exposure until bright
+markers/speckle hit the saturation rule, then lowered it again.
+
+The fix meters the plate itself:
+
+* IR/RGB brightness and contrast come from the bounding box of the latest
+  detected markers (`FrameStats.from_image(..., bbox=...)`), with 15 % padding.
+* Saturation and p99 still come from the full sensor, so bright markers do not
+  masquerade as plate exposure and clipping is still detected.
+* The colour camera uses its own marker bbox.
+
+After the fix, a 60 s run made **3 changes** total (IR 1200→1500 µs; RGB
+5000→9765 µs) and then stayed fixed. A 120 s soak made the same 3 changes,
+with preview 9.96 Hz p95 117 ms, 0 transfer timeouts, 3 startup frame drops and
+verified cleanup. See `analysis/calibration/overhaul/sustained_soak_120s.json`.

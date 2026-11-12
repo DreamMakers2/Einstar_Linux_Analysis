@@ -80,6 +80,7 @@ struct Options {
   bool json = false;
   bool show_serial = false;
   bool probe_only = false;
+  bool safe_off = false;
   std::optional<unsigned> laser_percent;
   double progress_seconds = 0.0;
   std::string status_file;
@@ -177,6 +178,7 @@ void print_usage() {
       "  --json               print a machine-readable summary on stdout\n"
       "  --show-serial        do not redact the device serial in logs/manifest\n"
       "  --probe-only         libusb: read metadata + calibration, change nothing\n"
+      "  --safe-off           libusb: stop trigger, strobe and laser; no streaming\n"
       "\n"
       "SIGINT/SIGTERM perform the same graceful stop as the 'stop' command: the\n"
       "trigger is stopped, the illuminator is set to 0 and the recording and\n"
@@ -753,6 +755,59 @@ Status verify_illuminator_off(ControlChannel& channel, DeviceInfo* device = null
   return Status::success();
 }
 
+/// Emergency host-side cleanup after a capture child died without its own
+/// stop path.  It opens the scanner, stops the trigger and turns every
+/// illuminator channel off using volatile commands, then verifies the readback.
+int run_libusb_safe_off(const Options&) {
+  LibUsbTransport transport{LibUsbTransport::Config{}};
+  const Status open_status = transport.open();
+  if (!open_status.ok()) {
+    std::fprintf(stderr, "safe-off: cannot open scanner: %s\n",
+                 open_status.message().c_str());
+    return 1;
+  }
+  ControlConfig config;
+  ControlChannel channel(transport, config);
+  auto identity = channel.open();
+  if (!identity) {
+    std::fprintf(stderr, "safe-off: control channel failed: %s\n",
+                 identity.error().message().c_str());
+    channel.close();
+    transport.close();
+    return 1;
+  }
+  bool ok = true;
+  if (const Status stopped = channel.stop_streaming(); !stopped.ok()) {
+    std::fprintf(stderr, "safe-off: stop_streaming failed: %s\n",
+                 stopped.message().c_str());
+    if (const Status zero = channel.set_trigger_counts(0, 0); !zero.ok()) {
+      std::fprintf(stderr, "safe-off: zero trigger failed: %s\n",
+                   zero.message().c_str());
+      ok = false;
+    }
+  }
+  if (!turn_illuminator_off(channel).ok()) {
+    ok = false;
+  }
+  if (!verify_illuminator_off(channel).ok()) {
+    ok = false;
+  }
+  auto counts = channel.trigger_counts();
+  if (!counts || counts->mono != 0 || counts->rgb != 0) {
+    std::fprintf(stderr, "safe-off: trigger readback is %s\n",
+                 counts ? (std::to_string(counts->mono) + "/" +
+                           std::to_string(counts->rgb)).c_str()
+                        : "unavailable");
+    ok = false;
+  } else {
+    std::printf("safe-off: trigger readback 0/0, illuminator readback 0, "
+                "volatile only\n");
+  }
+  channel.close();
+  transport.close();
+  return ok ? 0 : 1;
+}
+
 // Covers setup errors and unwinding before the session driver takes over.
 struct SetupSafetyCleanup {
   ControlChannel& channel;
@@ -1032,6 +1087,9 @@ class LiveSessionDriver final : public CaptureSessionDriver {
 };
 
 int run_libusb(const Options& options) {
+  if (options.safe_off) {
+    return run_libusb_safe_off(options);
+  }
   if (!options.probe_only && options.groups == 0 &&
       options.control_path.empty() && options.max_seconds <= 0.0) {
     return usage_error(
@@ -1429,6 +1487,8 @@ int main(int argc, char** argv) try {
       options.show_serial = true;
     } else if (argument == "--probe-only") {
       options.probe_only = true;
+    } else if (argument == "--safe-off") {
+      options.safe_off = true;
     } else if (argument == "--help" || argument == "-h") {
       show_help = true;
     } else {

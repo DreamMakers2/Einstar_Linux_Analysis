@@ -591,6 +591,25 @@ class RecordingSource(ReplayDirSource):
 # live capture
 # ---------------------------------------------------------------------------
 
+def disk_guard_reason(status: Mapping[str, Any] | None,
+                      min_free_gb: float = 2.0) -> str | None:
+    """Return a stop reason when live capture is about to fill the volume."""
+    if not isinstance(status, Mapping) or status.get("state") != "running":
+        return None
+    free_gb = status.get("disk_free_gb")
+    if free_gb is None:
+        return None
+    try:
+        free = float(free_gb)
+    except (TypeError, ValueError):
+        return None
+    if free >= float(min_free_gb):
+        return None
+    return (f"disk space guard: only {free:.2f} GB free "
+            f"(< {float(min_free_gb):.1f} GB); capture stopped to preserve "
+            "the recording and final status")
+
+
 class LiveSource:
     """Follow one supervised ``einstar-capture-frames`` ring directory.
 
@@ -610,7 +629,8 @@ class LiveSource:
     def __init__(self, session_dir: str | Path, *,
                  capture_args: Mapping[str, Any] | Any,
                  profile: Any | None = None,
-                 max_lag: int = 1) -> None:
+                 max_lag: int = 1,
+                 min_free_gb: float = 2.0) -> None:
         if _capture is None:  # pragma: no cover - capture.py is shipped in-package
             raise SourceError("tools.wizard.capture is unavailable")
         self.session_dir = Path(session_dir)
@@ -623,6 +643,9 @@ class LiveSource:
         #: how many unseen groups may wait before the oldest are dropped; -1
         #: keeps every group in order (used by tests that need completeness)
         self.max_lag = int(max_lag)
+        #: Stop before the filesystem fills completely.  At ~39 MB/s this is
+        #: about 50 s of headroom, enough to finalise the recording and status.
+        self.min_free_gb = float(min_free_gb)
         self.dropped_for_lag = 0
         #: groups dropped by the lag bound (recorded for diagnostics; the frames
         #: themselves stay in the capture tool's raw recording)
@@ -746,6 +769,26 @@ class LiveSource:
                 self._next_index += 1
                 yield group
             status = self.capture.status()
+            guard = disk_guard_reason(status, self.min_free_gb)
+            if guard is not None:
+                # A full volume loses the final status, the recording trailer
+                # and the operator's session.  Stop with margin instead.
+                try:
+                    self.capture.stop(reason="disk space guard")
+                except Exception:
+                    pass
+                raise SourceError(guard)
+            if (status.get("state") != "stopped"
+                    and self.capture.process_exited()):
+                verdict = self.capture.check_safe_final_state()
+                self.final_verdict = verdict
+                safe = (verdict.get("safe_off") or {}).get("ok")
+                detail = ("emergency safe-off verified (volatile readback)"
+                          if safe else
+                          ("; ".join(verdict.get("reasons") or [])
+                           or "no final status"))
+                raise SourceError(
+                    "capture process exited unexpectedly: " + detail)
             if status.get("state") == "stopped" and self.capture.process_exited():
                 # one final drain so files written just before exit are not lost
                 files = scan_frame_files(self.frames_dir)

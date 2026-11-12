@@ -23,6 +23,7 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 from tools.wizard import sources, types  # noqa: E402
+from tools.wizard.sources import disk_guard_reason  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -416,3 +417,11 @@ def test_live_capture_status_reaches_the_controller(tmp_path):
             src.close()
         finally:
             pass
+
+
+def test_disk_guard_stops_before_the_volume_fills():
+    assert disk_guard_reason({"state": "running", "disk_free_gb": 2.5}, 2.0) is None
+    reason = disk_guard_reason({"state": "running", "disk_free_gb": 0.5}, 2.0)
+    assert reason is not None and "disk space guard" in reason
+    assert disk_guard_reason({"state": "stopped", "disk_free_gb": 0.5}, 2.0) is None
+    assert disk_guard_reason({"state": "running", "disk_free_gb": None}, 2.0) is None

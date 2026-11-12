@@ -1,0 +1,51 @@
+{
+ "auto_exposure": {
+  "changes": 3,
+  "final_ir_us": 1500,
+  "final_rgb_us": 9765,
+  "note": "with plate-ROI metering; no oscillation"
+ },
+ "capture": {
+  "cleanup_verified": true,
+  "frames_completed": 3558,
+  "frames_dropped": 3,
+  "frames_invalid": 0,
+  "groups_written": 1185,
+  "laser_percent_after_stop": 0,
+  "state": "stopping",
+  "throughput_mbps": 39.19,
+  "transfer_timeouts": 0,
+  "trigger_counts": {
+   "mono": 0,
+   "rgb": 0
+  }
+ },
+ "decisions": {
+  "count": 542,
+  "hz": 4.58,
+  "max_ms": 699.9,
+  "p50_ms": 219.1,
+  "p95_ms": 262.2
+ },
+ "disk_free_gb": {
+  "end": 20.7,
+  "guard_gb": 2.0,
+  "start": 25.3
+ },
+ "duration_s": 119.1,
+ "gui_rss_kb": {
+  "end": 351356,
+  "first": 263948,
+  "note": "rises once as Qt/caches warm, then flat",
+  "one_minute": 352036
+ },
+ "notes": "120 s controlled live run, static plate, no final calibration. The first attempt filled a 32 GB tmpfs; that exposed the missing disk guard. This run used 24 GB free and the guard.",
+ "preview": {
+  "count": 1182,
+  "hz": 9.96,
+  "max_ms": 311.4,
+  "p50_ms": 112.8,
+  "p95_ms": 117.3
+ },
+ "schema": "einstar-soak/1"
+}

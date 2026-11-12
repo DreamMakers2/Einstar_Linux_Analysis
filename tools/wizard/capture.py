@@ -436,6 +436,8 @@ class LiveCaptureProcess:
         self._gain_current = {int(k): int(v) for k, v in config.gain.items()}
         self._heartbeat_stop: threading.Event | None = None
         self._heartbeat_thread: threading.Thread | None = None
+        self._safe_off_attempted = False
+        self._safe_off_result: dict | None = None
 
     # -- simple properties ----------------------------------------------
     @property
@@ -947,6 +949,48 @@ class LiveCaptureProcess:
                 "stop_reason": status["stop_reason"]}
 
     # -- safe final state ------------------------------------------------
+    def emergency_safe_off(self, *, timeout_s: float = 15.0) -> dict:
+        """Best-effort trigger/illuminator off after the child died.
+
+        A SIGKILLed capture child cannot run its own cleanup.  The parent opens
+        the scanner through the same executable in a dedicated volatile-only
+        mode after the child has exited, stops the trigger and turns the laser
+        and strobes off, then verifies the readback.  This is not a substitute
+        for a normal stop and does not claim optical darkness.
+        """
+        if self._safe_off_attempted:
+            return dict(self._safe_off_result or {})
+        self._safe_off_attempted = True
+        if self.config.backend != "libusb":
+            self._safe_off_result = {"attempted": False,
+                                     "ok": True,
+                                     "reason": "simulated backend"}
+            return dict(self._safe_off_result)
+        if not self.config.binary.is_file():
+            self._safe_off_result = {"attempted": False, "ok": False,
+                                     "reason": "capture binary missing"}
+            return dict(self._safe_off_result)
+        cmd = [str(self.config.binary), "--backend", "libusb", "--safe-off"]
+        try:
+            proc = subprocess.run(cmd, stdin=subprocess.DEVNULL,
+                                  capture_output=True, text=True,
+                                  timeout=float(timeout_s),
+                                  cwd=str(self.config.session_dir))
+            self._safe_off_result = {
+                "attempted": True,
+                "ok": proc.returncode == 0,
+                "returncode": int(proc.returncode),
+                "stdout": proc.stdout[-2000:],
+                "stderr": proc.stderr[-2000:],
+                "command": cmd,
+            }
+        except Exception as exc:
+            self._safe_off_result = {
+                "attempted": True, "ok": False,
+                "reason": f"{type(exc).__name__}: {exc}", "command": cmd,
+            }
+        return dict(self._safe_off_result)
+
     def check_safe_final_state(self) -> dict:
         """Assert the documented shutdown invariants from the last status.
 
@@ -963,6 +1007,16 @@ class LiveCaptureProcess:
         state = status.get("state")
         if state != "stopped":
             reasons.append(f"state is {state!r}, expected 'stopped'")
+            # The child may have been killed before it could publish a stopped
+            # status.  Once it is gone, recover the device from the parent.
+            if self.process_exited():
+                recovery = self.emergency_safe_off()
+                if recovery.get("ok"):
+                    reasons.append("child exited without final status; "
+                                   "emergency safe-off readback verified")
+                else:
+                    reasons.append("child exited without final status; "
+                                   "emergency safe-off failed")
         counts = status.get("trigger_counts")
         if isinstance(counts, dict) and counts:
             nonzero = {k: v for k, v in counts.items()
@@ -1015,4 +1069,5 @@ class LiveCaptureProcess:
             "commands": list(self.commands),
             "states": self.poll_states(),
             "process_running": self.running,
+            "safe_off": dict(self._safe_off_result or {}),
         }

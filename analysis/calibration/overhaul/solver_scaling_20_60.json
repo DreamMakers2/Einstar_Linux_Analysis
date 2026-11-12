@@ -1,0 +1,54 @@
+{
+ "failures": [],
+ "rows": [
+  {
+   "baseline_mm": 163.08612950291425,
+   "baseline_sigma_mm": 0.10044863058282291,
+   "condition": 247577.95791587982,
+   "covariance_s": 0.04326847399988765,
+   "free_parameters": 144,
+   "iterations": 29,
+   "parameters": 159,
+   "point_sigma_mm_450": 1.0436148896274997,
+   "residuals": 4800,
+   "rms_px": 1.1693124850293313,
+   "solve_s": 1.4524093170002743,
+   "status": "`ftol` termination condition is satisfied.",
+   "views": 20,
+   "wall_s": 1.5521127150004759
+  },
+  {
+   "baseline_mm": 163.06359735241617,
+   "baseline_sigma_mm": 0.07171188039517122,
+   "condition": 283040.28530539136,
+   "covariance_s": 0.11800202199992782,
+   "free_parameters": 234,
+   "iterations": 30,
+   "parameters": 249,
+   "point_sigma_mm_450": 0.8186555891162455,
+   "residuals": 8400,
+   "rms_px": 1.232914006779192,
+   "solve_s": 0.7175450559998353,
+   "status": "converged_cost",
+   "views": 35,
+   "wall_s": 0.9198751490002905
+  },
+  {
+   "baseline_mm": 163.0435961753668,
+   "baseline_sigma_mm": 0.052509785298677364,
+   "condition": 306890.2683463573,
+   "covariance_s": 0.4701855090006575,
+   "free_parameters": 384,
+   "iterations": 27,
+   "parameters": 399,
+   "point_sigma_mm_450": 0.6207072129737113,
+   "residuals": 14400,
+   "rms_px": 1.301673420294486,
+   "solve_s": 1.9122830899996188,
+   "status": "converged_cost",
+   "views": 60,
+   "wall_s": 2.5259408700003405
+  }
+ ],
+ "schema": "einstar-bench-scaling/1"
+}

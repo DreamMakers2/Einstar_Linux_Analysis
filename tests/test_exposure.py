@@ -62,6 +62,16 @@ def test_accepted_view_freezes_settings_but_saturation_overrides():
     assert advice.changed and advice.settings.exposure_us[0] < 1200
 
 
+def test_frame_stats_use_the_plate_roi_not_the_dark_background():
+    image = np.full((200, 300), 20, np.uint8)
+    image[60:140, 90:210] = 110
+    full = FrameStats.from_image(image)
+    roi = FrameStats.from_image(image, bbox=(90, 60, 210, 140))
+    assert full.mean < 40
+    assert roi.mean == 110
+    assert roi.contrast == 0
+
+
 def test_frame_stats_ignore_colour_channels_and_are_bounded():
     grey = np.full((64, 64), 100, np.uint8)
     stats = FrameStats.from_image(grey)

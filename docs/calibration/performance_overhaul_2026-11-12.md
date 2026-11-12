@@ -186,6 +186,48 @@ bottlenecks were engineering (GIL, repeated verification, serial hashing), not
 a wrong estimator. Ceres remains unavailable because Eigen headers are absent;
 OpenCV 5 is used where its primitives are proven; no dependency was added.
 
+### 1.5b Sustained operation and failure recovery
+
+A 120 s controlled live run (static plate, no calibration) held:
+
+| metric | measured |
+|---|---:|
+| capture cadence | 9.96 groups/s |
+| throughput | 39.19 MB/s |
+| transfer timeouts | 0 |
+| frames completed / dropped | 3,558 / 3 (startup only) |
+| preview | **9.96 Hz**, p50 112.8 ms, p95 117.3 ms |
+| decisions | 4.58/s, p95 262 ms |
+| GUI RSS | 264 MB → 352 MB during warm-up, then flat at ~351 MB |
+| auto-exposure changes | 3, then stable (IR 1500 µs, RGB 9765 µs) |
+| shutdown | `control:stop`, trigger readback 0/0, illuminator readback 0, `cleanup_verified` |
+
+The first attempt (before the disk guard) filled a 32 GB tmpfs to 5.5 MB; the
+writer stopped and the final status was lost. The application now stops live
+capture with 2 GB free (about 50 s of headroom), and the successful 120 s run
+ended with 20.7 GB free. This is recorded as a real failure, not hidden.
+
+Capture-child failure was also tested on hardware: `SIGKILL` of the child while
+the GUI stayed alive. The parent detected the unexpected exit, ran the new
+volatile-only `--safe-off` mode (trigger readback 0/0, laser 0, strobes 0, readback
+verified), surfaced the error, and exited normally with no orphan capture
+process. The child's stale status is not represented as a graceful stop.
+
+### 1.5c 49–60-view scaling
+
+Synthetic ground truth, all five distortion coefficients held, covariance on:
+
+| views | solve wall | RMS | baseline σ | point σ at 450 mm |
+|---:|---:|---:|---:|---:|
+| 20 | 1.55 s | 1.17 px | 0.100 mm | 1.044 mm |
+| 35 | 0.92 s | 1.23 px | 0.072 mm | 0.819 mm |
+| 60 | 2.53 s | 1.30 px | 0.053 mm | 0.621 mm |
+
+A 49-accepted-view synthetic controller finish (60 rendered poses) completed
+in **4.96 s** with RMS 0.413 px and all validation gates run. The 35-view real
+session remains the primary comparison because its optimum is independently
+known; the synthetic corpus is for scaling.
+
 ### 1.6 Process safety
 
 `docs/calibration/process_safety.md` records the mechanism and the unit tests.
@@ -219,8 +261,11 @@ capture is now started from the long-lived GUI thread before the reader starts.
   before; performance work did not change that verdict.
 * Absolute dimensional accuracy is still unverified (no independent length
   artefact).
-* The live run is 12 s, not an 8 h soak. One partial timeout and three startup
-  drops were observed; longer thermal/USB behaviour is unmeasured.
+* The live runs are 60–180 s, not an 8 h soak. The 120 s run had zero transfer
+  timeouts and three startup drops; one partial timeout occurred in a 12 s run.
+  Longer thermal/USB behaviour is unmeasured. A first soak filled a tmpfs; the
+  disk guard now stops at 2 GB free, but power loss and kernel I/O stalls remain
+  outside software control.
 * Process-pool startup adds ~0.4 s to the first decision. Replay/tests keep the
   thread path to preserve deterministic ordering.
 * Auto exposure is validated for control and stability, not for photometric

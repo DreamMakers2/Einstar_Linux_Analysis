@@ -22,7 +22,10 @@ split-half, epipolar, coverage and lifecycle gate still running. On the
 physical scanner, preview held **9.75 Hz** (p95 121 ms) while decisions ran at
 4.55/s, capture held 9.76 groups/s at 36.9 MB/s with 0 transfer timeouts, and a
 GUI `SIGKILL` left capture stopped with verified trigger `0/0` and illuminator
-readback `0`.
+readback `0`. A 120 s soak held 9.96 Hz preview with zero transfer timeouts;
+after a first soak exhausted a tmpfs, capture now stops at 2 GB free. Killing
+the capture child makes the parent run a volatile-only `--safe-off` recovery
+(trigger and illuminator readback 0) and surface the failure.
 
 * [Performance and architecture report](docs/calibration/performance_overhaul_2026-11-12.md)
 * [Operator UI](docs/calibration/modern_ui.md)

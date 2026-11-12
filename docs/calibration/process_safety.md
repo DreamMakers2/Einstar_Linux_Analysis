@@ -158,3 +158,40 @@ parent-death signal delivery rather than inferring it from watchdog exit.
   failed/unavailable transport provides no way to confirm a pre-existing scanner
   state. Forced exit diagnostics and the lack of verified final status must be
   treated as an unresolved hardware state.
+
+## Parent-side recovery after capture-child SIGKILL (2026-11-12)
+
+A killed child cannot run its signal handler. The supervisor now has an
+explicit recovery path for that case:
+
+* If the capture process has exited while its last published state is not
+  `stopped`, the parent runs `einstar-capture-frames --backend libusb
+  --safe-off` after the child is gone. That mode opens the control channel,
+  stops streaming / zeroes the trigger, turns the laser and both strobes off,
+  reads them back, and exits. It sends volatile commands only.
+* The GUI surfaces the failure as an acquisition error. The recovery result is
+  recorded in `ui_metrics.json` (`capture_safe_off`) and in the final verdict.
+* The child's last `status.json` remains stale; it is never presented as a
+  graceful stop. The safe-off readback is the recovery evidence.
+
+Hardware test: with the GUI running live, the capture child was `SIGKILL`ed.
+The GUI exited normally (code 0), no capture process remained, and the recorder
+reported:
+
+```
+GUI error: acquisition reader: SourceError: capture process exited unexpectedly:
+           emergency safe-off verified (volatile readback)
+safe-off:  trigger readback 0/0, illuminator readback 0, volatile only
+```
+
+Evidence: `analysis/calibration/overhaul/capture_child_sigkill.json`. Optical
+darkness is still not claimed. Power loss, kernel failure, or `SIGKILL` of the
+whole process group remains outside software control.
+
+## Storage guard
+
+Live capture now stops when the volume falls below **2 GB** free (about 50 s of
+headroom at 39 MB/s). This prevents the failure observed in the first soak
+attempt: a 32 GB tmpfs filled to 5.5 MB, the writer stopped and the final status
+was lost. The guard is tested as a pure decision (`disk_guard_reason`) and the
+subsequent 120 s live run used 24 GB free and finished with verified cleanup.

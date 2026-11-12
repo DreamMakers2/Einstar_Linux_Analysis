@@ -505,6 +505,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._last_rgb_image = None
         self._last_exposure_eval = 0.0
         self._exposure_log_path = None
+        self._ui_error = None
 
         self.setWindowTitle("Einstar Calibration")
         self.resize(1640, 1000)
@@ -796,6 +797,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._fail(f"could not start: {type(exc).__name__}: {exc}")
             return
         self._started_at = time.time()
+        self._ui_error = None
         self.worker = self._make_worker()
         self.worker.finished_ok.connect(self._on_worker_done)
         self.worker.start()
@@ -908,6 +910,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._advanced.activateWindow()
 
     def _fail(self, message: str) -> None:
+        self._ui_error = str(message)
         self.error_banner.setText(message)
         self.error_banner.setVisible(True)
         self._event(message)
@@ -979,10 +982,32 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             current = exposure_mod.ExposureSettings(
                 {i: int(exp[i]) for i in range(3)},
                 {i: int(gain[i]) for i in range(3)}, int(laser))
-            ir_stats = (exposure_mod.FrameStats.from_image(self._last_ir_image)
-                        if self._last_ir_image is not None else None)
-            rgb_stats = (exposure_mod.FrameStats.from_image(self._last_rgb_image)
-                         if self._last_rgb_image is not None else None)
+            ir_stats = None
+            if self._last_ir_image is not None:
+                full = exposure_mod.FrameStats.from_image(self._last_ir_image)
+                box = self._plate_bbox(snap, "left")
+                if box is not None:
+                    roi = exposure_mod.FrameStats.from_image(
+                        self._last_ir_image, bbox=box)
+                    # Plate brightness from the ROI; clipping/p99 from the
+                    # full sensor so bright markers do not fake saturation.
+                    ir_stats = exposure_mod.FrameStats(
+                        mean=roi.mean, p99=full.p99,
+                        saturation=full.saturation, contrast=roi.contrast)
+                else:
+                    ir_stats = full
+            rgb_stats = None
+            if self._last_rgb_image is not None:
+                full_rgb = exposure_mod.FrameStats.from_image(self._last_rgb_image)
+                box = self._plate_bbox(snap, "tex")
+                if box is not None:
+                    roi = exposure_mod.FrameStats.from_image(
+                        self._last_rgb_image, bbox=box)
+                    rgb_stats = exposure_mod.FrameStats(
+                        mean=roi.mean, p99=full_rgb.p99,
+                        saturation=full_rgb.saturation, contrast=roi.contrast)
+                else:
+                    rgb_stats = full_rgb
             advice = self._auto_exposure.observe(
                 ir=ir_stats, rgb=rgb_stats, current=current, now=now)
             if _dbg:
@@ -1000,6 +1025,22 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._event("auto exposure: " + advice.reason)
         except Exception as exc:
             self._event(f"auto exposure skipped: {type(exc).__name__}: {exc}")
+
+    @staticmethod
+    def _plate_bbox(snap: dict, camera: str):
+        pts = (snap.get("detections") or {}).get(camera) or []
+        if len(pts) < 4:
+            return None
+        try:
+            import numpy as _np
+            arr = _np.asarray(pts, float).reshape(-1, 2)
+            x0, y0 = arr.min(axis=0)
+            x1, y1 = arr.max(axis=0)
+            pad = 0.15 * max(x1 - x0, y1 - y0, 20.0)
+            return (float(x0 - pad), float(y0 - pad),
+                    float(x1 + pad), float(y1 + pad))
+        except Exception:
+            return None
 
     def _log_exposure(self, advice, record: dict) -> None:
         try:
@@ -1169,6 +1210,11 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                            if self.worker is not None else None),
                 "source": {k: v for k, v in
                            ((self.controller.snapshot().get("source") or {}).items())},
+                "error": self.controller.snapshot().get("error") or self._ui_error,
+                "capture_safe_off": getattr(
+                    getattr(self.source, "capture", None),
+                    "_safe_off_result", None),
+                "source_final_verdict": getattr(self.source, "final_verdict", None),
                 "auto_exposure": self._auto_exposure.history,
             }
             (root / "ui_metrics.json").write_text(

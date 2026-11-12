@@ -33,16 +33,23 @@ class FrameStats:
     contrast: float
 
     @classmethod
-    def from_image(cls, image, *, step: int = 4) -> "FrameStats":
+    def from_image(cls, image, *, bbox=None, step: int = 4) -> "FrameStats":
         """Cheap robust statistics on a subsampled grey image.
 
-        A full-frame percentile on 1.3 MP costs several milliseconds; the
-        advisor runs at <2 Hz, but the preview thread must stay cheap.  A
-        stride-4 sample is 81k pixels and preserves the decision.
+        ``bbox`` is an optional ``(x0, y0, x1, y1)`` region.  Auto exposure
+        measures the *plate* through this box: the full frame's median is
+        dominated by the dark background and is not a useful exposure target.
+        Saturation is still measured on the full sensor by the caller.
         """
         arr = np.asarray(image)
         if arr.ndim == 3:
             arr = arr[..., 1] if arr.shape[2] >= 2 else arr[..., 0]
+        if bbox is not None:
+            h, w = arr.shape[:2]
+            x0, y0, x1, y1 = (int(v) for v in bbox)
+            x0 = max(0, min(w - 2, x0)); y0 = max(0, min(h - 2, y0))
+            x1 = max(x0 + 2, min(w, x1)); y1 = max(y0 + 2, min(h, y1))
+            arr = arr[y0:y1, x0:x1]
         sample = np.asarray(arr[::step, ::step], dtype=np.float32)
         if sample.size == 0:
             return cls(0.0, 0.0, 0.0, 0.0)
