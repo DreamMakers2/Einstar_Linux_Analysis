@@ -30,6 +30,7 @@ separately.
 | refusal | vendor stills 16 accepted, 5/8, no candidate written | `analysis/calibration/overhaul/vendor_refusal.json` |
 | pause/resume | shadowed `resume` fixed; 188 groups, 32.65 MB/s, cleanup verified | `analysis/calibration/overhaul/live_pause_resume.json` |
 | moving replay | 10.0 Hz split preview p95 114 ms on real sweep; 2/8 coverage, not READY | `analysis/calibration/overhaul/moving_replay_30s.json` |
+| fast-solver fallback | stationary `no_descent` no longer triggers SciPy; 100/100 LM, equivalence unchanged | `analysis/calibration/overhaul/solver_stationary_fix.json` |
 | 120 s soak | 9.96 groups/s, 39.2 MB/s, 0 transfer timeouts, 3 startup drops, preview 9.96 Hz p95 117 ms, cleanup verified | `analysis/calibration/overhaul/sustained_soak_120s.json` |
 | auto-exposure stability | 3 changes in 60 s and 120 s, then fixed; plate-ROI metering removed the 55-change oscillation | `docs/calibration/auto_exposure.md` |
 | 49–60-view scaling | 60-view solve 2.53 s; 49-accepted synthetic finish 4.96 s, RMS 0.413 px | `analysis/calibration/overhaul/solver_scaling_20_60.json`, `synthetic_finish_49view.json` |

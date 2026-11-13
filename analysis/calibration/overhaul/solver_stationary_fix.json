@@ -1,0 +1,14 @@
+{
+ "fix": "classify no_descent with |g|inf <= 1e-5 as converged_stationary; larger gradients still fall back",
+ "note": "Numerical equivalence thresholds are unchanged; this only stops a false failure classification.",
+ "root_cause": "the LM success predicate accepted only status.startswith('converged'); a stationary no_descent step with negligible gradient was classified as failure and triggered the expensive reference fallback",
+ "schema": "einstar-solver-reliability/1",
+ "symptom": "fast calibration intermittently returned SciPy after LM reported no_descent with |g|inf 3.6e-7..9.3e-6",
+ "verification": {
+  "fallbacks": 0,
+  "lm_backend": 100,
+  "reference_test_failures": 0,
+  "reference_test_runs": 10,
+  "scipy+fast pairs": 100
+ }
+}

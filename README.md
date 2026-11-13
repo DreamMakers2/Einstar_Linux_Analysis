@@ -36,7 +36,10 @@ through the real operator window reached **8/8 READY and a validated candidate**
 views in 72.6 s. The incomplete vendor still collection is refused with no
 candidate. Pause/resume was broken by a shadowed `resume()` method (capture
 stayed paused); it is fixed and verified on hardware at 32.65 MB/s with
-verified cleanup. The 35-view finish remains 3.61 s at 0.33037 px RMS.
+verified cleanup. The 35-view finish remains 3.61 s at 0.33037 px RMS. An intermittent
+`no_descent` LM result with a negligible gradient was being misclassified as a
+failure and silently fell back to SciPy; it is now recognised as a stationary
+fast-path solution (100/100 paired fits stayed on LM, equivalence unchanged).
 
 The complete READY/validated sessions are diverse synthetic still sequences.
 A 30 s replay of the real moving-plate sweep processed 115 groups and accepted

@@ -1370,10 +1370,17 @@ def solve_joint(problem: Problem | Sequence[Observation],
         lm = _solve_lm(problem, x_start, free_idx, robust, f_scale,
                        prior_pos, prior_mean, prior_sigma, max_iter=max_iter)
         x = lm["x"]
-        solved = {"x": x, "status": lm["status"], "nfev": lm["nfev"],
+        # A "no_descent" step at a negligible gradient is a stationary
+        # point, not a failed fit.  It occurred intermittently on the synthetic
+        # free-kc fixture (|g|inf 4e-7..9e-6) and caused a silent expensive
+        # SciPy fallback; treat that case as converged and keep the fast path.
+        stationary = (lm["status"] == "no_descent"
+                      and float(lm["grad_inf"]) <= 1e-5)
+        lm_status = "converged_stationary" if stationary else lm["status"]
+        solved = {"x": x, "status": lm_status, "nfev": lm["nfev"],
                   "nit": lm["nit"], "cost": lm["cost"],
                   "optimality": lm["grad_inf"],
-                  "success": lm["status"].startswith("converged")}
+                  "success": (lm_status.startswith("converged") or stationary)}
         backend_used = "lm"
         if not solved["success"] and allow_fallback:
             # a non-converged internal LM must never be published silently

@@ -345,6 +345,13 @@ The 3.61 s run is within run-to-run noise of the previous 3.47 s; no numerical
 regression is claimed beyond the measured residual. Parameter/covariance
 equivalence remains covered by `tests/test_solver_equivalence.py`.
 
+A later public-suite run exposed an intermittent false fallback: the LM could
+stop with `no_descent` at |g|inf 3.6e-7..9.3e-6 and be classified as failed,
+silently running the slow SciPy path. That is a stationary point, not a failed
+fit; `converged_stationary` now covers negligible gradients only (larger
+gradients still fall back). 100/100 paired fits kept the LM backend and 10/10
+equivalence runs passed. Evidence: `solver_stationary_fix.json`.
+
 ### 2.4 Live pause/resume defect found and fixed
 
 The live harness initially showed 2.6 groups/s, 152 transfer timeouts and a
