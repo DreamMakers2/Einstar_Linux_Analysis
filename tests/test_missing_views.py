@@ -784,3 +784,40 @@ def test_hold_tracker_does_not_pollute_an_accepted_hold_with_the_entry_move():
     # the fast entry sample is not part of the hold window
     assert hold["max_speed_mm_s"] < 3.0
     assert hold["samples"][0]["t"] == pytest.approx(0.2, abs=1e-6)
+
+
+def test_begin_after_begin_extension_does_not_reset_the_extension(tmp_path):
+    """The launcher calls ``begin_extension`` and then the window's Start path
+    calls ``begin()``.  ``begin`` must be a no-op for an already-recording
+    extension, or the plan, the tracker and the store would be replaced by a
+    fresh empty session (the operator would silently get a full capture).
+    """
+    import hashlib
+
+    from tools.wizard import controller, sources, types
+
+    spec = sources.SyntheticSpec(n_views=1, seed=3)
+    synthetic = sources.SyntheticSource(spec)
+    factory = tmp_path / "factory.json"
+    types.atomic_write_json(factory, synthetic.profile_dict())
+    factory_sha = hashlib.sha256(factory.read_bytes()).hexdigest()
+    base = write_session(tmp_path / "base", covering_views(),
+                         stream=_stationary_rows(1000.0) + _stationary_rows(1010.0),
+                         factory_sha256=factory_sha)
+
+    ctl = controller.WizardController(factory_profile=factory,
+                                      session_dir=tmp_path / "ext",
+                                      mode="quick", source=None, ring_keep=4)
+    assert ctl.begin_extension(base)["ok"] is True
+    tracker_before = ctl.extension["tracker"]
+    plan_before = dict(ctl.extension["plan"])
+    session_json_before = (tmp_path / "ext" / "session.json").read_bytes()
+
+    result = ctl.begin()
+
+    assert result["created"] is False
+    assert ctl.state == "recording"
+    assert ctl.extension is not None
+    assert ctl.extension["tracker"] is tracker_before
+    assert ctl.extension["plan"] == plan_before
+    assert (tmp_path / "ext" / "session.json").read_bytes() == session_json_before

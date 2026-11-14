@@ -249,7 +249,7 @@ parameters, condition 1,804, split-half reproducibility 1.2–2.3× σ.  The
 candidate remains a **standard-target** result.  It is **not activated**, and
 `finish()` still refuses an activatable candidate while the plan is unsatisfied.
 
-Tests in this working tree: **573 Python passed, 8 skipped**; **12/12** driver
+Tests in this working tree: **578 Python passed, 8 skipped**; **12/12** driver
 C++ tests (`build/driver-ninja`).  Clean-clone verification of the published
 tree (fresh `git clone`, tests run from the clone): **440 passed, 79 skipped,
 0 failed** — the skips are the real-data and hardware tests that need fixtures
