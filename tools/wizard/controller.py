@@ -857,6 +857,12 @@ class WizardController:
         self._observability_key: tuple | None = None
         self._guidance_cache: dict | None = None
         self._guidance_key: tuple | None = None
+        #: increments on every rejected view; a refused duplicate must force a
+        #: fresh instruction instead of repeating the one just refused
+        self._guidance_epoch: int = 0
+        self._guidance_epoch_at: int = 0
+        #: the last view was refused as a near-duplicate: do not repeat its pose
+        self._last_duplicate: bool = False
         self._guidance_generated_at: float | None = None
         self._guidance_monotonic: float | None = None
         self._guidance_solves = 0
@@ -1823,6 +1829,7 @@ class WizardController:
     def _veto(self, group, images, reason, record, Decision, FrameSet,
               obs_grids=None, raw=None, extras=None) -> Any:
         """Reject a frame for a controller-only reason and record it."""
+        self._guidance_epoch += 1
         quality = self._veto_quality(images, obs_grids, group)
         self._track_pose(group.timestamp_s,
                          getattr(self, "_veto_pose", None))
@@ -2070,6 +2077,9 @@ class WizardController:
         self._prune_ring()
 
     def _record_reject(self, group, decision, record, stage) -> None:
+        self._guidance_epoch += 1
+        self._last_duplicate = any("too similar" in str(r).lower()
+                                   for r in (decision.reasons or []))
         self._rejected += 1
         for reason in decision.reasons:
             self._bump_reason(reason)
@@ -2319,8 +2329,9 @@ class WizardController:
 
     def _refresh_guidance(self, force: bool = False) -> None:
         signature = self._pose_signature()
-        key = (len(self.session.accepted), int(getattr(self.session, "_solves", 0)),
-               signature)
+        key = (len(self.session.accepted),
+               int(getattr(self.session, "_solves", 0)),
+               signature, int(self._guidance_epoch))
         if not force and key == self._guidance_key and self._guidance_cache:
             return
         now = time.monotonic()
@@ -2328,7 +2339,8 @@ class WizardController:
                 and self._guidance_monotonic is not None
                 and now - self._guidance_monotonic < 0.30
                 and len(self.session.accepted) == self._guidance_accepted
-                and int(getattr(self.session, "_solves", 0)) == self._guidance_solves):
+                and int(getattr(self.session, "_solves", 0)) == self._guidance_solves
+                and int(self._guidance_epoch) == self._guidance_epoch_at):
             # Bound the recompute rate while still following a moving plate.
             return
         self._guidance_key = key
@@ -2337,6 +2349,7 @@ class WizardController:
         self._guidance_monotonic = now
         self._guidance_accepted = len(self.session.accepted)
         self._guidance_solves = int(getattr(self.session, "_solves", 0))
+        self._guidance_epoch_at = int(self._guidance_epoch)
         self._guidance_view_id = (
             self._views[-1].get("view_id") if self._views else None)
 
@@ -2380,8 +2393,10 @@ class WizardController:
                     measurement = measure(views, spec)
                 if isinstance(measurement, dict) and measurement.get("D1"):
                     checks_now = measurement.get("checks") or {}
-                    for name in ("tilt_axis_x", "tilt_axis_y",
-                                 "tilt_quadrants"):
+                    # No latching: the latch hid a signed axis from guidance
+                    # after the moving centre later withdrew it.  Guidance must
+                    # see the current deficit and keep asking.
+                    for name in ():
                         if (checks_now.get(name) or {}).get("satisfied"):
                             self._coverage_latched.add(name)
                     self._measurement = measurement
@@ -3020,7 +3035,8 @@ class WizardController:
                 spec_cls = getattr(module, "CoverageSpec", None)
                 if spec_cls is not None and not isinstance(spec, spec_cls):
                     spec = None
-                plan = target_fn(self._measurement, self._last_pose, spec)
+                plan = target_fn(self._measurement, self._last_pose, spec,
+                                 avoid_current=self._last_duplicate)
                 if isinstance(plan, dict) and plan.get("instruction"):
                     family = plan.get("family") or {}
                     return {

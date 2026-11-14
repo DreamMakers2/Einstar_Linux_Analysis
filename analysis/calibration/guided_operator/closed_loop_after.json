@@ -1,0 +1,1579 @@
+{
+ "views": 45,
+ "accepted": 30,
+ "coverage": {
+  "D1": true,
+  "D2": false,
+  "D3": true,
+  "D4": true,
+  "D5": true,
+  "D6": true,
+  "D7": true,
+  "D8": true
+ },
+ "ready": false,
+ "missing": [
+  "tilt about the second axis (y, positive and negative)",
+  "tilt quadrants (four sign combinations)"
+ ],
+ "log": [
+  {
+   "view": 0,
+   "pose": [
+    420.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [
+    "bootstrap seed"
+   ],
+   "instruction": "bootstrap",
+   "attempts": []
+  },
+  {
+   "view": 1,
+   "pose": [
+    420.0,
+    20.05,
+    -19.94,
+    45.0,
+    -139.89,
+    114.81
+   ],
+   "accepted": true,
+   "reasons": [
+    "bootstrap seed"
+   ],
+   "instruction": "Put the plate centre in the bottom-left corner of the image, tilt 20 deg right and 20 deg down, roll the plate by 45 deg anticlockwise, show the plate to the colour camera, move to 380-460 mm.",
+   "target_tilt": [
+    20.049155010176065,
+    -19.938047479336348
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      286.0,
+      788.6
+     ],
+     "cell": [
+      2,
+      0
+     ],
+     "markers": 35
+    }
+   ]
+  },
+  {
+   "view": 2,
+   "pose": [
+    490.0,
+    -9.87,
+    10.13,
+    135.0,
+    165.2,
+    -128.7
+   ],
+   "accepted": true,
+   "reasons": [
+    "bootstrap seed"
+   ],
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 30 deg left and 30 deg up, roll the plate by 90 deg anticlockwise, show the plate to the colour camera, move to 460-560 mm (further, 32 mm).",
+   "target_tilt": [
+    -9.874764378044912,
+    10.126231731612984
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      1021.8,
+      220.8
+     ],
+     "cell": [
+      0,
+      2
+     ],
+     "markers": 38
+    }
+   ]
+  },
+  {
+   "view": 3,
+   "pose": [
+    530.0,
+    -14.57,
+    -24.87,
+    225.0,
+    178.15,
+    144.71
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 5 deg left and 35 deg down, roll the plate by 90 deg anticlockwise, show the plate to the colour camera, move to 460-560 mm.",
+   "target_tilt": [
+    -14.570910140078364,
+    -24.867412113203386
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      1019.5,
+      809.5
+     ],
+     "cell": [
+      2,
+      2
+     ],
+     "markers": 39
+    }
+   ]
+  },
+  {
+   "view": 4,
+   "pose": [
+    530.0,
+    22.66,
+    12.44,
+    224.91,
+    -177.06,
+    -139.37
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 38 deg right and 38 deg up, show the plate to the colour camera, move to 460-560 mm (closer, 48 mm).",
+   "target_tilt": [
+    22.660723295216755,
+    12.441020396070574
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      262.9,
+      217.5
+     ],
+     "cell": [
+      0,
+      0
+     ],
+     "markers": 39
+    }
+   ]
+  },
+  {
+   "view": 5,
+   "pose": [
+    530.0,
+    23.98,
+    13.68,
+    224.87,
+    -183.52,
+    3.08
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (1.4 deg, 0.1 mm)"
+   ],
+   "instruction": "Put the plate centre in the middle-left region of the image, show the plate to the colour camera, move to 460-560 mm (closer, 47 mm).",
+   "target_tilt": [
+    23.979796116609307,
+    13.67707517744002
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      247.9,
+      510.7
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 6,
+   "pose": [
+    530.0,
+    23.98,
+    13.68,
+    224.88,
+    -183.52,
+    3.08
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (1.4 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the middle-left region of the image, show the plate to the colour camera, move to 460-560 mm (closer, 32 mm).",
+   "target_tilt": [
+    23.979796116609307,
+    13.67707517744002
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      247.8,
+      510.6
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 7,
+   "pose": [
+    530.0,
+    23.98,
+    13.68,
+    224.92,
+    -183.52,
+    3.08
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Put the plate centre in the middle-left region of the image, show the plate to the colour camera, move to 460-560 mm (closer, 32 mm).",
+   "target_tilt": [
+    23.979796116609307,
+    13.67707517744002
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      247.9,
+      510.7
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 8,
+   "pose": [
+    530.0,
+    24.52,
+    14.26,
+    224.98,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Show the plate to the colour camera, move to 460-560 mm (closer, 31 mm).",
+   "target_tilt": [
+    24.52334419831583,
+    14.261872962502874
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      635.1,
+      504.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 9,
+   "pose": [
+    510.0,
+    24.89,
+    14.54,
+    224.96,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Show the plate to the colour camera, move to 460-560 mm (closer, 20 mm).",
+   "target_tilt": [
+    24.889871336542935,
+    14.53641748793342
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      634.8,
+      504.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 10,
+   "pose": [
+    436.0,
+    25.05,
+    14.73,
+    224.96,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Show the plate to the colour camera, move to 380-460 mm (closer, 74 mm).",
+   "target_tilt": [
+    25.049013870173724,
+    14.73038041427564
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      633.9,
+      504.0
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 11,
+   "pose": [
+    356.0,
+    25.05,
+    14.76,
+    224.96,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Show the plate to the colour camera, move to 300-380 mm (closer, 80 mm).",
+   "target_tilt": [
+    25.05271684793526,
+    14.763167237979317
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      631.9,
+      503.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 12,
+   "pose": [
+    340.0,
+    25.1,
+    14.76,
+    224.95,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Show the plate to the colour camera, move to 300-380 mm (closer, 16 mm).",
+   "target_tilt": [
+    25.09969518247377,
+    14.763167237979317
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      631.3,
+      503.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 13,
+   "pose": [
+    324.0,
+    25.14,
+    14.81,
+    224.94,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Show the plate to the colour camera, move to 300-380 mm (closer, 16 mm).",
+   "target_tilt": [
+    25.14320477235681,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.7,
+      503.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 14,
+   "pose": [
+    323.91,
+    -14.83,
+    14.81,
+    224.94,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.830936715353879,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.0,
+      494.8
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 15,
+   "pose": [
+    323.97,
+    25.17,
+    14.81,
+    224.92,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.3 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.16906328464612,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.7,
+      503.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 16,
+   "pose": [
+    323.64,
+    -14.83,
+    14.81,
+    224.89,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.830936715353879,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.1,
+      494.8
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 17,
+   "pose": [
+    323.42,
+    25.17,
+    14.81,
+    224.85,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.16906328464612,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.7,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 18,
+   "pose": [
+    323.1,
+    -14.83,
+    14.81,
+    224.85,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.830936715353879,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.0,
+      494.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 19,
+   "pose": [
+    322.92,
+    25.17,
+    14.81,
+    224.82,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.16906328464612,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 20,
+   "pose": [
+    322.6,
+    -14.82,
+    14.81,
+    224.82,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.822363689424407,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.8
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 21,
+   "pose": [
+    322.27,
+    25.18,
+    14.81,
+    224.79,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.177636310575593,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 22,
+   "pose": [
+    321.93,
+    -14.81,
+    14.81,
+    224.77,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.4,
+      494.8
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 23,
+   "pose": [
+    322.07,
+    25.19,
+    14.81,
+    224.75,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 24,
+   "pose": [
+    321.89,
+    -14.81,
+    14.81,
+    224.73,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.3,
+      494.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 25,
+   "pose": [
+    321.99,
+    25.19,
+    14.81,
+    224.69,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.1 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 26,
+   "pose": [
+    321.82,
+    -14.81,
+    14.81,
+    224.7,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 27,
+   "pose": [
+    321.96,
+    25.19,
+    14.81,
+    224.66,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.1 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 28,
+   "pose": [
+    321.8,
+    -14.81,
+    14.81,
+    224.67,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 29,
+   "pose": [
+    321.81,
+    25.19,
+    14.81,
+    224.63,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.3
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 30,
+   "pose": [
+    321.72,
+    -14.81,
+    14.81,
+    224.63,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.814139059082184
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 31,
+   "pose": [
+    321.63,
+    25.19,
+    14.85,
+    224.63,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.848770401639097
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 32,
+   "pose": [
+    321.56,
+    -14.81,
+    14.85,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.848770401639097
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 33,
+   "pose": [
+    321.46,
+    25.19,
+    14.87,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 34,
+   "pose": [
+    321.38,
+    -14.81,
+    14.87,
+    224.67,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 35,
+   "pose": [
+    321.4,
+    25.19,
+    14.87,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.5
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 36,
+   "pose": [
+    321.41,
+    -14.81,
+    14.87,
+    224.65,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.7
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 37,
+   "pose": [
+    321.42,
+    25.19,
+    14.87,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": true,
+   "reasons": [],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.5
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 38,
+   "pose": [
+    321.45,
+    -14.81,
+    14.87,
+    224.66,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 39,
+   "pose": [
+    321.45,
+    25.19,
+    14.87,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 40,
+   "pose": [
+    321.45,
+    -14.81,
+    14.87,
+    224.67,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 41,
+   "pose": [
+    321.45,
+    25.19,
+    14.87,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 42,
+   "pose": [
+    321.45,
+    -14.81,
+    14.87,
+    224.67,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 43,
+   "pose": [
+    321.45,
+    25.19,
+    14.87,
+    224.64,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg right.",
+   "target_tilt": [
+    25.19075973570142,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      630.5,
+      503.4
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  },
+  {
+   "view": 44,
+   "pose": [
+    321.45,
+    -14.81,
+    14.87,
+    224.67,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.0 mm)"
+   ],
+   "instruction": "Tilt 40 deg left.",
+   "target_tilt": [
+    -14.80924026429858,
+    14.872500290697156
+   ],
+   "y_sat": false,
+   "q_sat": false,
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      649.2,
+      494.6
+     ],
+     "cell": [
+      1,
+      1
+     ],
+     "markers": 40
+    }
+   ]
+  }
+ ],
+ "finish": {
+  "ok": true,
+  "passed": false,
+  "would": false,
+  "rms": 0.4143588716897812,
+  "reasons": [
+   "quality status fail",
+   "coverage not ready: tilt about the second axis (y, positive and negative), tilt quadrants (four sign combinations)",
+   "repeatability: group spread baseline 0.090 mm / rotation 0.058\u00b0 exceeds the effective limit 0.577 mm / 0.056\u00b0"
+  ]
+ }
+}

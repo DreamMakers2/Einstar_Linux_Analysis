@@ -140,9 +140,38 @@ therefore ordered:
 
 This is a concrete product bug with a reproducible harness, not hardware work.
 
+## Partial fix: the duplicate stall is gone, D2 still oscillates
+
+The shipped-selector fix (guidance refresh epoch + avoid the just-refused pose +
+distinct distance depths + colour family, no check latch) was tested with the
+same closed-loop operator:
+
+| | before | after |
+|---|---:|---:|
+| accepted in 45 targets | 7 | **31** |
+| accepted in 20 targets | 7 | 19 |
+| D1 distance bands | missing | **satisfied** |
+| D6 colour | missing | **satisfied** |
+| D2 tilt | missing | still missing |
+| finish | refused (7 views) | refused (D2) |
+
+The operator no longer loops on `too similar`: it moves through distance bands
+and colour, and the fit stays good (RMS 0.414 px). The remaining failure is
+narrower: the relative tilt centre still oscillates between the y axis and the
+four quadrants, so D2 is satisfied at some steps (20-target run: only quadrants
+missing) and unsatisfied at the end (45-target run: y axis + quadrants). A check
+latch can hold y but then the quadrants never fill; no latch lets y flip back.
+
+This needs the **stable absolute tilt reference** design, not another nudge:
+count the four absolute quadrants (and the two signed axes) from accepted poses
+against the bootstrap reference, and make guidance request the least-covered
+absolute quadrant until it has the required evidence. That is the next change;
+the duplicate-stall fix is a real improvement and is shipped.
+
 ## Evidence
 
-`run_latched.json`, `run_stable_reference.json` and `run_deficit_ranked.json`
-contain the full per-target log (pose, instruction, acceptance) and the final
+`run_latched.json`, `run_stable_reference.json`, `run_deficit_ranked.json`,
+`closed_loop_run.json` (before) and `closed_loop_after.json` (after) contain the
+full per-target log (pose, instruction, acceptance) and the final
 measurement/validation summary.  All are synthetic; no private recording,
 serial or factory content.

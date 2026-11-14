@@ -1758,7 +1758,8 @@ def _image_targets(measurement: Mapping[str, Any],
 
 
 def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
-              current: dict | None) -> list[dict]:
+              current: dict | None, *, avoid_current: bool = False
+              ) -> list[dict]:
     """Rank candidate pose families for the genuinely unsatisfied checks.
 
     A family is generated only when it unlocks at least one unsatisfied
@@ -1777,7 +1778,16 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
                     < int(spec.min_views_per_distance_band)]
     distance_required = bool(band_missing)
     if distance_required:
-        band_choices = [(b, _band_centre(spec, b), True) for b in band_missing]
+        band_choices = []
+        for b in band_missing:
+            lo, hi = spec.distance_bands_mm[b]
+            centre = _band_centre(spec, b)
+            # several distinct depths inside the same band: a single carrier
+            # pose repeats the current view and is rejected as a duplicate
+            choices = {round(centre, 3),
+                       round(lo + 0.30 * (hi - lo), 3),
+                       round(hi - 0.30 * (hi - lo), 3)}
+            band_choices.extend((b, float(d), True) for d in sorted(choices))
     else:
         cd = None if current is None else current.get("distance_mm")
         cd = float(cd) if cd is not None else None
@@ -1808,16 +1818,29 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
     med_x = float(stats.get("tilt_x_centre_deg") or 0.0)
     med_y = float(stats.get("tilt_y_centre_deg") or 0.0)
     exc = float(spec.min_tilt_deg) + 5.0
-    if tilt_x_missing or quad_missing:
+    colour_missing = not (checks.get("colour") or {}).get("satisfied", True)
+    colour_only = bool(colour_missing and not (
+        distance_required or tilt_x_missing or tilt_y_missing or quad_missing
+        or roll_missing or image_targets))
+    if colour_only:
+        ctx = float((current or {}).get("tilt_x_deg", med_x))
+        cty = float((current or {}).get("tilt_y_deg", med_y))
+        tx_choices = [ctx + 6.0, ctx - 6.0]
+        ty_choices = [cty]
+    elif tilt_x_missing or quad_missing or distance_required:
         tx_choices = [med_x - exc, med_x + exc]
     else:
         tx_choices = [float((current or {}).get("tilt_x_deg", med_x))]
-    if tilt_y_missing or quad_missing:
-        ty_choices = [med_y - exc, med_y + exc]
-    else:
-        ty_choices = [float((current or {}).get("tilt_y_deg", med_y))]
+    if not colour_only:
+        if tilt_y_missing or quad_missing or distance_required:
+            ty_choices = [med_y - exc, med_y + exc]
+        else:
+            ty_choices = [float((current or {}).get("tilt_y_deg", med_y))]
 
-    if roll_missing:
+    if colour_only:
+        croll = float((current or {}).get("roll_deg", 0.0))
+        roll_choices = [(croll + 12.0) % 360.0, (croll - 12.0) % 360.0]
+    elif roll_missing:
         counts = ((checks.get("roll_sectors") or {}).get("measured") or {}) \
             .get("bin_counts", [])
         size = spec.roll_bin_size_deg()
@@ -1859,6 +1882,9 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
                             unlocks.append(
                                 f"roll sector {int((roll % 360) // 90)}")
                             weight += 1
+                        if colour_missing:
+                            unlocks.append("colour participation")
+                            weight += 1
                         if target is not None:
                             if target["kind"] == "corner":
                                 unlocks.append(
@@ -1873,6 +1899,7 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
                         if not unlocks:
                             continue
                         fam = {"distance_band": b,
+                               "colour_required": bool(colour_missing),
                                "distance_mm": float(target_d),
                                "pose_z_mm": float(z),
                                "tilt_x_deg": float(tx),
@@ -1896,6 +1923,17 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
                                    "depth_mm": 0.0, "rotation_deg": 0.0,
                                    "move_mm": [0.0, 0.0, 0.0]}
                         fam["effort"] = eff
+                        if avoid_current and current is not None:
+                            # the last view at this pose was just refused as a
+                            # duplicate: do not hand the operator the same
+                            # instruction again
+                            try:
+                                if (abs(float(fam["distance_mm"])
+                                        - float(current.get("distance_mm") or 0.0)) < 8.0
+                                        and float(eff.get("rotation_deg") or 0.0) < 1.5):
+                                    continue
+                            except (TypeError, ValueError):
+                                pass
                         families.append(fam)
     # First unlock *what is genuinely missing* (a corner outweighs a carrier
     # distance), then nearest family; the rest of the key is deterministic.
@@ -1943,6 +1981,8 @@ def _instruction(spec: CoverageSpec, fam: Mapping[str, Any],
         if abs(droll) >= 5.0:
             parts.append(f"roll the plate by {abs(droll):.0f} deg "
                          f"{'clockwise' if droll < 0 else 'anticlockwise'}")
+    if fam.get("colour_required"):
+        parts.append("show the plate to the colour camera")
     if fam.get("distance_required"):
         lo, hi = spec.distance_bands_mm[fam["distance_band"]]
         text = f"move to {lo:.0f}-{hi:.0f} mm"
@@ -2016,7 +2056,8 @@ def _dwell_hold_result(measurement: Mapping[str, Any],
 
 def guidance_target(measurement: Mapping[str, Any],
                     current_pose: Any = None,
-                    spec: CoverageSpec | None = None) -> dict:
+                    spec: CoverageSpec | None = None,
+                    *, avoid_current: bool = False) -> dict:
     """The single most valuable next pose *family*.
 
     Returns ``{"mode", "instruction", "target_pose", "target_R", "target_t",
@@ -2072,7 +2113,8 @@ def guidance_target(measurement: Mapping[str, Any],
     if dwell is not None:
         return dwell
 
-    families = _families(measurement, spec, cur)
+    families = _families(measurement, spec, cur,
+                         avoid_current=avoid_current)
     if not families:
         hold = _dwell_hold_result(measurement, ready, spec)
         if hold is not None:
