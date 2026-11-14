@@ -62,50 +62,51 @@ The curated 37-view hybrid rehearsal does reach 8/8, but it was selected
 against the gate; it is not evidence that the guidance-driven workflow finds
 that set by itself.
 
-## Root cause in the selector
+## Correction: this operator is open-loop
 
-The family rank in `coverage._families` is **additive and type-based**, not
-deficit-based:
+The operator renders the **nominal** family pose and ingests it. It never sees
+the preview and cannot adjust until the plate is actually in the requested image
+corner.  `_image_targets` requests a corner through a lateral offset; under
+tilt/roll the nominal pose does not always project the plate centre into that
+corner, so the instruction repeats and the accepted set stalls.
 
-| unlock | weight |
-|---|---:|
-| distance band | 1 |
-| tilt axis/quadrant | 2 |
-| roll sector | 1 |
-| image corner | 3 |
-| image region | 2 |
-| colour participation (D6) | **not represented at all** |
+Two selector variants were tried after the first result:
 
-A family that fills a completely empty distance band (weight 1) therefore ranks
-below any tilt nudge (weight 2), even when several distance bands have zero
-views; and no family is generated specifically to recover colour participation.
-This is consistent with the observed end state (D1/D4/D6 still missing while the
-tilt cluster keeps receiving views), and with the guidance repeatedly choosing a
-small signed-tilt change.
+| variant | accepted | 45-target result |
+|---|---:|---|
+| fixed type weights (shipped) | 132 | 7/8; D2 quadrants missing; D1/D4/D6 also missing at the end |
+| deficit-normalized ranking (not shipped) | **16** | 7/8; D2 quadrants **and image corners** missing |
 
-A proposed fix (next change, not shipped): rank families by **normalized
-deficit** over the checks they unlock — `sum((need - have) / need)` — with the
-objective's priority order as the tie-break, and generate an explicit colour
-family when D6 is short.  That removes the starvation without lowering any
-threshold, and can be re-validated with this same operator.
+The deficit-ranked variant did not help: corner attempts starved everything
+else.  An earlier revision of this report blamed fixed type weights as the
+primary cause; that is not established by this experiment.
+
+What the runs do show:
+
+* the nominal family → pose mapping is **not sufficient** to guarantee the
+  requested image region under tilt/roll for an open-loop actuator; a human can
+  close that loop from the preview, the synthetic operator cannot;
+* the guidance has no machine-checkable “the plate is in the requested corner”
+  confirmation, so the product relies on the operator's eyes for that part;
+* the measured calibration quality is good (RMS 0.42 px), so the failure is
+  **coverage progress**, not bad observations.
 
 ## What this means
 
 * The offline **curated** rehearsals remain valid (37 real-image views, 8/8,
   validated candidate).
-* Acceptance criteria 9 (“selection prioritizes actual missing evidence”) and
-  10 (“a realistic from-scratch session reaches READY with a small number of
-  informative views”) are **not fully demonstrated for a guidance-following
-  operator**. The product still needs a guidance-selection fix, not another
-  hardware session.
-* The next fix should be explicit: maintain a **fixed absolute tilt
-  reference**, count the four absolute quadrants from accepted poses, and make
-  the guidance request the least-covered quadrant until each has the required
-  evidence — do not let a moving relative centre or a latch declare it done.
-  This needs a focused design + replay, not a threshold tweak.
+* Acceptance criteria 9 and 10 are **unverified**, not disproven: the only
+  guidance-following operator tested is open-loop, and it fails for a reason
+  (nominal pose vs projected region) that a human can correct visually.
+* A valid test needs a **closed-loop operator**: render, detect the projected
+  plate centre, adjust the nominal pose until the actual region/quadrant
+  matches the request, then ingest; or have the controller verify the region
+  from the preview before counting progress.  That is the next verification to
+  build, and it does not need hardware.
 
 ## Evidence
 
-`run_latched.json` and `run_stable_reference.json` contain the full per-target
-log (pose, instruction, acceptance) and the final measurement/validation
-summary. Both are synthetic; no private recording, serial or factory content.
+`run_latched.json`, `run_stable_reference.json` and `run_deficit_ranked.json`
+contain the full per-target log (pose, instruction, acceptance) and the final
+measurement/validation summary.  All are synthetic; no private recording,
+serial or factory content.

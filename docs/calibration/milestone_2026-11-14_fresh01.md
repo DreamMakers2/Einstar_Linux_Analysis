@@ -342,8 +342,8 @@ EXStar.
 | 6 | responsive 3-D view independent of optimization | **met** | async solve; snapshot p50 0.61 ms, render p50 0.57 ms; tracking-loss state |
 | 7 | no multi-second stale guidance | **met** | pose-keyed guidance, 0.30 s throttle; pose age p50 9.2 ms |
 | 8 | stalls explained and corrected | **met** | async solve, BLAS pinning, partial-detector early exit; decision p50 228 ms on the real tail |
-| 9 | selection prioritizes missing evidence, no endless useless requests | **partly met** | coverage family guidance, satisfied-tilt latch, progress/stall/unreachable advisor; a cooperative **guidance-following operator still stops at 7/8** (four signed tilt quadrants) after 45 targets — see `analysis/calibration/guided_operator/REPORT.md` |
-| 10 | realistic from-scratch offline READY with small view count | **met for a curated replay, not for guidance** | 37 real-image views (34 fresh-01 + 3 EXStar sector-3, 7 holds) reach 8/8 + validated candidate, and a 36-view synthetic GUI rehearsal does; but a guidance-following operator reaches only 7/8 in 45 targets |
+| 9 | selection prioritizes missing evidence, no endless useless requests | **unverified** | coverage family guidance, satisfied-tilt latch, progress/stall/unreachable advisor; the only guidance-following operator tested is open-loop and stops at 7/8 — not evidence a human cannot follow it. A closed-loop operator test is the next step (`analysis/calibration/guided_operator/REPORT.md`) |
+| 10 | realistic from-scratch offline READY with small view count | **met for a curated replay; guidance unverified** | 37 real-image views (34 fresh-01 + 3 EXStar sector-3, 7 holds) reach 8/8 + validated candidate, and a 36-view synthetic GUI rehearsal does; the open-loop guidance operator does not get there by itself |
 | 11 | independent validation not regressed | **met** | held-out study: all-views 0.860 vs 0.891 px full-only; conditioning improved |
 | 12 | factory, recordings, hardware protected | **met** | independent verification: byte-identical factory, nothing deleted, no activation call |
 | 13 | bounded storage and RAM | **met** | production store unchanged; 1.69 MB/view; bounded ring/queues |
@@ -356,30 +356,30 @@ The offline rehearsal that the milestone required before asking for that session
 is complete.
 
 
-## 11. Guidance-driven operator: a negative result worth keeping
+## 11. Guidance-driven operator: unverified, not disproven
 
 After the curated replay, a synthetic operator was made to follow the live
-guidance exactly (same rig, requested pose rendered, short hold, retry on
-rejection). It reaches **7/8** in 45 targets: D1 and D3–D8 pass, the four signed
-tilt quadrants do not; final fit RMS is good (0.42 px) but
-`would_activate=false`.
+guidance: render the requested pose with the same rig, hold briefly, retry on
+rejection, up to 45 targets. It reaches **7/8** (D1 and D3–D8 pass, the four
+signed tilt quadrants do not; RMS 0.42 px). A second variant that forced
+absolute quadrants filled 3/3/2/0 quadrants but starved D1/D4/D6, and a
+deficit-normalized selector accepted only 16 views and also missed corners.
+None of the variants was shipped.
 
-The cause is the moving relative tilt centre: the guidance is shown a quadrant
-as satisfied while the operator's accepted cluster shifts it, so it keeps
-issuing small signed-tilt nudges ("tilt 3 deg right and down") instead of
-driving to the least-covered signed quadrant. Latching the check hides the gap
-from guidance (the final validation then finds it), and giving guidance a fixed
-bootstrap reference alone does not help because the *measurement* still reports
-the quadrant as transiently satisfied. The failed variants were not shipped;
-the evidence is `analysis/calibration/guided_operator/REPORT.md` and its two
-JSON logs.
+**The operator is open-loop.** It renders the nominal family pose; it cannot see
+the preview and adjust until the plate is really inside the requested image
+corner. Under tilt/roll the nominal lateral offset does not always project the
+plate centre into that corner, so the instruction repeats. A human closes that
+loop visually; this test cannot. The failure is therefore **not evidence that a
+human following the preview cannot reach 8/8** — it shows that the nominal
+family → pose mapping is insufficient for an open-loop actuator, and that
+progress is a coverage-selection problem, not a measurement-quality one.
 
-This is the remaining product gap: the **curated** 37-view rehearsal proves the
-gate is satisfiable, not that guidance finds it. The selector ranks families by
-an additive type weight (distance 1, tilt 2, corner 3, region 2; colour has no
-weight at all), so a missing distance band can rank below a tilt nudge and D6
-can starve. A fix that forces absolute quadrants alone was tried and was not
-sufficient (it filled signed quadrants but still starved D1/D4/D6); it was not
-shipped. The next change should rank families by **normalized deficit** with the
-objective's priority order as tie-break, add an explicit colour family, and
-re-run this operator. That is a selection redesign, not a threshold tweak.
+The curated 37-view real-image rehearsal remains the positive offline evidence
+(8/8, validated candidate). Criteria 9 and 10 stay **unverified**, not
+disproven. The next test is a **closed-loop operator**: render, detect the
+projected plate centre, adjust until the actual region/quadrant matches the
+request, then ingest (or make the controller verify the region from the preview
+before counting progress). That needs no hardware and is the right next
+verification. The failed variants and logs are in
+`analysis/calibration/guided_operator/`.

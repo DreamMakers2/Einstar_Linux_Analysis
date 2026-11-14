@@ -1,0 +1,2023 @@
+{
+ "views": 133,
+ "accepted": 16,
+ "ready": false,
+ "missing": [
+  "tilt quadrants (four sign combinations)",
+  "image corners"
+ ],
+ "coverage": {
+  "D1": true,
+  "D2": false,
+  "D3": true,
+  "D4": false,
+  "D5": true,
+  "D6": true,
+  "D7": true,
+  "D8": true
+ },
+ "quads": {
+  "+x+y": 0,
+  "+x-y": 2,
+  "-x+y": 8,
+  "-x-y": 0
+ },
+ "rms": 0.4252277000995083,
+ "log": [
+  {
+   "pose": [
+    420.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (bootstrap duplicate, 0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-left corner of the image, tilt 20 deg right and 20 deg down, roll the plate by 45 deg anticlockwise, move to 380-460 mm."
+  },
+  {
+   "pose": [
+    420.0,
+    20.05,
+    -19.94,
+    45.0,
+    -113.4,
+    88.2
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (bootstrap duplicate, 0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the top-centre region of the image, tilt 30 deg left and 30 deg up, roll the plate by 90 deg anticlockwise, move to 460-560 mm (further, 65 mm)."
+  },
+  {
+   "pose": [
+    440.0,
+    23.05,
+    -22.94,
+    50.0,
+    -90.72,
+    70.56
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.3 deg, 0.6 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-centre region of the image, tilt 32 deg left and 9 deg down, roll the plate by 85 deg anticlockwise, move to 460-560 mm (further, 55 mm)."
+  },
+  {
+   "pose": [
+    400.0,
+    17.05,
+    -16.94,
+    40.0,
+    -90.72,
+    70.56
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the top-centre region of the image, tilt 25 deg left and 25 deg up, roll the plate by 95 deg anticlockwise, move to 300-380 mm (closer, 77 mm)."
+  },
+  {
+   "pose": [
+    340.0,
+    -8.41,
+    8.62,
+    135.0,
+    0.0,
+    -71.4
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image, tilt 4 deg left and 4 deg up, roll the plate by 90 deg anticlockwise, move to 300-380 mm."
+  },
+  {
+   "pose": [
+    360.0,
+    -5.41,
+    5.62,
+    140.0,
+    0.0,
+    -57.12
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 1.1 mm)"
+   ],
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 7 deg left and 8 deg up, roll the plate by 85 deg anticlockwise, move to 460-560 mm (further, 145 mm)."
+  },
+  {
+   "pose": [
+    320.0,
+    -11.41,
+    11.62,
+    130.0,
+    0.0,
+    -57.12
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (ambiguous, identity score 1/4)"
+   ],
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 7 deg left and 8 deg up, roll the plate by 85 deg anticlockwise, move to 460-560 mm (further, 145 mm)."
+  },
+  {
+   "pose": [
+    510.0,
+    -12.57,
+    12.89,
+    225.0,
+    137.7,
+    -107.1
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image, tilt 2 deg left and 2 deg up, move to 460-560 mm (closer, 29 mm)."
+  },
+  {
+   "pose": [
+    530.0,
+    -9.57,
+    9.89,
+    230.0,
+    110.16,
+    -85.68
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image, tilt 5 deg left and 5 deg up, move to 460-560 mm (closer, 37 mm)."
+  },
+  {
+   "pose": [
+    490.0,
+    -15.57,
+    15.89,
+    220.0,
+    110.16,
+    -85.68
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.8 mm)"
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image, move to 300-380 mm (closer, 169 mm)."
+  },
+  {
+   "pose": [
+    340.0,
+    -16.27,
+    16.47,
+    219.95,
+    91.8,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image."
+  },
+  {
+   "pose": [
+    360.0,
+    -13.27,
+    13.47,
+    224.95,
+    73.44,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    320.0,
+    -19.27,
+    19.47,
+    214.95,
+    73.44,
+    0.0
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image."
+  },
+  {
+   "pose": [
+    328.5,
+    -18.07,
+    18.32,
+    214.94,
+    88.69,
+    68.98
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 8 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image."
+  },
+  {
+   "pose": [
+    348.5,
+    -15.07,
+    15.32,
+    219.94,
+    70.96,
+    55.19
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    308.5,
+    -21.07,
+    21.32,
+    209.94,
+    70.96,
+    55.19
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 11 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    360.1,
+    -18.07,
+    18.32,
+    219.92,
+    97.23,
+    75.62
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (ambiguous, identity score 1/4)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    380.1,
+    -15.07,
+    15.32,
+    224.92,
+    77.78,
+    60.5
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    340.1,
+    -21.07,
+    21.32,
+    214.92,
+    77.78,
+    60.5
+   ],
+   "accepted": false,
+   "reasons": [
+    "left: ambiguous marker assignment (partial witness 0/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    392.64,
+    -18.07,
+    18.32,
+    224.9,
+    106.01,
+    82.45
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image."
+  },
+  {
+   "pose": [
+    412.64,
+    -15.07,
+    15.32,
+    229.9,
+    84.81,
+    65.96
+   ],
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    372.64,
+    -21.07,
+    21.32,
+    219.9,
+    84.81,
+    65.96
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (ambiguous, identity score 3/4)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    426.35,
+    -18.07,
+    18.32,
+    229.9,
+    -115.12,
+    -89.53
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    446.35,
+    -15.07,
+    15.32,
+    234.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  },
+  {
+   "pose": [
+    406.35,
+    -21.07,
+    21.32,
+    224.9,
+    -92.09,
+    -71.63
+   ],
+   "accepted": false,
+   "reasons": [
+    "stereo overlap 10 < 12 shared markers (both IR cameras must see the same labels)"
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 3 deg left and 3 deg up."
+  }
+ ]
+}
