@@ -250,7 +250,8 @@ Public checkout (`DreamMakers2/Einstar_Linux_Analysis`, sanitized):
 |---|---|---|
 | private research tree | `abf483b` | the milestone: detection, solver, dwell, roll, exposure, GUI and evidence |
 | private research tree | `4666798`, `ffb0859` | export-only path-scrub hygiene (home-relative paths kept intact for tests) |
-| public `DreamMakers2/Einstar_Linux_Analysis` | `2ab35df` | sanitized mirror of the above |
+| private research tree | `533d790`, `90aad45` | independent verification, stale-ROI/duplicate-write fixes, stereo rig gate, partial-vs-full accuracy study |
+| public `DreamMakers2/Einstar_Linux_Analysis` | `2ab35df`, `0000873`, `c54ef03` | sanitized mirror of the above |
 
 The public tree contains no recordings, no firmware, no factory calibration
 backup, no scanner serial and no absolute private path. `scripts/export_public.sh`

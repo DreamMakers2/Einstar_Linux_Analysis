@@ -258,6 +258,14 @@ anchored on complete boards.
 This says nothing about boards clipped to a third of the field, which are absent
 from this accepted set, and nothing about EXStar or any other implementation.
 
+## Data availability
+
+`data_fresh01.json` (keyed per-view observations) and `results_fresh01.json`
+(all 204 fits with per-view holdout rows) are derived from the private fresh-01
+recording and stay in the private research tree. This report and
+`PARTIAL_VS_FULL.json` (aggregates, provenance, sensitivity) are public; the
+scripts reproduce the aggregates given the private inputs.
+
 ## Metric sensitivity (positive control)
 
 The same held-out statistic after perturbing one fitted rig parameter by a known
