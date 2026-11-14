@@ -375,7 +375,11 @@ the evidence is `analysis/calibration/guided_operator/REPORT.md` and its two
 JSON logs.
 
 This is the remaining product gap: the **curated** 37-view rehearsal proves the
-gate is satisfiable, not that guidance finds it. The next change should count
-the four **absolute** tilt quadrants from accepted poses against a fixed
-reference and request the least-covered one explicitly, then re-run this
-operator; that is a guidance-selection design fix, not a threshold tweak.
+gate is satisfiable, not that guidance finds it. The selector ranks families by
+an additive type weight (distance 1, tilt 2, corner 3, region 2; colour has no
+weight at all), so a missing distance band can rank below a tilt nudge and D6
+can starve. A fix that forces absolute quadrants alone was tried and was not
+sufficient (it filled signed quadrants but still starved D1/D4/D6); it was not
+shipped. The next change should rank families by **normalized deficit** with the
+objective's priority order as tie-break, add an explicit colour family, and
+re-run this operator. That is a selection redesign, not a threshold tweak.

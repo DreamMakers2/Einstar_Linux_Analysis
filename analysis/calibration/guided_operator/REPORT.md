@@ -62,6 +62,33 @@ The curated 37-view hybrid rehearsal does reach 8/8, but it was selected
 against the gate; it is not evidence that the guidance-driven workflow finds
 that set by itself.
 
+## Root cause in the selector
+
+The family rank in `coverage._families` is **additive and type-based**, not
+deficit-based:
+
+| unlock | weight |
+|---|---:|
+| distance band | 1 |
+| tilt axis/quadrant | 2 |
+| roll sector | 1 |
+| image corner | 3 |
+| image region | 2 |
+| colour participation (D6) | **not represented at all** |
+
+A family that fills a completely empty distance band (weight 1) therefore ranks
+below any tilt nudge (weight 2), even when several distance bands have zero
+views; and no family is generated specifically to recover colour participation.
+This is consistent with the observed end state (D1/D4/D6 still missing while the
+tilt cluster keeps receiving views), and with the guidance repeatedly choosing a
+small signed-tilt change.
+
+A proposed fix (next change, not shipped): rank families by **normalized
+deficit** over the checks they unlock — `sum((need - have) / need)` — with the
+objective's priority order as the tie-break, and generate an explicit colour
+family when D6 is short.  That removes the starvation without lowering any
+threshold, and can be re-validated with this same operator.
+
 ## What this means
 
 * The offline **curated** rehearsals remain valid (37 real-image views, 8/8,
