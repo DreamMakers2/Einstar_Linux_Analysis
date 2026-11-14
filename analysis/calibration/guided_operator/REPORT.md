@@ -104,6 +104,42 @@ What the runs do show:
   from the preview before counting progress.  That is the next verification to
   build, and it does not need hardware.
 
+## Closed-loop test: the stall is now reproducible
+
+A closed-loop operator was built for the next step: it renders the requested
+pose, detects the plate, checks that the measured plate centre is really in the
+requested 3x3 image cell, adjusts the lateral offset and only then ingests.
+On the 45-target run it **does** place the plate in the requested cells
+(attempts `[2,0]`, `[0,2]`, `[2,2]`, `[0,0]`, `[1,0]`), but the session stalls
+after **7 accepted views** (`closed_loop_run.json`).
+
+The loop is visible in the log: guidance returns the same pose, the controller
+rejects it as `too similar to an accepted view (0.5 deg, 0.1 mm)`, and the same
+instruction comes back. Final coverage: D3/D4/D5/D8 true; D1, D2, D6 and D7
+false; finish refuses (7 views, `right.tz`/`tex.tz` unobservable).
+
+Two code facts explain it:
+
+1. **No refresh after a duplicate.** Guidance is keyed on the accepted pose /
+   coverage; a rejected duplicate at the unchanged pose does not force a
+   recompute, so the wizard keeps repeating an instruction that has just been
+   refused. A human would keep holding the same pose and see no progress.
+2. **Colour has no family.** D6 (colour participation) is a pose-relevant
+   dimension, but the shipped selector has no colour unlock/family. When it is
+   the remaining deficit, `_families` can return no admissible next pose and
+   guidance falls into a hold.
+
+A colour-only family (varied tilt/roll) was prototyped and not shipped: without
+the refresh fix the operator still stalled on the same pose. The next fix is
+therefore ordered:
+
+1. force guidance to recompute after a duplicate/rejected view (add a
+   rejection/attempt counter to the guidance key);
+2. generate a colour-participation family that differs from the current pose;
+3. re-run this closed-loop operator and the curated replay.
+
+This is a concrete product bug with a reproducible harness, not hardware work.
+
 ## Evidence
 
 `run_latched.json`, `run_stable_reference.json` and `run_deficit_ranked.json`

@@ -1,0 +1,1243 @@
+{
+ "schema": "einstar.guided-closed-loop/1",
+ "views": 45,
+ "groups": 180,
+ "accepted": 7,
+ "coverage": {
+  "D1": false,
+  "D2": false,
+  "D3": true,
+  "D4": true,
+  "D5": true,
+  "D6": false,
+  "D7": true,
+  "D8": true
+ },
+ "ready": false,
+ "missing": [
+  "distance bands",
+  "tilt about the x axis (positive and negative)",
+  "tilt about the second axis (y, positive and negative)",
+  "tilt quadrants (four sign combinations)",
+  "colour participation"
+ ],
+ "elapsed_s": 50.11,
+ "log": [
+  {
+   "view": 0,
+   "pose": [
+    420.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "accepted": false,
+   "instruction": "bootstrap",
+   "attempts": []
+  },
+  {
+   "view": 1,
+   "pose": [
+    420.0,
+    20.05,
+    -19.94,
+    45.0,
+    -139.89,
+    114.81
+   ],
+   "accepted": false,
+   "instruction": "Put the plate centre in the bottom-left corner of the image, tilt 20 deg right and 20 deg down, roll the plate by 45 deg anticlockwise, move to 380-460 mm.",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      286.0,
+      788.6
+     ],
+     "cell": [
+      2,
+      0
+     ],
+     "markers": 35
+    }
+   ]
+  },
+  {
+   "view": 2,
+   "pose": [
+    510.0,
+    -9.87,
+    10.13,
+    135.0,
+    171.94,
+    -133.95
+   ],
+   "accepted": false,
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 30 deg left and 30 deg up, roll the plate by 90 deg anticlockwise, move to 460-560 mm (further, 52 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      1021.4,
+      214.8
+     ],
+     "cell": [
+      0,
+      2
+     ],
+     "markers": 39
+    }
+   ]
+  },
+  {
+   "view": 3,
+   "pose": [
+    510.0,
+    -14.72,
+    -24.97,
+    225.0,
+    171.43,
+    139.25
+   ],
+   "accepted": false,
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 5 deg left and 35 deg down, roll the plate by 90 deg anticlockwise, move to 460-560 mm (closer, 45 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      1022.0,
+      798.0
+     ],
+     "cell": [
+      2,
+      2
+     ],
+     "markers": 37
+    }
+   ]
+  },
+  {
+   "view": 4,
+   "pose": [
+    510.0,
+    22.77,
+    12.32,
+    224.95,
+    -170.38,
+    -134.11
+   ],
+   "accepted": false,
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 37 deg right and 38 deg up, move to 460-560 mm (closer, 46 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      262.6,
+      217.7
+     ],
+     "cell": [
+      0,
+      0
+     ],
+     "markers": 39
+    }
+   ]
+  },
+  {
+   "view": 5,
+   "pose": [
+    420.0,
+    24.1,
+    13.56,
+    224.95,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Put the plate centre in the middle-left region of the image, move to 380-460 mm (closer, 135 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      261.5,
+      506.0
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 38
+    }
+   ]
+  },
+  {
+   "view": 6,
+   "pose": [
+    340.0,
+    24.78,
+    14.22,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 105 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.7
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 7,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 8,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 9,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 10,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 11,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 12,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 13,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 14,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 15,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 16,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 17,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 18,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 19,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 20,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 21,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 22,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 23,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 24,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 25,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 26,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 27,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 28,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 29,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 30,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 31,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 32,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 33,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 34,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 35,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 36,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 37,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 38,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 39,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 40,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 41,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 42,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 43,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  },
+  {
+   "view": 44,
+   "pose": [
+    340.0,
+    25.05,
+    14.51,
+    224.89,
+    -145.43,
+    2.44
+   ],
+   "accepted": false,
+   "instruction": "Move to 300-380 mm (closer, 30 mm).",
+   "attempts": [
+    {
+     "attempt": 0,
+     "centre": [
+      221.2,
+      487.5
+     ],
+     "cell": [
+      1,
+      0
+     ],
+     "markers": 32
+    }
+   ]
+  }
+ ],
+ "finish": {
+  "ok": true,
+  "passed": false,
+  "would_activate": false,
+  "accepted_views": 7,
+  "rms_px": 0.43511089581853285,
+  "reasons": [
+   "quality status fail",
+   "coverage not ready: distance bands, tilt about the x axis (positive and negative), tilt about the second axis (y, positive and negative), tilt quadrants (four sign combinations), colour participation",
+   "observability gates failed: freed_parameters",
+   "pose diversity: 7 views, distance span 185 mm, tilt span 39\u00b0, roll bins 4 \u2014 needs >= 12 views, 150 mm, 20\u00b0, 4 bins",
+   "observability gate failed: 2 free parameter(s) are unobservable: right.tz, tex.tz"
+  ]
+ }
+}

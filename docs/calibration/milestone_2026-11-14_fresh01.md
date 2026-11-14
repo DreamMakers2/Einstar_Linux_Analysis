@@ -377,9 +377,17 @@ progress is a coverage-selection problem, not a measurement-quality one.
 
 The curated 37-view real-image rehearsal remains the positive offline evidence
 (8/8, validated candidate). Criteria 9 and 10 stay **unverified**, not
-disproven. The next test is a **closed-loop operator**: render, detect the
-projected plate centre, adjust until the actual region/quadrant matches the
-request, then ingest (or make the controller verify the region from the preview
-before counting progress). That needs no hardware and is the right next
-verification. The failed variants and logs are in
-`analysis/calibration/guided_operator/`.
+disproven.
+
+A **closed-loop operator** was then built: it renders, detects the plate centre,
+adjusts the lateral offset until the requested 3x3 cell matches, and only then
+ingests. It reaches the requested cells, but the session **stalls after 7
+accepted views**: guidance repeats the same pose, the controller rejects it as
+`too similar`, and no new instruction is produced. Two code facts explain it —
+guidance is not refreshed after a duplicate rejection, and D6 (colour) has no
+family in the shipped selector, so guidance can fall into a hold while a
+pose-relevant dimension is still missing. Final coverage is D3/D4/D5/D8 only and
+finish refuses (7 views, unobservable `tz`). The evidence is
+`analysis/calibration/guided_operator/closed_loop_run.json`; the fix order is
+recorded there (refresh-on-duplicate, then a colour family, then re-run). This
+is a reproducible product bug, not hardware work.

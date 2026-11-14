@@ -73,7 +73,11 @@ Round-3 additions after independent verification
   really in the requested image corner, so it is not a valid verdict on human
   guidance. Variants (forced quadrants, deficit ranking) did not improve it and
   were not shipped. The curated 37-view replay remains 8/8. A closed-loop
-  operator is the next verification. Evidence:
+  operator now places the plate in the requested cells but stalls after 7
+  accepted views: guidance repeats a pose the controller rejects as
+  `too similar` (no refresh after a duplicate), and colour participation has no
+  family. This is a reproducible product bug; fix order is refresh-on-duplicate,
+  then a colour family, then re-run. Evidence:
   `analysis/calibration/guided_operator/REPORT.md`.
 * **partial views do not cost accuracy** (`analysis/calibration/accuracy/PARTIAL_VS_FULL.md`):
   held-out cross-camera 0.860 px (all 122 views) vs 0.891 px (60 full-board),
