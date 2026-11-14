@@ -49,6 +49,12 @@ DEFAULT_QUALITY = {
     "min_contrast": {"left": 14.0, "right": 14.0, "tex": 5.0},
     "min_focus": {"left": 150.0, "right": 150.0, "tex": 55.0},
     "max_sync_ms": 3.0,
+    # Independent left/right PnP must imply the *same* rig.  A rigid relabel
+    # of one camera's lattice (a sub-lattice shift, an orientation slip) fits
+    # each camera's own reprojection but breaks the left-right correspondence;
+    # the gross disagreement is caught here before it can enter the solver.
+    "max_stereo_pose_deg": 4.0,
+    "max_stereo_pose_mm": 12.0,
     "min_dwell_s": 0.25,
     "max_motion_mm": 3.0,           # dwell threshold: reported, not a rejection
     "max_motion_deg": 1.5,
@@ -214,6 +220,7 @@ def evaluate_frame(images: dict[str, np.ndarray],
 
     # board pose from the left camera (or right if left is missing)
     pose = None
+    pnp: dict[str, object] = {}
     obj = plate.board_points_mm()
     uv_idx = [(float(u), float(v)) for (u, v) in plate.lattice_uv()]
     for c in ("left", "right"):
@@ -231,6 +238,9 @@ def evaluate_frame(images: dict[str, np.ndarray],
         p = solve_pnp(obj_pts, img_pts, cam.K, cam.kc)
         if p is None:
             continue
+        pnp[c] = p
+        if pose is not None:
+            continue
         # Board-pose convention normalisation.  The detector's lattice
         # assignment is mirrored in v relative to the vendor lattice frame
         # (the calibration is invariant to it: it is a global 180 deg rotation
@@ -243,10 +253,37 @@ def evaluate_frame(images: dict[str, np.ndarray],
             # right-camera pose -> left camera frame: X_r = R_rl X_l + t_rl
             R_rl, t_rl = rig["right"]
             pose = (R_rl.T @ p.R, R_rl.T @ (p.t - t_rl))
-        break
     if pose is None:
         reasons.append("no board pose")
     metrics["pose_ok"] = pose is not None
+
+    # Stereo rig consistency: both IR cameras must imply the same left->right
+    # transform.  A per-camera lattice slip is invisible to each camera's own
+    # reprojection but shows up here as a gross translation/rotation error.
+    if "left" in pnp and "right" in pnp and rig and "right" in rig:
+        try:
+            Rl = np.asarray(pnp["left"].R, float)
+            tl = np.asarray(pnp["left"].t, float).reshape(3)
+            Rr = np.asarray(pnp["right"].R, float)
+            tr = np.asarray(pnp["right"].t, float).reshape(3)
+            R_est = Rr @ Rl.T
+            t_est = tr - R_est @ tl
+            R_rig, t_rig = rig["right"]
+            R_rig = np.asarray(R_rig, float)
+            t_rig = np.asarray(t_rig, float).reshape(3)
+            cos = (np.trace(R_est @ R_rig.T) - 1.0) / 2.0
+            ang = float(np.degrees(np.arccos(np.clip(cos, -1.0, 1.0))))
+            trans = float(np.linalg.norm(t_est - t_rig))
+            metrics["stereo_pose_angle_deg"] = ang
+            metrics["stereo_pose_translation_mm"] = trans
+            if (ang > float(q["max_stereo_pose_deg"])
+                    or trans > float(q["max_stereo_pose_mm"])):
+                reasons.append(
+                    f"stereo pose inconsistency ({ang:.2f} deg / "
+                    f"{trans:.2f} mm vs the known rig); one camera's marker "
+                    "identity is inconsistent with the other")
+        except Exception:
+            pass
 
     # dwell / motion: the board must be nearly stationary between frames
     if pose is not None and previous_pose is not None:

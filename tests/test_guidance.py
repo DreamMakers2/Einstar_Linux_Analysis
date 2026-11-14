@@ -189,3 +189,28 @@ def test_acceptance_admits_stationary_dwell_only_when_opted_in():
     no_dt = guidance.FrameQuality(True, [], {"speed_mm_s": 0.2})
     assert guidance.quality_stationarity(no_dt) is None
     assert guidance.acceptance(no_dt, 0.0, admit_dwell=True)["accept"] is False
+
+
+def test_stereo_rig_check_rejects_a_one_camera_label_slip():
+    """A lattice slip in one IR camera must not reach the solver.
+
+    Each camera's own reprojection can stay self-consistent while the two
+    cameras disagree about which physical marker is which; the implied rig then
+    moves by a plate pitch.  The check is inactive without a rig (unit tests,
+    bootstrap) and active as soon as the factory rig is known.
+    """
+    from calib import guidance as _g
+    imgs, grids, cams = _clean_frame_inputs()
+    rig = {"right": (np.eye(3), np.zeros(3))}
+    clean = _g.evaluate_frame(imgs, grids, cameras=cams, rig=rig)
+    assert clean.passed is True, clean.reasons
+
+    shifted = {}
+    for (u, v), point in grids["right"].uv.items():
+        shifted[(float(u) + 1.0, float(v))] = np.asarray(point, float)
+    bad_grids = dict(grids)
+    bad_grids["right"] = Observation("right", 0, shifted)
+    bad = _g.evaluate_frame(imgs, bad_grids, cameras=cams, rig=rig)
+    assert bad.passed is False, bad.metrics
+    assert any("stereo pose inconsistency" in reason for reason in bad.reasons), \
+        bad.reasons

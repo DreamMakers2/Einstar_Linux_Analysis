@@ -1098,6 +1098,8 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._rgb_roi.reset()
         self._exposure_baseline_done = False
         self._exposure_mismatch_seen = 0
+        self._last_exposure_request = None
+        self._last_exposure_request_at = 0.0
         self._exposure_run_id = f"{int(self._started_at)}-{os.getpid()}"
         self._ui_error = None
         self._display_state = None
@@ -1663,8 +1665,12 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                         self._event("auto exposure baseline skipped: "
                                     f"{type(exc).__name__}: {exc}")
                     return
+            detection_age = snap.get("detections_age_s")
+            observed_at = (now if detection_age is None
+                           else now - max(0.0, float(detection_age)))
             ir_points = list((snap.get("detections") or {}).get("left") or [])
-            ir_box, ir_meter, ir_pts = self._ir_roi.box(ir_points, now)
+            ir_box, ir_meter, ir_pts = self._ir_roi.box(
+                ir_points, now, observed_at=observed_at)
             ir_stats = None
             if self._last_ir_image is not None:
                 if ir_box is None:
@@ -1676,7 +1682,8 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                         self._last_ir_image, bbox=ir_box, exclude=ir_pts)
                     ir_stats.metering = ir_meter
             rgb_points = list((snap.get("detections") or {}).get("tex") or [])
-            rgb_box, rgb_meter, rgb_pts = self._rgb_roi.box(rgb_points, now)
+            rgb_box, rgb_meter, rgb_pts = self._rgb_roi.box(
+                rgb_points, now, observed_at=observed_at)
             rgb_stats = None
             if self._last_rgb_image is not None:
                 if rgb_box is None:
@@ -1701,6 +1708,21 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._exposure_mismatch_seen = self._report_exposure_mismatch()
             if not advice.changed or advice.settings is None:
                 return
+            request = (
+                tuple(sorted(dict(advice.settings.exposure_us).items())),
+                tuple(sorted(dict(advice.settings.gain).items())),
+                int(advice.settings.laser_percent))
+            if (request == self._last_exposure_request
+                    and (now - self._last_exposure_request_at) < 2.0):
+                # The device polls the control file and reports the readback
+                # with some lag.  Rewriting an identical request inside that
+                # grace produced two duplicate writes for a frozen/clamped
+                # value (a second hard-clipping step before the first was
+                # observed is also unsafe).  The advisor re-emits after the
+                # grace if the readback still differs.
+                return
+            self._last_exposure_request = request
+            self._last_exposure_request_at = now
             record = capture.set_volatile(
                 exposure_us=advice.settings.exposure_us,
                 gain=advice.settings.gain,

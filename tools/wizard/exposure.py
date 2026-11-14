@@ -163,27 +163,40 @@ class RoiHold:
     """
 
     def __init__(self, *, hold_s: float = 2.0, pad: float = 0.15,
-                 min_points: int = 4):
+                 min_points: int = 4, fresh_s: float = 0.5):
         self.hold_s = float(hold_s)
+        #: a detection older than this is reused as a *stale* box: clipping may
+        #: still step down but exposure is never raised from it
+        self.fresh_s = float(fresh_s)
         self.pad = float(pad)
         self.min_points = int(min_points)
         self._box = None
         self._points: list[tuple[float, float]] = []
         self._at = 0.0
 
-    def box(self, points, now: float):
+    def box(self, points, now: float, *, observed_at: float | None = None):
         """Return ``(bbox, metering, marker_points)``.
 
         ``metering`` is ``"roi"`` for a fresh detection, ``"stale"`` when the
         previous box is reused, and ``"none"`` when no usable region is known.
+
+        ``observed_at`` is when the detection was actually made.  The GUI polls
+        ``snap["detections"]`` at 10 Hz while detections are only refreshed by
+        a decision; without this stamp the same cached list would be re-labelled
+        "fresh" forever and a stale plate box could raise exposure from the
+        dark background (independent verification found exactly that).
         """
         box = plate_bbox(points, pad=self.pad, min_points=self.min_points)
+        stamp = float(now if observed_at is None else observed_at)
         if box is not None:
             arr = np.asarray(points, float).reshape(-1, 2)
             self._box = box
             self._points = [(float(x), float(y)) for x, y in arr]
-            self._at = float(now)
-            return box, "roi", list(self._points)
+            self._at = stamp
+            age = float(now) - stamp
+            if age > self.hold_s:
+                return None, "none", []
+            return box, ("roi" if age <= self.fresh_s else "stale"), list(self._points)
         if self._box is not None and (float(now) - self._at) <= self.hold_s:
             return self._box, "stale", list(self._points)
         return None, "none", []

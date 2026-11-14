@@ -1,7 +1,11 @@
 # Safe automatic exposure and illumination
 
-Status 2026-11-12. Implemented for the live capture path; validated in a
-controlled 12 s hardware run. Absolute photometric accuracy is not claimed.
+Status 2026-11-14. Implemented for the live capture path. The 2026-11-12
+hardware run proved the control path; the 2026-11-14 fresh session showed the
+*policy* was ineffective (29 no-op writes, RGB pinned, 17 IR reversals), and
+`tools/wizard/exposure.py` was rewritten from that evidence
+(`analysis/calibration/auto_exposure/AUDIT.md`). Absolute photometric accuracy
+is still not claimed, and no post-fix hardware run has been performed.
 
 ## Why
 
@@ -43,23 +47,60 @@ laser 100
 * Every applied change is written to `SESSION/exposure.jsonl` and the final
   settings are in `status.json` and the capture manifest.
 
-## Decision rules
+## Decision rules (2026-11-14)
 
-| rule | action |
+Metering is the **detected plate** (bbox from the latest decision) with a disk
+masked around every marker, so the deliberately clipped retro-reflective marker
+cores do not drive the loop. A valid box is reused as ``stale`` for 2 s after
+detection is lost; after that the metering is ``frame`` and **no up-correction
+is allowed** (a dark background must never raise exposure).
+
+| condition (plate ROI) | action |
 |---|---|
-| saturation >1 % or p99 ≥250 | reduce exposure 20 %; at minimum, reduce gain; at gain minimum, reduce laser by 10 (floor 40 %) |
-| p50 < target low | raise exposure 25 %; at maximum, raise gain; at gain maximum, raise laser by 10 (ceiling 100 %) |
-| p50 > target high | reduce exposure 15–20 % |
-| contrast too low | treated as under-exposed |
-| accepted view | freeze all settings for 1.6 s |
-| saturation during freeze | saturation override still applies |
+| saturation ≥ 15 % or p95 ≥ 250 | **one** observation, ×0.60 exposure, IR pair together, bypasses freeze/interval |
+| saturation > 4 % | ×0.85 after 2 observations |
+| p50 > target_high × 1.05 | ×0.85 after 2 observations |
+| p50 < target_low × 0.95 **and** p95 < 235 | ×1.25 after 2 observations |
+| p50 < target_low but p95 ≥ 235 | hold, report "highlight headroom" |
+| p50 outside band, metering `stale` | down-steps allowed, **up suppressed** |
+| metering `frame` | hold unless full-frame saturation ≥ 25 % |
+| exposure at limit | step gain, then illuminator; report the limit once |
+| proposed value equals the last readback | **not emitted** |
 
-IR cameras 0 and 1 are always set to the same exposure; only RGB is independent.
-A change needs two consecutive observations in the same direction (hysteresis),
-and evaluations are at least 1 s apart. The advisor uses a stride-4 sample of the
-1.3 MP frame, so it costs well under a millisecond on the preview path.
+There is a 5 % dead band on both target edges. A change needs two observations
+(except hard clipping). The advisor evaluates at most every 0.75 s; the GUI has
+no second gate. Accepted views freeze **soft** corrections for 1.6 s, and a
+detected stationary hold (D7 window) also freezes soft corrections, but hard
+clipping and urgent far-out-of-band corrections still act.
+
+The advisor stores the requested values and compares them with the next device
+readback within a 2 s grace; a persistent difference is surfaced as
+``status()["mismatch"]`` and in the session log. Every log entry carries a
+``run`` id.
+
+IR cameras 0 and 1 are always set to the same exposure; RGB is independent. The
+advisor uses a stride-4 sample of the 1.3 MP frame, so it costs well under a
+millisecond on the preview path.
 
 The UI opt-out is `--no-auto-exposure`. The default is on for live capture.
+
+## 2026-11-14 evidence
+
+| | legacy policy (fresh-01, 447 s) | new policy (closed-loop simulation) |
+|---|---:|---:|
+| exposure writes | 51 | **8** |
+| IR direction reversals | 31 | **1** |
+| RGB pinned (µs/gain at max) | 15 s | **0 s** |
+| no-op fields / writes | 19 / 0 | **0 / 0** |
+| final RGB gain | 300 | **180** |
+
+Closed-loop simulation starts from the observed pinned state (IR 2325 µs,
+RGB 20000 µs / gain 300), sweeps 420 → 550 → 320 → 420 mm with 2.5 s detection
+loss every 8 s. Real-frame classification of 35 accepted views × 2 cameras:
+IR 28 ok / 7 up (legacy 24/11), RGB 14 ok / 21 up (unchanged; at the limit).
+The remaining RGB darkness is a hardware/light-budget limit, not a control
+loop that can be fixed by more gain — and at least one `gain 2:300` write was
+rejected by the device (`status 3`), which the wizard now reports.
 
 ## Measured behaviour (2026-11-12, physical scanner)
 

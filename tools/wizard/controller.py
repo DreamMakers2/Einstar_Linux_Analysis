@@ -272,12 +272,15 @@ class _ProgressAdvisor:
     """
 
     WINDOW_S = 120.0
-    STALL_S = 120.0
-    STALL_VIEWS = 60
-    STOP_S = 180.0
-    STOP_VIEWS = 90
-    UNREACHABLE_S = 75.0
-    UNREACHABLE_SAMPLES = 30
+    # fresh-01 spent its last ~150 s asking for a sector that never registered;
+    # the old 180 s / 90-view stop threshold never fired before the operator
+    # gave up.  These are operator-feedback thresholds, not calibration gates.
+    STALL_S = 90.0
+    STALL_VIEWS = 45
+    STOP_S = 150.0
+    STOP_VIEWS = 45
+    UNREACHABLE_S = 60.0
+    UNREACHABLE_SAMPLES = 20
 
     def __init__(self) -> None:
         self.reset()
@@ -768,6 +771,10 @@ class WizardController:
             pass
         #: the wrapped decision engine (alias, per the GUI contract)
         self.session = self.controller
+        try:
+            self.session.rig_hint = self._factory_rig_hint()
+        except Exception:
+            self.session.rig_hint = None
 
         self.state = "idle"
         self.error: str | None = None
@@ -835,6 +842,8 @@ class WizardController:
         #: window used by the dwell estimator (seconds)
         self.dwell_window_s = 0.45
         self._last_detections: dict[str, list] = {k: [] for k in CAMERAS}
+        #: monotonic time of the last real detection (for metering staleness)
+        self._last_detections_at: float | None = None
         self._last_markers: dict[str, int] = {k: 0 for k in CAMERAS}
         self._last_shared = 0
         self._last_assignment_ok = True
@@ -1894,6 +1903,7 @@ class WizardController:
                     "metrics": {}, "n_markers": {}}
 
     def _detections(self, raw: Mapping[str, Any]) -> dict[str, list]:
+        self._last_detections_at = time.monotonic()
         out: dict[str, list] = {}
         for key in CAMERAS:
             grid = raw.get(key)
@@ -4951,6 +4961,19 @@ class WizardController:
             },
         }
 
+    def _factory_rig_hint(self) -> dict | None:
+        """Factory left->right/tex extrinsics for early stereo consistency."""
+        out: dict = {}
+        try:
+            for key, name in JSON_NAMES.items():
+                cam = self.profile.camera(name)
+                R = np.asarray(cam.R, float).reshape(3, 3)
+                T = np.asarray(cam.T, float).reshape(3)
+                out[key] = (R, T)
+        except Exception:
+            return None
+        return out or None
+
     def _left_intrinsics_dict(self) -> dict | None:
         """Left IR intrinsics for the 3-D preview (calibration happens on it)."""
         try:
@@ -5385,6 +5408,9 @@ class WizardController:
             "pose_rt": _pose_rt(self._last_pose),
             "pose_age_s": (None if self._last_pose_at is None else
                            max(0.0, time.monotonic() - self._last_pose_at)),
+            "detections_age_s": (None if self._last_detections_at is None else
+                                 max(0.0, time.monotonic()
+                                     - self._last_detections_at)),
             "camera_left": self._left_intrinsics_dict(),
             "detections": copy.deepcopy(self._last_detections),
             "markers": dict(self._last_markers),
@@ -5423,6 +5449,12 @@ class WizardController:
                            *, now: float | None = None) -> dict:
         """Progress/stagnation facts refreshed on every snapshot (not cached)."""
         groups = capture.get("groups_written")
+        # Advance the guidance-age counter even when no decision is being made
+        # (a stall means decisions may stop producing accepts; the GUI still
+        # polls at 10 Hz).  Without this, fresh-01 showed 6 samples after 107 s
+        # and the "unreachable" advice could never fire.
+        if self._guidance_cache:
+            self._progress.observe_guidance(self._guidance_cache)
         progress = self._progress.status(
             now=now, groups_written=(None if groups is None else int(groups)))
         coverage = self._coverage_cache or {}
@@ -5445,6 +5477,12 @@ class WizardController:
         progress["missing_dimensions"] = missing_dims
         progress["missing_corners"] = missing_corners
         progress["missing_image_regions"] = missing_regions
+        if progress.get("stalled") and not progress.get("stop_recommended"):
+            progress["stall_hint"] = (
+                f"No new coverage for {float(progress.get('seconds_since_progress') or 0):.0f} s. "
+                "Hold the plate still for about a second; if this view still "
+                "does not register, reposition the scanner or plate. If it "
+                "cannot be reached, stop and keep the data for offline analysis.")
         progress["ready"] = bool((self._readiness_cache or {}).get("ready"))
         progress["missing"] = list((self._readiness_cache or {}).get("missing")
                                    or [])
@@ -5471,6 +5509,12 @@ class WizardController:
         generated = self._guidance_generated_at
         age = None if generated is None else max(0.0, now - generated)
         coverage = self._coverage_cache or {}
+        if progress.get("stall_hint"):
+            guidance["stalled"] = True
+            guidance["stall_hint"] = str(progress["stall_hint"])
+            detail = str(guidance.get("detail") or "").strip()
+            guidance["detail"] = (detail + " " if detail else "") + str(
+                progress["stall_hint"])
         guidance.update({
             "generated_at_s": generated,
             "age_s": (None if age is None else round(float(age), 3)),

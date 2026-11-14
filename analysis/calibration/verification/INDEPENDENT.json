@@ -1,0 +1,476 @@
+{
+ "schema": "einstar.independent-verification/1",
+ "generated_utc": "2026-11-14T10:28:47+00:00",
+ "subject": {
+  "repo": "<repo>",
+  "head": "eee5a9a",
+  "working_tree_dirty_from_concurrent_agent": {
+   "modified": [
+    "docs/calibration/auto_exposure.md",
+    "tools/wizard/controller.py"
+   ],
+   "untracked": [
+    "analysis/calibration/accuracy/",
+    "tools/wizard/guided_rehearsal.py"
+   ],
+   "note": "progress/stall_hint threshold edits only; product code not changed by the verifier",
+   "mitigation": "E2E repeated from a clean `git archive eee5a9a tools calib` export"
+  },
+  "reports_verified": [
+   "docs/calibration/milestone_2026-11-14_fresh01.md",
+   "analysis/calibration/fresh01/REPORT.md"
+  ],
+  "environment": {
+   "python": "3.14 (venv)",
+   "pyside6": "6.12.0",
+   "numpy": "2.5.4",
+   "opencv": "5.0.0",
+   "pytest": "9.2.0",
+   "hardware": "none (no scanner, no USB)"
+  },
+  "working_tree_moved_during_verification": {
+   "files": [
+    "tools/wizard/exposure.py",
+    "tools/wizard/gui/modern_window.py",
+    "calib/guidance.py",
+    "calib/session.py",
+    "tools/wizard/coverage.py",
+    "tools/wizard/controller.py",
+    "tests/test_exposure.py",
+    "tests/test_guidance.py",
+    "tests/test_wizard_coverage.py"
+   ],
+   "note": "uncommitted concurrent-agent edits landed after the audit; one implements the EXP-1 fix (observed_at/fresh_s/detections_age_s)",
+   "scope": "all line references, test counts and conclusions in this report describe eee5a9a, where the exposure files were clean when read and tested"
+  }
+ },
+ "verdict": {
+  "session_isolation": "holds",
+  "factory_protection": "holds",
+  "e2e_reproduction": "holds; every reported number reproduced",
+  "exposure_audit": "mostly holds; one real bug missed (stale ROI freshness keyed to poll clock) + one secondary (no in-flight write suppression)",
+  "privacy_publication": "holds (no serial/absolute path/recording/firmware/binary); nuances: home-relative private paths and factory SHA/derived params published",
+  "regression": "55 passed, 0 failed",
+  "numeric_contradictions": 0
+ },
+ "session_isolation": {
+  "method": "LiveCaptureProcess(config, binary=/bin/sh).archive_previous_output() then WizardController(...).begin() on the same /tmp dir; no start()",
+  "capture_archived_kinds": [
+   "control.txt",
+   "exposure-control.txt",
+   "frames",
+   "recording",
+   "status"
+  ],
+  "capture_reused": true,
+  "archived_moves": [
+   {
+    "kind": "frames",
+    "path": "/tmp/agv/iso/session/frames",
+    "moved_to": "/tmp/agv/iso/session/frames.previous-20261114-102128"
+   },
+   {
+    "kind": "recording",
+    "path": "/tmp/agv/iso/session/raw.e1r",
+    "moved_to": "/tmp/agv/iso/session/raw.e1r.previous-20261114-102128",
+    "bytes": 16402
+   },
+   {
+    "kind": "exposure-control.txt",
+    "path": "/tmp/agv/iso/session/exposure-control.txt",
+    "moved_to": "/tmp/agv/iso/session/exposure-control.txt.previous-20261114-102128"
+   },
+   {
+    "kind": "control.txt",
+    "path": "/tmp/agv/iso/session/control.txt",
+    "moved_to": "/tmp/agv/iso/session/control.txt.previous-20261114-102128"
+   },
+   {
+    "kind": "status",
+    "path": "/tmp/agv/iso/session/status.json",
+    "moved_to": "/tmp/agv/iso/session/status.json.previous-20261114-102128"
+   }
+  ],
+  "controller_previous_session_dir": "/tmp/agv/iso/session/previous-20261114-102128",
+  "controller_quarantine_contents": [
+   "decisions.jsonl",
+   "manifest.json",
+   "session.json",
+   "views",
+   "views/000000.json"
+  ],
+  "new_frames_dir_empty": true,
+  "raw_e1r_archived_bytes_identical": true,
+  "raw_e1r_archive_size": 16402,
+  "stale_exposure_control_removed": true,
+  "stale_control_removed": true,
+  "stale_status_removed": true,
+  "accepted_views_after_begin": 0,
+  "views_len_after_begin": 0,
+  "view_store_views": 0,
+  "files_before": 12,
+  "files_after": 17,
+  "all_pre_existing_bytes_preserved": true,
+  "factory_hash_unchanged_by_begin": true,
+  "note": "controller recreates an empty views/ for the new production store; the old views/ lives in previous-<stamp>/",
+  "result": "PASS"
+ },
+ "factory_protection": {
+  "finish_state": "done",
+  "finish_ok": true,
+  "factory_unchanged_flag": true,
+  "synthetic_factory_sha_before": "c7a78569d676a309783f6a7bb07410dff2ef69e78a89b14a174fca66fabb40e2",
+  "synthetic_factory_sha_after": "c7a78569d676a309783f6a7bb07410dff2ef69e78a89b14a174fca66fabb40e2",
+  "synthetic_factory_byte_identical": true,
+  "real_factory_sha_before": "8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4",
+  "real_factory_sha_after": "8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4",
+  "real_factory_byte_identical": true,
+  "real_factory_mtime_ns_before": 1794348884406894208,
+  "real_factory_mtime_ns_after": 1794348884406894208,
+  "profiles_dir_unchanged": true,
+  "candidate_produced": true,
+  "validation_produced": true,
+  "validation_passed": true,
+  "validation_would_activate": true,
+  "groups_ingested": 36,
+  "accepted_views": 33,
+  "activation_call_present_in_wizard": false,
+  "activation_evidence": "grep -rn 'activate(' tools/wizard is empty; finish() calls lifecycle.validate only and re-hashes the factory at controller.py:3341-3348",
+  "result": "PASS"
+ },
+ "e2e": {
+  "command_clean_head": "cd /tmp/agv/head && <repo>/.venv/bin/python tools/wizard/gui/app.py --source views --views-dir ~/einstar-calibration-fresh-01 --select 30 --holds 7 --hold-repeats 8 --rotated-views '' --vendor-views 14,22,4 --vendor-dir ~/einstar-private/exstar-20261114 --async-solve --headless --finish --mode high --session-dir /tmp/agv/e2e-head --duration 900",
+  "command_working_tree": "same, --session-dir /tmp/agv/e2e",
+  "clean_head": {
+   "session_dir": "/tmp/agv/e2e-head",
+   "accepted_views": 37,
+   "rejected_views": 56,
+   "validation_passed": true,
+   "would_activate": true,
+   "quality_status": "fail",
+   "quality_sigma_fx_px": 0.5681699002611229,
+   "quality_sigma_fx_limit_px": 0.35,
+   "rms_px": 2.341767480251889,
+   "cross_camera_worst_rms_px": 0.49079948627578757,
+   "cross_camera_worst_p95_px": 0.9188988518926539,
+   "baseline_mm": 160.3580534167145,
+   "baseline_sigma_mm": 0.04862670272726637,
+   "stereo_rotation_sigma_deg": 0.0188381223512122,
+   "colour_translation_mm": 0.050058161580872486,
+   "colour_pixel_at_400mm": 0.14506755957903908,
+   "roll_bins_covered": 4,
+   "roll_deg_range": {
+    "min": 44.15186013067571,
+    "max": 276.7670214125686,
+    "span": 232.6151612818929
+   },
+   "stationary_intervals": 7,
+   "stationary_observations": 50,
+   "accepted_stationary_views": 0,
+   "heldout_rms_px": 0.3323193273383308,
+   "heldout_train_views": 30,
+   "heldout_test_views": 7,
+   "readiness": {
+    "ready": true,
+    "satisfied": 8,
+    "total": 8,
+    "n_views": 37
+   },
+   "candidate_sha256": "83270d9b82341f571163fc03125440539db1257897ef83b0f22bf1d7320b2273"
+  },
+  "working_tree": {
+   "session_dir": "/tmp/agv/e2e",
+   "accepted_views": 37,
+   "rejected_views": 56,
+   "validation_passed": true,
+   "would_activate": true,
+   "quality_status": "fail",
+   "quality_sigma_fx_px": 0.5681707267498396,
+   "quality_sigma_fx_limit_px": 0.35,
+   "rms_px": 2.3417673460869812,
+   "cross_camera_worst_rms_px": 0.49079644607206285,
+   "cross_camera_worst_p95_px": 0.9189061070482695,
+   "baseline_mm": 160.3580584505972,
+   "baseline_sigma_mm": 0.04862672468020388,
+   "stereo_rotation_sigma_deg": 0.018838168355783662,
+   "colour_translation_mm": 0.050058268475910606,
+   "colour_pixel_at_400mm": 0.14506786723390447,
+   "roll_bins_covered": 4,
+   "roll_deg_range": {
+    "min": 44.15186012991383,
+    "max": 276.76702074698807,
+    "span": 232.61516061707425
+   },
+   "stationary_intervals": 7,
+   "stationary_observations": 51,
+   "accepted_stationary_views": 0,
+   "heldout_rms_px": 0.3323192861878153,
+   "heldout_train_views": 30,
+   "heldout_test_views": 7,
+   "readiness": {
+    "ready": true,
+    "satisfied": 8,
+    "total": 8,
+    "n_views": 37
+   },
+   "candidate_sha256": "ae72929b47dc0dd4b1eebf513a8005b031db49ed1c87405bb3c3cecb1d7c4f9e"
+  },
+  "wall_time_s": {
+   "working_tree": 50,
+   "clean_head": 65
+  },
+  "accepted_split": {
+   "recorded_fresh01": 34,
+   "vendor": 3,
+   "rotated": 0,
+   "vendor_labels": [
+    "vendor_15",
+    "vendor_23",
+    "vendor_05"
+   ],
+   "vendor_markers": {
+    "vendor_15": [
+     38,
+     38,
+     40
+    ],
+    "vendor_23": [
+     40,
+     40,
+     40
+    ],
+    "vendor_05": [
+     35,
+     35,
+     35
+    ]
+   }
+  },
+  "report_table_match": true,
+  "notes": [
+   "the report has no literal \u00a74.2 command block; the printed command is the \u00a74 surrogate (rotated-views 180)",
+   "--rotated-views none is not a valid literal: float('none') raises; an empty value means no rotations",
+   "--vendor-views indexes the 0-based sorted corpus list, so 14,22,4 selects files 15,23,5 (labels vendor_15/23/05)",
+   "the candidate profile differs only by session dir/timestamps; fitted numbers agree to ~1e-7"
+  ],
+  "result": "PASS"
+ },
+ "exposure": {
+  "claims": {
+   "no_op_suppression": "holds vs last device readback; 0 violations in a 108-scenario sweep",
+   "hard_vs_soft_saturation": "holds (ROI hard >=15% or p95>=250 immediate x0.60; soft >4% x0.85 after 2 obs; frame hard >=25%)",
+   "plate_roi_metering_with_marker_masking": "holds (padded marker bbox, +/-24 px square mask per marker)",
+   "stale_roi_up_suppression": "PARTIAL/BUG: applies only when the detection list is empty; freshness is keyed to poll time",
+   "freeze_handling": "holds (soft frozen, hard bypass)",
+   "readback_mismatch_reporting": "holds (lag <=2 s silent; stuck 2.5 s reported once with requested/readback/after_s)",
+   "per_run_baseline": "implemented once per _on_start; runs after capture start; baseline write not readback-tracked"
+  },
+  "bug": {
+   "id": "EXP-1",
+   "severity": "moderate",
+   "title": "stale ROI freshness is measured from the poll clock, not the detection time",
+   "mechanism": "RoiHold.box() sets _at=now on every non-empty point list (exposure.py:174-189); _auto_expose feeds it snap['detections'] = deepcopy of _last_detections (controller.py:5389), which only updates on ingest (controller.py:1770/1830/2034/4783), while the preview image updates per frame (modern_window.py:1029) and the worker keeps previewing during a decision (worker.py:64-78)",
+   "probe": {
+    "roi_label_same_list_at_0s": "roi",
+    "roi_label_same_list_at_100s": "roi",
+    "stale_label_reachable_from_retained_list": false,
+    "roi_labelled_background_dark_result": [
+     {
+      "t": 10.0,
+      "changed": false,
+      "settings": null,
+      "reason": "within target"
+     },
+     {
+      "t": 10.8,
+      "changed": true,
+      "settings": {
+       "exposure_us": {
+        "0": 1500,
+        "1": 1500,
+        "2": 5000
+       },
+       "gain": {
+        "0": 105,
+        "1": 105,
+        "2": 200
+       },
+       "laser_percent": 100
+      },
+      "reason": "IR dark (p50 30)"
+     },
+     {
+      "t": 11.6,
+      "changed": false,
+      "settings": null,
+      "reason": "within target"
+     }
+    ],
+    "stale_labelled_background_dark_result": [
+     {
+      "changed": false,
+      "reason": "within target"
+     },
+     {
+      "changed": false,
+      "reason": "at limit: IR metering stale; holding"
+     },
+     {
+      "changed": false,
+      "reason": "within target"
+     }
+    ]
+   },
+   "impact": "a decision lag/stall with the plate moved out of the last box can raise exposure from background (IR 1200->1500 us after 2 confirmations in the probe); fresh-01 measured p95 1.22 s / max 15.4 s decision latency; post-fix decisions <= 0.87 s bound the practical exposure",
+   "fix": "carry the ingest monotonic timestamp with detections and age the ROI from it",
+   "missed_by_audit": true
+  },
+  "secondary": {
+   "id": "EXP-2",
+   "severity": "low-moderate",
+   "title": "identical re-requests while a write is unconfirmed",
+   "mechanism": "_pending/_unconfirmed only detect mismatch (exposure.py:531-556); no in-flight suppression in observe()",
+   "probe": {
+    "writes": 3,
+    "duplicates": 2,
+    "cadence_s": 0.8,
+    "readback_frozen": true
+   },
+   "impact": "a clamped/rejected write is re-emitted every 0.75 s while the condition persists (file rewrite, no device change)"
+  },
+  "minor": [
+   "baseline write not registered in _pending/_unconfirmed -> a rejected baseline write is never reported as mismatch",
+   "baseline reset runs on the first GUI refresh after the capture child is already running; it cannot precede the first captured frames (archive_previous_output already removes the sticky file)",
+   "hard clip bypasses freeze/interval for both cameras (soft RGB can ride along)",
+   "fast_down=0.60 is ~1.3 stops, not 'one stop'"
+  ],
+  "readback_probe": {
+   "lag_mismatch": null,
+   "stuck_mismatch": {
+    "requested": {
+     "exposure_us": {
+      "0": 1500,
+      "1": 1500,
+      "2": 5000
+     },
+     "gain": {
+      "0": 105,
+      "1": 105,
+      "2": 200
+     },
+     "laser_percent": 100
+    },
+    "readback": {
+     "exposure_us": {
+      "0": 1200,
+      "1": 1200,
+      "2": 5000
+     },
+     "gain": {
+      "0": 105,
+      "1": 105,
+      "2": 200
+     },
+     "laser_percent": 100
+    },
+    "after_s": 2.5
+   },
+   "stuck_count": 1,
+   "frozen_soft": false,
+   "frozen_hard": true,
+   "changed_but_equal_count": 0
+  },
+  "tests": {
+   "file": "tests/test_exposure.py",
+   "passed": 26,
+   "failed": 0
+  }
+ },
+ "privacy": {
+  "public_checkout": {
+   "path": "<repo>",
+   "head": "e88f269",
+   "head_full": "e88f2697fa2788bf370c7a0989ecceaf22bf6b60",
+   "mirror_commit_cited_in_report": "2ab35df",
+   "working_tree_clean": true,
+   "tracked_files": 770,
+   "size_mb": 101
+  },
+  "no_absolute_home_paths": true,
+  "exact_device_serial_occurrences": 0,
+  "redacted_serial_pattern_occurrences": 0,
+  "tracked_binary_blobs": 0,
+  "tracked_e1r_recordings": 0,
+  "firmware_payloads": 0,
+  "files_with_home_relative_private_paths": {
+   "~/einstar-private": 45,
+   "~/einstar-calibration*": 22
+  },
+  "files_with_private_inputs_placeholder": 44,
+  "files_with_factory_profile_sha256": 13,
+  "images": {
+   "tracked": 104,
+   "private_recording_images_hashed": 567,
+   "byte_identical_to_private_recording": 0
+  },
+  "published_profiles": {
+   "analysis/calibration/solver/final/profile.json": {
+    "kind": "candidate",
+    "validation": "pending",
+    "schema": "einstar.recon.profile/1"
+   },
+   "analysis/calibration/recovery/candidate_hardpp/profile.json": {
+    "kind": "candidate",
+    "validation": "pending",
+    "schema": "einstar.recon.profile/1"
+   },
+   "note": "kind=candidate (project output); share 6 factory intrinsics and the factory distortion coefficients (held)"
+  },
+  "export_script_in_public_tree": false,
+  "pushed": false,
+  "result": "PASS (with two nuances recorded)"
+ },
+ "regression": {
+  "command": ".venv/bin/python -m pytest tests/test_session_hygiene.py tests/test_async_solve.py tests/test_dwell.py tests/test_roll_sectors.py tests/test_real_view_source.py tests/test_exposure.py tests/test_wizard_worker_budget.py tests/test_wizard_gui_ready.py -q",
+  "summary": "55 passed, 14 warnings in 172.27s",
+  "per_file": {
+   "test_session_hygiene": 5,
+   "test_async_solve": 2,
+   "test_dwell": 2,
+   "test_roll_sectors": 5,
+   "test_real_view_source": 2,
+   "test_exposure": 26,
+   "test_wizard_worker_budget": 10,
+   "test_wizard_gui_ready": 3
+  },
+  "skipped": 0,
+  "failed": 0,
+  "not_run": [
+   "full suite (per instructions)",
+   "public checkout suite",
+   "driver CTest"
+  ]
+ },
+ "contradictions": [],
+ "imprecisions": [
+  "\u00a74.2 has no literal command block (the printed one is the \u00a74 rotated-surrogate variant)",
+  "--rotated-views none is not a valid literal (float('none'))",
+  "--vendor-views 14,22,4 are 0-based list positions -> corpus files 15,23,5 (vendor_15/23/05)",
+  "previous-<utc>/ is actually previous-YYYYmmdd-HHMMSS/ (controller) and <name>.previous-YYYYmmdd-HHMMSS (capture)",
+  "fast_down=0.60 is ~1.3 stops, not one stop"
+ ],
+ "unproven_here": [
+  "any scanner/hardware behaviour (exposure on a device, RGB-dark limit)",
+  "full suite 651 passed/8 skipped; public suite 514 passed/79 skipped; driver 12/12",
+  "performance timings (solve times, decision latency, 10 solves/162 views)",
+  "\u00a74.1 fresh-01-alone 7/8 refusal (not re-run)"
+ ],
+ "evidence": {
+  "scratch": "/tmp/agv (isolated replication scripts + outputs), removed after collection",
+  "e2e_dirs": [
+   "/tmp/agv/e2e",
+   "/tmp/agv/e2e-head"
+  ],
+  "reproduce": "see e2e.command_clean_head; public scan via git grep/git ls-files in the public checkout"
+ }
+}

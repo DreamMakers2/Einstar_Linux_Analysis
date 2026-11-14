@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **651 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **654 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
 
@@ -44,6 +44,30 @@ Exposure audit: `analysis/calibration/auto_exposure/AUDIT.md`.
 | real-image GUI rehearsal | **37 accepted, 8/8 READY, validated candidate** | hybrid fresh-01 + 3 EXStar real sector-3 views |
 | display: snapshot / plate render p50 | **0.61 / 0.57 ms** | `display_latency.json` |
 | public clean checkout | **514 passed / 79 skipped** | published tree, `2ab35df` |
+
+Round-3 additions after independent verification
+(`analysis/calibration/verification/INDEPENDENT.md`):
+
+* **stale-ROI exposure bug fixed.** `RoiHold` aged the plate box from the poll
+  clock and the GUI re-presents cached detections at 10 Hz, so a stale box stayed
+  "fresh" and could raise exposure from the dark background after detection was
+  lost. Detections are now stamped at ingest (`detections_age_s`); older than
+  0.5 s is `stale`, older than 2 s is `none` (never raises).
+* **no duplicate in-flight exposure writes** inside the 2 s readback grace.
+* **per-view stereo rig-consistency gate**: both IR cameras must imply the same
+  left→right transform (4 deg / 12 mm), so a one-camera lattice slip cannot
+  reach the solver (`tests/test_guidance.py`).
+* the independent verifier reproduced the real E2E from a clean commit
+  (37 accepted, 8/8, `passed`/`would_activate`) and all session-isolation and
+  factory-protection claims; 55 targeted tests passed.
+* freezing the tilt centre was tested and reverted: it regressed the validated
+  real rehearsal 8/8 → 7/8. The dynamic relative tilt definition and its
+  moving-goalpost behaviour remain a documented limitation.
+* **partial views do not cost accuracy** (`analysis/calibration/accuracy/PARTIAL_VS_FULL.md`):
+  held-out cross-camera 0.860 px (all 122 views) vs 0.891 px (60 full-board),
+  Δ −0.030 px [−0.043, −0.019]; stereo baseline sigma 0.059 → 0.039 mm;
+  matched-view-count changes are within noise. One session, mostly mild clipping;
+  no EXStar claim.
 
 ---
 

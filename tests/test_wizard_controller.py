@@ -217,8 +217,14 @@ def test_real_session_production_storage_is_compact_and_verifiable(tmp_path):
     chosen = group_dirs[:6]
     for index, group_dir in enumerate(chosen):
         for cam in range(3):
-            (frames / f"frame_{index:06d}_cam{cam}.pgm").symlink_to(
-                group_dir / f"cam{cam}.pgm")
+            image = types.read_pgm(group_dir / f"cam{cam}.pgm")
+            # these recovered groups store *oriented* IR/colour images, while
+            # a raw capture directory stores cam0/cam2 180 deg rotated.  Write
+            # the orientation the replay reader expects, otherwise the new
+            # stereo rig gate correctly sees a 180 deg pair mismatch.
+            if cam in (0, 2):
+                image = np.rot90(image, 2)
+            types.write_pgm(frames / f"frame_{index:06d}_cam{cam}.pgm", image)
     source = sources.ReplayDirSource(frames, limit=6)
     ctl = _controller(tmp_path, source, factory, name="real")
     _ingest_all(ctl, source)

@@ -191,6 +191,15 @@ passes the independent lifecycle validation (`passed: true`,
 | stationarity intervals | 7 (7 real holds) |
 | fit RMS (all views, robust) | 2.34 px |
 
+The `validation: "pending"` field is the **lifecycle** state (a profile is never
+activated automatically); the authoritative gate results are
+`passed: true` / `would_activate: true` with one quality advisory
+(`sigma_fx` 0.568 px against the high-mode 0.35 px target).
+
+Independent verification reproduced every number above from a clean
+`git archive` of the published commit, twice, to ~1e-7 px
+([`analysis/calibration/verification/INDEPENDENT.md`](../../analysis/calibration/verification/INDEPENDENT.md)).
+
 The two recordings are the same physical scanner and plate under the same
 factory profile; the hybrid is labelled as such and is not presented as one
 physical session.
@@ -207,7 +216,7 @@ Baseline before this milestone: 601 passed / 8 skipped. New tests:
 `test_wizard_worker_budget.py` (10, performance task), plus the exposure suite
 (26, was 6) and partial-detection additions.
 
-Full suite: **651 passed, 8 skipped** (8 min 06 s, `.venv/bin/python -m pytest tests -q`);
+Full suite: **654 passed, 8 skipped** (8 min 17 s, `.venv/bin/python -m pytest tests -q`);
 driver C++: **12/12** (`build/driver-ninja`, ctest). The single earlier failure
 (`test_live_capture_source_plumbing`) reproduced only while a heavy GUI
 rehearsal was running concurrently and passes in the clean run.
@@ -247,3 +256,74 @@ The public tree contains no recordings, no firmware, no factory calibration
 backup, no scanner serial and no absolute private path. `scripts/export_public.sh`
 performed the copy, untracked-file pruning, path scrub and forbidden-content
 check; the sanitized checkout was then tested from its own working tree.
+
+
+## 8. Independent verification and the bug it found
+
+`analysis/calibration/verification/INDEPENDENT.md` (Agent G) reproduced the
+session-isolation, factory-protection and real-E2E claims from a clean export:
+**all hold**, including 37 accepted / 8/8 / `passed=true` / `would_activate=true`
+and 55 targeted regression tests.
+
+It also found one real defect the exposure audit missed: `RoiHold` aged the
+plate box from the **poll clock**, and the GUI re-presents the cached
+`detections` list at 10 Hz while detections only refresh on a decision. A stale
+plate box therefore stayed labelled `"roi"` forever and could still raise
+exposure from the dark background after detection was lost (probe: same list at
+t=0 and t=100 s both `"roi"`, IR 1200 → 1500 µs where `"stale"` holds).
+Fixed by stamping detections with a monotonic time at ingest
+(`detections_age_s` in the snapshot) and ageing the ROI from that stamp; a
+detection older than the hold window is now `"none"`, never fresh. Identical
+in-flight requests inside the 2 s readback grace are also suppressed (two
+duplicate writes for a frozen value were observed).
+
+A second verification nuance: `--vendor-views` positions are **0-based list
+positions**, not `imageLeftNN` file numbers. The command above is the exact one
+that reproduces the table. `--rotated-views` must be omitted (or empty), not
+`none`.
+
+Two further safeguards were added after the verification pass:
+* a per-view **stereo rig-consistency** check: both IR cameras must imply the
+  same left→right transform (4°/12 mm), so a lattice slip in one camera cannot
+  reach the solver; unit test with a one-pitch label slip.
+* a **frozen tilt centre** was tested and **reverted**: freezing the centre
+  after eight mixed views regressed the validated real-image rehearsal from
+  8/8 to 7/8 because those first views were not neutral. The optional
+  `tilt_center_deg` API stays, but the live wizard keeps the dynamic centre.
+  The moving-centre behaviour (a dimension can flip as views are added) remains
+  a known limitation of the relative tilt definition.
+
+
+## 9. Does partial-board acceptance cost accuracy? (independent study)
+
+`analysis/calibration/accuracy/PARTIAL_VS_FULL.md` (Agent D) re-detected all 162
+fresh-01 accepted views with the chiral identity witness (99.72 % of the stored
+label rows reproduced exactly), then compared full-board-only, all-views and
+bounded-hybrid arms under one **held-out** protocol: 3 repeats × 4 folds, fixed
+seed; the held-out board pose is PnP-solved from its left view only and the
+right/colour pixels are predicted through the fitted rig; every arm uses the
+production solve plus the finish prune and one refit.
+
+| arm (train views) | held-out cross RMS median | p95 | stereo baseline sigma | stereo rotation sigma |
+|---|---:|---:|---:|---:|
+| full-board only (60) | 0.891 px | 2.248 px | 0.059 mm | 0.070 deg |
+| all accepted (122) | **0.860 px** | **2.182 px** | **0.039 mm** | **0.044 deg** |
+| hybrid: core + 10 best partial (70) | 0.906 px | 2.228 px | 0.052 mm | 0.062 deg |
+| hybrid: core + 20 best partial (80) | 0.872 px | 2.219 px | 0.047 mm | 0.058 deg |
+| matched 60 views, 1/3 full + 2/3 partial | 0.858 px | 2.280 px | 0.054 mm | 0.062 deg |
+
+* all-views vs full-only: **Δ −0.030 px** (paired 95 % CI −0.043…−0.019), and the
+  gain is concentrated on held-out *partial* views (0.927 → 0.870 px);
+* at a matched view budget the difference is within noise (CIs include 0), so a
+  partial view is worth slightly less than a complete board but is not harmful;
+* conditioning improves significantly (baseline sigma 0.059 → 0.039 mm) because
+  the same 39 rig parameters see more observations;
+* a positive control shows the metric resolves a 0.02° stereo rotation
+  (+0.045 px), so every arm difference above is below 0.02° equivalent.
+
+**Verdict:** enabling partial views does not regress accuracy or conditioning on
+this dataset; the safeguards that make it safe are the chiral identity witness and
+the 3 px finish prune. Limitations: one session, mostly mild clipping
+(median 36/40), reconstructed partial labels, and only four heavily-clipped
+probes; it says nothing about boards clipped to a third of the field or about
+EXStar.

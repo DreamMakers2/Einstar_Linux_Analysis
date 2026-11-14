@@ -181,6 +181,9 @@ class CalibrationSession:
         self._task_history: list[float] = []
         self._sigma_history: list[float] = []
         self._stop_checked = False
+        #: factory rig used for the per-view stereo consistency check before
+        #: the first solve (set by the wizard controller)
+        self.rig_hint: Optional[dict] = None
 
     # -- observation helpers ------------------------------------------------
     def _detect(self, frames: FrameSet) -> dict[str, Observation]:
@@ -228,7 +231,7 @@ class CalibrationSession:
 
     def _rig(self):
         if self.result is None:
-            return None
+            return getattr(self, "rig_hint", None)
         return {"right": self.result.extrinsics["right"],
                 "tex": self.result.extrinsics["tex"]}
 

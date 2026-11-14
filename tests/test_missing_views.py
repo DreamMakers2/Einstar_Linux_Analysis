@@ -642,7 +642,7 @@ def test_controller_extension_accepts_a_hold_and_never_touches_the_base(tmp_path
 
     from tools.wizard import controller, sources, types
 
-    spec = sources.SyntheticSpec(n_views=1, seed=3)
+    spec = sources.SyntheticSpec(n_views=1, seed=5)
     synthetic = sources.SyntheticSource(spec)
     factory = tmp_path / "factory.json"
     types.atomic_write_json(factory, synthetic.profile_dict())
@@ -687,6 +687,8 @@ def test_controller_extension_accepts_a_hold_and_never_touches_the_base(tmp_path
                                                float)),
                   duplicate_pose["pose"]["t"][0],
                   duplicate_pose["pose"]["t"][1])
+    # the extension renders with the same synthetic rig as the factory; the
+    # stereo rig-consistency gate rejects a pair from a different rig
     source = sources.SyntheticSource(sources.SyntheticSpec(
         n_views=2, seed=5, poses=[pose6, duplicate6], frames_per_pose=12))
     decisions = [ctl.ingest(group) for group in source]
@@ -823,7 +825,7 @@ def test_begin_after_begin_extension_does_not_reset_the_extension(tmp_path):
     assert (tmp_path / "ext" / "session.json").read_bytes() == session_json_before
 
 
-def _still_for_target(ctl, entry, spec):
+def _still_for_target(ctl, entry, spec, *, seed: int = 3):
     """A one-frame synthetic still whose *fitted* pose matches the plan target.
 
     The synthetic renderer ignores ``lateral_mm`` when explicit poses are
@@ -854,7 +856,7 @@ def _still_for_target(ctl, entry, spec):
                     pose = (distance, tilt_x, tilt_y, machine["roll_deg"],
                             dx, dy)
                     source = sources.SyntheticSource(sources.SyntheticSpec(
-                        n_views=1, seed=11, poses=[pose]))
+                        n_views=1, seed=seed, poses=[pose]))
                     group = next(iter(source))
                     images = {key: np.asarray(value)
                               for key, value in group.images.items()}

@@ -794,3 +794,24 @@ def test_still_collection_poses_are_each_a_dwell_episode():
     st = m["checks"]["stationarity"]
     assert st["measured"]["n_stationary_intervals"] == 6
     assert st["satisfied"] is True
+
+
+def test_fixed_tilt_centre_keeps_the_goalposts_stable():
+    """A moving tilt centre can make a satisfied dimension disappear.
+
+    The gate centres the tilt excursion on its midrange.  With eight views at
+    0 deg and two at +20 deg, the dynamic centre is +10 deg and both positive
+    views count as zero; a live session that freezes the centre after its first
+    views does not have this failure mode.
+    """
+    views = [_view(i, 400, 0, 0, 0, (640, 512), i * 0.5) for i in range(8)]
+    views += [_view(8 + i, 400, 20, 0, 0, (640, 512), 4 + i * 0.5)
+              for i in range(2)]
+    dynamic = measure(views)
+    fixed = measure(views, tilt_center_deg=(0.0, 0.0))
+    dyn_x = dynamic["checks"]["tilt_axis_x"]["measured"]
+    fix_x = fixed["checks"]["tilt_axis_x"]["measured"]
+    assert dyn_x["tilt_centre_deg"] == pytest.approx(10.0)
+    assert dyn_x["positive"] == 0
+    assert fix_x["tilt_centre_deg"] == 0.0
+    assert fix_x["positive"] == 2

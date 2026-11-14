@@ -698,7 +698,8 @@ def _fmt_bands(bands: Sequence[Sequence[float]]) -> str:
 
 def measure(accepted_views: Sequence[Mapping[str, Any]],
             spec: CoverageSpec | None = None,
-            *, stationarity_observations: Sequence[Mapping[str, Any]] | None = None
+            *, stationarity_observations: Sequence[Mapping[str, Any]] | None = None,
+            tilt_center_deg: tuple[float, float] | None = None
             ) -> dict:
     """Measure D1-D8 over the accepted views.
 
@@ -713,6 +714,13 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
         excluded from the D1-D6 pose counts.
     spec:
         :class:`CoverageSpec`; the defaults are the architecture §6 values.
+    tilt_center_deg:
+        Optional fixed tilt centre (degrees).  By default the centre is the
+        midrange of the *current* accepted tilt excursion, which can move as
+        views are added.  Callers that require a frozen convention can pass the
+        centre explicitly; the live wizard currently uses the dynamic centre
+        (freezing it after eight mixed views regressed a validated real-image
+        rehearsal from 8/8 to 7/8, because those first views were not neutral).
     stationarity_observations:
         The session-level observation stream: every ingested group/raw frame,
         accepted or rejected, with its short-term motion fields.  D7
@@ -798,8 +806,19 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
     # one-sided.  Absolute ranges are still reported.
     tx_raw = np.array([m["tilt_x_deg"] for m in metrics], float)
     ty_raw = np.array([m["tilt_y_deg"] for m in metrics], float)
-    med_x = _midrange(tx_raw)
-    med_y = _midrange(ty_raw)
+    if tilt_center_deg is not None:
+        try:
+            med_x = float(tilt_center_deg[0])
+            med_y = float(tilt_center_deg[1])
+            if not (np.isfinite(med_x) and np.isfinite(med_y)):
+                med_x = _midrange(tx_raw)
+                med_y = _midrange(ty_raw)
+        except (TypeError, ValueError, IndexError):
+            med_x = _midrange(tx_raw)
+            med_y = _midrange(ty_raw)
+    else:
+        med_x = _midrange(tx_raw)
+        med_y = _midrange(ty_raw)
     tx = tx_raw - med_x
     ty = ty_raw - med_y
     thr = float(spec.min_tilt_deg)

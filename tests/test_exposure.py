@@ -412,3 +412,27 @@ def test_highlight_headroom_holds_instead_of_stepping_into_clipping():
                                contrast=60.0, p95=190.0)
     advice2 = a.observe(ir=with_headroom, rgb=None, current=cur, now=1.0)
     assert advice2.changed
+
+
+def test_roi_hold_ages_from_the_detection_not_the_poll():
+    """A cached detection list must not stay "fresh" forever.
+
+    The GUI polls the controller snapshot at 10 Hz while detections only change
+    on a decision.  Ageing the box from the poll clock made a retained list
+    permanently fresh, so a stale plate box could still raise exposure from the
+    dark background after detection was lost.
+    """
+    from tools.wizard.exposure import RoiHold
+
+    hold = RoiHold(hold_s=2.0, fresh_s=0.5)
+    points = [[100.0, 100.0], [200.0, 100.0], [200.0, 180.0], [100.0, 180.0]]
+    box, metering, pts = hold.box(points, 0.0, observed_at=0.0)
+    assert metering == "roi" and box is not None
+
+    # same detection re-presented by the poll loop 1 s later: stale, not fresh
+    box2, metering2, _ = hold.box(points, 1.0, observed_at=0.0)
+    assert metering2 == "stale" and box2 == box
+
+    # ...and after the hold window it is unusable, not fresh
+    box3, metering3, _ = hold.box(points, 3.0, observed_at=0.0)
+    assert metering3 == "none" and box3 is None
