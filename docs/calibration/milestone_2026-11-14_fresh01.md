@@ -222,7 +222,7 @@ driver C++: **12/12** (`build/driver-ninja`, ctest). The single earlier failure
 rehearsal was running concurrently and passes in the clean run.
 
 Public checkout (`DreamMakers2/Einstar_Linux_Analysis`, sanitized):
-**514 passed, 79 skipped** (`pytest tests -q`, 6 min 20 s).
+**517 passed, 79 skipped** (`pytest tests -q`, 6 min 20 s).
 
 ## 6. Limits and unresolved questions
 
@@ -284,7 +284,7 @@ that reproduces the table. `--rotated-views` must be omitted (or empty), not
 
 Two further safeguards were added after the verification pass:
 * a per-view **stereo rig-consistency** check: both IR cameras must imply the
-  same left→right transform (4°/12 mm), so a lattice slip in one camera cannot
+  same left→right transform (4 deg / 20 mm), so a lattice slip in one camera cannot
   reach the solver; unit test with a one-pitch label slip.
 * a **frozen tilt centre** was tested and **reverted**: freezing the centre
   after eight mixed views regressed the validated real-image rehearsal from

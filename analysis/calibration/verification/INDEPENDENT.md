@@ -341,3 +341,141 @@ Scratch scripts and outputs lived in `/tmp/agv` (`isolation.py`, `isolation.json
 `exposure_probe.json`, `e2e/`, `e2e-head/`, `head/`) and were removed after this
 report was written. The E2E sessions are reproducible with the command in §3; the
 public-tree scan is reproducible with `git grep`/`git ls-files` in the check-out.
+
+---
+
+## Round-3 follow-up — HEAD `533d790` (working tree clean)
+
+Re-checked **only** what changed after the verification commit
+(`eee5a9a..533d790`: 23 files, +5694/−39; product changes in
+`tools/wizard/exposure.py`, `gui/modern_window.py`, `controller.py`,
+`calib/session.py`, `calib/guidance.py`, `coverage.py`, plus test fixtures).
+No product edits were made. Targeted tests: **104 passed, 0 failed**
+(133.46 s).
+
+### R3.1 EXP-1 (stale ROI) — fixed, correct
+
+`RoiHold` now takes `observed_at` and a `fresh_s` window
+(`exposure.py:166-201`). The GUI derives the stamp from the snapshot:
+`detection_age = snap.get("detections_age_s")`, then
+`observed_at = now - max(0, age)` and passes it to both ROIs
+(`modern_window.py:1668-1686`). The controller stamps
+`_last_detections_at = time.monotonic()` inside `_detections()` (`controller.py:1906`)
+and publishes `detections_age_s` in the snapshot (`controller.py:5411-5413`).
+
+Adversarial probe (same 4-point list re-presented at increasing `now`, fixed
+`observed_at=0`):
+
+| now (s) | 0 | 0.2 | 0.5 | 0.6 | 1.0 | 2.0 | 2.01 | 9.0 |
+|---|---|---|---|---|---|---|---|---|
+| metering | roi | roi | roi | stale | stale | stale | **none** | **none** |
+
+A 1 s-old detection is `"stale"`; older than `hold_s` it is `"none"` with no
+box (the caller then falls back to `"frame"` metering, which holds); fresh
+stamps stay `"roi"`. Empty list after a fresh detection reuses the box as
+`"stale"` for `hold_s` from the last real detection (0.5/1.9 s stale, 2.1 s
+none); no stamp keeps the old poll-based behaviour (rusty callers/tests);
+a future stamp is benign (`roi`). `tests/test_exposure.py::test_roi_hold_ages_from_the_detection_not_the_poll` passes.
+
+Residual (low): the stamp is taken when `_detections()` runs, i.e. after
+detect+PnP, so a decision slower than `fresh_s` (0.5 s) is labelled `"stale"`
+on its first poll. That is conservative — it holds instead of raising — and
+the old EXP-1 raising path is closed. The `"stale"`/`"none"` boundary is
+`age > hold_s` (2.0 s is still `stale`).
+
+### R3.2 EXP-2 (duplicate writes) — fixed, correct
+
+`modern_window._auto_expose` keeps `(exposure, gain, laser)` of the last write
+and suppresses an **identical** request inside 2 s (`modern_window.py:1712-1726`),
+reset per recording run (`:1101-1102`). Isolated probe through the real method
+(stub advisor, fake capture, patched clock):
+
+| t (s) | 200.0 | 200.5 | 201.9 | 202.1 | 202.2 | 202.3 |
+|---|---|---|---|---|---|---|
+| requested µs | 1500 | 1500 | 1500 | 1500 | 1875 | 1875 |
+| writes | 1 | 1 | 1 | **2** | **3** | 3 |
+
+A frozen/clamped value is written once and not rewritten inside 2 s; the next
+identical request after the grace goes through; a genuinely changed request
+(1875) goes through immediately, and the same new request is then suppressed.
+With the real advisor and a frozen readback the integrated path behaved the
+same (one write, no churn). The suppression is only for *identical* settings,
+so a real step (a new readback ⇒ a new target) is never blocked.
+
+Residuals (low): the dedup state is updated *before* `capture.set_volatile`, so
+a failed write is suppressed for 2 s; the once-per-run baseline write bypasses
+and does not update the dedup state (a duplicate immediately after a baseline
+reset is possible but was not observed).
+
+### R3.3 Stereo rig-consistency gate — correct; one tuning caution
+
+`calib/guidance.py` adds `max_stereo_pose_deg=4.0` / `max_stereo_pose_mm=12.0`
+(`:55-57`) and compares the per-view implied left→right transform of the two IR
+PnP poses against the known rig (`:258-285`). The reference is the factory rig
+before the first solve (`calib/session.py:234`, `controller.py:775,4964`), then
+the solved rig. Verified by probe:
+
+| case | angle | translation | stereo reject |
+|---|---:|---:|---|
+| clean pair, identity rig | 0.00° | 0.00 mm | no (passes) |
+| right camera +1 pitch (u) | 32.10° | 188.5 mm | **yes** |
+| right camera −1 pitch | 32.10° | 188.5 mm | **yes** |
+| right camera +1 pitch (v) | 30.51° | 201.8 mm | **yes** |
+| realistic projection, right +1 pitch | 0.00° | **28.0 mm** (= one plate pitch) | **yes** |
+| both cameras +1 pitch (global relabel) | 0.00° | 0.00 mm | no (world-frame shift, harmless) |
+| `rig=None` | — | — | inactive (no metric, no reason) |
+| rig perturbed 1° / 3 mm | 1.00° | 3.0 mm | no |
+| rig perturbed 5° | 5.00° | 0.0 mm | yes |
+| right camera < 8 markers | — | — | check skipped (no right PnP) |
+
+Real-image paths: I re-ran the hybrid rehearsal from a clean
+`git archive 533d790` export — **37 accepted, 56 rejected, 8/8, `passed=true`,
+`would_activate=true`**, RMS 2.341767, cross-camera 0.490796, baseline
+160.358058 mm, i.e. byte-for-number identical to the earlier run. All 93
+decision rows carry the stereo metric; **0** stereo rejections; worst observed
+**0.708° / 4.66 mm**. `/tmp/e2e-hybrid4` (built 11:31 from the same fixed tree)
+inspects identically (37 accepted, 8/8, passed=true; 0 stereo rejects; same
+max). The factory-vs-solved rig offset is 0.067° / 1.94 mm (baseline 158.557 vs
+160.358 mm), so valid views sit ~1.9 mm from the bootstrap reference.
+
+**Caution (tuning, not a correctness bug):** the 12 mm translation limit is
+tight for the *far* coverage band (460–560 mm) with the high-mode minimum of 16
+markers. Using a real projection of a 18°/−12° tilted 28 mm-pitch board and
+independent per-camera Gaussian marker noise:
+
+| markers | distance | σ = 0.3 px | σ = 0.5 px |
+|---|---:|---:|---:|
+| 40 | 420 mm | 0 % | 0 % (max 3.8 mm) |
+| 40 | 550 mm | 0 % | 0 % (max 7.3 mm) |
+| 16 | 420 mm | 0 % (max 11.6) | **4.5 %** (max 19.1) |
+| 16 | 550 mm | **9 %** (max 19.0) | **34.5 %** (max 32.0) |
+
+A one-pitch slip is 28 mm, so the limit could be raised to ~20 mm (still
+< 28 mm) for noise margin without losing slip detection, or scaled with
+distance. No false reject was observed on the real hybrid data (max 4.66 mm),
+and the gate errs safe (a rejection, never a bad accept). The gate also caught
+a genuine camera-orientation mismatch in a recovered-replay fixture
+(`test_wizard_controller` now writes cam0/cam2 rotated) and forced one
+synthetic fixture to use a consistent rig seed (`test_missing_views`) — test
+adaptations, not product behaviour.
+
+### R3.4 Targeted tests — 104 passed
+
+`test_exposure` (27), `test_guidance` (12), `test_wizard_coverage` (37),
+`test_missing_views` (24), `test_wizard_controller::test_real_session_production_storage_is_compact_and_verifiable` (1),
+`test_wizard_gui_ready` (3). **104 passed, 4 warnings in 133.46 s**, no skips.
+Per instructions the full suite was not run; the milestone's new
+"654 passed / 8 skipped" therefore remains unverified here.
+
+### R3.5 Contradiction check
+
+Nothing the exposure audit claimed is contradicted. Its stale-ROI sentence
+("a 2 s stale ROI … never raises exposure from background") was **over-broad
+before** (true only for an empty detection list, which is what §4.1 reported)
+and is **now literally true**. Its no-op claim is strengthened by an in-GUI
+in-flight suppression (the audit only claimed suppression against the last
+readback). The stereo gate is additive and no audit claim covers it; the
+frozen-tilt-centre experiment was reverted, and `coverage.measure`'s
+`tilt_center_deg` is used only by a test, so the live tilt definition is
+unchanged. The only new caution is the far-band 16-marker rejection risk in
+R3.3, which the milestone does not mention.

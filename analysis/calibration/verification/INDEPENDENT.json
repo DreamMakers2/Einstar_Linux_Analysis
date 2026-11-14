@@ -472,5 +472,374 @@
    "/tmp/agv/e2e-head"
   ],
   "reproduce": "see e2e.command_clean_head; public scan via git grep/git ls-files in the public checkout"
+ },
+ "current_head": "533d790",
+ "round3": {
+  "head": "533d790",
+  "parent": "eee5a9a",
+  "verified_utc": "2026-11-14T11:15:11+00:00",
+  "scope": "only eee5a9a..533d790 (23 files, +5694/-39); no product edits",
+  "exp1_stale_roi": {
+   "verdict": "fixed, correct",
+   "code": [
+    "tools/wizard/exposure.py:166-201 (fresh_s=0.5, observed_at, age>hold_s -> none)",
+    "tools/wizard/gui/modern_window.py:1668-1686 (observed_at = now - detections_age_s, both ROIs)",
+    "tools/wizard/controller.py:1906 (_last_detections_at in _detections)",
+    "tools/wizard/controller.py:5411-5413 (snapshot detections_age_s)"
+   ],
+   "probe_cached_fixed_stamp": [
+    {
+     "now": 0.0,
+     "metering": "roi",
+     "box_none": false
+    },
+    {
+     "now": 0.2,
+     "metering": "roi",
+     "box_none": false
+    },
+    {
+     "now": 0.5,
+     "metering": "roi",
+     "box_none": false
+    },
+    {
+     "now": 0.6,
+     "metering": "stale",
+     "box_none": false
+    },
+    {
+     "now": 1.0,
+     "metering": "stale",
+     "box_none": false
+    },
+    {
+     "now": 2.0,
+     "metering": "stale",
+     "box_none": false
+    },
+    {
+     "now": 2.01,
+     "metering": "none",
+     "box_none": true
+    },
+    {
+     "now": 9.0,
+     "metering": "none",
+     "box_none": true
+    }
+   ],
+   "probe_empty_after_fresh": [
+    {
+     "now": 0.5,
+     "metering": "stale",
+     "box_none": false
+    },
+    {
+     "now": 1.9,
+     "metering": "stale",
+     "box_none": false
+    },
+    {
+     "now": 2.1,
+     "metering": "none",
+     "box_none": true
+    }
+   ],
+   "probe_no_stamp_backcompat": [
+    [
+     "roi",
+     false
+    ],
+    [
+     "roi",
+     false
+    ]
+   ],
+   "residual": "stamp is taken when _detections() runs (after detect/PnP), so a >0.5 s decision is labelled stale on its first poll; conservative (holds, never raises)",
+   "test": "tests/test_exposure.py::test_roi_hold_ages_from_the_detection_not_the_poll passes"
+  },
+  "exp2_duplicate_writes": {
+   "verdict": "fixed, correct (GUI path)",
+   "code": [
+    "tools/wizard/gui/modern_window.py:1712-1726 (identical request inside 2 s suppressed)",
+    "tools/wizard/gui/modern_window.py:1101-1102 (state reset per run)"
+   ],
+   "probe_sequence": [
+    {
+     "t": 200.0,
+     "us": 1500,
+     "tag": "same#1",
+     "writes": 1
+    },
+    {
+     "t": 200.5,
+     "us": 1500,
+     "tag": "same#2 (<2s)",
+     "writes": 1
+    },
+    {
+     "t": 201.9,
+     "us": 1500,
+     "tag": "same#3 (<2s)",
+     "writes": 1
+    },
+    {
+     "t": 202.1,
+     "us": 1500,
+     "tag": "same#4 (>2s)",
+     "writes": 2
+    },
+    {
+     "t": 202.2,
+     "us": 1875,
+     "tag": "changed inside 2s",
+     "writes": 3
+    },
+    {
+     "t": 202.3,
+     "us": 1875,
+     "tag": "same as new (<2s)",
+     "writes": 3
+    }
+   ],
+   "probe_writes": 3,
+   "residuals": [
+    "dedup state updated before set_volatile: a failed write is suppressed for 2 s",
+    "baseline write bypasses and does not update the dedup state"
+   ]
+  },
+  "stereo_rig_gate": {
+   "verdict": "correct; one tuning caution for far 16-marker views",
+   "code": [
+    "calib/guidance.py:55-57 (4.0 deg / 12.0 mm)",
+    "calib/guidance.py:258-285 (implied left->right vs known rig)",
+    "calib/session.py:234 + tools/wizard/controller.py:775,4964 (factory rig hint before first solve)"
+   ],
+   "cases": {
+    "clean_rig": {
+     "case": "clean_rig",
+     "passed": true,
+     "angle": 0.0,
+     "trans": 1.1659329484329298e-20,
+     "stereo_reason": false,
+     "reasons": []
+    },
+    "slip_u_plus1": {
+     "case": "slip_u_plus1",
+     "passed": false,
+     "angle": 32.10291859270101,
+     "trans": 188.47234553515983,
+     "stereo_reason": true,
+     "reasons": [
+      "stereo pose inconsistency (32.10 deg / 188.47 mm vs the known rig); one camera's marker identity is inconsistent with the other"
+     ]
+    },
+    "slip_u_minus1": {
+     "case": "slip_u_minus1",
+     "passed": false,
+     "angle": 32.10338603349832,
+     "trans": 188.47490020135038,
+     "stereo_reason": true,
+     "reasons": [
+      "stereo pose inconsistency (32.10 deg / 188.47 mm vs the known rig); one camera's marker identity is inconsistent with the other"
+     ]
+    },
+    "slip_v_plus1": {
+     "case": "slip_v_plus1",
+     "passed": false,
+     "angle": 30.508315388373227,
+     "trans": 201.80468404915553,
+     "stereo_reason": true,
+     "reasons": [
+      "stereo pose inconsistency (30.51 deg / 201.80 mm vs the known rig); one camera's marker identity is inconsistent with the other"
+     ]
+    },
+    "slip_u_plus1_rig_none": {
+     "case": "slip_u_plus1_rig_none",
+     "passed": true,
+     "angle": null,
+     "trans": null,
+     "stereo_reason": false,
+     "reasons": []
+    },
+    "clean_rig_none": {
+     "case": "clean_rig_none",
+     "passed": true,
+     "angle": null,
+     "trans": null,
+     "stereo_reason": false,
+     "reasons": []
+    },
+    "clean_rig_1deg_3mm": {
+     "case": "clean_rig_1deg_3mm",
+     "passed": true,
+     "angle": 0.9999999999999002,
+     "trans": 3.0,
+     "stereo_reason": false,
+     "reasons": []
+    },
+    "clean_rig_5deg": {
+     "case": "clean_rig_5deg",
+     "passed": false,
+     "angle": 4.999999999999992,
+     "trans": 1.1659329484329298e-20,
+     "stereo_reason": true,
+     "reasons": [
+      "stereo pose inconsistency (5.00 deg / 0.00 mm vs the known rig); one camera's marker identity is inconsistent with the other"
+     ]
+    },
+    "right_7_markers_clean": {
+     "case": "right_7_markers_clean",
+     "passed": false,
+     "angle": null,
+     "trans": null,
+     "stereo_reason": false,
+     "reasons": [
+      "right: only 7 markers (need 16)",
+      "right: plate too small (0.000)",
+      "stereo overlap 7 < 16"
+     ]
+    }
+   },
+   "one_sided_slip_real_projection": {
+    "clean": {
+     "passed": false,
+     "angle": 5.663293681020318e-06,
+     "trans": 4.2579391219336515e-05,
+     "stereo": false
+    },
+    "right_u_plus1": {
+     "passed": false,
+     "angle": 7.040397847728103e-06,
+     "trans": 27.999985114188526,
+     "stereo": true
+    },
+    "right_u_minus1": {
+     "passed": false,
+     "angle": 4.829673078902934e-06,
+     "trans": 28.000015779475387,
+     "stereo": true
+    },
+    "left_u_plus1": {
+     "passed": false,
+     "angle": 6.156649318399953e-06,
+     "trans": 27.9999596717153,
+     "stereo": true
+    },
+    "both_u_plus1": {
+     "passed": false,
+     "angle": 5.915117333884395e-06,
+     "trans": 4.5879895345258694e-05,
+     "stereo": false
+    },
+    "right_u_plus1_noisy": {
+     "passed": false,
+     "angle": 0.15904959965032267,
+     "trans": 27.185591540931505,
+     "stereo": true
+    },
+    "clean_noisy": {
+     "passed": false,
+     "angle": 0.3599995506898514,
+     "trans": 2.5158442525696274,
+     "stereo": false
+    }
+   },
+   "factory_vs_solved_rig": {
+    "angle_deg": 0.0671,
+    "translation_mm": 1.9427,
+    "factory_baseline_mm": 158.557,
+    "solved_baseline_mm": 160.358
+   },
+   "real_paths": {
+    "clean_533d790_e2e": {
+     "accepted": 37,
+     "rejected": 56,
+     "ready": "8/8",
+     "passed": true,
+     "would_activate": true,
+     "rms_px": 2.341767346307085,
+     "cross_camera_worst": 0.49079640363894816,
+     "baseline_mm": 160.35805845103897,
+     "stereo_rows": 93,
+     "max_angle_deg": 0.7076251992822066,
+     "max_translation_mm": 4.659638234836971,
+     "stereo_rejects": 0
+    },
+    "tmp_e2e_hybrid4": {
+     "accepted": 37,
+     "ready": "8/8",
+     "passed": true,
+     "would_activate": true,
+     "max_angle_deg": 0.7076238242986744,
+     "max_translation_mm": 4.659629333178056,
+     "stereo_rejects": 0
+    }
+   },
+   "noise_margin": {
+    "40mk_420mm_sig0.3": {
+     "n": 200,
+     "trans_max": 2.24,
+     "reject_frac": 0.0
+    },
+    "40mk_420mm_sig0.5": {
+     "n": 200,
+     "trans_max": 3.75,
+     "reject_frac": 0.0
+    },
+    "40mk_550mm_sig0.3": {
+     "n": 200,
+     "trans_max": 4.36,
+     "reject_frac": 0.0
+    },
+    "40mk_550mm_sig0.5": {
+     "n": 200,
+     "trans_max": 7.32,
+     "reject_frac": 0.0
+    },
+    "16mk_420mm_sig0.3": {
+     "n": 200,
+     "trans_max": 11.63,
+     "reject_frac": 0.0
+    },
+    "16mk_420mm_sig0.5": {
+     "n": 200,
+     "trans_max": 19.08,
+     "reject_frac": 0.045
+    },
+    "16mk_550mm_sig0.3": {
+     "n": 200,
+     "trans_max": 19.02,
+     "reject_frac": 0.09
+    },
+    "16mk_550mm_sig0.5": {
+     "n": 200,
+     "trans_max": 32.0,
+     "reject_frac": 0.345
+    }
+   },
+   "caution": "at 550 mm with the 16-marker minimum, 9 % (sigma 0.3 px) / 34.5 % (sigma 0.5 px) of valid views exceed 12 mm; a one-pitch slip is 28 mm, so ~20 mm would keep slip detection with more margin",
+   "fixture_adaptations": [
+    "test_wizard_controller now writes cam0/cam2 rotated (gate caught a real recovered-replay orientation mismatch)",
+    "test_missing_views seed 3 -> 5 for a consistent synthetic rig"
+   ]
+  },
+  "tests": {
+   "command": ".venv/bin/python -m pytest tests/test_exposure.py tests/test_guidance.py tests/test_wizard_coverage.py tests/test_missing_views.py tests/test_wizard_controller.py::test_real_session_production_storage_is_compact_and_verifiable tests/test_wizard_gui_ready.py -q",
+   "summary": "104 passed, 4 warnings in 133.46s",
+   "per_file": {
+    "test_exposure": 27,
+    "test_guidance": 12,
+    "test_wizard_coverage": 37,
+    "test_missing_views": 24,
+    "test_wizard_controller::test_real_session_production_storage_is_compact_and_verifiable": 1,
+    "test_wizard_gui_ready": 3
+   },
+   "skipped": 0,
+   "failed": 0
+  },
+  "contradictions": [],
+  "audit_status": "no audit claim contradicted; the stale-ROI sentence was over-broad before and is now literally true; the no-op claim is strengthened; the rig gate is additive"
  }
 }

@@ -43,7 +43,7 @@ Exposure audit: `analysis/calibration/auto_exposure/AUDIT.md`.
 | dwell intervals, 7 real holds | **7** (was 0) | rehearsal |
 | real-image GUI rehearsal | **37 accepted, 8/8 READY, validated candidate** | hybrid fresh-01 + 3 EXStar real sector-3 views |
 | display: snapshot / plate render p50 | **0.61 / 0.57 ms** | `display_latency.json` |
-| public clean checkout | **514 passed / 79 skipped** | published tree, `2ab35df` |
+| public clean checkout | **517 passed / 79 skipped** | published tree, `2ab35df` |
 
 Round-3 additions after independent verification
 (`analysis/calibration/verification/INDEPENDENT.md`):

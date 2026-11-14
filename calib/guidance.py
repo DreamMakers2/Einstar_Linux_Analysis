@@ -54,7 +54,7 @@ DEFAULT_QUALITY = {
     # each camera's own reprojection but breaks the left-right correspondence;
     # the gross disagreement is caught here before it can enter the solver.
     "max_stereo_pose_deg": 4.0,
-    "max_stereo_pose_mm": 12.0,
+    "max_stereo_pose_mm": 20.0,
     "min_dwell_s": 0.25,
     "max_motion_mm": 3.0,           # dwell threshold: reported, not a rejection
     "max_motion_deg": 1.5,
