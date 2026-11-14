@@ -205,8 +205,8 @@ the correct next index in a separate real 8-view run.
 
 **RAM:** the live controller holds one 3.93 MB camera group plus the compact
 stationarity stream — decisions need no multi-frame image history, so the tested
-256 MiB rolling buffer (68 groups, 6.94 s at 9.8 Hz) is available but not
-allocated on the production path.  The storage path's working set measured
+256 MiB rolling buffer (68 groups, 6.94 s at 9.8 Hz) is wired as an explicit
+controller opt-in (`ram_ring_bytes`) and is not allocated by default.  The storage path's working set measured
 16–21 MB and does not grow with session length.  **Runtime:** live acquisition
 and preview stay on the existing ≈10 Hz path (9.96 groups/s, 39.2 MB/s on a
 120 s soak); 35-view finalisation is 3.47 s (was 38.94 s); a 60-view solve is
@@ -228,11 +228,11 @@ and preview stay on the existing ≈10 Hz path (9.96 groups/s, 39.2 MB/s on a
   witness tests, readiness and lifecycle gates; no profile is ever activated
   automatically.
 
-**Test evidence this milestone:** **600 Python passed, 8 skipped** in the
-working tree (baseline 579 + 21 new); **15/15** GUI extension tests;
+**Test evidence this milestone:** **601 Python passed, 8 skipped** in the
+working tree (baseline 579 + 22 new); **15/15** GUI extension tests;
 **12/12** driver C++ tests; **1/1** reconstruction C++ test.  The clean published
 checkout (exported tree, no private fixtures, its own `scripts/verify_all.sh
---with-driver`) ran **463 passed, 79 skipped, 0 failed** and built the C++ driver
+--with-driver`) ran **464 passed, 79 skipped, 0 failed** and built the C++ driver
 tests **14/14** plus recon 1/1; the result is recorded in `docs/readiness.md`.
 
 ---

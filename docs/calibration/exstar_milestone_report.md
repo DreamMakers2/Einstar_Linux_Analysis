@@ -195,7 +195,7 @@ two debayer mappings is wrong.
 | **no way to add the missing evidence without re-recording** | **Capture Missing Views**: `calib/missing_views.py`, controller extension mode, `tools/wizard/missing_views.py` CLI, launcher `--complete-session`.  The base session is opened **read-only**, verified by digest, and the new evidence goes to a **new** session directory |
 | an operator cannot tell a genuine still from a pause | `HoldTracker` (ALIGNING → HOLDING → ACCEPTED, with progress) that separates **intentional movement** (pose change > move threshold → reset) from **micro-instability** (within jitter tolerance → keep counting), and refuses a short or drifting "hold" with a named reason (`hold_too_short`, `hold_unstable`) |
 | duplicate dwell frames were rejected as redundant, destroying D7 | in extension mode the dwell frame **is** the evidence; other frames are rejected with stable tokens (`hold_pending`, `not_needed_dwell_only`) so counters stay meaningful |
-| a normal session recorded 52 GB "just in case" | production capture is the default: **no `raw.e1r`**, compressed accepted views, CRC-framed append-only journal; the controller holds one 3.93 MB group in flight (the tested 256 MiB ring module is available for multi-frame consumers but not allocated on the live path).  Lossless recording is diagnostic mode |
+| a normal session recorded 52 GB "just in case" | production capture is the default: **no `raw.e1r`**, compressed accepted views, CRC-framed append-only journal; the controller holds one 3.93 MB group in flight (the tested 256 MiB ring module is an explicit controller opt-in (`ram_ring_bytes`) and is not allocated by default).  Lossless recording is diagnostic mode |
 
 Verified on the real session: base **6/8** (D4+D7) → recovered overlay **7/8**
 (D7 only), plan of **4 holds, ~1.6 min**.  A controlled synthetic extension of
@@ -267,11 +267,11 @@ parameters, condition 1,804, split-half reproducibility 1.2–2.3× σ.  The
 candidate remains a **standard-target** result.  It is **not activated**, and
 `finish()` still refuses an activatable candidate while the plan is unsatisfied.
 
-Tests in this working tree: **600 Python passed, 8 skipped**; **12/12** driver
+Tests in this working tree: **601 Python passed, 8 skipped**; **12/12** driver
 C++ tests (`build/driver-ninja`).  Clean-clone verification of the published
-tree (fresh `git clone`, tests run from the clone): **463 passed, 79 skipped,
+tree (fresh `git clone`, tests run from the clone): **464 passed, 79 skipped,
 0 failed**, `verify_all.sh --with-driver` including the C++ build; the published
-suite is a subset (542 collected vs 608 here) — the skips are the real-data and
+suite is a subset (543 collected vs 609 here) — the skips are the real-data and
 hardware tests that need fixtures which are not published.
 
 ---

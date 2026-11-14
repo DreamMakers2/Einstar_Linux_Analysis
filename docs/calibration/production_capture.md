@@ -163,8 +163,9 @@ working set**, i.e. one view in flight, independent of session length.
 3.93 MB) plus the compact stationarity/pose stream — the current decisions need
 no multi-frame image history, so the production path deliberately does **not**
 allocate the 256 MiB ring.  The ring module is implemented, measured and tested
-(figures above) for consumers that do need short-horizon frames; enabling it is
-a bounded, explicit choice, not a hidden default.  In RAM terms the live path is
+(figures above) for consumers that do need short-horizon frames.  The
+controller wires it as an explicit opt-in, `WizardController(ram_ring_bytes=...)`
+(default 0); enabling it is a bounded choice, not a hidden default.  In RAM terms the live path is
 therefore smaller than the ring budget, and never grows with session length.
 With the 256 MiB ring held at the same time: peak RSS **284.1 MB** — the ring
 dominates, as designed.

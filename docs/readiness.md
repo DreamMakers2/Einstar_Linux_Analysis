@@ -11,7 +11,7 @@ document separates four states:
 | **Implemented** | code exists and is wired into the build |
 | **Offline-validated** | covered by deterministic tests independent of the implementation (golden vectors, invariants, fuzzing, sanitizers) |
 | **Static checks** | `scripts/verify_all.sh` fails on undefined names, redefinitions and duplicate dictionary keys (pyflakes when available); the tree currently reports zero of those, and the check found four real defects when introduced |
-| **Clean-room verified** | a fresh clone of the published repository passes its own `scripts/verify_all.sh` (463 tests, 79 skipped without private fixtures) and builds both C++ trees (`recon` ctest 1/1, `driver` ctest 14/14) with no files missing |
+| **Clean-room verified** | a fresh clone of the published repository passes its own `scripts/verify_all.sh` (464 tests, 79 skipped without private fixtures) and builds both C++ trees (`recon` ctest 1/1, `driver` ctest 14/14) with no files missing |
 | **Hardware-validated** | observed working against the physical scanner |
 | **Unresolved** | known gap; a gate below is required before it can be trusted |
 
@@ -196,7 +196,7 @@ A publish is only complete when the clean clone builds and passes:
 
 ```sh
 git clone <public-repo> /tmp/check && cd /tmp/check
-scripts/verify_all.sh            # 463 passed, 79 skipped without fixtures
+scripts/verify_all.sh            # 464 passed, 79 skipped without fixtures
 cmake -S recon  -B /tmp/rc && cmake --build /tmp/rc && ctest --test-dir /tmp/rc
 cmake -S driver -B /tmp/dr && cmake --build /tmp/dr && ctest --test-dir /tmp/dr  # 14/14
 ```

@@ -673,7 +673,7 @@ class WizardController:
                  goal: str = "full", source: types.SourceInfo | None = None,
                  capture: Any | None = None, ring_keep: int = 64,
                  continuous: bool | None = None, seed_k: int | None = None,
-                 storage: str = "production") -> None:
+                 storage: str = "production", ram_ring_bytes: int = 0) -> None:
         self.profile = _load_profile(factory_profile)
         self.profile_path: Path | None = None
         try:
@@ -692,6 +692,12 @@ class WizardController:
         self._view_store: Any | None = None
         self._storage_error: str | None = None
         self._storage_fallback: str | None = None
+        #: opt-in bounded RAM history of recent camera triplets.  The live
+        #: decisions need only the current group, so the default is 0 (no
+        #: allocation); a consumer that needs short-horizon frames sets a
+        #: byte budget and gets an exact, evicting ring (never a recording).
+        self.ram_ring_bytes = max(0, int(ram_ring_bytes))
+        self._ram_ring: Any | None = None
         self.mode = str(mode)
         self.goal = str(goal)
         self.pitch_mm = float(pitch_mm)
@@ -895,6 +901,7 @@ class WizardController:
             self._view_store = None
             self._storage_error = None
             self._storage_fallback = None
+            self._ram_ring = self._make_ram_ring()
             self._session_io_info = self._prepare_with_session_io()
             self.started_wall = time.time()
             self.started_monotonic = time.monotonic()
@@ -929,6 +936,20 @@ class WizardController:
             "software": dict(self.software),
             "session_io": self._session_io_info,
         }
+
+    def _make_ram_ring(self) -> Any | None:
+        """Build the opt-in bounded RAM history (``None`` when disabled)."""
+        if self.ram_ring_bytes <= 0:
+            return None
+        module = _optional("ring_buffer")
+        factory = getattr(module, "BoundedRingBuffer", None) if module else None
+        if not callable(factory):
+            return None
+        try:
+            return factory(capacity_bytes=self.ram_ring_bytes,
+                           name="controller")
+        except Exception:
+            return None
 
     def _prepare_with_session_io(self) -> dict | None:
         """Create the session through ``tools.wizard.session_io``.
@@ -1028,6 +1049,7 @@ class WizardController:
         return {
             "mode": self.mode, "goal": self.goal, "pitch_mm": self.pitch_mm,
             "storage": self.storage_mode,
+            "ram_ring_bytes": int(self.ram_ring_bytes),
             "ring_keep": self.ring_keep,
             "require_colour": bool(_spec_get(self.coverage_spec, "require_colour", True)),
             "coverage": self._coverage_spec_dict(),
@@ -1475,6 +1497,11 @@ class WizardController:
             self._last_colour_bgr = bgr
             group = _dc.replace(group, images={**group.images, "tex": grey},
                                 colour_bgr=bgr)
+        if self._ram_ring is not None:
+            try:
+                self._ram_ring.push_group(group)
+            except Exception:
+                pass                    # history is never allowed to fail ingest
         if self.state in ("done", "finishing"):
             raise RuntimeError(f"session is {self.state}; cannot ingest")
         if self.extension is not None:
@@ -5015,6 +5042,12 @@ class WizardController:
                 "persist_interval_s": float(self.autosave_interval_s),
             },
         }
+        if self._ram_ring is not None:
+            try:
+                snapshot["performance"]["ram_ring"] = self._ram_ring.stats()
+            except Exception as exc:
+                snapshot["performance"]["ram_ring"] = {
+                    "error": f"{type(exc).__name__}: {exc}"}
         if self.extension is not None:
             snapshot["extension"] = self.extension_status()
         with self._snap_lock:

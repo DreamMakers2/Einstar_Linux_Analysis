@@ -293,6 +293,30 @@ def test_resume_reopens_production_store_and_keeps_view_evidence(tmp_path):
         "counters"]["decisions"] == len(lines)
 
 
+def test_opt_in_bounded_ram_ring_is_exact_and_evicting(tmp_path):
+    """The RAM history is opt-in, bounded and exact; the default allocates none."""
+    from tools.wizard.ring_buffer import ENTRY_OVERHEAD_BYTES, frames_bytes
+    synthetic, groups, frames, factory = _make_fixture(tmp_path, n_views=6)
+    payload = frames_bytes(groups[0].images)
+    budget = 2 * (payload + ENTRY_OVERHEAD_BYTES)
+    source = sources.ReplayDirSource(frames)
+    ctl = _controller(tmp_path, source, factory, ram_ring_bytes=budget)
+    _ingest_all(ctl, source)
+
+    ring = ctl.snapshot()["performance"]["ram_ring"]
+    assert ring["capacity_bytes"] == budget
+    assert ring["nbytes"] <= budget
+    assert ring["groups"] <= 2
+    assert ring["pushed_groups"] == 6
+    assert ring["evicted_groups"] >= 4
+    assert ring["consistent"] is True
+    assert ring["seconds"] > 0
+
+    default = _controller(tmp_path, sources.ReplayDirSource(frames), factory,
+                          name="plain")
+    assert "ram_ring" not in default.snapshot()["performance"]
+
+
 def test_duplicate_is_rejected_as_redundant(tmp_path):
     _, groups, frames, factory = _make_fixture(tmp_path, n_views=5)
     source = sources.ReplayDirSource(frames)

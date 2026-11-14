@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **600 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **601 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
 
@@ -150,7 +150,7 @@ faster" rule still applies, and no end-to-end GPU measurement has been made.
 ## 4. How to check all of it
 
 ```sh
-.venv/bin/python -m pytest tests/ -q      # 600 passed, 8 skipped
+.venv/bin/python -m pytest tests/ -q      # 601 passed, 8 skipped
 ctest --test-dir build/recon              # 1/1
 ctest --test-dir build/driver             # 13/13
 scripts/verify_all.sh                     # includes the static check
