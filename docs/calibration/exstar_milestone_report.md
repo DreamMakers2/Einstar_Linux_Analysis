@@ -210,11 +210,13 @@ Measured with `tools/wizard/storage_bench.py` on the real session-03 frames
 (read-only) and on the replay harness:
 
 **What is live today:** the production default stops the lossless `raw.e1r`
-stream (the 52 GB problem) and keeps a bounded ring plus the accepted frame
-triplets written as PGM per view — **40 views ≈ 157 MB**, 297 views ≈ 1.17 GB.
-The compressed `ViewStore` below is implemented, measured and tested, but the
-wizard controller still writes the legacy PGM layout; wiring it is a follow-up,
-not a claim of this milestone.
+stream (the 52 GB problem) and, since 2026-11-14, the controller writes the
+compressed `ViewStore` layout for accepted views. Measured on 24 real views
+from the recovered session: **1.69 MB per accepted view vs 3.95 MB as PGM
+(2.34× smaller, 40.5 MB vs 94.8 MB for the session tree)**, at +95 ms/view
+encode, with no per-group staging writes; `verify` and `resume` pass on the
+same session. The legacy `groups/*.pgm` layout remains available through
+`storage="legacy"` for old sessions and comparison runs.
 
 | quantity | compressed store (implemented, benchmarked) | lossless `.e1r` |
 |---|---:|---:|
@@ -265,11 +267,12 @@ parameters, condition 1,804, split-half reproducibility 1.2–2.3× σ.  The
 candidate remains a **standard-target** result.  It is **not activated**, and
 `finish()` still refuses an activatable candidate while the plan is unsatisfied.
 
-Tests in this working tree: **579 Python passed, 8 skipped**; **12/12** driver
+Tests in this working tree: **600 Python passed, 8 skipped**; **12/12** driver
 C++ tests (`build/driver-ninja`).  Clean-clone verification of the published
-tree (fresh `git clone`, tests run from the clone): **441 passed, 79 skipped,
-0 failed**; the published suite is a subset (519 collected vs 586 here) — the skips are the real-data and hardware tests that need fixtures
-which are not published.
+tree (fresh `git clone`, tests run from the clone): **463 passed, 79 skipped,
+0 failed**, `verify_all.sh --with-driver` including the C++ build; the published
+suite is a subset (542 collected vs 608 here) — the skips are the real-data and
+hardware tests that need fixtures which are not published.
 
 ---
 
@@ -286,10 +289,12 @@ which are not published.
 3. **No colorimetry.**  White-balance cast removal is validated; colour
    *accuracy* is not.  The Bayer phase that is physically red is unknown, and one
    of our two debayer conventions is therefore wrong.
-4. **GUI button.**  The extension workflow is reachable from the launcher
-   (`--complete-session`) and the CLI, and the controller exposes
-   `snapshot()["extension"]`; a dedicated button in the modern window is not yet
-   wired.
+4. **GUI entry point is now wired.**  The modern window has a
+   **Complete calibration…** button (idle/cancelled/error only).  It asks for
+   the base session, derives `<base>-ext`, and restarts the wizard with
+   `--source live --complete-session BASE --session-dir <base>-ext` after
+   releasing the scanner; a live run whose stop cannot be verified refuses to
+   start a second process.  The launcher flag still works for scripted use.
 5. **EXStar's engine log is encrypted**, so its per-view residuals and acceptance
    thresholds remain unrecoverable.
 6. **`fy − fx` disagrees in sign** between our vendor-corpus fit (+1.7 px) and our

@@ -72,16 +72,31 @@ def test_accept_materialises_and_manifest_round_trip(tmp_path):
     assert decisions[0].accepted
     assert "bootstrap seed" in decisions[0].reasons
 
-    # every accepted triplet is on disk, byte-identical to the oriented input
+    # production storage: every accepted triplet is a lossless PNG that
+    # decodes to exactly the oriented input, next to its refined observation
+    from tools.wizard import session_io
     view = ctl.session.accepted[0]
     view_id = int(view.view_id)
     materialised_group = ctl._views[0]["group"]
     source_group = replayed[materialised_group]
-    for key, cam in (("left", 1), ("right", 0)):
-        path = ctl.paths.group_dir(view_id) / f"cam{cam}.pgm"
+    for key, cam in (("left", 1), ("right", 0), ("tex", 2)):
+        path = ctl.paths.root / "views" / f"{view_id:06d}" / f"cam{cam}.png"
         assert path.is_file()
-        assert np.array_equal(types.read_pgm(path), source_group.images[key])
-    assert (ctl.paths.group_dir(view_id) / "cam2.pgm").is_file()
+        decoded = session_io.decode_frame_png(path.read_bytes())
+        assert np.array_equal(decoded,
+                              np.asarray(source_group.images[key], np.uint8))
+    view_record = json.loads(
+        (ctl.paths.root / "views" / f"{view_id:06d}" / "view.json").read_text())
+    observation = json.loads(
+        (ctl.paths.root / "views" / f"{view_id:06d}" / "observation.json").read_text())
+    assert view_record["images_sha256"]
+    assert observation["pose"]["R"] and observation["pose"]["t"]
+    assert observation["image_points"]["left"]
+    # the legacy PGM layout is gone from a production session
+    assert list(ctl.paths.groups_dir.rglob("*.pgm")) == []
+    assert ctl._view_store is not None
+    store_report = session_io.verify_views(ctl.paths.root)
+    assert store_report["ok"] and store_report["checked"] >= 3
 
     manifest = json.loads(ctl.manifest_path.read_text())
     assert manifest["schema"] == "einstar-wizard-manifest/1"
@@ -91,6 +106,7 @@ def test_accept_materialises_and_manifest_round_trip(tmp_path):
     assert entry["index"] == view_id
     assert entry["pose"]["R"] and entry["pose"]["t"]
     assert entry["files"]["left"]["sha256"]
+    assert entry["files"]["left"]["path"].startswith("views/")
     assert manifest["accepted_digest"]
 
     # decisions.jsonl has one deterministic line per ingest
@@ -104,6 +120,177 @@ def test_accept_materialises_and_manifest_round_trip(tmp_path):
     assert session["counters"]["accepted"] == len(ctl.session.accepted)
     assert session["counters"]["rejected"] == len(ctl.session.rejected)
     assert session["counters"]["decisions"] == len(records)
+
+
+def test_legacy_storage_keeps_the_uncompressed_pgm_layout(tmp_path):
+    """The historical layout still works (old sessions, comparison runs)."""
+    synthetic, groups, frames, factory = _make_fixture(tmp_path, n_views=3)
+    source = sources.ReplayDirSource(frames)
+    ctl = _controller(tmp_path, source, factory, storage="legacy")
+    replayed, decisions = _ingest_all(ctl, source)
+
+    assert ctl._view_store is None
+    assert ctl.session.accepted
+    view_id = int(ctl.session.accepted[0].view_id)
+    source_group = replayed[ctl._views[0]["group"]]
+    for key, cam in (("left", 1), ("right", 0)):
+        path = ctl.paths.group_dir(view_id) / f"cam{cam}.pgm"
+        assert path.is_file()
+        assert np.array_equal(types.read_pgm(path), source_group.images[key])
+    assert (ctl.paths.group_dir(view_id) / "cam2.pgm").is_file()
+    assert not (ctl.paths.root / "views").exists()
+
+
+def test_production_storage_failure_is_visible_and_blocks_activation(tmp_path):
+    """A failed view write must never look like a clean, activatable session."""
+    synthetic, groups, frames, factory = _make_fixture(tmp_path, n_views=6, seed=5)
+    source = sources.ReplayDirSource(frames)
+    ctl = _controller(tmp_path, source, factory)
+
+    def boom(*args, **kwargs):
+        raise OSError(28, "No space left on device")
+
+    ctl._view_store.add_view = boom
+    decisions = [ctl.ingest(group) for group in source]
+    assert any(decision.accepted for decision in decisions)
+    assert "cannot store accepted view" in (ctl.error or "")
+
+    manifest = json.loads(ctl.manifest_path.read_text())
+    assert manifest["accepted"]
+    assert all(entry["files"] == {} for entry in manifest["accepted"])
+
+    result = ctl.finish()
+    verdict = (result.get("validation") or {}).get("verdict") or {}
+    if verdict:
+        assert verdict.get("would_activate") is False
+        assert any("storage" in str(reason)
+                   for reason in verdict.get("reasons") or [])
+    else:  # no candidate was solvable at all - still never activatable
+        assert (result.get("validation") or {}).get("validation") != "pending"
+
+
+def test_diagnostic_storage_mode_is_recorded_without_a_stream(tmp_path):
+    synthetic, groups, frames, factory = _make_fixture(tmp_path, n_views=3)
+    source = sources.ReplayDirSource(frames)
+    ctl = _controller(tmp_path, source, factory, storage="diagnostic")
+    _ingest_all(ctl, source)
+
+    assert ctl._view_store is not None
+    assert ctl._view_store.config.mode == "diagnostic"
+    assert ctl._view_store.config.lossless_recording is True
+    # the controller never records a stream in any mode; the capture side does
+    assert not ctl.paths.raw_recording.exists()
+    storage = ctl.snapshot()["storage"]
+    assert storage["mode"] == "diagnostic"
+    assert storage["lossless_recording"] is True
+    assert list(ctl.paths.groups_dir.rglob("*.pgm")) == []
+
+
+def test_unknown_storage_mode_falls_back_to_legacy_visibly(tmp_path):
+    synthetic, groups, frames, factory = _make_fixture(tmp_path, n_views=3)
+    source = sources.ReplayDirSource(frames)
+    ctl = _controller(tmp_path, source, factory, storage="bogus-mode")
+    replayed, decisions = _ingest_all(ctl, source)
+
+    assert ctl._view_store is None
+    assert ctl.session.accepted
+    # a fallback is never silent: it is in the session info and the snapshot
+    assert (ctl._session_io_info or {}).get("error")
+    assert (ctl.snapshot().get("storage") or {}).get("error")
+    view_id = int(ctl.session.accepted[0].view_id)
+    assert (ctl.paths.group_dir(view_id) / "cam1.pgm").is_file()
+
+
+def test_real_session_production_storage_is_compact_and_verifiable(tmp_path):
+    """Pin the production layout on real scanner frames (skipped without data)."""
+    pytest.importorskip("cv2")
+    base = Path(os.path.expanduser("~/einstar-calibration-03"))
+    factory = Path(os.path.expanduser(
+        "~/einstar-private/einstar-profiles/factory-e10.json"))
+    group_dirs = (sorted(p for p in (base / "groups").iterdir()
+                         if p.is_dir() and p.name.isdigit())
+                  if (base / "groups").is_dir() else [])
+    if len(group_dirs) < 6 or not factory.is_file():
+        pytest.skip("recovered real session or factory profile not available")
+    frames = tmp_path / "frames"
+    frames.mkdir()
+    chosen = group_dirs[:6]
+    for index, group_dir in enumerate(chosen):
+        for cam in range(3):
+            (frames / f"frame_{index:06d}_cam{cam}.pgm").symlink_to(
+                group_dir / f"cam{cam}.pgm")
+    source = sources.ReplayDirSource(frames, limit=6)
+    ctl = _controller(tmp_path, source, factory, name="real")
+    _ingest_all(ctl, source)
+    assert ctl.session.accepted, "no real frame was accepted"
+
+    from tools.wizard import session_io
+    root = ctl.paths.root
+    assert list(paths_cams(root)) == []  # no legacy PGMs at all
+    png = sorted((root / "views").rglob("cam*.png"))
+    assert len(png) == 3 * len(ctl.session.accepted)
+    session_bytes = sum(p.stat().st_size for p in root.rglob("*") if p.is_file())
+    per_view = session_bytes / len(ctl.session.accepted)
+    # measured 2026-11-14 on these frames: 1.69 MB/view vs 3.93 MB PGM/view
+    assert per_view < 3_000_000, per_view
+    report = session_io.verify(root)
+    assert report["ok"], report
+    assert (report.get("storage") or {}).get("ok"), report
+    load = session_io.load(root)
+    assert (load.get("storage") or {}).get("mode") == "production"
+    assert load["n_accepted"] == len(ctl.session.accepted)
+    resumed = session_io.resume(root)
+    assert resumed["next_group_index"] >= len(ctl.session.accepted)
+    # the in-memory snapshot exposes the same storage facts to the GUI
+    storage = ctl.snapshot()["storage"]
+    assert storage["mode"] == "production"
+    assert storage["views"] == len(ctl.session.accepted)
+    assert storage["bytes_per_view"]["mean"] > 0
+
+
+def paths_cams(root):
+    """Every legacy cam PGM anywhere under a session directory."""
+    return list((root / "groups").rglob("cam*.pgm"))
+
+
+def test_resume_reopens_production_store_and_keeps_view_evidence(tmp_path):
+    synthetic, groups, frames, factory = _make_fixture(tmp_path, n_views=6)
+    source = sources.ReplayDirSource(frames)
+    ctl = _controller(tmp_path, source, factory)
+    _ingest_all(ctl, source)
+    accepted = len(ctl.session.accepted)
+    assert accepted
+    assert ctl._view_store is not None
+    ctl.cancel()
+
+    resumed = controller.WizardController(
+        factory_profile=factory, session_dir=ctl.paths.root, mode="quick",
+        storage="production")
+    info = resumed.resume()
+    assert info["resumed"] and info["accepted"] == accepted
+    assert resumed._view_store is not None
+    assert all(view.get("files") for view in resumed._views[:accepted])
+
+    # a manifest rewrite after the resume still names every stored PNG
+    resumed._persist_progress(force=True)
+    manifest = json.loads(resumed.paths.manifest_json.read_text())
+    assert len(manifest["accepted"]) == accepted
+    for entry in manifest["accepted"]:
+        assert entry["files"], entry
+        assert entry["files"]["left"]["path"].startswith("views/")
+    from tools.wizard import session_io
+    report = session_io.verify(resumed.paths.root)
+    assert report["ok"], report
+    assert (report.get("storage") or {}).get("ok"), report
+
+    # a post-resume decision continues the counters instead of restarting at 0
+    before = len(resumed.paths.decisions_jsonl.read_text().splitlines())
+    resumed.ingest(next(iter(sources.ReplayDirSource(frames))))
+    resumed.flush_progress()          # reject-only traffic is debounced
+    lines = resumed.paths.decisions_jsonl.read_text().splitlines()
+    assert len(lines) == before + 1
+    assert json.loads(resumed.paths.session_json.read_text())[
+        "counters"]["decisions"] == len(lines)
 
 
 def test_duplicate_is_rejected_as_redundant(tmp_path):
@@ -411,7 +598,7 @@ def test_disk_failure_rejects_frames_without_crashing(tmp_path, monkeypatch):
         pytest.skip("recording or factory profile not available")
     ctl = controller.WizardController(factory_profile=str(factory),
                                       session_dir=str(tmp_path / "s"),
-                                      mode="standard")
+                                      mode="standard", storage="legacy")
     ctl.begin()
     monkeypatch.setattr(ctl, "_materialise", lambda group: None)
     src = sources.ReplayDirSource(frames, limit=3, lazy_colour=True)

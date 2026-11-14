@@ -39,6 +39,7 @@ only as a developer/regression dataset.
 | `tools/wizard/ring_buffer.py` | new bounded RAM rolling buffer of recent triplets |
 | `tools/wizard/session_io.py` | production `ViewStore`: lossless PNG views, append-only CRC journal, `storage.json`, crash recovery, verification/replay, `compact_session` migration |
 | `tools/wizard/capture.py` | `record` storage mode; **production is the default** (`--out`/`--status-file`, no `raw.e1r`); diagnostic mode keeps `--session-dir` |
+| `tools/wizard/controller.py` | **integrated 2026-11-14**: `storage=` selects the accepted-view layout, production is the default; accepted views go through `ViewStore.add_view`, no per-group PGM staging |
 | `tools/wizard/storage_bench.py` | reproducible benchmark used for every number here |
 | `tests/test_production_storage.py` | 24 tests: buffer bound, retention, truncation recovery, estimate, round-trip, diagnostic and no-`.e1r` guards |
 
@@ -249,13 +250,14 @@ can be pinned offline.
 | acquisition/preview cadence | unchanged 10 Hz path | preview 10.001 Hz on replay; command tokens unchanged |
 | production session never contains `--session-dir`/`--record` | enforced by validation + test | `test_default_capture_command_has_no_raw_recording` |
 
-The 1 GB limit is about the **calibration data**. During a live session two
-bounded rings also exist on disk and are transient, not part of the session
-record: the capture `frames/` ring (`--ring`, GUI default 120 groups ≈ 472 MB)
-and the controller's crash-evidence ring (`ring_keep`, default 64 groups ≈
-252 MB). They are fixed-size; shrinking them is a controller/GUI decision
-(recommended: `--ring 30`, `ring_keep 24` with production storage, ≈ 118 MB +
-94 MB). Retained data is 1.88 MB per accepted view regardless.
+The 1 GB limit is about the **calibration data**. During a live session one
+bounded ring exists on disk and is transient, not part of the session record:
+the capture `frames/` ring (`--ring`, GUI default 120 groups ≈ 472 MB). A
+production controller writes **no per-group staging ring**: it only writes an
+accepted view, atomically. The controller's old `ring_keep` crash-evidence ring
+(64 groups ≈ 252 MB) now exists only for `storage="legacy"` and for the
+missing-view extension workflow. Retained data is 1.69–1.88 MB per accepted
+view regardless.
 
 ## 9. Selecting diagnostic (lossless) mode
 
@@ -285,37 +287,71 @@ selects Developer mode (the mapping parser already accepts `storage`,
 `storage_mode`, `record`, `record_lossless`, `diagnostic`, `developer`). That
 file is owned by another agent, so it was not edited.
 
-## 10. Controller integration (storage side is ready; controller not edited)
+## 10. Controller integration (wired 2026-11-14)
 
-`tools/wizard/controller.py` is owned by another agent. It currently writes
-uncompressed PGMs for every ingested group into `ring/` and moves accepted
-groups to `groups/`. The storage-side API is in place; the minimal change is:
+`WizardController` now uses the production layout by default. The change is
+deliberately small and keeps the storage class independent of the decision
+logic:
 
 ```python
-from tools.wizard import session_io
-
-# begin(): create the production layout (mode is known from the live source)
-session_io.create(root, config, state="recording", spec=spec, exist_ok=True,
-                  storage="production")            # or "diagnostic"
-store = session_io.open_store(root)
-
-# accept (replacing _move_to_groups):
-record = store.add_view(group, entry, view_id=view_id)
-entry["files"] = {cam: {"path": m["path"], "sha256": m["sha256"],
-                        "bytes": m["bytes"]} for cam, m in record["files"].items()}
-
-# diagnostic mode only, for explicitly interesting rejections:
-store.add_diagnostic(group, reason)      # bounded; returns None in production
-
-# short-horizon decisions (blur/exposure/stationarity) use recent RAM only:
-from tools.wizard.ring_buffer import BoundedRingBuffer
-recent = BoundedRingBuffer(256 * 1024 * 1024)   # 68 groups, 6.94 s at 9.8 Hz
-recent.push_group(group)
+ctl = WizardController(..., storage="production")  # the default
+# begin(): session_io.create(..., storage="production") + open_store()
+# accept:  record = store.add_view(group, observation, view_id=view_id)
+#          entry["files"] = {cam: path/sha256/bytes}  # names views/*.png
+# legacy:  storage="legacy" keeps _materialise() + groups/*.pgm
 ```
 
-With that change `groups/*.pgm` disappears and a 60-view session retains
-112.8 MB instead of 236 MB (and 10.5 GB→0 of raw stream). Until it lands, a
-legacy session can be migrated offline without the controller:
+* In production the per-group PGM staging step is skipped entirely. A frame
+  that is not accepted never touches the disk; an accepted view is written as
+  its three lossless PNGs plus `observation.json`/`view.json`, journalled
+  append-only and fsynced.
+* `manifest.json` names the PNG paths and their hashes, so
+  `session_io.verify()` checks the production files with the same code that
+  checked PGMs (and additionally verifies the store journal). `session_io.load()`
+  reports `storage.mode`, the view rows and any journal recovery;
+  `session_io.resume()` extends the next index from the production views.
+* If a view write fails (full disk, permission), the calibration is not
+  silently presented as clean: the controller records `_storage_error`, the
+  snapshot exposes it, and the final verdict's `storage_ok` gate forces
+  `would_activate=false` with the reason. The observation is still in
+  `session.json`, so a resume can solve, but no profile from that session is
+  activatable.
+* `storage="diagnostic"` uses the same compact layout and additionally lets the
+  capture side keep the lossless `.e1r`; the controller itself never records a
+  stream. `store.add_diagnostic()` remains available for explicitly requested
+  bounded frames and returns `None` in production.
+
+### Measured on the recovered real session (24 frames)
+
+The controller was run twice over the same 24 real groups from
+`~/einstar-calibration-03/groups` through `ReplayDirSource` (read-only
+symlinks), once per storage mode; all 24 frames were accepted in both runs:
+
+| | production | legacy |
+|---|---:|---:|
+| session tree | **40,538,377 B** | 94,759,912 B |
+| per accepted view | **1,689,099 B** | 3,948,330 B |
+| accepted-view files | 40,113,068 B (PNG) | 94,373,064 B (PGM) |
+| JSON/journal/manifest | 425,309 B | 386,848 B |
+| staging ring retained | **0 B** | 0 B (all groups accepted) |
+| wall (begin → last decision) | 33.20 s | 30.69 s |
+
+The production path is **2.34× smaller** end-to-end (2.35× on the view files
+alone) and costs **105 ms per accepted view** for PNG encode+fsync, which is
+well inside the 0.22 accepts/s measured live cadence. Reproduce with
+`.venv/bin/python -m tools.wizard.controller_storage_bench --session
+~/einstar-calibration-03 --factory ~/einstar-private/einstar-profiles/factory-e10.json
+--views 24 --out analysis/calibration/controller_storage_2026-11-14.json`;
+the JSON in this repository is that run. An 8-view real run was
+then verified and resumed through `session_io`: `verify` ok (48 files
+re-hashed, storage ok), `resume` returned `next_group_index=8`, and the session
+contained 24 PNGs and zero PGMs. The regression test
+`test_real_session_production_storage_is_compact_and_verifiable` pins
+`< 3 MB/view` and the verify/resume round-trip on the same data (skipped when
+the private session is absent).
+
+The legacy command below still works for old sessions and for any session
+recorded before this change:
 
 ```sh
 .venv/bin/python -m tools.wizard.session_io compact SESSION --delete-pgm
@@ -323,12 +359,6 @@ legacy session can be migrated offline without the controller:
 .venv/bin/python -m tools.wizard.session_io summary SESSION
 .venv/bin/python -m tools.wizard.session_io estimate --views 60
 ```
-
-`compact_session()` writes the compressed views, rebuilds
-`views_manifest.json`/`storage.json`, rewrites `manifest.json` to point at the
-PNG files (so `load`/`verify`/`resume` remain valid), and only then removes the
-PGM directories. Read-only source files are reported in `delete_errors`, not
-silently skipped.
 
 ## 11. Reproduction
 

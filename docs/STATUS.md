@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **579 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **600 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
 
@@ -28,7 +28,7 @@ milestone mined it, and the result changes one conclusion materially.
 | vendor corpus refit | our fit on the vendor's own 25 fresh images: baseline **160.210 mm**, RMS **0.314 px**; the vendor CCF explains its own images at **1.420 px** and a rig-scale x1.0100 collapses it to 0.445 px | `calibration/exstar_vendor_corpus_refit.md` |
 | model selection | held-out error prefers free PP+distortion (0.7512 vs 0.7567 px) and moves `fx` **down**/baseline **up**, i.e. **away** from the CCF and onto the device record; no model variant reaches 158.56 mm | same |
 | missing views | base session **6/8** → recovered overlay **7/8** (D7 only); plan = **4 holds, ~1.6 min** | `calibration/missing_views_workflow.md` |
-| production capture | the default no longer records `raw.e1r` (**40 views ≈ 157 MB** as PGM, 297 views ≈ 1.17 GB, vs 7.0 / 10.5 GB / 51.98 GB lossless).  A compressed `ViewStore` is implemented and benchmarked (**40 views 75.1 MB**, 60 views 112.8 MB) with a 256 MiB ring (6.94 s) and truncated-tail recovery, but the controller still writes the legacy PGM layout — wiring it is a follow-up | `calibration/production_capture.md` |
+| production capture | no `raw.e1r` stream, and the **controller now writes the compact `ViewStore` layout by default**: measured on 24 real views, **1.69 MB/accepted view vs 3.95 MB PGM (2.34×)**, 40.5 MB vs 94.8 MB session tree, +95 ms/view encode, zero per-group staging writes; `verify`/`resume` round-trip passes.  `storage="legacy"` keeps the old `groups/*.pgm` path for old sessions | `calibration/production_capture.md` §10 |
 
 The milestone report with the operator's next physical action is
 [`calibration/exstar_milestone_report.md`](calibration/exstar_milestone_report.md).
@@ -150,14 +150,14 @@ faster" rule still applies, and no end-to-end GPU measurement has been made.
 ## 4. How to check all of it
 
 ```sh
-.venv/bin/python -m pytest tests/ -q      # 372 passed
+.venv/bin/python -m pytest tests/ -q      # 600 passed, 8 skipped
 ctest --test-dir build/recon              # 1/1
 ctest --test-dir build/driver             # 13/13
 scripts/verify_all.sh                     # includes the static check
 ```
 
 A clean clone of the public repository builds both C++ trees and passes its own
-`verify_all.sh` (278 passed, 70 skipped without private fixtures) - see
+`verify_all.sh` (463 passed, 79 skipped without private fixtures; driver 14/14) - see
 `docs/readiness.md`.
 
 ## 5. The honest summary

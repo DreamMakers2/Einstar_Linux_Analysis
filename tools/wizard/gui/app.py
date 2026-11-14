@@ -119,12 +119,17 @@ def main(argv=None) -> int:
     if args.resume:
         info = controller.resume()
         print(f"wizard: resume {info}")
+    # The window's "Complete calibration…" entry point restarts this launcher
+    # in a new process (the capture child and session dir are bound at launch
+    # time), so it needs the arguments this process was started with.
+    launch_argv = list(argv) if argv is not None else list(sys.argv[1:])
     win = MainWindow(controller, source, pace_hz=args.pace,
                      headless=args.headless, max_groups=args.max_groups,
                      autostart=(args.autostart or
                                 (not args.headless and args.source == "live")),
                      auto_exposure=not args.no_auto_exposure,
-                     async_decisions=(True if args.async_decisions else None))
+                     async_decisions=(True if args.async_decisions else None),
+                     launch_argv=launch_argv)
     win.show()
     win.maybe_autostart()
 

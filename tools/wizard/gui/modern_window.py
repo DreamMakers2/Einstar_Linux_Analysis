@@ -13,6 +13,7 @@ instead of the detector's cadence.
 from __future__ import annotations
 
 import math
+import sys
 import time
 from pathlib import Path
 from typing import Any, Mapping
@@ -20,6 +21,7 @@ from typing import Any, Mapping
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from . import extension as extension_mod
 from . import panels, plate3d, status, theme, tiles, worker
 from wizard import exposure as exposure_mod
 
@@ -587,7 +589,8 @@ class ModernMainWindow(QtWidgets.QMainWindow):
     def __init__(self, controller, source, *, pace_hz: float = 0.0,
                  headless: bool = False, max_groups: int = 0,
                  autostart: bool = False, auto_exposure: bool = True,
-                 parent=None, async_decisions: bool | None = None):
+                 parent=None, async_decisions: bool | None = None,
+                 launch_argv: list[str] | None = None):
         super().__init__(parent)
         self.controller = controller
         self.source = source
@@ -633,6 +636,11 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._source_ended = False
         self._feedback_hold_until = 0.0
         self._shutdown_done = False
+        # Launcher arguments without the program name.  ``None`` means "this
+        # window was not started by the CLI", and the extension entry point
+        # stays hidden because there is nothing to restart with.
+        self._launch_argv = None if launch_argv is None else [str(a) for a in launch_argv]
+        self._extension_busy = False
 
         self.setWindowTitle("Einstar Calibration")
         self.resize(1640, 1000)
@@ -724,6 +732,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self.controls.finish.clicked.connect(self._on_finish)
         self.controls.advanced.clicked.connect(self._open_advanced)
         self.controls.cancel.clicked.connect(self._on_cancel)
+        self.controls.extension.clicked.connect(self._on_complete_calibration)
 
         self._timer = QtCore.QTimer(self)
         self._timer.timeout.connect(self.refresh)
@@ -771,6 +780,16 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             "Keep the plate in view; the scanner captures automatically.")
         self.footer_note.setObjectName("muted")
         lay.addWidget(self.footer_note, 1)
+        # Rare, deliberate operator action: it restarts the application, so it
+        # must not compete with Start/Finish.  Hidden unless the window was
+        # started by the CLI and the controller can extend an existing session.
+        self.btn_extension = QtWidgets.QPushButton("Complete calibration…")
+        self.btn_extension.setObjectName("ghost")
+        self.btn_extension.setToolTip(
+            "Restart the wizard to capture only the poses an existing session "
+            "still needs. The base session is opened read-only.")
+        self.btn_extension.setVisible(False)
+        lay.addWidget(self.btn_extension)
         self.btn_cancel = QtWidgets.QPushButton("Stop && keep data")
         self.btn_cancel.setObjectName("ghost")
         self.btn_cancel.setToolTip("End the session and keep every recorded frame")
@@ -796,6 +815,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self.controls.finish = self.btn_finish
         self.controls.advanced = self.btn_advanced
         self.controls.cancel = self.btn_cancel
+        self.controls.extension = self.btn_extension
         return self.controls
 
     def _finish_overlay(self, parent) -> QtWidgets.QWidget:
@@ -964,6 +984,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             elif state == "error":
                 self.instruction.ready_pill.setText("NEEDS ATTENTION")
                 self.instruction.kicker.setText("CHECK THE MESSAGE")
+        self._sync_extension_button(state)
 
     def _tick(self) -> None:
         if (self._finish_worker is not None and self._finish_worker.isRunning()
@@ -1365,6 +1386,155 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._advanced.show()
         self._advanced.raise_()
         self._advanced.activateWindow()
+
+    # -- complete missing views (relaunch) --------------------------------
+    def _extension_entry_available(self) -> bool:
+        """True when this window may offer the missing-view workflow.
+
+        The capture child and the session directory are bound at launch time,
+        so the only safe way to add views to *another* session is a fresh
+        process.  Without the original launcher arguments there is nothing to
+        restart with, and a headless run must never pop dialogs.
+        """
+        if self.headless or self._launch_argv is None:
+            return False
+        if not callable(getattr(self.controller, "begin_extension", None)):
+            return False
+        try:
+            if getattr(self.controller, "extension", None):
+                return False
+        except Exception:
+            return False
+        return True
+
+    def _sync_extension_button(self, state: str | None = None) -> None:
+        state = str(state if state is not None
+                    else getattr(self, "_session_state", "idle"))
+        allowed = (self._extension_entry_available()
+                   and not self._extension_busy
+                   and state in ("idle", "cancelled", "error"))
+        self.btn_extension.setVisible(bool(allowed))
+        self.btn_extension.setEnabled(bool(allowed))
+
+    def _on_complete_calibration(self) -> None:
+        """Pick a base session, derive its extension directory and relaunch."""
+        if (self.headless or self._extension_busy
+                or not self._extension_entry_available()):
+            return
+        start_dir = ""
+        try:
+            root = getattr(getattr(self.controller, "paths", None), "root", None)
+            if root:
+                start_dir = str(root)
+        except Exception:
+            start_dir = ""
+        base = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Select the session to complete", start_dir)
+        if not base:
+            return
+        new_dir = extension_mod.derive_extension_dir(base)
+        problem = extension_mod.extension_target_problem(new_dir)
+        if problem:
+            QtWidgets.QMessageBox.warning(
+                self, "Complete calibration",
+                f"{problem}.\n\nChoose a different base session.")
+            return
+        answer = QtWidgets.QMessageBox.question(
+            self, "Complete calibration",
+            "The wizard will restart to capture only the missing poses. "
+            "The base session is opened read-only.\n\n"
+            f"Base session: {base}\nNew session: {new_dir}",
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No)
+        if answer != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+        self._relaunch_for_extension(base, new_dir)
+
+    def _relaunch_for_extension(self, base_dir: str, new_dir: str) -> None:
+        python = sys.executable or "python3"
+        app_path = extension_mod.launcher_path(sys.argv[0] if sys.argv else None)
+        try:
+            argv = extension_mod.build_extension_launch(
+                list(self._launch_argv or []), base_dir, new_dir, app_path, python)
+        except Exception as exc:
+            QtWidgets.QMessageBox.critical(
+                self, "Complete calibration",
+                f"Could not build the restart command: "
+                f"{type(exc).__name__}: {exc}")
+            return
+        self._extension_busy = True
+        self._sync_extension_button()
+        self._set_pill("●  RESTARTING", theme.INFO)
+        self.footer_note.setText(
+            "Releasing the scanner, then restarting the wizard to capture the "
+            "missing poses…")
+        self._event(f"extension: restarting from {base_dir} into {new_dir}")
+        # Let the operator see the busy state before the window stops painting.
+        QtWidgets.QApplication.processEvents()
+        try:
+            released = self.shutdown(timeout_s=10.0)
+        except Exception as exc:                 # pragma: no cover - defensive
+            released = False
+            self._event(f"extension: shutdown raised "
+                        f"{type(exc).__name__}: {exc}")
+        # A live extension must not race the old process for the scanner.  When
+        # the shutdown could not verify the stop (trigger off, child exited,
+        # illuminator off), starting a second wizard would be a hardware risk:
+        # refuse and tell the operator to relaunch manually.
+        try:
+            live_source = self._source_kind() == "live"
+        except Exception:
+            live_source = False
+        if live_source and not released:
+            self._extension_busy = False
+            self._sync_extension_button()
+            self._set_pill("●  SCANNER NOT RELEASED", theme.WARN)
+            self.footer_note.setText(
+                "The scanner stop could not be verified; the wizard was not "
+                "restarted. Close this window and relaunch it manually.")
+            QtWidgets.QMessageBox.critical(
+                self, "Complete calibration",
+                "The scanner stop could not be verified, so the wizard was "
+                "not restarted. Close this window, check that the scanner is "
+                "idle, and relaunch the complete-session command manually.\n\n"
+                f"Command:\n{' '.join(argv)}")
+            return
+        ok, detail = self._start_detached(argv)
+        if not ok:
+            self._extension_busy = False
+            self._sync_extension_button()
+            self._set_pill("●  NOT STARTED", theme.MUTED)
+            self.footer_note.setText(
+                "The wizard could not be restarted. Close this window and "
+                "relaunch it manually.")
+            QtWidgets.QMessageBox.critical(
+                self, "Complete calibration",
+                f"The wizard could not be restarted.\n\n{detail}\n\n"
+                f"Command:\n{' '.join(argv)}")
+            return
+        self._event(f"extension: restart released={bool(released)}")
+        self.close()
+
+    @staticmethod
+    def _start_detached(argv: list[str]) -> tuple[bool, str]:
+        """Start the relaunched wizard; return ``(started, failure_detail)``."""
+        if not argv:
+            return False, "empty command line"
+        try:
+            result = QtCore.QProcess.startDetached(
+                str(argv[0]), [str(a) for a in argv[1:]])
+        except Exception as exc:
+            return False, f"{type(exc).__name__}: {exc}"
+        # PySide6 returns ``(started, pid)`` for the static overload; older
+        # bindings returned a bare bool.  Accept both.
+        if isinstance(result, tuple):
+            started = bool(result[0]) if result else False
+        else:
+            started = bool(result)
+        if not started:
+            return False, "QProcess.startDetached reported failure"
+        return True, ""
 
     def _fail(self, message: str) -> None:
         self._ui_error = str(message)

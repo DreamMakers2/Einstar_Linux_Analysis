@@ -672,7 +672,8 @@ class WizardController:
                  solve_fn: Any | None = None, pitch_mm: float = 28.0,
                  goal: str = "full", source: types.SourceInfo | None = None,
                  capture: Any | None = None, ring_keep: int = 64,
-                 continuous: bool | None = None, seed_k: int | None = None) -> None:
+                 continuous: bool | None = None, seed_k: int | None = None,
+                 storage: str = "production") -> None:
         self.profile = _load_profile(factory_profile)
         self.profile_path: Path | None = None
         try:
@@ -683,6 +684,14 @@ class WizardController:
         if self.profile_path is not None and self.profile_path.is_file():
             self.factory_sha256 = _sha256_file(self.profile_path)
         self.paths = types.SessionPaths(Path(session_dir))
+        #: accepted-view layout: ``production`` (compact PNG + journal, the
+        #: default), ``diagnostic`` (same, and a lossless capture recording is
+        #: expected from the capture side) or ``legacy`` (uncompressed
+        #: ``groups/*.pgm``; kept for old sessions and for comparison tests).
+        self.storage_mode = str(storage or "production")
+        self._view_store: Any | None = None
+        self._storage_error: str | None = None
+        self._storage_fallback: str | None = None
         self.mode = str(mode)
         self.goal = str(goal)
         self.pitch_mm = float(pitch_mm)
@@ -774,6 +783,9 @@ class WizardController:
         #: towards motion because duplicate dwell frames are rejected.
         self._stationarity_observations: list[dict] = []
         self._decisions: list[dict] = []
+        #: decision records that exist only in decisions.jsonl (a resumed
+        #: session must keep its sequence numbers and verify counters)
+        self._resumed_decisions = 0
         self._last_decision: dict | None = None
         self._last_quality: dict | None = None
         self._last_pose: tuple | None = None
@@ -880,6 +892,9 @@ class WizardController:
             self.paths.groups_dir.mkdir(parents=True, exist_ok=True)
             self.paths.candidate_dir.mkdir(parents=True, exist_ok=True)
             (root / "ring").mkdir(parents=True, exist_ok=True)
+            self._view_store = None
+            self._storage_error = None
+            self._storage_fallback = None
             self._session_io_info = self._prepare_with_session_io()
             self.started_wall = time.time()
             self.started_monotonic = time.monotonic()
@@ -889,6 +904,7 @@ class WizardController:
             self._link_recording()
             self._progress.reset()
             self._stationarity_observations = []
+            self._resumed_decisions = 0
             self._last_persist_s = 0.0
             self._persist_dirty = True
             self._manifest_digest_cache = None
@@ -909,12 +925,20 @@ class WizardController:
             "factory_profile": str(self.profile_path or self.profile.path),
             "factory_sha256": self.factory_sha256,
             "mode": self.mode, "goal": self.goal, "pitch_mm": self.pitch_mm,
+            "storage": self.storage_mode,
             "software": dict(self.software),
             "session_io": self._session_io_info,
         }
 
     def _prepare_with_session_io(self) -> dict | None:
-        """Use ``tools.wizard.session_io`` when the other engineer shipped it."""
+        """Create the session through ``tools.wizard.session_io``.
+
+        Production storage is the default: accepted views are written as a
+        lossless PNG triplet plus their refined observations, journalled
+        append-only, instead of the historical uncompressed ``groups/`` PGMs
+        (3.93 MB/view) and with no whole-stream recording.  ``legacy`` keeps
+        the old layout for old sessions and for the comparison tests.
+        """
         module = _optional("session_io")
         if module is None:
             return None
@@ -922,15 +946,69 @@ class WizardController:
         if not callable(create):
             return {"module": "session_io", "available": True,
                     "note": "no known entry point; local layout used"}
+        storage = None if self.storage_mode == "legacy" else self.storage_mode
+        base = {"module": "session_io", "function": "create",
+                "storage": self.storage_mode}
         try:
-            paths = create(self.paths.root, self._config_dict(),
-                           state="recording", spec=self._coverage_spec_dict(),
-                           exist_ok=True)
-            return {"module": "session_io", "function": "create",
-                    "root": str(paths.root)}
+            try:
+                paths = create(self.paths.root, self._config_dict(),
+                               state="recording", spec=self._coverage_spec_dict(),
+                               exist_ok=True, storage=storage)
+            except TypeError:
+                # an older session_io without the storage kwarg: never turn a
+                # missing convenience option into a failed calibration
+                paths = create(self.paths.root, self._config_dict(),
+                               state="recording", spec=self._coverage_spec_dict(),
+                               exist_ok=True)
+                base["storage"] = "legacy"
         except Exception as exc:  # degrade gracefully, never fail begin()
+            self._storage_fallback = (
+                f"session_io.create failed ({type(exc).__name__}: {exc}); "
+                "falling back to the legacy PGM layout")
             return {"module": "session_io", "function": "create",
-                    "error": f"{type(exc).__name__}: {exc}"}
+                    "storage": self.storage_mode,
+                    "error": self._storage_fallback}
+        info = dict(base, root=str(paths.root))
+        store = self._open_view_store(module)
+        self._view_store = store
+        if store is not None:
+            info["mode"] = store.config.mode
+            info["codec"] = store.config.codec
+            info["lossless_recording"] = bool(store.config.lossless_recording)
+        elif self._storage_fallback:
+            info["error"] = self._storage_fallback
+        return info
+
+    def _open_view_store(self, module: Any | None = None) -> Any | None:
+        """Open the production store for this session (``None`` = legacy)."""
+        if self.storage_mode == "legacy":
+            return None
+        module = module if module is not None else _optional("session_io")
+        opener = getattr(module, "open_store", None) if module is not None else None
+        if not callable(opener):
+            self._storage_fallback = ("session_io.open_store is unavailable; "
+                                      "falling back to the legacy PGM layout")
+            return None
+        try:
+            return opener(self.paths.root)
+        except Exception as exc:
+            self._storage_fallback = (f"production storage unavailable "
+                                      f"({type(exc).__name__}: {exc}); "
+                                      "falling back to the legacy PGM layout")
+            return None
+
+    def _resume_store(self) -> Any | None:
+        """Reopen an existing production store when resuming; never create one.
+
+        A legacy session must stay legacy: only a session that already has the
+        production marker (``storage.json``) is reopened, and a resume never
+        writes a new layout into a directory that predates it.
+        """
+        if self.storage_mode == "legacy":
+            return None
+        if not (self.paths.root / "storage.json").is_file():
+            return None
+        return self._open_view_store()
 
     def _link_recording(self) -> None:
         """Point ``SESSION/raw.e1r`` at a recording source (best effort)."""
@@ -949,6 +1027,7 @@ class WizardController:
     def _config_dict(self) -> dict:
         return {
             "mode": self.mode, "goal": self.goal, "pitch_mm": self.pitch_mm,
+            "storage": self.storage_mode,
             "ring_keep": self.ring_keep,
             "require_colour": bool(_spec_get(self.coverage_spec, "require_colour", True)),
             "coverage": self._coverage_spec_dict(),
@@ -1421,8 +1500,9 @@ class WizardController:
                           + (", ".join(missing) if missing else "cameras"))
                 return self._veto(group, images, reason, record,
                                   Decision, FrameSet)
-            stage = self._materialise(group)
-            if stage is None:
+            stage = (None if self._view_store is not None
+                     else self._materialise(group))
+            if stage is None and self._view_store is None:
                 return self._veto(group, images,
                                   "io: cannot materialise the frame triplets",
                                   record, Decision, FrameSet)
@@ -1564,7 +1644,10 @@ class WizardController:
     def _record_accept(self, group, images, stage, decision, record, info,
                        raw, *, seeded: bool = False) -> None:
         view_id = int(decision.view_id if decision.view_id is not None else 0)
-        target = self._move_to_groups(stage, view_id, images)
+        # legacy sessions move the staged PGM triplet into groups/; production
+        # sessions write the compact view below (no staged frames exist)
+        target = (self._move_to_groups(stage, view_id, images)
+                  if self._view_store is None else None)
         self._accepted += 1
         accepted = self.session.accepted[-1]
         summary = accepted.as_dict()
@@ -1574,7 +1657,7 @@ class WizardController:
             "view_id": view_id,
             "group": int(group.index),
             "device_group": group.device_group,
-            "materialised": target.name,
+            "materialised": (target.name if target is not None else None),
             # the shapes tools.wizard.coverage.measure() consumes
             "pose": {"R": [float(x) for x in np.asarray(R_pose, float).ravel()],
                      "t": [float(x) for x in np.asarray(t_pose, float).ravel()]},
@@ -1600,16 +1683,75 @@ class WizardController:
             "solved": bool(decision.solved),
             "bootstrap_seed": bool(seeded),
         }
-        files = {}
-        for key in CAMERAS:
-            path = self.paths.group_file(view_id, key)
+        if self._view_store is not None:
+            # Production: one atomic view directory (PNG triplet + refined
+            # observations + view.json) journalled append-only.  The manifest
+            # then names exactly the files the store verified, so
+            # session_io.verify() covers both layouts with the same code.
+            observation = {
+                "schema": "einstar.wizard.observation/1",
+                "index": view_id, "view_id": view_id,
+                "group_index": int(group.index),
+                "device_group": group.device_group,
+                "pose": entry["pose"],
+                "quality": entry["quality"],
+                "image_points": entry["image_points"],
+                "n_markers": entry["n_markers"],
+                "shared_markers_ir": entry["shared_markers_ir"],
+                "assignment": entry["assignment"],
+                "assignment_ok": entry["assignment_ok"],
+                "timestamp": entry["timestamp"],
+                "distance_mm": entry["distance_mm"],
+                "tilt_deg": entry["tilt_deg"],
+                "yaw_deg": entry["yaw_deg"],
+                "roll_deg": entry["roll_deg"],
+                "predicted_gain": entry["predicted_gain"],
+                "holdout_rms_px": entry["holdout_rms_px"],
+                "solved": entry["solved"],
+                "bootstrap_seed": entry["bootstrap_seed"],
+                "accepted": True,
+            }
+            stored = None
             try:
-                if path.is_file():
-                    files[key] = {"path": str(path.relative_to(self.paths.root)),
-                                  "sha256": _sha256_file(path),
-                                  "bytes": int(path.stat().st_size)}
-            except OSError:
-                pass
+                stored = self._view_store.add_view(group, observation,
+                                                   view_id=view_id)
+            except Exception as exc:
+                # Never hide a storage failure behind an accepted decision:
+                # the observation is still in session.json (resume can solve),
+                # but the image evidence is missing and the error is visible.
+                self._storage_error = (f"cannot store accepted view "
+                                       f"{view_id}: {type(exc).__name__}: {exc}")
+                self.error = self._storage_error
+            if stored is not None:
+                entry["materialised"] = f"views/{view_id:06d}"
+                entry["storage"] = {
+                    "mode": self._view_store.config.mode,
+                    "codec": self._view_store.config.codec,
+                    "stored_bytes": int(stored.get("stored_bytes") or 0),
+                    "frame_bytes": int(stored.get("frame_bytes") or 0),
+                    "observation_bytes": int(stored.get("observation_bytes") or 0),
+                }
+                files = {
+                    cam: {"path": meta.get("path"),
+                          "sha256": meta.get("sha256"),
+                          "bytes": int(meta.get("bytes") or 0)}
+                    for cam, meta in (stored.get("files") or {}).items()}
+            else:
+                entry["storage"] = {"mode": self._view_store.config.mode,
+                                    "error": self._storage_error}
+                files = {}
+        else:
+            files = {}
+            for key in CAMERAS:
+                path = self.paths.group_file(view_id, key)
+                try:
+                    if path.is_file():
+                        files[key] = {
+                            "path": str(path.relative_to(self.paths.root)),
+                            "sha256": _sha256_file(path),
+                            "bytes": int(path.stat().st_size)}
+                except OSError:
+                    pass
         entry["files"] = files
         self._views.append(entry)
         self._view_extras.append({
@@ -3305,6 +3447,7 @@ class WizardController:
         lifecycle_ok = lifecycle.get("passed")
         gates = {
             "verify_ok": bool(verify_report.get("ok", False)),
+            "storage_ok": self._storage_error is None,
             "lifecycle_passed": (None if lifecycle_ok is None
                                  else bool(lifecycle_ok)),
             "quality_status": str(quality_report.get("status", "unknown")),
@@ -3317,6 +3460,12 @@ class WizardController:
         if not gates["verify_ok"]:
             reasons.extend(verify_report.get("gates") or
                            [verify_report.get("error", "internal verification failed")])
+        if not gates["storage_ok"]:
+            # An accepted view whose image evidence could not be written is a
+            # real loss of reproducibility: the solve may use its observation,
+            # but a profile built from it cannot be called defensible.
+            reasons.append("accepted-view storage failed: "
+                           + str(self._storage_error))
         if gates["quality_status"] != "pass":
             reasons.append(f"quality status {gates['quality_status']}")
         if not gates["coverage_ready"]:
@@ -3335,6 +3484,7 @@ class WizardController:
         # passed, its verdict governs and quality stays a reported advisory.
         lifecycle_authoritative = lifecycle_ok is True
         passed = (gates["coverage_ready"] and not failed
+                  and gates["storage_ok"]
                   and lifecycle_ok is not False
                   and (lifecycle_authoritative
                        or (gates["verify_ok"]
@@ -3379,7 +3529,7 @@ class WizardController:
                             "kind": self.profile.kind,
                             "color_status": self.profile.color_status},
                 "counters": {
-                    "decisions": len(self._decisions),
+                    "decisions": self._decision_total(),
                     "accepted": len(self.session.accepted),
                     "rejected": len(self.session.rejected),
                     "redundant": self._redundant_count(),
@@ -3387,7 +3537,7 @@ class WizardController:
                     "groups": self._n_materialised,
                     "next_group_index": (max((v["view_id"] for v in self._views),
                                              default=-1) + 1),
-                    "next_decision_seq": len(self._decisions),
+                    "next_decision_seq": self._decision_total(),
                     "n_materialised": self._n_materialised,
                 },
                 "paths": {
@@ -3479,7 +3629,7 @@ class WizardController:
             "views": views,
             "accepted": accepted,
             "stationarity_observations": stationarity,
-            "counters": {"decisions": len(self._decisions),
+            "counters": {"decisions": self._decision_total(),
                          "rejected": len(self.session.rejected),
                          "n_materialised": int(self._n_materialised)},
         }
@@ -3506,6 +3656,11 @@ class WizardController:
             return {"resumed": False, "reason": "no resumable session"}
         from calib.calibrate import Observation
         from calib.session import AcceptedView
+        try:
+            with open(self.paths.decisions_jsonl, "rb") as handle:
+                self._resumed_decisions = sum(1 for _ in handle)
+        except OSError:
+            self._resumed_decisions = 0
         session = self.session
         session.obs = []
         for entry in block.get("views") or []:
@@ -3552,6 +3707,8 @@ class WizardController:
             uv_by_view.setdefault(view_id, {})[cam] = rows
             label_by_view.setdefault(view_id, {})[cam] = labels
         self._views = []
+        self._view_store = self._resume_store()
+        store = self._view_store
         for acc in session.accepted:
             vid = int(acc.view_id)
             pts = uv_by_view.get(vid, {})
@@ -3562,7 +3719,8 @@ class WizardController:
             self._views.append({
                 "view_id": vid,
                 "group": None,
-                "materialised": None,
+                "materialised": (f"views/{vid:06d}" if store is not None
+                                 and store.get(vid) is not None else None),
                 "pose": {"R": [float(x) for x in np.asarray(acc.pose[0], float).ravel()],
                          "t": [float(x) for x in np.asarray(acc.pose[1], float).ravel()]},
                 "image_points": {cam: rows for cam, rows in pts.items()},
@@ -3581,6 +3739,17 @@ class WizardController:
                 "solved": False,
                 "bootstrap_seed": vid == 0,
             })
+            record = store.get(vid) if store is not None else None
+            if record is not None:
+                self._views[-1]["files"] = {
+                    cam: {"path": meta.get("path"),
+                          "sha256": meta.get("sha256"),
+                          "bytes": int(meta.get("bytes") or 0)}
+                    for cam, meta in (record.get("files") or {}).items()}
+                self._views[-1]["storage"] = {
+                    "mode": store.config.mode,
+                    "codec": store.config.codec,
+                    "stored_bytes": int(record.get("stored_bytes") or 0)}
         self._stationarity_observations = [
             dict(row) for row in (block.get("stationarity_observations") or [])
             if isinstance(row, Mapping)]
@@ -4481,6 +4650,10 @@ class WizardController:
         except OSError:
             return None
 
+    def _decision_total(self) -> int:
+        """Decisions on disk including the records a resume did not replay."""
+        return int(len(self._decisions) + self._resumed_decisions)
+
     def decisions(self) -> list[dict]:
         """The canonical, deterministic decision projection (JSON values)."""
         return [_jsonable(dict(entry)) for entry in self._decisions]
@@ -4639,6 +4812,9 @@ class WizardController:
                         "raw_recording": str(self.paths.raw_recording),
                         "groups_dir": str(self.paths.groups_dir),
                         "n_materialised": 0},
+            #: accepted-view storage (production PNG ViewStore); ``None`` for
+            #: legacy sessions.  Refreshed on every snapshot() call.
+            "storage": None,
             "counts": {"accepted": 0, "rejected": 0, "redundant": 0,
                        "by_reason": {}},
             "last_decision": None,
@@ -4833,7 +5009,7 @@ class WizardController:
             "guidance": guidance,
             "readiness": readiness,
             "performance": {
-                "decisions": len(self._decisions),
+                "decisions": self._decision_total(),
                 "accepted": len(self._views),
                 "persist": dict(self._persist_stats),
                 "persist_interval_s": float(self.autosave_interval_s),
@@ -4963,6 +5139,24 @@ class WizardController:
                 progress={"error": f"{type(exc).__name__}: {exc}"})
         snapshot.setdefault("performance", {})["persist"] = dict(
             self._persist_stats)
+        store = self._view_store
+        if store is not None:
+            try:
+                summary = store.summary()
+                snapshot["storage"] = {
+                    "mode": summary.get("mode"),
+                    "views": summary.get("views"),
+                    "bytes": dict(summary.get("bytes") or {}),
+                    "bytes_per_view": dict(summary.get("bytes_per_view") or {}),
+                    "compression": dict(summary.get("compression") or {}),
+                    "lossless_recording": summary.get("lossless_recording"),
+                    "recovery": dict(summary.get("recovery") or {}),
+                    "estimate": dict(summary.get("estimate") or {}),
+                }
+            except Exception as exc:  # a damaged store must not break 10 Hz UI
+                snapshot["storage"] = {"error": f"{type(exc).__name__}: {exc}"}
+        elif self._storage_fallback:
+            snapshot["storage"] = {"error": self._storage_fallback}
         return snapshot
 
 

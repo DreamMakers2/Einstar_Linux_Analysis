@@ -389,10 +389,15 @@ the spec) — the holds do not change that.
 
 ## 8. Limitations
 
-* **GUI wiring is not part of this change.**  The controller exposes
-  `begin_extension()`, `extension_status()` and `snapshot()["extension"]`; the
-  GUI files are owned by another engineer and the "Complete Calibration" button
-  still has to call them.
+* **GUI wiring (added 2026-11-14).**  The modern window has a **Complete
+  calibration…** button, shown only while the session is idle/cancelled/error.
+  It asks for the base session, derives `<base>-ext`, and restarts the wizard
+  with `--source live --complete-session BASE --session-dir <base>-ext` after
+  releasing the scanner.  The restart is deliberate: the capture child and
+  session directory are bound at launch, so rebinding a live controller would
+  be unsafe.  If a live scanner's stop cannot be verified, the window refuses
+  to start a second process and prints the manual command.  The launcher flag
+  remains the scripted path.
 * **Extension-session resume** restores the stationarity stream (so D7 stays
   satisfied) but not the dwell views, because they are deliberately kept out of
   `session.accepted`.  The durable record is `extension/holds.jsonl`; reopening

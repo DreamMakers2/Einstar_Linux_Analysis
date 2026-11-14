@@ -1,0 +1,54 @@
+{
+ "schema": "einstar.wizard.controller-storage/1",
+ "created_utc": "2026-11-14T03:49:42Z",
+ "source_session": "<calibration-session>",
+ "n_groups": 24,
+ "mode": "standard",
+ "measurements": [
+  {
+   "storage": "production",
+   "requested": 24,
+   "accepted": 24,
+   "rejected": 0,
+   "wall_s": 33.195,
+   "bytes": {
+    "total": 40538377,
+    "views": 40113068,
+    "groups": 0,
+    "ring": 0,
+    "json": 425309
+   },
+   "bytes_per_accepted_view": 1689099,
+   "snapshot_mode": "production",
+   "snapshot_bytes_per_view_mean": 1663107.0,
+   "verify_ok": true,
+   "verify_storage_ok": true,
+   "verify_checked": 144
+  },
+  {
+   "storage": "legacy",
+   "requested": 24,
+   "accepted": 24,
+   "rejected": 0,
+   "wall_s": 30.687,
+   "bytes": {
+    "total": 94759912,
+    "views": 0,
+    "groups": 94373064,
+    "ring": 0,
+    "json": 386848
+   },
+   "bytes_per_accepted_view": 3948330,
+   "snapshot_mode": null,
+   "snapshot_bytes_per_view_mean": null,
+   "verify_ok": true,
+   "verify_storage_ok": false,
+   "verify_checked": 72
+  }
+ ],
+ "comparison": {
+  "tree_ratio": 2.338,
+  "view_files_ratio": 2.353,
+  "encode_cost_per_view_s": 0.1045
+ }
+}
