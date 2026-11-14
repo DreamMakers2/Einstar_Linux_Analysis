@@ -815,3 +815,31 @@ def test_fixed_tilt_centre_keeps_the_goalposts_stable():
     assert dyn_x["positive"] == 0
     assert fix_x["tilt_centre_deg"] == 0.0
     assert fix_x["positive"] == 2
+
+
+def test_latched_tilt_checks_survive_a_moving_centre():
+    """A satisfied tilt check must not be revoked by the moving statistic.
+
+    The gate centres tilt on the current excursion, so adding views can flip a
+    check satisfied -> unsatisfied even though no accepted evidence was removed.
+    A live session passes the checks it already satisfied; the latch keeps the
+    dimension true, and the final validation deliberately does not latch.
+    """
+    views = [_view(i, 400, value, 0, 0, (640, 512), i * 0.5)
+             for i, value in enumerate((5, 10, 20, 30, 40, 45))]
+    plain = measure(views)
+    assert plain["checks"]["tilt_axis_x"]["satisfied"] is True
+    assert plain["D2"]["satisfied"] is False      # no y axis / quadrants
+
+    latched = measure(views, latched_checks={"tilt_axis_x"})
+    node = latched["checks"]["tilt_axis_x"]
+    assert node["satisfied"] is True
+    # already satisfied here, so it need not carry the forced flag
+    assert node.get("latched") in (None, True)
+    assert latched["D2"]["satisfied"] is False
+
+    forced = measure(views, latched_checks={
+        "tilt_axis_x", "tilt_axis_y", "tilt_quadrants"})
+    assert forced["D2"]["satisfied"] is True
+    assert forced["D2"].get("latched") is True
+    assert "additive" in forced["D2"]["hint"]

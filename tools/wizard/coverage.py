@@ -699,7 +699,8 @@ def _fmt_bands(bands: Sequence[Sequence[float]]) -> str:
 def measure(accepted_views: Sequence[Mapping[str, Any]],
             spec: CoverageSpec | None = None,
             *, stationarity_observations: Sequence[Mapping[str, Any]] | None = None,
-            tilt_center_deg: tuple[float, float] | None = None
+            tilt_center_deg: tuple[float, float] | None = None,
+            latched_checks: set[str] | None = None
             ) -> dict:
     """Measure D1-D8 over the accepted views.
 
@@ -721,6 +722,13 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
         centre explicitly; the live wizard currently uses the dynamic centre
         (freezing it after eight mixed views regressed a validated real-image
         rehearsal from 8/8 to 7/8, because those first views were not neutral).
+    latched_checks:
+        Tilt checks that were satisfied earlier in this session.  The gate
+        centres the tilt excursion on a statistic that moves as views are
+        added, so a check can flip satisfied -> unsatisfied without any evidence
+        being removed.  A live session latches them (accepted evidence is
+        additive); the final validation does not, so a genuinely unsatisfied
+        final state is still refused.
     stationarity_observations:
         The session-level observation stream: every ingested group/raw frame,
         accepted or rejected, with its short-term motion fields.  D7
@@ -1369,6 +1377,24 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
         "stable": stable,
     }
     out.update(dims)
+    if latched_checks:
+        tilt_names = set(dims["D2"].get("checks") or [])
+        forced = []
+        for name in sorted(set(latched_checks) & tilt_names):
+            node = out["checks"].get(name)
+            if node is not None and not node.get("satisfied"):
+                node["satisfied"] = True
+                node["latched"] = True
+                node["deficit"] = {}
+                forced.append(name)
+        if forced and all(out["checks"][name].get("satisfied")
+                          for name in tilt_names):
+            dims["D2"]["satisfied"] = True
+            dims["D2"]["latched"] = True
+            dims["D2"]["deficit"] = {}
+            dims["D2"]["hint"] = (
+                "Satisfied earlier in this session; accepted evidence is only "
+                "additive, so the moving tilt centre does not revoke it.")
     verdict = readiness(out)
     out["ready"] = bool(verdict["ready"])
     out["summary"] = verdict["summary"]

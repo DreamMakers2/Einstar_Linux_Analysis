@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **654 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **655 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
 
@@ -63,6 +63,11 @@ Round-3 additions after independent verification
 * freezing the tilt centre was tested and reverted: it regressed the validated
   real rehearsal 8/8 → 7/8. The dynamic relative tilt definition and its
   moving-goalpost behaviour remain a documented limitation.
+* tilt checks now **latch once satisfied** during recording (additive evidence;
+  the final validation does not latch). This stops the moving relative tilt
+  centre from withdrawing a satisfied dimension while the operator is still
+  being guided; the hybrid rehearsal still reaches 37 accepted / 8/8 /
+  validated.
 * **partial views do not cost accuracy** (`analysis/calibration/accuracy/PARTIAL_VS_FULL.md`):
   held-out cross-camera 0.860 px (all 122 views) vs 0.891 px (60 full-board),
   Δ −0.030 px [−0.043, −0.019]; stereo baseline sigma 0.059 → 0.039 mm;

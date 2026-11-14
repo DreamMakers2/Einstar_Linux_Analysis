@@ -849,6 +849,9 @@ class WizardController:
         self._last_assignment_ok = True
         self._view_extras: list[dict] = []
         self._coverage_cache: dict | None = None
+        #: tilt checks satisfied earlier; accepted evidence is additive, so the
+        #: moving relative tilt centre must not revoke a satisfied check
+        self._coverage_latched: set[str] = set()
         self._readiness_cache: dict | None = None
         self._observability_cache: dict | None = None
         self._observability_key: tuple | None = None
@@ -1138,6 +1141,7 @@ class WizardController:
             self.error = None
             self._link_recording()
             self._progress.reset()
+            self._coverage_latched = set()
             self._stationarity_observations = []
             self._resumed_decisions = 0
             self._last_persist_s = 0.0
@@ -2369,11 +2373,17 @@ class WizardController:
                 try:
                     measurement = measure(
                         views, spec,
-                        stationarity_observations=observations)
+                        stationarity_observations=observations,
+                        latched_checks=self._coverage_latched)
                 except TypeError:
                     # older coverage module: no stream argument
                     measurement = measure(views, spec)
                 if isinstance(measurement, dict) and measurement.get("D1"):
+                    checks_now = measurement.get("checks") or {}
+                    for name in ("tilt_axis_x", "tilt_axis_y",
+                                 "tilt_quadrants"):
+                        if (checks_now.get(name) or {}).get("satisfied"):
+                            self._coverage_latched.add(name)
                     self._measurement = measurement
                     readiness = getattr(module, "readiness", None)
                     verdict = None
@@ -3253,6 +3263,9 @@ class WizardController:
             if self.state in ("idle", "cancelled"):
                 self.begin()
             self.state = "finishing"
+            # the final measurement/validation must be truthful: never carry a
+            # recording-time latch into the activation decision
+            self._coverage_latched = set()
             self._publish()
             if not self._stop_capture_for_finish():
                 self.state = "error"
@@ -4047,6 +4060,7 @@ class WizardController:
 
     def resume(self) -> dict:
         """Rebuild the session state from disk and continue in place."""
+        self._coverage_latched = set()
         block = self.resume_available()
         if block is None:
             return {"resumed": False, "reason": "no resumable session"}

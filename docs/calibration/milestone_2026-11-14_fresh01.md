@@ -216,7 +216,7 @@ Baseline before this milestone: 601 passed / 8 skipped. New tests:
 `test_wizard_worker_budget.py` (10, performance task), plus the exposure suite
 (26, was 6) and partial-detection additions.
 
-Full suite: **654 passed, 8 skipped** (8 min 17 s, `.venv/bin/python -m pytest tests -q`);
+Full suite: **655 passed, 8 skipped** (8 min 35 s, `.venv/bin/python -m pytest tests -q`);
 driver C++: **12/12** (`build/driver-ninja`, ctest). The single earlier failure
 (`test_live_capture_source_plumbing`) reproduced only while a heavy GUI
 rehearsal was running concurrently and passes in the clean run.
