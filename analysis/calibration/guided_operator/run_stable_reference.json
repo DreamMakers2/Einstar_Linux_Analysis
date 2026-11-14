@@ -1,0 +1,2152 @@
+{
+ "schema": "einstar.guided-rehearsal/1",
+ "views": 133,
+ "groups": 532,
+ "accepted": 132,
+ "coverage": {
+  "D1": true,
+  "D2": false,
+  "D3": true,
+  "D4": true,
+  "D5": true,
+  "D6": true,
+  "D7": true,
+  "D8": true
+ },
+ "ready": false,
+ "missing": [
+  "tilt quadrants (four sign combinations)"
+ ],
+ "elapsed_s": 204.71,
+ "rejected_attempts": 133,
+ "log": [
+  {
+   "view": 0,
+   "pose": [
+    420.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ],
+   "instruction": "bootstrap",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (bootstrap duplicate, 0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 1,
+   "pose": [
+    420.0,
+    20.05,
+    -19.94,
+    45.0,
+    -113.4,
+    88.2
+   ],
+   "instruction": "Put the plate centre in the bottom-left corner of the image, tilt 20 deg right and 20 deg down, roll the plate by 45 deg anticlockwise, move to 380-460 mm.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (bootstrap duplicate, 0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 1,
+   "pose": [
+    440.0,
+    23.05,
+    -22.94,
+    50.0,
+    -90.72,
+    70.56
+   ],
+   "instruction": "Put the plate centre in the bottom-left corner of the image, tilt 20 deg right and 20 deg down, roll the plate by 45 deg anticlockwise, move to 380-460 mm. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.3 deg, 0.6 mm)"
+   ]
+  },
+  {
+   "view": 1,
+   "pose": [
+    400.0,
+    17.05,
+    -16.94,
+    40.0,
+    -90.72,
+    70.56
+   ],
+   "instruction": "Put the plate centre in the bottom-left corner of the image, tilt 20 deg right and 20 deg down, roll the plate by 45 deg anticlockwise, move to 380-460 mm. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 2,
+   "pose": [
+    340.0,
+    -8.41,
+    8.62,
+    135.0,
+    91.8,
+    -71.4
+   ],
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 25 deg left and 25 deg up, roll the plate by 95 deg anticlockwise, move to 300-380 mm (closer, 77 mm).",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 2,
+   "pose": [
+    360.0,
+    -5.41,
+    5.62,
+    140.0,
+    73.44,
+    -57.12
+   ],
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 25 deg left and 25 deg up, roll the plate by 95 deg anticlockwise, move to 300-380 mm (closer, 77 mm). (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.6 mm)"
+   ]
+  },
+  {
+   "view": 2,
+   "pose": [
+    320.0,
+    -11.41,
+    11.62,
+    130.0,
+    73.44,
+    -57.12
+   ],
+   "instruction": "Put the plate centre in the top-right corner of the image, tilt 25 deg left and 25 deg up, roll the plate by 95 deg anticlockwise, move to 300-380 mm (closer, 77 mm). (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 3,
+   "pose": [
+    510.0,
+    25.84,
+    14.45,
+    225.0,
+    -137.7,
+    -107.1
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 37 deg right and 3 deg up, roll the plate by 95 deg anticlockwise, move to 460-560 mm (further, 177 mm).",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 3,
+   "pose": [
+    530.0,
+    28.84,
+    11.45,
+    230.0,
+    -110.16,
+    -85.68
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 37 deg right and 3 deg up, roll the plate by 95 deg anticlockwise, move to 460-560 mm (further, 177 mm). (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 3,
+   "pose": [
+    490.0,
+    22.84,
+    17.45,
+    220.0,
+    -110.16,
+    -85.68
+   ],
+   "instruction": "Put the plate centre in the top-left corner of the image, tilt 37 deg right and 3 deg up, roll the plate by 95 deg anticlockwise, move to 460-560 mm (further, 177 mm). (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 4,
+   "pose": [
+    510.34,
+    -11.25,
+    17.3,
+    220.0,
+    137.79,
+    107.17
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 34 deg left.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 4,
+   "pose": [
+    530.34,
+    -8.25,
+    14.3,
+    225.0,
+    110.23,
+    85.74
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 34 deg left. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 4,
+   "pose": [
+    490.34,
+    -14.25,
+    20.3,
+    215.0,
+    110.23,
+    85.74
+   ],
+   "instruction": "Put the plate centre in the bottom-right corner of the image, tilt 34 deg left. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.6 mm)"
+   ]
+  },
+  {
+   "view": 5,
+   "pose": [
+    510.7,
+    -12.62,
+    18.75,
+    214.98,
+    137.89,
+    0.0
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 5,
+   "pose": [
+    530.7,
+    -9.62,
+    15.75,
+    219.98,
+    110.31,
+    0.0
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 5,
+   "pose": [
+    490.7,
+    -15.62,
+    21.75,
+    209.98,
+    110.31,
+    0.0
+   ],
+   "instruction": "Put the plate centre in the middle-right region of the image. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 6,
+   "pose": [
+    503.01,
+    -13.37,
+    19.46,
+    209.99,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 2 deg right and 2 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 6,
+   "pose": [
+    523.01,
+    -10.37,
+    16.46,
+    214.99,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 2 deg right and 2 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 6,
+   "pose": [
+    483.01,
+    -16.37,
+    22.46,
+    204.99,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 2 deg right and 2 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 7,
+   "pose": [
+    495.48,
+    -13.74,
+    19.81,
+    205.02,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.1 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 7,
+   "pose": [
+    515.48,
+    -10.74,
+    16.81,
+    210.02,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 7,
+   "pose": [
+    475.48,
+    -16.74,
+    22.81,
+    200.02,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 8,
+   "pose": [
+    488.29,
+    -13.88,
+    19.97,
+    199.99,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 8,
+   "pose": [
+    508.29,
+    -10.88,
+    16.97,
+    204.99,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 8,
+   "pose": [
+    468.29,
+    -16.88,
+    22.97,
+    194.99,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 9,
+   "pose": [
+    481.55,
+    -13.88,
+    20.05,
+    194.91,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 9,
+   "pose": [
+    501.55,
+    -10.88,
+    17.05,
+    199.91,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 9,
+   "pose": [
+    461.55,
+    -16.88,
+    23.05,
+    189.91,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 10,
+   "pose": [
+    474.39,
+    -13.96,
+    20.13,
+    189.91,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 10,
+   "pose": [
+    494.39,
+    -10.96,
+    17.13,
+    194.91,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 10,
+   "pose": [
+    454.39,
+    -16.96,
+    23.13,
+    184.91,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 11,
+   "pose": [
+    467.66,
+    -14.06,
+    20.19,
+    184.96,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 11,
+   "pose": [
+    487.66,
+    -11.06,
+    17.19,
+    189.96,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 11,
+   "pose": [
+    447.66,
+    -17.06,
+    23.19,
+    179.96,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 12,
+   "pose": [
+    461.36,
+    -14.06,
+    20.19,
+    179.94,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 12,
+   "pose": [
+    481.36,
+    -11.06,
+    17.19,
+    184.94,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 12,
+   "pose": [
+    441.36,
+    -17.06,
+    23.19,
+    174.94,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 13,
+   "pose": [
+    455.09,
+    -14.06,
+    20.19,
+    174.88,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 13,
+   "pose": [
+    475.09,
+    -11.06,
+    17.19,
+    179.88,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 13,
+   "pose": [
+    435.09,
+    -17.06,
+    23.19,
+    169.88,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 14,
+   "pose": [
+    448.89,
+    -14.06,
+    20.19,
+    169.82,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 14,
+   "pose": [
+    468.89,
+    -11.06,
+    17.19,
+    174.82,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 14,
+   "pose": [
+    428.89,
+    -17.06,
+    23.19,
+    164.82,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.1 mm)"
+   ]
+  },
+  {
+   "view": 15,
+   "pose": [
+    442.9,
+    -14.06,
+    20.19,
+    164.78,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 15,
+   "pose": [
+    462.9,
+    -11.06,
+    17.19,
+    169.78,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 15,
+   "pose": [
+    422.9,
+    -17.06,
+    23.19,
+    159.78,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 16,
+   "pose": [
+    437.5,
+    -14.06,
+    20.19,
+    159.73,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 16,
+   "pose": [
+    457.5,
+    -11.06,
+    17.19,
+    164.73,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 16,
+   "pose": [
+    417.5,
+    -17.06,
+    23.19,
+    154.73,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 17,
+   "pose": [
+    431.91,
+    -14.06,
+    20.19,
+    154.71,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 17,
+   "pose": [
+    451.91,
+    -11.06,
+    17.19,
+    159.71,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 17,
+   "pose": [
+    411.91,
+    -17.06,
+    23.19,
+    149.71,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 18,
+   "pose": [
+    426.74,
+    -14.06,
+    20.19,
+    149.67,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 18,
+   "pose": [
+    446.74,
+    -11.06,
+    17.19,
+    154.67,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 18,
+   "pose": [
+    406.74,
+    -17.06,
+    23.19,
+    144.67,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 19,
+   "pose": [
+    421.86,
+    -14.06,
+    20.19,
+    144.62,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 19,
+   "pose": [
+    441.86,
+    -11.06,
+    17.19,
+    149.62,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 19,
+   "pose": [
+    401.86,
+    -17.06,
+    23.19,
+    139.62,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 20,
+   "pose": [
+    416.88,
+    -14.06,
+    20.19,
+    139.59,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 20,
+   "pose": [
+    436.88,
+    -11.06,
+    17.19,
+    144.59,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 20,
+   "pose": [
+    396.88,
+    -17.06,
+    23.19,
+    134.59,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 21,
+   "pose": [
+    412.19,
+    -14.06,
+    20.19,
+    134.57,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 21,
+   "pose": [
+    432.19,
+    -11.06,
+    17.19,
+    139.57,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 21,
+   "pose": [
+    392.19,
+    -17.06,
+    23.19,
+    129.57,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 22,
+   "pose": [
+    407.75,
+    -14.06,
+    20.19,
+    129.55,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 22,
+   "pose": [
+    427.75,
+    -11.06,
+    17.19,
+    134.55,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 22,
+   "pose": [
+    387.75,
+    -17.06,
+    23.19,
+    124.55,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 23,
+   "pose": [
+    403.45,
+    -14.06,
+    20.19,
+    124.52,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 23,
+   "pose": [
+    423.45,
+    -11.06,
+    17.19,
+    129.52,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 23,
+   "pose": [
+    383.45,
+    -17.06,
+    23.19,
+    119.52,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 24,
+   "pose": [
+    399.12,
+    -14.06,
+    20.19,
+    119.48,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 24,
+   "pose": [
+    419.12,
+    -11.06,
+    17.19,
+    124.48,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 24,
+   "pose": [
+    379.12,
+    -17.06,
+    23.19,
+    114.48,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 25,
+   "pose": [
+    395.16,
+    -14.06,
+    20.19,
+    114.49,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 25,
+   "pose": [
+    415.16,
+    -11.06,
+    17.19,
+    119.49,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 25,
+   "pose": [
+    375.16,
+    -17.06,
+    23.19,
+    109.49,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 26,
+   "pose": [
+    391.12,
+    -14.06,
+    20.19,
+    109.48,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 26,
+   "pose": [
+    411.12,
+    -11.06,
+    17.19,
+    114.48,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 26,
+   "pose": [
+    371.12,
+    -17.06,
+    23.19,
+    104.48,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 27,
+   "pose": [
+    387.38,
+    -14.06,
+    20.19,
+    104.45,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 27,
+   "pose": [
+    407.38,
+    -11.06,
+    17.19,
+    109.45,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 27,
+   "pose": [
+    367.38,
+    -17.06,
+    23.19,
+    99.45,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 28,
+   "pose": [
+    383.72,
+    -14.06,
+    20.2,
+    99.47,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 28,
+   "pose": [
+    403.72,
+    -11.06,
+    17.2,
+    104.47,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 28,
+   "pose": [
+    363.72,
+    -17.06,
+    23.2,
+    94.47,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 29,
+   "pose": [
+    380.13,
+    -14.06,
+    20.2,
+    94.48,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 29,
+   "pose": [
+    400.13,
+    -11.06,
+    17.2,
+    99.48,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 29,
+   "pose": [
+    360.13,
+    -17.06,
+    23.2,
+    89.48,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 30,
+   "pose": [
+    376.89,
+    -14.06,
+    20.2,
+    89.45,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 30,
+   "pose": [
+    396.89,
+    -11.06,
+    17.2,
+    94.45,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 30,
+   "pose": [
+    356.89,
+    -17.06,
+    23.2,
+    84.45,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "right: ambiguous marker assignment (partial witness 2/4, off-lattice marker missing)"
+   ]
+  },
+  {
+   "view": 31,
+   "pose": [
+    412.33,
+    -14.06,
+    20.2,
+    94.41,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg left and 3 deg up.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 31,
+   "pose": [
+    432.33,
+    -11.06,
+    17.2,
+    99.41,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg left and 3 deg up. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 31,
+   "pose": [
+    392.33,
+    -17.06,
+    23.2,
+    89.41,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg left and 3 deg up. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 32,
+   "pose": [
+    407.78,
+    -14.06,
+    20.2,
+    89.4,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 32,
+   "pose": [
+    427.78,
+    -11.06,
+    17.2,
+    94.4,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 32,
+   "pose": [
+    387.78,
+    -17.06,
+    23.2,
+    84.4,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 33,
+   "pose": [
+    403.37,
+    -14.06,
+    20.2,
+    84.39,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 33,
+   "pose": [
+    423.37,
+    -11.06,
+    17.2,
+    89.39,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 33,
+   "pose": [
+    383.37,
+    -17.06,
+    23.2,
+    79.39,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 34,
+   "pose": [
+    399.22,
+    -14.06,
+    20.2,
+    79.38,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 34,
+   "pose": [
+    419.22,
+    -11.06,
+    17.2,
+    84.38,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 34,
+   "pose": [
+    379.22,
+    -17.06,
+    23.2,
+    74.38,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 35,
+   "pose": [
+    395.73,
+    -14.06,
+    20.2,
+    74.32,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 35,
+   "pose": [
+    415.73,
+    -11.06,
+    17.2,
+    79.32,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 35,
+   "pose": [
+    375.73,
+    -17.06,
+    23.2,
+    69.32,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 36,
+   "pose": [
+    391.65,
+    -14.06,
+    20.22,
+    69.31,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 36,
+   "pose": [
+    411.65,
+    -11.06,
+    17.22,
+    74.31,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 36,
+   "pose": [
+    371.65,
+    -17.06,
+    23.22,
+    64.31,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 37,
+   "pose": [
+    388.03,
+    -14.06,
+    20.22,
+    64.28,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 37,
+   "pose": [
+    408.03,
+    -11.06,
+    17.22,
+    69.28,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 37,
+   "pose": [
+    368.03,
+    -17.06,
+    23.22,
+    59.28,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 38,
+   "pose": [
+    385.03,
+    -14.06,
+    20.22,
+    59.18,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 38,
+   "pose": [
+    405.03,
+    -11.06,
+    17.22,
+    64.18,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 38,
+   "pose": [
+    365.03,
+    -17.06,
+    23.22,
+    54.18,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 39,
+   "pose": [
+    381.81,
+    -14.06,
+    20.22,
+    54.13,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 39,
+   "pose": [
+    401.81,
+    -11.06,
+    17.22,
+    59.13,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 39,
+   "pose": [
+    361.81,
+    -17.06,
+    23.22,
+    49.13,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 40,
+   "pose": [
+    378.4,
+    -14.06,
+    20.22,
+    49.12,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 40,
+   "pose": [
+    398.4,
+    -11.06,
+    17.22,
+    54.12,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 40,
+   "pose": [
+    358.4,
+    -17.06,
+    23.22,
+    44.12,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 41,
+   "pose": [
+    375.34,
+    -14.06,
+    20.22,
+    44.07,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 41,
+   "pose": [
+    395.34,
+    -11.06,
+    17.22,
+    49.07,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 41,
+   "pose": [
+    355.34,
+    -17.06,
+    23.22,
+    39.07,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 42,
+   "pose": [
+    372.18,
+    -14.06,
+    20.23,
+    39.08,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 42,
+   "pose": [
+    392.18,
+    -11.06,
+    17.23,
+    44.08,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 42,
+   "pose": [
+    352.18,
+    -17.06,
+    23.23,
+    34.08,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 43,
+   "pose": [
+    369.41,
+    -14.06,
+    20.23,
+    34.02,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 43,
+   "pose": [
+    389.41,
+    -11.06,
+    17.23,
+    39.02,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 43,
+   "pose": [
+    349.41,
+    -17.06,
+    23.23,
+    29.02,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 44,
+   "pose": [
+    366.47,
+    -14.07,
+    20.27,
+    29.08,
+    137.89,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down.",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 44,
+   "pose": [
+    386.47,
+    -11.07,
+    17.27,
+    34.08,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  },
+  {
+   "view": 44,
+   "pose": [
+    346.47,
+    -17.07,
+    23.27,
+    24.08,
+    110.31,
+    0.0
+   ],
+   "instruction": "Tilt 3 deg right and 3 deg down. (retry)",
+   "accepted": false,
+   "reasons": [
+    "too similar to an accepted view (0.0 deg, 0.0 mm)"
+   ]
+  }
+ ]
+}

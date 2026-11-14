@@ -68,6 +68,13 @@ Round-3 additions after independent verification
   centre from withdrawing a satisfied dimension while the operator is still
   being guided; the hybrid rehearsal still reaches 37 accepted / 8/8 /
   validated.
+* **guidance-driven operator rehearsal is negative**: a cooperative synthetic
+  operator following the live guidance reaches 7/8 in 45 targets (four signed
+  tilt quadrants missing) although the curated 37-view replay reaches 8/8 and
+  the fit RMS is 0.42 px. The moving relative tilt centre makes a quadrant look
+  satisfied while the accepted cluster shifts. Latching hides the gap from
+  guidance; a fixed guidance reference alone does not fix it. Evidence and the
+  proposed fix: `analysis/calibration/guided_operator/REPORT.md`.
 * **partial views do not cost accuracy** (`analysis/calibration/accuracy/PARTIAL_VS_FULL.md`):
   held-out cross-camera 0.860 px (all 122 views) vs 0.891 px (60 full-board),
   Δ −0.030 px [−0.043, −0.019]; stereo baseline sigma 0.059 → 0.039 mm;
