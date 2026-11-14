@@ -536,7 +536,8 @@ Discrepancies in the clean-clone claim:
 Fresh clone `92cc629`:
 
 ```sh
-grep -rniE "<redacted-device-serial>|einstarmea|CP-2023488F20|<home>/|/run/media/" . --exclude-dir=.git | wc -l
+grep -rniE "<device-serial>|<device-tag>|<part-number>|<home>/|<mount>/" \
+    . --exclude-dir=.git | wc -l    # patterns redacted in this copy
 # 0
 ```
 
