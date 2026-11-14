@@ -212,6 +212,9 @@ driver C++: **12/12** (`build/driver-ninja`, ctest). The single earlier failure
 (`test_live_capture_source_plumbing`) reproduced only while a heavy GUI
 rehearsal was running concurrently and passes in the clean run.
 
+Public checkout (`DreamMakers2/Einstar_Linux_Analysis`, sanitized):
+**514 passed, 79 skipped** (`pytest tests -q`, 6 min 20 s).
+
 ## 6. Limits and unresolved questions
 
 * **No scanner was used after the changes.** Exposure and detection improvements
@@ -230,3 +233,17 @@ rehearsal was running concurrently and passes in the clean run.
 * The ~1 % vendor calibration-branch difference is unchanged and unresolved.
 * `exposure.jsonl` remains append-only; new rows carry a run id but old rows
   cannot be retroactively separated.
+
+
+## 7. Commits and publishing
+
+| repository | commit | content |
+|---|---|---|
+| private research tree | `abf483b` | the milestone: detection, solver, dwell, roll, exposure, GUI and evidence |
+| private research tree | `4666798`, `ffb0859` | export-only path-scrub hygiene (home-relative paths kept intact for tests) |
+| public `DreamMakers2/Einstar_Linux_Analysis` | `2ab35df` | sanitized mirror of the above |
+
+The public tree contains no recordings, no firmware, no factory calibration
+backup, no scanner serial and no absolute private path. `scripts/export_public.sh`
+performed the copy, untracked-file pruning, path scrub and forbidden-content
+check; the sanitized checkout was then tested from its own working tree.
