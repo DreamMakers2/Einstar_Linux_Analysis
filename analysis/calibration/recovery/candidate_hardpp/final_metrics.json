@@ -1,0 +1,721 @@
+{
+ "schema": "einstar-solver-candidate/1",
+ "role": "offline analysis candidate; NOT activated",
+ "model": {
+  "distortion": "factory values, fixed (dist not estimated)",
+  "principal_point": "HARD-FIXED to the factory value for all three cameras (cx/cy not optimised, no prior, no movement)",
+  "free_intrinsics": [
+   "fx",
+   "fy"
+  ],
+  "free_extrinsics": [
+   "right.rx..tz",
+   "tex.rx..tz"
+  ],
+  "free_rig_parameters": 18,
+  "free_views": "per-view r6 (nuisance)",
+  "free_kc": false,
+  "priors": "none"
+ },
+ "pp_treatment": {
+  "mode": "hard-fixed at the factory value (not optimised, no prior)",
+  "factory_cx_cy": {
+   "left.cx": 623.9122318977746,
+   "left.cy": 534.5629450574738,
+   "right.cx": 635.5014370289109,
+   "right.cy": 494.5090595487099,
+   "tex.cx": 633.1023849680892,
+   "tex.cy": 521.1249788233655
+  },
+  "delta_to_factory_px": {
+   "left.cx": 0.0,
+   "left.cy": 0.0,
+   "right.cx": 0.0,
+   "right.cy": 0.0,
+   "tex.cx": 0.0,
+   "tex.cy": 0.0
+  },
+  "note": "the 2.0 px drift seen with the 1 px prior is gone because the parameters are not free"
+ },
+ "n_views_fit": 297,
+ "n_views_culled": 4,
+ "culled_views": [
+  6,
+  36,
+  129,
+  161
+ ],
+ "cull_rule": "per-view reprojection RMS > max(2.0 px, 3 x median view RMS) (calib.pipeline.calibrate_directory)",
+ "residual_rms_px": 0.6726427911491344,
+ "view_rms": {
+  "median": 0.4692455522694699,
+  "p90": 1.0271541673860611,
+  "max": 2.2801876146431432
+ },
+ "cameras": {
+  "left": {
+   "fx": 1159.1645049562871,
+   "fy": 1157.9437640251988,
+   "cx": 623.9122318977746,
+   "cy": 534.5629450574738,
+   "skew": 0.0,
+   "kc": [
+    -0.16202550808552876,
+    0.17329795771292744,
+    0.00018672474681613593,
+    0.00014679614540291652,
+    0.018457014016192375
+   ]
+  },
+  "right": {
+   "fx": 1158.4829063632533,
+   "fy": 1157.0788015321127,
+   "cx": 635.5014370289109,
+   "cy": 494.5090595487099,
+   "skew": 0.0,
+   "kc": [
+    -0.16205012000663044,
+    0.1779246629803719,
+    0.0008378695489299481,
+    2.422668790114102e-05,
+    0.012359554278068785
+   ]
+  },
+  "tex": {
+   "fx": 1141.351698217459,
+   "fy": 1139.9041501445004,
+   "cx": 633.1023849680892,
+   "cy": 521.1249788233655,
+   "skew": 0.0,
+   "kc": [
+    -0.1510098335785174,
+    0.1664357844770093,
+    0.0005756404561523299,
+    -7.375679496206352e-05,
+    0.031132636860223162
+   ]
+  }
+ },
+ "factory_cameras": {
+  "left": {
+   "fx": 1159.115416028666,
+   "fy": 1159.0213026553652,
+   "cx": 623.9122318977746,
+   "cy": 534.5629450574738,
+   "skew": 6.191640717156943e-05,
+   "kc": [
+    -0.16202550808552876,
+    0.17329795771292744,
+    0.00018672474681613593,
+    0.00014679614540291652,
+    0.018457014016192375
+   ]
+  },
+  "right": {
+   "fx": 1158.0869171977224,
+   "fy": 1157.7185632776404,
+   "cx": 635.5014370289109,
+   "cy": 494.5090595487099,
+   "skew": 0.00018306473825302483,
+   "kc": [
+    -0.16205012000663044,
+    0.1779246629803719,
+    0.0008378695489299481,
+    2.422668790114102e-05,
+    0.012359554278068785
+   ]
+  },
+  "tex": {
+   "fx": 1141.0776270986637,
+   "fy": 1141.0872782988874,
+   "cx": 633.1023849680892,
+   "cy": 521.1249788233655,
+   "skew": -9.547812137976804e-05,
+   "kc": [
+    -0.1510098335785174,
+    0.1664357844770093,
+    0.0005756404561523299,
+    -7.375679496206352e-05,
+    0.031132636860223162
+   ]
+  }
+ },
+ "extrinsics": {
+  "left": {
+   "R": [
+    [
+     1.0,
+     0.0,
+     0.0
+    ],
+    [
+     0.0,
+     1.0,
+     0.0
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "t": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "right": {
+   "R": [
+    [
+     0.9263168304549795,
+     -0.001979531157705131,
+     0.3767402434997308
+    ],
+    [
+     0.0016987447421563941,
+     0.9999979765888103,
+     0.0010775363503037975
+    ],
+    [
+     -0.37674161421608543,
+     -0.00035815454890955264,
+     0.9263183188532856
+    ]
+   ],
+   "t": [
+    -157.05900060662617,
+    -0.2155881967899623,
+    30.627649353447477
+   ]
+  },
+  "tex": {
+   "R": [
+    [
+     0.9558663163967092,
+     -0.001425280247272427,
+     0.2937984917497076
+    ],
+    [
+     0.0017225165253351477,
+     0.9999982329943008,
+     -0.0007529575658915177
+    ],
+    [
+     -0.29379689943055254,
+     0.0012257995320691711,
+     0.9558670824442596
+    ]
+   ],
+   "t": [
+    -122.22694279955283,
+    -0.08015754162829972,
+    12.606386404580102
+   ]
+  }
+ },
+ "solver": {
+  "solver_status": "converged_cost",
+  "nit": 31,
+  "success": true,
+  "rank": 1800,
+  "rank_kept": null,
+  "condition": 439693.6197339256,
+  "condition_scaled": 82.23275962430073,
+  "rank_scaled": 1800,
+  "sigma_px": 0.35426784469543177,
+  "n_free": 1800,
+  "n_residuals": 68464,
+  "estimator": "robust_sandwich"
+ },
+ "identifiability": {
+  "condition_scaled": 1821.4616528590327,
+  "rank": 18,
+  "n_free": 18,
+  "weak_directions": 0,
+  "direction_floor": 0.001,
+  "eigen_tail": [
+   0.27229073579561675,
+   0.024237236119342313,
+   0.020559841853316278,
+   0.015065906791180455,
+   0.009666094751194577,
+   0.0065766726974096894,
+   0.004244971962005846,
+   0.0022568149201725373
+  ],
+  "weakest": {
+   "rank": 17,
+   "eigenvalue": 0.0022568149201725373,
+   "explained_fraction": 0.00012537860667625206,
+   "dominant": [
+    {
+     "param": "right.ry",
+     "component": -0.533433798428104,
+     "sigma_units": -2.4912236602164417e-06
+    },
+    {
+     "param": "tex.ry",
+     "component": -0.4750446527433478,
+     "sigma_units": -2.0849509538561735e-06
+    },
+    {
+     "param": "left.fx",
+     "component": 0.34508080270209746,
+     "sigma_units": 0.009221309708719686
+    },
+    {
+     "param": "left.fy",
+     "component": 0.33681000312101045,
+     "sigma_units": 0.009243943404908481
+    },
+    {
+     "param": "right.fy",
+     "component": 0.23161911339052138,
+     "sigma_units": 0.006401638094708703
+    },
+    {
+     "param": "tex.fx",
+     "component": 0.2213131869519229,
+     "sigma_units": 0.0063742993565513665
+    },
+    {
+     "param": "right.fx",
+     "component": 0.2160563324719315,
+     "sigma_units": 0.006154229468892316
+    },
+    {
+     "param": "tex.fy",
+     "component": 0.20138226039419818,
+     "sigma_units": 0.006464965195249821
+    }
+   ]
+  },
+  "decades_raw": 10.229652619604634
+ },
+ "sigmas": {
+  "left.fx": 0.20915569224278,
+  "left.fy": 0.21036104945545403,
+  "right.fx": 0.17974770749891747,
+  "right.fy": 0.18368691607774335,
+  "tex.fx": 0.19164100829538017,
+  "tex.fy": 0.19340458879698327,
+  "right.rx": 2.6244850960596243e-05,
+  "right.ry": 5.8267148044085024e-05,
+  "right.rz": 2.1628528636609903e-05,
+  "right.tx": 0.02027438622037231,
+  "right.ty": 0.011728110056371161,
+  "right.tz": 0.05913810336068298,
+  "tex.rx": 3.013650195252315e-05,
+  "tex.ry": 5.0986168339732124e-05,
+  "tex.rz": 2.3226714911360696e-05,
+  "tex.tx": 0.01814939826306794,
+  "tex.ty": 0.013631646111618295,
+  "tex.tz": 0.06234170840841696
+ },
+ "free_mask": [
+  true,
+  true,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  true,
+  true,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  true,
+  true,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true
+ ],
+ "gate": {
+  "passed": true,
+  "blocking": [],
+  "counts": {
+   "constrained": 17,
+   "weak": 1,
+   "unobservable": 0
+  },
+  "reasons": [],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.20915569224278,
+    "sigma_units": 0.20915569224278,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792414531816267,
+    "ratio": 0.5975876921222286,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9427628965790477
+   },
+   "left.fy": {
+    "sigma": 0.21036104945545403,
+    "sigma_units": 0.21036104945545403,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792414531816267,
+    "ratio": 0.6010315698727259,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9369922875318023
+   },
+   "right.fx": {
+    "sigma": 0.17974770749891747,
+    "sigma_units": 0.17974770749891747,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792414531816267,
+    "ratio": 0.5135648785683357,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.6242011706508375
+   },
+   "right.fy": {
+    "sigma": 0.18368691607774335,
+    "sigma_units": 0.18368691607774335,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792414531816267,
+    "ratio": 0.5248197602221238,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.6288609837291923
+   },
+   "tex.fx": {
+    "sigma": 0.19164100829538017,
+    "sigma_units": 0.19164100829538017,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792414531816267,
+    "ratio": 0.5475457379868005,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.6136593948775719
+   },
+   "tex.fy": {
+    "sigma": 0.19340458879698327,
+    "sigma_units": 0.19340458879698327,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792414531816267,
+    "ratio": 0.5525845394199522,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.6110826247262983
+   },
+   "right.rx": {
+    "sigma": 2.6244850960596243e-05,
+    "sigma_units": 0.0015037191939920292,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.015037191939920291,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.2065712627684258
+   },
+   "right.ry": {
+    "sigma": 5.8267148044085024e-05,
+    "sigma_units": 0.0033384616671900216,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.033384616671900215,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6992195719019233
+   },
+   "right.rz": {
+    "sigma": 2.1628528636609903e-05,
+    "sigma_units": 0.001239223407955588,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.01239223407955588,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.17277934325094782
+   },
+   "right.tx": {
+    "sigma": 0.02027438622037231,
+    "sigma_units": 0.02027438622037231,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.33790643700620515,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.611739427879796
+   },
+   "right.ty": {
+    "sigma": 0.011728110056371161,
+    "sigma_units": 0.011728110056371161,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.19546850093951937,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.21847248657335758
+   },
+   "right.tz": {
+    "sigma": 0.05913810336068298,
+    "sigma_units": 0.05913810336068298,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.985635056011383,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.6033722199111672
+   },
+   "tex.rx": {
+    "sigma": 3.013650195252315e-05,
+    "sigma_units": 0.0017266943711673414,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.017266943711673415,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.25246339801667533
+   },
+   "tex.ry": {
+    "sigma": 5.0986168339732124e-05,
+    "sigma_units": 0.00292129225941019,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.029212922594101902,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6469227918544552
+   },
+   "tex.rz": {
+    "sigma": 2.3226714911360696e-05,
+    "sigma_units": 0.001330792736374544,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.013307927363745439,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.1560260972905532
+   },
+   "tex.tx": {
+    "sigma": 0.01814939826306794,
+    "sigma_units": 0.01814939826306794,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.30248997105113234,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.48044372681597747
+   },
+   "tex.ty": {
+    "sigma": 0.013631646111618295,
+    "sigma_units": 0.013631646111618295,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.22719410186030492,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.26556661622878075
+   },
+   "tex.tz": {
+    "sigma": 0.06234170840841696,
+    "sigma_units": 0.06234170840841696,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.0390284734736162,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.5580309200605776
+   }
+  },
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "unobservable": [],
+    "weak": [
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.0033384616671900216,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.0015037191939920292,
+     "right.ry": 0.0033384616671900216,
+     "right.rz": 0.001239223407955588
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.01790180417609816,
+    "limit_mm": 0.06,
+    "ratio": 0.2983634029349694
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "distortion_free": false,
+    "freed_distortion_parameters": [],
+    "note": "held-out prediction change when the distortion model is freed; training RMS is deliberately not used.  A candidate that holds the factory distortion passes when freeing it is not worth it, and a candidate that frees it passes only when it is."
+   }
+  },
+  "model_sensitivity": {
+   "ok": true,
+   "n_views": 297,
+   "n_train_views": 238,
+   "n_heldout_views": 59,
+   "heldout_rms_free_kc_px": 0.37492539506203787,
+   "heldout_rms_fixed_kc_px": 0.37485364087666456,
+   "delta_px": -7.175418537330724e-05,
+   "relative_improvement": -0.0001914192035203308,
+   "worth_freeing": false,
+   "train_rms_free_kc_px": 0.6807513535488684,
+   "train_rms_fixed_kc_px": 0.6828023785672233,
+   "backend": "`ftol` termination condition is satisfied.",
+   "refit_converged": true,
+   "refit_iterations": [
+    20,
+    6
+   ],
+   "note": "selection uses the held-out change; the training RMS is reported only to show it moves the other way"
+  }
+ },
+ "heldout_folds": {
+  "0": {
+   "left": 0.4171449118585833,
+   "right": 0.4788629600651616,
+   "tex": 1.21861779433149,
+   "all": 0.8022547882866723
+  },
+  "1": {
+   "left": 0.4109374728447334,
+   "right": 0.4760331803290923,
+   "tex": 1.1553210412505688,
+   "all": 0.7686015191399616
+  },
+  "2": {
+   "left": 0.41700951963428384,
+   "right": 0.4704303841623052,
+   "tex": 1.2630908645147694,
+   "all": 0.8257613971975344
+  }
+ },
+ "heldout_rms_mean_px": 0.7988725682080561,
+ "heldout_rms_sd_px": 0.028729644522414388,
+ "epipolar": {
+  "fitted_ir": {
+   "n": 10867,
+   "sampson_rms_px": 0.3367642887534121,
+   "sampson_p90_px": 0.5338757395535073
+  },
+  "factory_ir": {
+   "n": 10867,
+   "sampson_rms_px": 0.47075983063459137,
+   "sampson_p90_px": 0.7555833818711308
+  },
+  "fitted_rgb": {
+   "n": 11182,
+   "sampson_rms_px": 0.6482972940438471,
+   "sampson_p90_px": 1.0830358115501146
+  },
+  "factory_rgb": {
+   "n": 11182,
+   "sampson_rms_px": 31.416095611393704,
+   "sampson_p90_px": 37.74167847202409
+  }
+ },
+ "rig": {
+  "baseline_fit_mm": 160.0175898291826,
+  "baseline_factory_mm": 158.55702724431998,
+  "baseline_error_mm": 1.460562584862629,
+  "baseline_error_pct": 0.9211591628872134,
+  "baseline_sigma_mm": 0.01790180417609816,
+  "ir_rotation_fit_deg": 22.132273771239785,
+  "ir_rotation_factory_deg": 22.138282490475216,
+  "rgb_translation_fit_mm": 122.87535533840064,
+  "rgb_translation_factory_mm": 125.317604126271,
+  "pitch_mm": 28.0,
+  "scale_note": "metric scale is the plate pitch (28.0 mm nominal, 27.72 mm CCF-effective); no length artefact was measured, so absolute scale is unvalidated",
+  "ir_relative_sigma": {
+   "rotation_deg": 0.0038655091133332573,
+   "translation_mm": 0.01790180417609816
+  }
+ },
+ "wall_s": 36.105687030998524,
+ "profile": {
+  "path": "<repo>/analysis/calibration/recovery/candidate_hardpp/profile.json",
+  "sha256": "81f3466b3f5b3cc54dea63e64ff4977e40d1112927466caa6e0243cdbc241805",
+  "schema": "einstar.recon.profile/1",
+  "validation": "pending (analysis only; never activated)"
+ }
+}

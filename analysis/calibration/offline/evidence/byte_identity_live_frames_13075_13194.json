@@ -1,0 +1,2178 @@
+{
+  "schema": "einstar-offline-byte-identity/1",
+  "replayed_range": {
+    "start_group": 12700,
+    "end_group": 13194,
+    "source": "<calibration-session>/raw.e1r",
+    "command": "build/driver/einstar-stream-frames --in raw.e1r --out /tmp/stream_bench/range_c --start-group 12700 --single-pass --fast-pacing --queue-depth 32 --manifest"
+  },
+  "reference": {
+    "path": "<calibration-session>/frames",
+    "note": "120 groups retained by the live ring at the end of capture; read-only"
+  },
+  "compared_files": 360,
+  "mismatches": 0,
+  "all_identical": true,
+  "pairs": [
+    {
+      "file": "frame_013075_cam0.pgm",
+      "replay_sha256": "02c4539fac039accd415ab5469f21113ec0d6a866323b9aeffbff5d89e2c185b",
+      "live_sha256": "02c4539fac039accd415ab5469f21113ec0d6a866323b9aeffbff5d89e2c185b",
+      "identical": true
+    },
+    {
+      "file": "frame_013075_cam1.pgm",
+      "replay_sha256": "840fe425b7ba9d38a896789383e868a0701b65114b50323e4b9720e7eed88068",
+      "live_sha256": "840fe425b7ba9d38a896789383e868a0701b65114b50323e4b9720e7eed88068",
+      "identical": true
+    },
+    {
+      "file": "frame_013075_cam2.pgm",
+      "replay_sha256": "8c6ab584e2f6fd561689b03d9c6478ffc1d2b620f727d47e772e9fdd55057cc6",
+      "live_sha256": "8c6ab584e2f6fd561689b03d9c6478ffc1d2b620f727d47e772e9fdd55057cc6",
+      "identical": true
+    },
+    {
+      "file": "frame_013076_cam0.pgm",
+      "replay_sha256": "9f99a86b49ca2aeaa25b1bbcec5c9738493c08b8b18b791af547ec6897e9f9f2",
+      "live_sha256": "9f99a86b49ca2aeaa25b1bbcec5c9738493c08b8b18b791af547ec6897e9f9f2",
+      "identical": true
+    },
+    {
+      "file": "frame_013076_cam1.pgm",
+      "replay_sha256": "1dbbba589010ed2ba78fd802a882b4299e5ef5edbff217d6961d6b9d8e5b2347",
+      "live_sha256": "1dbbba589010ed2ba78fd802a882b4299e5ef5edbff217d6961d6b9d8e5b2347",
+      "identical": true
+    },
+    {
+      "file": "frame_013076_cam2.pgm",
+      "replay_sha256": "3fcf28b66eeed00283bb6c532486fb1225cd8c097feac26536e2f268f15393b2",
+      "live_sha256": "3fcf28b66eeed00283bb6c532486fb1225cd8c097feac26536e2f268f15393b2",
+      "identical": true
+    },
+    {
+      "file": "frame_013077_cam0.pgm",
+      "replay_sha256": "6e073206a0c07119c19e97b95bafd1bee159b310f0476d3a881e00d75e093e5e",
+      "live_sha256": "6e073206a0c07119c19e97b95bafd1bee159b310f0476d3a881e00d75e093e5e",
+      "identical": true
+    },
+    {
+      "file": "frame_013077_cam1.pgm",
+      "replay_sha256": "503b3cb605fc9aab08bab3c020cff340cfe4ba96f3d8dd750fbd30bdd876357d",
+      "live_sha256": "503b3cb605fc9aab08bab3c020cff340cfe4ba96f3d8dd750fbd30bdd876357d",
+      "identical": true
+    },
+    {
+      "file": "frame_013077_cam2.pgm",
+      "replay_sha256": "c15d9385709b86bd8ac618657d24ff48395a6f6e146e2a03e2b766bedf3a57a0",
+      "live_sha256": "c15d9385709b86bd8ac618657d24ff48395a6f6e146e2a03e2b766bedf3a57a0",
+      "identical": true
+    },
+    {
+      "file": "frame_013078_cam0.pgm",
+      "replay_sha256": "29e6d3a5c1e845584a150ec4bd4952dfc313d1b1a63c10040e52cce2e1bdb5b4",
+      "live_sha256": "29e6d3a5c1e845584a150ec4bd4952dfc313d1b1a63c10040e52cce2e1bdb5b4",
+      "identical": true
+    },
+    {
+      "file": "frame_013078_cam1.pgm",
+      "replay_sha256": "d1e853d3c5012b3c8e048d9bd4e718c953302f7b729913596edb30b98415f4ab",
+      "live_sha256": "d1e853d3c5012b3c8e048d9bd4e718c953302f7b729913596edb30b98415f4ab",
+      "identical": true
+    },
+    {
+      "file": "frame_013078_cam2.pgm",
+      "replay_sha256": "47b153f4d5addfd41f12f8b3657d16ef0cab3882c03217663a53a6674317c150",
+      "live_sha256": "47b153f4d5addfd41f12f8b3657d16ef0cab3882c03217663a53a6674317c150",
+      "identical": true
+    },
+    {
+      "file": "frame_013079_cam0.pgm",
+      "replay_sha256": "3e3d3cddc692c3beeae7af3696635128c312d799be81203ec06298d555a93f3a",
+      "live_sha256": "3e3d3cddc692c3beeae7af3696635128c312d799be81203ec06298d555a93f3a",
+      "identical": true
+    },
+    {
+      "file": "frame_013079_cam1.pgm",
+      "replay_sha256": "793344ff5014b5579aab31a5861faa9abf44fc8a31647f050773c499c150571a",
+      "live_sha256": "793344ff5014b5579aab31a5861faa9abf44fc8a31647f050773c499c150571a",
+      "identical": true
+    },
+    {
+      "file": "frame_013079_cam2.pgm",
+      "replay_sha256": "a50b62304cb9c714106e5bb280d2ec66fdb3af769ec9d4bd1cb23e0b76c1e822",
+      "live_sha256": "a50b62304cb9c714106e5bb280d2ec66fdb3af769ec9d4bd1cb23e0b76c1e822",
+      "identical": true
+    },
+    {
+      "file": "frame_013080_cam0.pgm",
+      "replay_sha256": "06a73e2cd91aec2199973fa36496174b3495bfaaefa098f4412218ad388bf9cf",
+      "live_sha256": "06a73e2cd91aec2199973fa36496174b3495bfaaefa098f4412218ad388bf9cf",
+      "identical": true
+    },
+    {
+      "file": "frame_013080_cam1.pgm",
+      "replay_sha256": "5dbba3524c0553305173406db9580d0d91279bc8e97c69f9155e7e2c82427e0c",
+      "live_sha256": "5dbba3524c0553305173406db9580d0d91279bc8e97c69f9155e7e2c82427e0c",
+      "identical": true
+    },
+    {
+      "file": "frame_013080_cam2.pgm",
+      "replay_sha256": "5f1bf44d1037a1d1016e175393ce439ea74653db6a1f2ea2eb5384d305201528",
+      "live_sha256": "5f1bf44d1037a1d1016e175393ce439ea74653db6a1f2ea2eb5384d305201528",
+      "identical": true
+    },
+    {
+      "file": "frame_013081_cam0.pgm",
+      "replay_sha256": "b02a776d8bf0099e3bb2a7719b5f51d845368932388c2793d83b72849270d906",
+      "live_sha256": "b02a776d8bf0099e3bb2a7719b5f51d845368932388c2793d83b72849270d906",
+      "identical": true
+    },
+    {
+      "file": "frame_013081_cam1.pgm",
+      "replay_sha256": "e55be5913212a4d51526d7a782a6946c3bdf51e340014a9c1b71e68b46ab9680",
+      "live_sha256": "e55be5913212a4d51526d7a782a6946c3bdf51e340014a9c1b71e68b46ab9680",
+      "identical": true
+    },
+    {
+      "file": "frame_013081_cam2.pgm",
+      "replay_sha256": "6f20d2283c119aca9b6dd4b34874f70f5a04c2fe9f2b3e879d94b82121cf8445",
+      "live_sha256": "6f20d2283c119aca9b6dd4b34874f70f5a04c2fe9f2b3e879d94b82121cf8445",
+      "identical": true
+    },
+    {
+      "file": "frame_013082_cam0.pgm",
+      "replay_sha256": "7a2e6a89514cd039e6c67908f7c4ef3240c237663df4d2be5888b4ec9be689e3",
+      "live_sha256": "7a2e6a89514cd039e6c67908f7c4ef3240c237663df4d2be5888b4ec9be689e3",
+      "identical": true
+    },
+    {
+      "file": "frame_013082_cam1.pgm",
+      "replay_sha256": "b1bfb4e2238678cda1a6d801dba96fd50ca8ffce57ffa4a244ffc1453697ff13",
+      "live_sha256": "b1bfb4e2238678cda1a6d801dba96fd50ca8ffce57ffa4a244ffc1453697ff13",
+      "identical": true
+    },
+    {
+      "file": "frame_013082_cam2.pgm",
+      "replay_sha256": "d26bcbc1ba70db4d6c6dcde4edef5c9b4e07e66526c7d91eae1d0cba79a163dc",
+      "live_sha256": "d26bcbc1ba70db4d6c6dcde4edef5c9b4e07e66526c7d91eae1d0cba79a163dc",
+      "identical": true
+    },
+    {
+      "file": "frame_013083_cam0.pgm",
+      "replay_sha256": "6b2d6114379bdea2ac7ce5b05c10b6600a1f44311df729b594ee7ccb54f4f081",
+      "live_sha256": "6b2d6114379bdea2ac7ce5b05c10b6600a1f44311df729b594ee7ccb54f4f081",
+      "identical": true
+    },
+    {
+      "file": "frame_013083_cam1.pgm",
+      "replay_sha256": "4f0b5e3b857e2f4c4482c300edea51f6661656db3fe587e38aeffbf39734db21",
+      "live_sha256": "4f0b5e3b857e2f4c4482c300edea51f6661656db3fe587e38aeffbf39734db21",
+      "identical": true
+    },
+    {
+      "file": "frame_013083_cam2.pgm",
+      "replay_sha256": "7a9b484ac510925237cdff76754a3e1d5d57b14573508a0a9af21ff2e66211bf",
+      "live_sha256": "7a9b484ac510925237cdff76754a3e1d5d57b14573508a0a9af21ff2e66211bf",
+      "identical": true
+    },
+    {
+      "file": "frame_013084_cam0.pgm",
+      "replay_sha256": "fbb139fc48b76f6ce8364f4957dd48d2561474dff8d7223261f0c76fe68525ac",
+      "live_sha256": "fbb139fc48b76f6ce8364f4957dd48d2561474dff8d7223261f0c76fe68525ac",
+      "identical": true
+    },
+    {
+      "file": "frame_013084_cam1.pgm",
+      "replay_sha256": "59850db6b787f9313c655f7482e516c2da23e1e85293c125ee6effd251b026e9",
+      "live_sha256": "59850db6b787f9313c655f7482e516c2da23e1e85293c125ee6effd251b026e9",
+      "identical": true
+    },
+    {
+      "file": "frame_013084_cam2.pgm",
+      "replay_sha256": "4c0504047cd9eac3027e6c4ff3e9a1e0b7e3e29231dde41a5acdbaaa44b2f129",
+      "live_sha256": "4c0504047cd9eac3027e6c4ff3e9a1e0b7e3e29231dde41a5acdbaaa44b2f129",
+      "identical": true
+    },
+    {
+      "file": "frame_013085_cam0.pgm",
+      "replay_sha256": "858720387aca1348f0bbfac45efce9c7f486abc2ad92f18ee3cdadd55f747bf4",
+      "live_sha256": "858720387aca1348f0bbfac45efce9c7f486abc2ad92f18ee3cdadd55f747bf4",
+      "identical": true
+    },
+    {
+      "file": "frame_013085_cam1.pgm",
+      "replay_sha256": "1dd36854e5383d8a0f29a94afdb9d86e361482757c0ecdcf963163bd3f7fab29",
+      "live_sha256": "1dd36854e5383d8a0f29a94afdb9d86e361482757c0ecdcf963163bd3f7fab29",
+      "identical": true
+    },
+    {
+      "file": "frame_013085_cam2.pgm",
+      "replay_sha256": "3d6dfb81cdea3b24a6c4ecc797054967251843fdd6c52db15af3ca6416d43655",
+      "live_sha256": "3d6dfb81cdea3b24a6c4ecc797054967251843fdd6c52db15af3ca6416d43655",
+      "identical": true
+    },
+    {
+      "file": "frame_013086_cam0.pgm",
+      "replay_sha256": "ac7b5b6a38d48d57978033c52bbcd3248762c1567cda67dd582424389d4850bd",
+      "live_sha256": "ac7b5b6a38d48d57978033c52bbcd3248762c1567cda67dd582424389d4850bd",
+      "identical": true
+    },
+    {
+      "file": "frame_013086_cam1.pgm",
+      "replay_sha256": "64b7a8acb87a7cea5c939e0fa7607642ad570183348016e37e7d97853968f8eb",
+      "live_sha256": "64b7a8acb87a7cea5c939e0fa7607642ad570183348016e37e7d97853968f8eb",
+      "identical": true
+    },
+    {
+      "file": "frame_013086_cam2.pgm",
+      "replay_sha256": "685ed83c47e2c4b1f5f95e0f14f53c91b3544c0397d2506e0361e00b8750f2b4",
+      "live_sha256": "685ed83c47e2c4b1f5f95e0f14f53c91b3544c0397d2506e0361e00b8750f2b4",
+      "identical": true
+    },
+    {
+      "file": "frame_013087_cam0.pgm",
+      "replay_sha256": "e1c08e8221b2f05888cb78f74687854df956d45e4576c70524aabd6fa2107f41",
+      "live_sha256": "e1c08e8221b2f05888cb78f74687854df956d45e4576c70524aabd6fa2107f41",
+      "identical": true
+    },
+    {
+      "file": "frame_013087_cam1.pgm",
+      "replay_sha256": "0c4bf643f2b936d46a609f3ff0a05e4e1906a3178e947447ba7e401d06abaa16",
+      "live_sha256": "0c4bf643f2b936d46a609f3ff0a05e4e1906a3178e947447ba7e401d06abaa16",
+      "identical": true
+    },
+    {
+      "file": "frame_013087_cam2.pgm",
+      "replay_sha256": "0068b85dfaed756cef647201fc044c7f251c77867c50787a1dc99ab5f231cd7c",
+      "live_sha256": "0068b85dfaed756cef647201fc044c7f251c77867c50787a1dc99ab5f231cd7c",
+      "identical": true
+    },
+    {
+      "file": "frame_013088_cam0.pgm",
+      "replay_sha256": "927df545b834bfb8de82ab5bc11f9b8f10c87202a1cf75e181820ad6e7d7d854",
+      "live_sha256": "927df545b834bfb8de82ab5bc11f9b8f10c87202a1cf75e181820ad6e7d7d854",
+      "identical": true
+    },
+    {
+      "file": "frame_013088_cam1.pgm",
+      "replay_sha256": "5e8b3672e3e4a75376421d63290abc2719473cc24dae946a8d14cb09a3076d86",
+      "live_sha256": "5e8b3672e3e4a75376421d63290abc2719473cc24dae946a8d14cb09a3076d86",
+      "identical": true
+    },
+    {
+      "file": "frame_013088_cam2.pgm",
+      "replay_sha256": "c5fee57e53fbb86bf91e371fd494d7f680dc6d980c8afc794cc1e76ba7910df5",
+      "live_sha256": "c5fee57e53fbb86bf91e371fd494d7f680dc6d980c8afc794cc1e76ba7910df5",
+      "identical": true
+    },
+    {
+      "file": "frame_013089_cam0.pgm",
+      "replay_sha256": "e080e5a273befc262e75f41516d9aad404a04faafe2d09741051987438c4804f",
+      "live_sha256": "e080e5a273befc262e75f41516d9aad404a04faafe2d09741051987438c4804f",
+      "identical": true
+    },
+    {
+      "file": "frame_013089_cam1.pgm",
+      "replay_sha256": "58aab2305bb7d8b0dcc7533c3619067aeb81efa15ed0c4dd8f39703310ea36ca",
+      "live_sha256": "58aab2305bb7d8b0dcc7533c3619067aeb81efa15ed0c4dd8f39703310ea36ca",
+      "identical": true
+    },
+    {
+      "file": "frame_013089_cam2.pgm",
+      "replay_sha256": "41b13780c53850dcf4676e30ffbb407e432cad1738cd832f9107004654d5e380",
+      "live_sha256": "41b13780c53850dcf4676e30ffbb407e432cad1738cd832f9107004654d5e380",
+      "identical": true
+    },
+    {
+      "file": "frame_013090_cam0.pgm",
+      "replay_sha256": "a84d23650afdc0a5e2aeaba585dca9e66d65aa52a3c09e5f402635429d283f85",
+      "live_sha256": "a84d23650afdc0a5e2aeaba585dca9e66d65aa52a3c09e5f402635429d283f85",
+      "identical": true
+    },
+    {
+      "file": "frame_013090_cam1.pgm",
+      "replay_sha256": "7571a2af6327c77462395e19b58b3b4b996c1e96d184357f13fe15e63706448c",
+      "live_sha256": "7571a2af6327c77462395e19b58b3b4b996c1e96d184357f13fe15e63706448c",
+      "identical": true
+    },
+    {
+      "file": "frame_013090_cam2.pgm",
+      "replay_sha256": "f272475f7e39b523475f7395423fc40b503794b1487d5eda09c2edfad02ef5be",
+      "live_sha256": "f272475f7e39b523475f7395423fc40b503794b1487d5eda09c2edfad02ef5be",
+      "identical": true
+    },
+    {
+      "file": "frame_013091_cam0.pgm",
+      "replay_sha256": "9ddb991003c8adb085a61d767abdcf3ca444beb847c0e883472c22fde141ebee",
+      "live_sha256": "9ddb991003c8adb085a61d767abdcf3ca444beb847c0e883472c22fde141ebee",
+      "identical": true
+    },
+    {
+      "file": "frame_013091_cam1.pgm",
+      "replay_sha256": "ff9093383a62a77a55531cdfc6fae907307f42d144594443cbb4ca92b6089993",
+      "live_sha256": "ff9093383a62a77a55531cdfc6fae907307f42d144594443cbb4ca92b6089993",
+      "identical": true
+    },
+    {
+      "file": "frame_013091_cam2.pgm",
+      "replay_sha256": "da3c0b7422bddca338b48d2fff8a5d845291539fd2d24dd8ae12e748ed386bd6",
+      "live_sha256": "da3c0b7422bddca338b48d2fff8a5d845291539fd2d24dd8ae12e748ed386bd6",
+      "identical": true
+    },
+    {
+      "file": "frame_013092_cam0.pgm",
+      "replay_sha256": "a07ecddbb3a32b7acaa2bbaa12056c9d2edc72c7934161f6e5a34ff4792a3512",
+      "live_sha256": "a07ecddbb3a32b7acaa2bbaa12056c9d2edc72c7934161f6e5a34ff4792a3512",
+      "identical": true
+    },
+    {
+      "file": "frame_013092_cam1.pgm",
+      "replay_sha256": "70ad379b699ca6af33e7d003cfebb1b2f6a4ccc81cddc3ddf6429a614092f874",
+      "live_sha256": "70ad379b699ca6af33e7d003cfebb1b2f6a4ccc81cddc3ddf6429a614092f874",
+      "identical": true
+    },
+    {
+      "file": "frame_013092_cam2.pgm",
+      "replay_sha256": "d4583439eff70f62fcf9713ceb773225748c617cbf6b8fd33828a706e902e57d",
+      "live_sha256": "d4583439eff70f62fcf9713ceb773225748c617cbf6b8fd33828a706e902e57d",
+      "identical": true
+    },
+    {
+      "file": "frame_013093_cam0.pgm",
+      "replay_sha256": "762933dfc55a215ac28ee04ba77025959850e6784fc7ee19fe0bea7ae3450fbf",
+      "live_sha256": "762933dfc55a215ac28ee04ba77025959850e6784fc7ee19fe0bea7ae3450fbf",
+      "identical": true
+    },
+    {
+      "file": "frame_013093_cam1.pgm",
+      "replay_sha256": "fd04c73b172268957bb0fd4ead2819d99b43f7c6164554ba316f7472b4626253",
+      "live_sha256": "fd04c73b172268957bb0fd4ead2819d99b43f7c6164554ba316f7472b4626253",
+      "identical": true
+    },
+    {
+      "file": "frame_013093_cam2.pgm",
+      "replay_sha256": "73616cac8017eb57b6a79a0087b54f65b748f43b348f1ee20b171f31dd6a42d8",
+      "live_sha256": "73616cac8017eb57b6a79a0087b54f65b748f43b348f1ee20b171f31dd6a42d8",
+      "identical": true
+    },
+    {
+      "file": "frame_013094_cam0.pgm",
+      "replay_sha256": "bc13a4f8f08891ff9bfb2e19a549a67c5ddf3fe620e4c45f1b2aac4cd7fe711b",
+      "live_sha256": "bc13a4f8f08891ff9bfb2e19a549a67c5ddf3fe620e4c45f1b2aac4cd7fe711b",
+      "identical": true
+    },
+    {
+      "file": "frame_013094_cam1.pgm",
+      "replay_sha256": "ff853f6c601bffe7c0fc2ee5f040c2c36f0928b1d6b896feeeed1cf76f37a6a4",
+      "live_sha256": "ff853f6c601bffe7c0fc2ee5f040c2c36f0928b1d6b896feeeed1cf76f37a6a4",
+      "identical": true
+    },
+    {
+      "file": "frame_013094_cam2.pgm",
+      "replay_sha256": "196128e2f42b130f7b0fe49f99ec1a85e73d368bb88b02422ae9b6ee5cf98e38",
+      "live_sha256": "196128e2f42b130f7b0fe49f99ec1a85e73d368bb88b02422ae9b6ee5cf98e38",
+      "identical": true
+    },
+    {
+      "file": "frame_013095_cam0.pgm",
+      "replay_sha256": "baf912bcd0cf0023e24d72c0d70706ba26068f21042e86862bd46bc082fde5d9",
+      "live_sha256": "baf912bcd0cf0023e24d72c0d70706ba26068f21042e86862bd46bc082fde5d9",
+      "identical": true
+    },
+    {
+      "file": "frame_013095_cam1.pgm",
+      "replay_sha256": "d30c15913cd4f3b2bcabc055a8366f247874ab5bc032f645fdca84cf061c4689",
+      "live_sha256": "d30c15913cd4f3b2bcabc055a8366f247874ab5bc032f645fdca84cf061c4689",
+      "identical": true
+    },
+    {
+      "file": "frame_013095_cam2.pgm",
+      "replay_sha256": "d2e9877c642bda0d2fc747485c58c25cbd04793f3a4b1fb188e3ca31a276e7eb",
+      "live_sha256": "d2e9877c642bda0d2fc747485c58c25cbd04793f3a4b1fb188e3ca31a276e7eb",
+      "identical": true
+    },
+    {
+      "file": "frame_013096_cam0.pgm",
+      "replay_sha256": "6e79a10dd6f92a935fc7d508e7d8b3145d0a77cb248a7ea1d831ef2845577d8b",
+      "live_sha256": "6e79a10dd6f92a935fc7d508e7d8b3145d0a77cb248a7ea1d831ef2845577d8b",
+      "identical": true
+    },
+    {
+      "file": "frame_013096_cam1.pgm",
+      "replay_sha256": "4acd90160405f07a88780b5fec8a8023f7afc7f3e21a26fc1d4f8a440347579d",
+      "live_sha256": "4acd90160405f07a88780b5fec8a8023f7afc7f3e21a26fc1d4f8a440347579d",
+      "identical": true
+    },
+    {
+      "file": "frame_013096_cam2.pgm",
+      "replay_sha256": "ea0cff0018a78147aec5290de74d6c6a85d2205e6e14806946ce3177a92cf5e6",
+      "live_sha256": "ea0cff0018a78147aec5290de74d6c6a85d2205e6e14806946ce3177a92cf5e6",
+      "identical": true
+    },
+    {
+      "file": "frame_013097_cam0.pgm",
+      "replay_sha256": "fae6902964c139bb889c14e84777777a1b8b7b0380b354dc138305efd0ecb95a",
+      "live_sha256": "fae6902964c139bb889c14e84777777a1b8b7b0380b354dc138305efd0ecb95a",
+      "identical": true
+    },
+    {
+      "file": "frame_013097_cam1.pgm",
+      "replay_sha256": "313b90a9559fb921110255b2c696a2d88c24e93549bf61fbf980f2e543771e1a",
+      "live_sha256": "313b90a9559fb921110255b2c696a2d88c24e93549bf61fbf980f2e543771e1a",
+      "identical": true
+    },
+    {
+      "file": "frame_013097_cam2.pgm",
+      "replay_sha256": "4cf4d30d89689be0e2a437bd64fa131d9e9943e166682085010947b303fa2071",
+      "live_sha256": "4cf4d30d89689be0e2a437bd64fa131d9e9943e166682085010947b303fa2071",
+      "identical": true
+    },
+    {
+      "file": "frame_013098_cam0.pgm",
+      "replay_sha256": "5826a6b1841783a5fcc01ee6e96875fa24c3fdf36e222825c88d37c1052738b1",
+      "live_sha256": "5826a6b1841783a5fcc01ee6e96875fa24c3fdf36e222825c88d37c1052738b1",
+      "identical": true
+    },
+    {
+      "file": "frame_013098_cam1.pgm",
+      "replay_sha256": "61493dda962b1b9df561c94c3c1eb2f2f8ce515dbff113f82b8504a4cab27a9e",
+      "live_sha256": "61493dda962b1b9df561c94c3c1eb2f2f8ce515dbff113f82b8504a4cab27a9e",
+      "identical": true
+    },
+    {
+      "file": "frame_013098_cam2.pgm",
+      "replay_sha256": "f435ad418ca732f163b6548f380baca71773243a7f2e95f5b07cc1c33229121c",
+      "live_sha256": "f435ad418ca732f163b6548f380baca71773243a7f2e95f5b07cc1c33229121c",
+      "identical": true
+    },
+    {
+      "file": "frame_013099_cam0.pgm",
+      "replay_sha256": "3e1a87d9ee737bce18b53322bb86674fbcadf0f08c51eec06937ef25dfd0ff0f",
+      "live_sha256": "3e1a87d9ee737bce18b53322bb86674fbcadf0f08c51eec06937ef25dfd0ff0f",
+      "identical": true
+    },
+    {
+      "file": "frame_013099_cam1.pgm",
+      "replay_sha256": "c5d8c52e0525e22720f73d9c28a7ad46611ef94905ce996b57a2cd8d1f59b126",
+      "live_sha256": "c5d8c52e0525e22720f73d9c28a7ad46611ef94905ce996b57a2cd8d1f59b126",
+      "identical": true
+    },
+    {
+      "file": "frame_013099_cam2.pgm",
+      "replay_sha256": "5e247db8813ede7123552b3edfb9251bf5ae017e55fc31e7264e77dbb36c1269",
+      "live_sha256": "5e247db8813ede7123552b3edfb9251bf5ae017e55fc31e7264e77dbb36c1269",
+      "identical": true
+    },
+    {
+      "file": "frame_013100_cam0.pgm",
+      "replay_sha256": "fa18e0ec279bab2f13362568fc48579c7563ae3ca24cefa400cfae167c88bafd",
+      "live_sha256": "fa18e0ec279bab2f13362568fc48579c7563ae3ca24cefa400cfae167c88bafd",
+      "identical": true
+    },
+    {
+      "file": "frame_013100_cam1.pgm",
+      "replay_sha256": "05980775ecdbedaa8ff4caa6fe7ab6ecc1446a97c906cd30d94200c8aa6ff210",
+      "live_sha256": "05980775ecdbedaa8ff4caa6fe7ab6ecc1446a97c906cd30d94200c8aa6ff210",
+      "identical": true
+    },
+    {
+      "file": "frame_013100_cam2.pgm",
+      "replay_sha256": "04c6733fda6039f7aab9ddf3acf0e417a7d333f14fb8bc93733c9201771722ed",
+      "live_sha256": "04c6733fda6039f7aab9ddf3acf0e417a7d333f14fb8bc93733c9201771722ed",
+      "identical": true
+    },
+    {
+      "file": "frame_013101_cam0.pgm",
+      "replay_sha256": "18850f93c0cc18db9f9680e87a98d08cae0331df3fea326f50a6fdfc11db3840",
+      "live_sha256": "18850f93c0cc18db9f9680e87a98d08cae0331df3fea326f50a6fdfc11db3840",
+      "identical": true
+    },
+    {
+      "file": "frame_013101_cam1.pgm",
+      "replay_sha256": "ecf1c2285227c0692c71e56ca409efc5048274365e5714f6497d5a98b2204dd4",
+      "live_sha256": "ecf1c2285227c0692c71e56ca409efc5048274365e5714f6497d5a98b2204dd4",
+      "identical": true
+    },
+    {
+      "file": "frame_013101_cam2.pgm",
+      "replay_sha256": "7b1232580ff942fa4848b108ee624f25e5dcf4aab3aed2e01b1ae8cbb251c18a",
+      "live_sha256": "7b1232580ff942fa4848b108ee624f25e5dcf4aab3aed2e01b1ae8cbb251c18a",
+      "identical": true
+    },
+    {
+      "file": "frame_013102_cam0.pgm",
+      "replay_sha256": "6c1c2daffd9a3f326e23ee0884648c447e9f4b5aa047fe81ac6fada166bbb24e",
+      "live_sha256": "6c1c2daffd9a3f326e23ee0884648c447e9f4b5aa047fe81ac6fada166bbb24e",
+      "identical": true
+    },
+    {
+      "file": "frame_013102_cam1.pgm",
+      "replay_sha256": "c6ca29a7858605b551e828fcde2a018cf4657c4937bf984653d2538746294df4",
+      "live_sha256": "c6ca29a7858605b551e828fcde2a018cf4657c4937bf984653d2538746294df4",
+      "identical": true
+    },
+    {
+      "file": "frame_013102_cam2.pgm",
+      "replay_sha256": "d7b401095edc5146404e76a6783c26130735bc4356388a11e2d8d2d5f53325a2",
+      "live_sha256": "d7b401095edc5146404e76a6783c26130735bc4356388a11e2d8d2d5f53325a2",
+      "identical": true
+    },
+    {
+      "file": "frame_013103_cam0.pgm",
+      "replay_sha256": "db4262415881c19556f1d7f78ca08e3fcc2940fbd870fccaef460c34c94fcf6d",
+      "live_sha256": "db4262415881c19556f1d7f78ca08e3fcc2940fbd870fccaef460c34c94fcf6d",
+      "identical": true
+    },
+    {
+      "file": "frame_013103_cam1.pgm",
+      "replay_sha256": "5eaa4671dd4f16fe5ad2eb58538aac034d0061e32166f40a899fd3fa65213cdb",
+      "live_sha256": "5eaa4671dd4f16fe5ad2eb58538aac034d0061e32166f40a899fd3fa65213cdb",
+      "identical": true
+    },
+    {
+      "file": "frame_013103_cam2.pgm",
+      "replay_sha256": "d0300bedd81fa424606e9c5cff6023b4efdaf2d28aaba4ab83b96559ee594c49",
+      "live_sha256": "d0300bedd81fa424606e9c5cff6023b4efdaf2d28aaba4ab83b96559ee594c49",
+      "identical": true
+    },
+    {
+      "file": "frame_013104_cam0.pgm",
+      "replay_sha256": "dfa7050d475931cbe2e533ac1aa5dad98945048621602a5737c7cc770ab3c773",
+      "live_sha256": "dfa7050d475931cbe2e533ac1aa5dad98945048621602a5737c7cc770ab3c773",
+      "identical": true
+    },
+    {
+      "file": "frame_013104_cam1.pgm",
+      "replay_sha256": "dd8b42ff26c35a8c32690f063327eb16984b93c9c923b556ec935937cd800578",
+      "live_sha256": "dd8b42ff26c35a8c32690f063327eb16984b93c9c923b556ec935937cd800578",
+      "identical": true
+    },
+    {
+      "file": "frame_013104_cam2.pgm",
+      "replay_sha256": "022b512c26112c9bf3a576febe120dd9c30c12b7adcb0267353ad6b02ce06dfe",
+      "live_sha256": "022b512c26112c9bf3a576febe120dd9c30c12b7adcb0267353ad6b02ce06dfe",
+      "identical": true
+    },
+    {
+      "file": "frame_013105_cam0.pgm",
+      "replay_sha256": "13a9b119cf9677ffcb32a17ff95221a6cb466660b3c846af5146ac7e3e6e4546",
+      "live_sha256": "13a9b119cf9677ffcb32a17ff95221a6cb466660b3c846af5146ac7e3e6e4546",
+      "identical": true
+    },
+    {
+      "file": "frame_013105_cam1.pgm",
+      "replay_sha256": "1ef68354473e7a36079a8d073997b4b2db49cc6780f8b53aeff11ce611218da1",
+      "live_sha256": "1ef68354473e7a36079a8d073997b4b2db49cc6780f8b53aeff11ce611218da1",
+      "identical": true
+    },
+    {
+      "file": "frame_013105_cam2.pgm",
+      "replay_sha256": "f956246bd7bb434d57df6af3f645124c4e6b6febdc970356d28ff0980cf9f184",
+      "live_sha256": "f956246bd7bb434d57df6af3f645124c4e6b6febdc970356d28ff0980cf9f184",
+      "identical": true
+    },
+    {
+      "file": "frame_013106_cam0.pgm",
+      "replay_sha256": "f4dd9af227bb59d1f2a70b5cc4df7feeb618fc29353a197f9af18158f0c721f8",
+      "live_sha256": "f4dd9af227bb59d1f2a70b5cc4df7feeb618fc29353a197f9af18158f0c721f8",
+      "identical": true
+    },
+    {
+      "file": "frame_013106_cam1.pgm",
+      "replay_sha256": "2edef399852b7ce438d57c1c6b2b48502f8076c5a1eadf9d6f62666d2d2b3cbe",
+      "live_sha256": "2edef399852b7ce438d57c1c6b2b48502f8076c5a1eadf9d6f62666d2d2b3cbe",
+      "identical": true
+    },
+    {
+      "file": "frame_013106_cam2.pgm",
+      "replay_sha256": "2f83ab74d5fa6f558f4c840ab434eb28f76cfedddb0349ec95f3594bf5584522",
+      "live_sha256": "2f83ab74d5fa6f558f4c840ab434eb28f76cfedddb0349ec95f3594bf5584522",
+      "identical": true
+    },
+    {
+      "file": "frame_013107_cam0.pgm",
+      "replay_sha256": "65dd6f2ce33e3582087587374da626bfcf164e1cd360e1a1b318cd211d9fe2d8",
+      "live_sha256": "65dd6f2ce33e3582087587374da626bfcf164e1cd360e1a1b318cd211d9fe2d8",
+      "identical": true
+    },
+    {
+      "file": "frame_013107_cam1.pgm",
+      "replay_sha256": "ff4b48fc202455b4cf0594fa7f0903fc140613594243253c347008777c78bd83",
+      "live_sha256": "ff4b48fc202455b4cf0594fa7f0903fc140613594243253c347008777c78bd83",
+      "identical": true
+    },
+    {
+      "file": "frame_013107_cam2.pgm",
+      "replay_sha256": "3541067835878c355ec0589d213332cd04f770d2bad57847b59c27f7083f31f9",
+      "live_sha256": "3541067835878c355ec0589d213332cd04f770d2bad57847b59c27f7083f31f9",
+      "identical": true
+    },
+    {
+      "file": "frame_013108_cam0.pgm",
+      "replay_sha256": "6843c0cbe8112cbbab94c7b9d5b554cdd526b52fd166e72c526993a6d9790828",
+      "live_sha256": "6843c0cbe8112cbbab94c7b9d5b554cdd526b52fd166e72c526993a6d9790828",
+      "identical": true
+    },
+    {
+      "file": "frame_013108_cam1.pgm",
+      "replay_sha256": "a042d83fdf0a15f4d31012c8adf14daa827a99ee5d158dbea64112a9a6223dfc",
+      "live_sha256": "a042d83fdf0a15f4d31012c8adf14daa827a99ee5d158dbea64112a9a6223dfc",
+      "identical": true
+    },
+    {
+      "file": "frame_013108_cam2.pgm",
+      "replay_sha256": "711a7737010aa610a4070a6b9cc4a12470a596c579325219d47c42cdc8cd6b7f",
+      "live_sha256": "711a7737010aa610a4070a6b9cc4a12470a596c579325219d47c42cdc8cd6b7f",
+      "identical": true
+    },
+    {
+      "file": "frame_013109_cam0.pgm",
+      "replay_sha256": "23e0c192a97aa0e3d1c6a0e7e8a14e663887d3fe165c99c517e11d527fe369e7",
+      "live_sha256": "23e0c192a97aa0e3d1c6a0e7e8a14e663887d3fe165c99c517e11d527fe369e7",
+      "identical": true
+    },
+    {
+      "file": "frame_013109_cam1.pgm",
+      "replay_sha256": "f89ec428062f4983f30cd3ed6883ea1fd2c42ffb185c39114f81778c77b5090a",
+      "live_sha256": "f89ec428062f4983f30cd3ed6883ea1fd2c42ffb185c39114f81778c77b5090a",
+      "identical": true
+    },
+    {
+      "file": "frame_013109_cam2.pgm",
+      "replay_sha256": "69e0cb0c67511efa20960c5d1b99bdf20c676e6aaa62a7929028051d33641611",
+      "live_sha256": "69e0cb0c67511efa20960c5d1b99bdf20c676e6aaa62a7929028051d33641611",
+      "identical": true
+    },
+    {
+      "file": "frame_013110_cam0.pgm",
+      "replay_sha256": "2a8cdfbee29114dc1bcd2995e7bb6cda113ccd5b168cb780595574794c856eb4",
+      "live_sha256": "2a8cdfbee29114dc1bcd2995e7bb6cda113ccd5b168cb780595574794c856eb4",
+      "identical": true
+    },
+    {
+      "file": "frame_013110_cam1.pgm",
+      "replay_sha256": "e04870453c66116667c71fc0196335a0733b7943da83713796e0ea9a4b69a8cc",
+      "live_sha256": "e04870453c66116667c71fc0196335a0733b7943da83713796e0ea9a4b69a8cc",
+      "identical": true
+    },
+    {
+      "file": "frame_013110_cam2.pgm",
+      "replay_sha256": "d351149ca8378d756e7ef30e18345b650a9065e6f19cac3964217de49f83f770",
+      "live_sha256": "d351149ca8378d756e7ef30e18345b650a9065e6f19cac3964217de49f83f770",
+      "identical": true
+    },
+    {
+      "file": "frame_013111_cam0.pgm",
+      "replay_sha256": "b42d8d4ee16720086b6cf8d3b633ff40f253dd294adcc92b1b41220b8edf36f0",
+      "live_sha256": "b42d8d4ee16720086b6cf8d3b633ff40f253dd294adcc92b1b41220b8edf36f0",
+      "identical": true
+    },
+    {
+      "file": "frame_013111_cam1.pgm",
+      "replay_sha256": "1b9bb8827be736a2f7beaa12d59409d1398c42d104b94908df3ba449770e73a7",
+      "live_sha256": "1b9bb8827be736a2f7beaa12d59409d1398c42d104b94908df3ba449770e73a7",
+      "identical": true
+    },
+    {
+      "file": "frame_013111_cam2.pgm",
+      "replay_sha256": "7307b7ff7e6a5e171550cca98ec4b63528bb5e65ba39b00854fccd65031040e2",
+      "live_sha256": "7307b7ff7e6a5e171550cca98ec4b63528bb5e65ba39b00854fccd65031040e2",
+      "identical": true
+    },
+    {
+      "file": "frame_013112_cam0.pgm",
+      "replay_sha256": "06ca3f5ed9a91b4fa84b9bc0bb1bb593553e63d761b890e5eacdab5bc29c9ad5",
+      "live_sha256": "06ca3f5ed9a91b4fa84b9bc0bb1bb593553e63d761b890e5eacdab5bc29c9ad5",
+      "identical": true
+    },
+    {
+      "file": "frame_013112_cam1.pgm",
+      "replay_sha256": "ccea543693d563a378fc1589594e86e43d345ca762f38940737810a8cfa5a466",
+      "live_sha256": "ccea543693d563a378fc1589594e86e43d345ca762f38940737810a8cfa5a466",
+      "identical": true
+    },
+    {
+      "file": "frame_013112_cam2.pgm",
+      "replay_sha256": "421cf837e932c324c6a04aa44063545902e33c4ca7787d953657c089ef72f8d5",
+      "live_sha256": "421cf837e932c324c6a04aa44063545902e33c4ca7787d953657c089ef72f8d5",
+      "identical": true
+    },
+    {
+      "file": "frame_013113_cam0.pgm",
+      "replay_sha256": "d3d1598a9d8a41a527d371ffd5eaef6d96680bf83e9aef871c639b5fd9ff4b34",
+      "live_sha256": "d3d1598a9d8a41a527d371ffd5eaef6d96680bf83e9aef871c639b5fd9ff4b34",
+      "identical": true
+    },
+    {
+      "file": "frame_013113_cam1.pgm",
+      "replay_sha256": "429743ea4d3788a8a70542244bf0b5a236974a7b895f6f1b0c7fabe015cce442",
+      "live_sha256": "429743ea4d3788a8a70542244bf0b5a236974a7b895f6f1b0c7fabe015cce442",
+      "identical": true
+    },
+    {
+      "file": "frame_013113_cam2.pgm",
+      "replay_sha256": "8e6bcf6e7085833cee8406f446044723021654791b2837886ee81ec6c6c92ac9",
+      "live_sha256": "8e6bcf6e7085833cee8406f446044723021654791b2837886ee81ec6c6c92ac9",
+      "identical": true
+    },
+    {
+      "file": "frame_013114_cam0.pgm",
+      "replay_sha256": "e637005b87d418fe140ba21ac82cf6cf920b28e8e84469cfedc18d2cf37f046c",
+      "live_sha256": "e637005b87d418fe140ba21ac82cf6cf920b28e8e84469cfedc18d2cf37f046c",
+      "identical": true
+    },
+    {
+      "file": "frame_013114_cam1.pgm",
+      "replay_sha256": "3f142b72f7120f0a0451ecbfdbee1b8ff47e34e180f9f5b443f99d32277098b0",
+      "live_sha256": "3f142b72f7120f0a0451ecbfdbee1b8ff47e34e180f9f5b443f99d32277098b0",
+      "identical": true
+    },
+    {
+      "file": "frame_013114_cam2.pgm",
+      "replay_sha256": "ff6b6d966d184b9012c285f381e6aab94a39c87bc0ac74d2c1e91a2caf713149",
+      "live_sha256": "ff6b6d966d184b9012c285f381e6aab94a39c87bc0ac74d2c1e91a2caf713149",
+      "identical": true
+    },
+    {
+      "file": "frame_013115_cam0.pgm",
+      "replay_sha256": "65368b3a431e2ac1f5599ddd2eae6e2adb1a026726692b6a739a532570dfed5b",
+      "live_sha256": "65368b3a431e2ac1f5599ddd2eae6e2adb1a026726692b6a739a532570dfed5b",
+      "identical": true
+    },
+    {
+      "file": "frame_013115_cam1.pgm",
+      "replay_sha256": "46268d9d208e42d0d733e5a46cccd15b5b97a1635974b0a9a9b6c00baed415c3",
+      "live_sha256": "46268d9d208e42d0d733e5a46cccd15b5b97a1635974b0a9a9b6c00baed415c3",
+      "identical": true
+    },
+    {
+      "file": "frame_013115_cam2.pgm",
+      "replay_sha256": "9505d3be0ced5b65009d2172fe8086716662969002ecef40fc768d93489c807f",
+      "live_sha256": "9505d3be0ced5b65009d2172fe8086716662969002ecef40fc768d93489c807f",
+      "identical": true
+    },
+    {
+      "file": "frame_013116_cam0.pgm",
+      "replay_sha256": "bd994aa2d00932e954597e9d6c38ec07871245e0bb2b2210f440dc42a0b01ccd",
+      "live_sha256": "bd994aa2d00932e954597e9d6c38ec07871245e0bb2b2210f440dc42a0b01ccd",
+      "identical": true
+    },
+    {
+      "file": "frame_013116_cam1.pgm",
+      "replay_sha256": "116b78d51fbcf280c2fb9a55cf490a2ac05ea4ba9a840ceb647a4a59e7cfbc82",
+      "live_sha256": "116b78d51fbcf280c2fb9a55cf490a2ac05ea4ba9a840ceb647a4a59e7cfbc82",
+      "identical": true
+    },
+    {
+      "file": "frame_013116_cam2.pgm",
+      "replay_sha256": "008deeb5e021f0a13f08d91a543a997ca8e0bdb86e7c6e2aec87c8b32faeb143",
+      "live_sha256": "008deeb5e021f0a13f08d91a543a997ca8e0bdb86e7c6e2aec87c8b32faeb143",
+      "identical": true
+    },
+    {
+      "file": "frame_013117_cam0.pgm",
+      "replay_sha256": "d051905f070454ba32185bc912a506ebee658aa84636b7f697f5efbd5a10d5aa",
+      "live_sha256": "d051905f070454ba32185bc912a506ebee658aa84636b7f697f5efbd5a10d5aa",
+      "identical": true
+    },
+    {
+      "file": "frame_013117_cam1.pgm",
+      "replay_sha256": "d178c6df7703c3df19c07b0e210a82a5cf03af213f004681b0d267f999416f64",
+      "live_sha256": "d178c6df7703c3df19c07b0e210a82a5cf03af213f004681b0d267f999416f64",
+      "identical": true
+    },
+    {
+      "file": "frame_013117_cam2.pgm",
+      "replay_sha256": "f65f5bda4546ef03ac76faf2fd3149bfa654550d94b4c93babcc17b17e7b81fc",
+      "live_sha256": "f65f5bda4546ef03ac76faf2fd3149bfa654550d94b4c93babcc17b17e7b81fc",
+      "identical": true
+    },
+    {
+      "file": "frame_013118_cam0.pgm",
+      "replay_sha256": "714bedf84244461df9f7e2e398b497836d2e9b076bc1db3c409e6ec5e4b1de64",
+      "live_sha256": "714bedf84244461df9f7e2e398b497836d2e9b076bc1db3c409e6ec5e4b1de64",
+      "identical": true
+    },
+    {
+      "file": "frame_013118_cam1.pgm",
+      "replay_sha256": "71059f15fa12784dc67806df4bac7989eb8312b9d28d1ef243d7948e5bd05761",
+      "live_sha256": "71059f15fa12784dc67806df4bac7989eb8312b9d28d1ef243d7948e5bd05761",
+      "identical": true
+    },
+    {
+      "file": "frame_013118_cam2.pgm",
+      "replay_sha256": "6bc1a3a97fe4c14370a46ce7c70c6cbf1e99faa95a20eca9752181344eba0667",
+      "live_sha256": "6bc1a3a97fe4c14370a46ce7c70c6cbf1e99faa95a20eca9752181344eba0667",
+      "identical": true
+    },
+    {
+      "file": "frame_013119_cam0.pgm",
+      "replay_sha256": "a4dc6e97a4208a5b9cdadd2953f55da22b676d5755776e3ae6a78eb016c686c1",
+      "live_sha256": "a4dc6e97a4208a5b9cdadd2953f55da22b676d5755776e3ae6a78eb016c686c1",
+      "identical": true
+    },
+    {
+      "file": "frame_013119_cam1.pgm",
+      "replay_sha256": "7858755cff68c8ff4da7efd331ef1e27add50e15bbf7d4e90785413aa58c2108",
+      "live_sha256": "7858755cff68c8ff4da7efd331ef1e27add50e15bbf7d4e90785413aa58c2108",
+      "identical": true
+    },
+    {
+      "file": "frame_013119_cam2.pgm",
+      "replay_sha256": "1a34807d696347471f0f482e569f551593524b5a27298d9fe9c4d98a984c6eba",
+      "live_sha256": "1a34807d696347471f0f482e569f551593524b5a27298d9fe9c4d98a984c6eba",
+      "identical": true
+    },
+    {
+      "file": "frame_013120_cam0.pgm",
+      "replay_sha256": "009452ee06c6d8b9cf21db4ab812f86eb8ad6aa980e7bd2485cc5dfae6b290e3",
+      "live_sha256": "009452ee06c6d8b9cf21db4ab812f86eb8ad6aa980e7bd2485cc5dfae6b290e3",
+      "identical": true
+    },
+    {
+      "file": "frame_013120_cam1.pgm",
+      "replay_sha256": "b8a681c32b24a78bc5ba81b090fd742714a1c6ecbf66dea5ab86d9962107b9ca",
+      "live_sha256": "b8a681c32b24a78bc5ba81b090fd742714a1c6ecbf66dea5ab86d9962107b9ca",
+      "identical": true
+    },
+    {
+      "file": "frame_013120_cam2.pgm",
+      "replay_sha256": "04b8d1fac681427e0784c14cf35ef9eb86c1724c7d195ead67d2f65b1b326727",
+      "live_sha256": "04b8d1fac681427e0784c14cf35ef9eb86c1724c7d195ead67d2f65b1b326727",
+      "identical": true
+    },
+    {
+      "file": "frame_013121_cam0.pgm",
+      "replay_sha256": "eb13887351f7103dbb1bffdb89f64c745a214bab224d345c2c08e0770bad54a6",
+      "live_sha256": "eb13887351f7103dbb1bffdb89f64c745a214bab224d345c2c08e0770bad54a6",
+      "identical": true
+    },
+    {
+      "file": "frame_013121_cam1.pgm",
+      "replay_sha256": "5d9be821afe9cfc13a6f524856e340e154a094c319272c7f777222a59c5323b0",
+      "live_sha256": "5d9be821afe9cfc13a6f524856e340e154a094c319272c7f777222a59c5323b0",
+      "identical": true
+    },
+    {
+      "file": "frame_013121_cam2.pgm",
+      "replay_sha256": "ab0342a610be8075c659501bcb4aeed48235819a9bbe3093f4c58ba9a0d31128",
+      "live_sha256": "ab0342a610be8075c659501bcb4aeed48235819a9bbe3093f4c58ba9a0d31128",
+      "identical": true
+    },
+    {
+      "file": "frame_013122_cam0.pgm",
+      "replay_sha256": "970653defb10fe0d825049c431c59f4a3ffb4b149c3e6d2e4c38c3e50dea8a8e",
+      "live_sha256": "970653defb10fe0d825049c431c59f4a3ffb4b149c3e6d2e4c38c3e50dea8a8e",
+      "identical": true
+    },
+    {
+      "file": "frame_013122_cam1.pgm",
+      "replay_sha256": "0812f165791cdc37dd2d5ed445d37820fa9d45710732de57fda6cab19c98cfed",
+      "live_sha256": "0812f165791cdc37dd2d5ed445d37820fa9d45710732de57fda6cab19c98cfed",
+      "identical": true
+    },
+    {
+      "file": "frame_013122_cam2.pgm",
+      "replay_sha256": "ad0fa9fd0e4302f35f5e97a809b54d441cef330384a98084b15163a29205f454",
+      "live_sha256": "ad0fa9fd0e4302f35f5e97a809b54d441cef330384a98084b15163a29205f454",
+      "identical": true
+    },
+    {
+      "file": "frame_013123_cam0.pgm",
+      "replay_sha256": "bd16c4f2f65d2843fb41ca5c9bc4d0a44ba267504d1e2ec4e6ab83e8962208b6",
+      "live_sha256": "bd16c4f2f65d2843fb41ca5c9bc4d0a44ba267504d1e2ec4e6ab83e8962208b6",
+      "identical": true
+    },
+    {
+      "file": "frame_013123_cam1.pgm",
+      "replay_sha256": "3af6656b3cbbb4cbf2bc880873ae59c74878b150758490a82e3ebd0d020bed32",
+      "live_sha256": "3af6656b3cbbb4cbf2bc880873ae59c74878b150758490a82e3ebd0d020bed32",
+      "identical": true
+    },
+    {
+      "file": "frame_013123_cam2.pgm",
+      "replay_sha256": "59b71ef7d2048030b5162a410dde0bbace285a48af97b2d30c0914ff7d0f7c1b",
+      "live_sha256": "59b71ef7d2048030b5162a410dde0bbace285a48af97b2d30c0914ff7d0f7c1b",
+      "identical": true
+    },
+    {
+      "file": "frame_013124_cam0.pgm",
+      "replay_sha256": "a3224f2cf50cfe784b05e0031cb39583b4cd659c240fc7f11817e658c949294e",
+      "live_sha256": "a3224f2cf50cfe784b05e0031cb39583b4cd659c240fc7f11817e658c949294e",
+      "identical": true
+    },
+    {
+      "file": "frame_013124_cam1.pgm",
+      "replay_sha256": "a2457e1eeda3d9fe97356ce1ad3293bebfccbef1fac0dfd16d395b43d14ac67a",
+      "live_sha256": "a2457e1eeda3d9fe97356ce1ad3293bebfccbef1fac0dfd16d395b43d14ac67a",
+      "identical": true
+    },
+    {
+      "file": "frame_013124_cam2.pgm",
+      "replay_sha256": "915300b9180c93875ef628dc58c75673ad61c924e5fc7cceba21108c7b70fc22",
+      "live_sha256": "915300b9180c93875ef628dc58c75673ad61c924e5fc7cceba21108c7b70fc22",
+      "identical": true
+    },
+    {
+      "file": "frame_013125_cam0.pgm",
+      "replay_sha256": "f8a51168884ef636fe342627f9778df9368447466414da27c6f350de64daf2aa",
+      "live_sha256": "f8a51168884ef636fe342627f9778df9368447466414da27c6f350de64daf2aa",
+      "identical": true
+    },
+    {
+      "file": "frame_013125_cam1.pgm",
+      "replay_sha256": "a3c53b2219c325e7580f75491c801abe36938e484e4ecb407867a392b2b52106",
+      "live_sha256": "a3c53b2219c325e7580f75491c801abe36938e484e4ecb407867a392b2b52106",
+      "identical": true
+    },
+    {
+      "file": "frame_013125_cam2.pgm",
+      "replay_sha256": "07228a4b80be362047e45ad2c7c43b837808065cc31efd3bc2b8188fec38be5a",
+      "live_sha256": "07228a4b80be362047e45ad2c7c43b837808065cc31efd3bc2b8188fec38be5a",
+      "identical": true
+    },
+    {
+      "file": "frame_013126_cam0.pgm",
+      "replay_sha256": "90ac3e068977579e12289fee8338393a52eef0c88425c84b0428121cfb71ae70",
+      "live_sha256": "90ac3e068977579e12289fee8338393a52eef0c88425c84b0428121cfb71ae70",
+      "identical": true
+    },
+    {
+      "file": "frame_013126_cam1.pgm",
+      "replay_sha256": "48e6283a883c6745215e7150bd7a46bc0258db551f3205344012cce75cc73b35",
+      "live_sha256": "48e6283a883c6745215e7150bd7a46bc0258db551f3205344012cce75cc73b35",
+      "identical": true
+    },
+    {
+      "file": "frame_013126_cam2.pgm",
+      "replay_sha256": "0f14fbf1eef603766116e2ba9630b9a7c06c49a599f98ff1ebdcaf64ffe7c3a8",
+      "live_sha256": "0f14fbf1eef603766116e2ba9630b9a7c06c49a599f98ff1ebdcaf64ffe7c3a8",
+      "identical": true
+    },
+    {
+      "file": "frame_013127_cam0.pgm",
+      "replay_sha256": "e33a32890e9065073c69708c02e04a20da9bff306b603e414b096de4348f9c39",
+      "live_sha256": "e33a32890e9065073c69708c02e04a20da9bff306b603e414b096de4348f9c39",
+      "identical": true
+    },
+    {
+      "file": "frame_013127_cam1.pgm",
+      "replay_sha256": "bfbc03194e4aa2b2250549889e461e6ecb505794269df2b177d3d9300d4ac87a",
+      "live_sha256": "bfbc03194e4aa2b2250549889e461e6ecb505794269df2b177d3d9300d4ac87a",
+      "identical": true
+    },
+    {
+      "file": "frame_013127_cam2.pgm",
+      "replay_sha256": "8f986e39f0e5bdeb824759035f2f74995a301034c1012b09dbb1a239c05c8147",
+      "live_sha256": "8f986e39f0e5bdeb824759035f2f74995a301034c1012b09dbb1a239c05c8147",
+      "identical": true
+    },
+    {
+      "file": "frame_013128_cam0.pgm",
+      "replay_sha256": "385ea2a9749882f2975029c76093b879ec602fe25f08ba754ee717ec285b0e51",
+      "live_sha256": "385ea2a9749882f2975029c76093b879ec602fe25f08ba754ee717ec285b0e51",
+      "identical": true
+    },
+    {
+      "file": "frame_013128_cam1.pgm",
+      "replay_sha256": "34e2c9c5d43f23e995e05a653347a70c3e6ff5a53867c0c1da3f7ed04bee50cc",
+      "live_sha256": "34e2c9c5d43f23e995e05a653347a70c3e6ff5a53867c0c1da3f7ed04bee50cc",
+      "identical": true
+    },
+    {
+      "file": "frame_013128_cam2.pgm",
+      "replay_sha256": "1e64f9969a4297d257c334097accd1713852e542c600afbde282d89c55f9ce68",
+      "live_sha256": "1e64f9969a4297d257c334097accd1713852e542c600afbde282d89c55f9ce68",
+      "identical": true
+    },
+    {
+      "file": "frame_013129_cam0.pgm",
+      "replay_sha256": "92319ff927a593b5e234c074860f430cdac84a0d32ca1233953bbf9b6e7c540d",
+      "live_sha256": "92319ff927a593b5e234c074860f430cdac84a0d32ca1233953bbf9b6e7c540d",
+      "identical": true
+    },
+    {
+      "file": "frame_013129_cam1.pgm",
+      "replay_sha256": "cee205d5e2e2b31d173e3f57b0a16cb2c2f8fb7e3fa4f0fa654dd7af03cbb780",
+      "live_sha256": "cee205d5e2e2b31d173e3f57b0a16cb2c2f8fb7e3fa4f0fa654dd7af03cbb780",
+      "identical": true
+    },
+    {
+      "file": "frame_013129_cam2.pgm",
+      "replay_sha256": "ba436e8f7129f1136e888961a14f55af7199d93ffbcd7433a328c4d55d9e3596",
+      "live_sha256": "ba436e8f7129f1136e888961a14f55af7199d93ffbcd7433a328c4d55d9e3596",
+      "identical": true
+    },
+    {
+      "file": "frame_013130_cam0.pgm",
+      "replay_sha256": "5e0ff3de046e449f282982c4f95801837456daed69ce4dd67dcda16309ee4acb",
+      "live_sha256": "5e0ff3de046e449f282982c4f95801837456daed69ce4dd67dcda16309ee4acb",
+      "identical": true
+    },
+    {
+      "file": "frame_013130_cam1.pgm",
+      "replay_sha256": "ead3851c9d1837fd932182866fe3cffcafdd587f4ad87aab073cadacb9bdb991",
+      "live_sha256": "ead3851c9d1837fd932182866fe3cffcafdd587f4ad87aab073cadacb9bdb991",
+      "identical": true
+    },
+    {
+      "file": "frame_013130_cam2.pgm",
+      "replay_sha256": "beb0412b13d2d936eeb0f9de28cb15d63f037aa1cca3b6a20c68a2c79179087c",
+      "live_sha256": "beb0412b13d2d936eeb0f9de28cb15d63f037aa1cca3b6a20c68a2c79179087c",
+      "identical": true
+    },
+    {
+      "file": "frame_013131_cam0.pgm",
+      "replay_sha256": "c21b909bf797bb0470933a252a27c9a57acd8ebb08a3daff5f5e8feec70f90ea",
+      "live_sha256": "c21b909bf797bb0470933a252a27c9a57acd8ebb08a3daff5f5e8feec70f90ea",
+      "identical": true
+    },
+    {
+      "file": "frame_013131_cam1.pgm",
+      "replay_sha256": "1eee837632c48608a39f5ad9172e62abf37da7cc1932bde8ab1a1e77ccf08cbb",
+      "live_sha256": "1eee837632c48608a39f5ad9172e62abf37da7cc1932bde8ab1a1e77ccf08cbb",
+      "identical": true
+    },
+    {
+      "file": "frame_013131_cam2.pgm",
+      "replay_sha256": "7a7b3dcc764f31271dea8529e4efb2a1145aaafdbbab0f9444ac74129a58a959",
+      "live_sha256": "7a7b3dcc764f31271dea8529e4efb2a1145aaafdbbab0f9444ac74129a58a959",
+      "identical": true
+    },
+    {
+      "file": "frame_013132_cam0.pgm",
+      "replay_sha256": "cc2e4f6e43b361db22415eaa6346f8b96f12b849a2d1e35aa2b6925b5c9fca42",
+      "live_sha256": "cc2e4f6e43b361db22415eaa6346f8b96f12b849a2d1e35aa2b6925b5c9fca42",
+      "identical": true
+    },
+    {
+      "file": "frame_013132_cam1.pgm",
+      "replay_sha256": "9dde9590682e5f2dbdd27f3e9aaf7180e795b3a9c9c8aeae7342b0800ea5f19a",
+      "live_sha256": "9dde9590682e5f2dbdd27f3e9aaf7180e795b3a9c9c8aeae7342b0800ea5f19a",
+      "identical": true
+    },
+    {
+      "file": "frame_013132_cam2.pgm",
+      "replay_sha256": "a033a594eb872d214b0a6b66d3847bbfb977628331c94d20708233510f3e257e",
+      "live_sha256": "a033a594eb872d214b0a6b66d3847bbfb977628331c94d20708233510f3e257e",
+      "identical": true
+    },
+    {
+      "file": "frame_013133_cam0.pgm",
+      "replay_sha256": "65f0e8f1f216b8b6d9238f02bd7a8b244dcd79edb1e51991f9ae1f6b2e46958d",
+      "live_sha256": "65f0e8f1f216b8b6d9238f02bd7a8b244dcd79edb1e51991f9ae1f6b2e46958d",
+      "identical": true
+    },
+    {
+      "file": "frame_013133_cam1.pgm",
+      "replay_sha256": "741de47b759a6d71aa03eaf84a403e2b7bc6542d50369b1e42acbd8345d5ad83",
+      "live_sha256": "741de47b759a6d71aa03eaf84a403e2b7bc6542d50369b1e42acbd8345d5ad83",
+      "identical": true
+    },
+    {
+      "file": "frame_013133_cam2.pgm",
+      "replay_sha256": "1b656cf5d2abd4c481f0d313bff763a34a597f14238e79c1268a72ec99698c88",
+      "live_sha256": "1b656cf5d2abd4c481f0d313bff763a34a597f14238e79c1268a72ec99698c88",
+      "identical": true
+    },
+    {
+      "file": "frame_013134_cam0.pgm",
+      "replay_sha256": "3708641074d66e38af6a91f517c3c88bda1947369b2d2d156f5399b4eb28d1d1",
+      "live_sha256": "3708641074d66e38af6a91f517c3c88bda1947369b2d2d156f5399b4eb28d1d1",
+      "identical": true
+    },
+    {
+      "file": "frame_013134_cam1.pgm",
+      "replay_sha256": "6541f43a2c187d6543ac52d75005c11d072dda5bb28da8e02c63c36b564db7f3",
+      "live_sha256": "6541f43a2c187d6543ac52d75005c11d072dda5bb28da8e02c63c36b564db7f3",
+      "identical": true
+    },
+    {
+      "file": "frame_013134_cam2.pgm",
+      "replay_sha256": "a87ab2e3c060ec7c89118b475b68155a700cd9b66f39656ed0aebc4e09df36d3",
+      "live_sha256": "a87ab2e3c060ec7c89118b475b68155a700cd9b66f39656ed0aebc4e09df36d3",
+      "identical": true
+    },
+    {
+      "file": "frame_013135_cam0.pgm",
+      "replay_sha256": "77cbf25702b7d66bcdb705233c6fe96d99ad30dd21f01006b2f9829d4230972e",
+      "live_sha256": "77cbf25702b7d66bcdb705233c6fe96d99ad30dd21f01006b2f9829d4230972e",
+      "identical": true
+    },
+    {
+      "file": "frame_013135_cam1.pgm",
+      "replay_sha256": "a1fc20cef4d23d3d711ed859ada4f43da2974989565eb93ab3c01ac764e3c2c1",
+      "live_sha256": "a1fc20cef4d23d3d711ed859ada4f43da2974989565eb93ab3c01ac764e3c2c1",
+      "identical": true
+    },
+    {
+      "file": "frame_013135_cam2.pgm",
+      "replay_sha256": "6c07b5f64ad61d6c5ed0050f16f8bbf4c50edbc2a366b85db9cfea7b2e161c9f",
+      "live_sha256": "6c07b5f64ad61d6c5ed0050f16f8bbf4c50edbc2a366b85db9cfea7b2e161c9f",
+      "identical": true
+    },
+    {
+      "file": "frame_013136_cam0.pgm",
+      "replay_sha256": "eed5a91b83642371dd7350e98a58c7765ff07f1a0c3cc39deac3671a68e2865c",
+      "live_sha256": "eed5a91b83642371dd7350e98a58c7765ff07f1a0c3cc39deac3671a68e2865c",
+      "identical": true
+    },
+    {
+      "file": "frame_013136_cam1.pgm",
+      "replay_sha256": "645dce626f38853f45916313796623dc6b72d169ba854436d70b4492741a5021",
+      "live_sha256": "645dce626f38853f45916313796623dc6b72d169ba854436d70b4492741a5021",
+      "identical": true
+    },
+    {
+      "file": "frame_013136_cam2.pgm",
+      "replay_sha256": "62f0a556762c9b81be000b3a2d1ed76ef5248e6019cd025c4c397e68709ec467",
+      "live_sha256": "62f0a556762c9b81be000b3a2d1ed76ef5248e6019cd025c4c397e68709ec467",
+      "identical": true
+    },
+    {
+      "file": "frame_013137_cam0.pgm",
+      "replay_sha256": "a597f5dbc09aa0de7fd14701c5e3b2792dea346fe13cb6b2a91f7aa52f1c6055",
+      "live_sha256": "a597f5dbc09aa0de7fd14701c5e3b2792dea346fe13cb6b2a91f7aa52f1c6055",
+      "identical": true
+    },
+    {
+      "file": "frame_013137_cam1.pgm",
+      "replay_sha256": "d9925c3c8693ba055f38b0ab09b9b0e985d0862238f98b7ca972f2f25afee6f5",
+      "live_sha256": "d9925c3c8693ba055f38b0ab09b9b0e985d0862238f98b7ca972f2f25afee6f5",
+      "identical": true
+    },
+    {
+      "file": "frame_013137_cam2.pgm",
+      "replay_sha256": "c19cf0998c302e0abaa1a2836a8fc08c16b900c5c22afb1bf4e9ab6e98285582",
+      "live_sha256": "c19cf0998c302e0abaa1a2836a8fc08c16b900c5c22afb1bf4e9ab6e98285582",
+      "identical": true
+    },
+    {
+      "file": "frame_013138_cam0.pgm",
+      "replay_sha256": "e4b3ddecaf5a6c4e597e5b1150dff63d2e16fa622a780158c4bf0380309bf1f5",
+      "live_sha256": "e4b3ddecaf5a6c4e597e5b1150dff63d2e16fa622a780158c4bf0380309bf1f5",
+      "identical": true
+    },
+    {
+      "file": "frame_013138_cam1.pgm",
+      "replay_sha256": "e0884cb24d2f4171d848169c39c932c3068109e1efa4612ea6e27214835b58b4",
+      "live_sha256": "e0884cb24d2f4171d848169c39c932c3068109e1efa4612ea6e27214835b58b4",
+      "identical": true
+    },
+    {
+      "file": "frame_013138_cam2.pgm",
+      "replay_sha256": "a0848cfe09558a9dd56c59f7c2649f2080f65afe6b6227be0c9237eea52e82cf",
+      "live_sha256": "a0848cfe09558a9dd56c59f7c2649f2080f65afe6b6227be0c9237eea52e82cf",
+      "identical": true
+    },
+    {
+      "file": "frame_013139_cam0.pgm",
+      "replay_sha256": "ba84b3ca8333f27126e6814d91caf56d68d0a6345e75c983420d50752e353108",
+      "live_sha256": "ba84b3ca8333f27126e6814d91caf56d68d0a6345e75c983420d50752e353108",
+      "identical": true
+    },
+    {
+      "file": "frame_013139_cam1.pgm",
+      "replay_sha256": "25549e92eacc3b980381571282a1ee00825f6409dcee9f17d2c3ccfb82976919",
+      "live_sha256": "25549e92eacc3b980381571282a1ee00825f6409dcee9f17d2c3ccfb82976919",
+      "identical": true
+    },
+    {
+      "file": "frame_013139_cam2.pgm",
+      "replay_sha256": "7e7a25da07ff4b32017d9fc6e0dd8318c97b63b14e5e4bf34f52b93bc3e332f0",
+      "live_sha256": "7e7a25da07ff4b32017d9fc6e0dd8318c97b63b14e5e4bf34f52b93bc3e332f0",
+      "identical": true
+    },
+    {
+      "file": "frame_013140_cam0.pgm",
+      "replay_sha256": "2d15719a0441548f3f78a32bd46def55d8927a5e4c1c4e55be401f5df91e46ca",
+      "live_sha256": "2d15719a0441548f3f78a32bd46def55d8927a5e4c1c4e55be401f5df91e46ca",
+      "identical": true
+    },
+    {
+      "file": "frame_013140_cam1.pgm",
+      "replay_sha256": "776a7067e2d083a4dd11d5e03cb7032ab8b34007517b48b2aef8f39104538874",
+      "live_sha256": "776a7067e2d083a4dd11d5e03cb7032ab8b34007517b48b2aef8f39104538874",
+      "identical": true
+    },
+    {
+      "file": "frame_013140_cam2.pgm",
+      "replay_sha256": "b512d1828bada42f0bc7e07af4b41d0b8bdff814cb20444a017d692ccf1520c7",
+      "live_sha256": "b512d1828bada42f0bc7e07af4b41d0b8bdff814cb20444a017d692ccf1520c7",
+      "identical": true
+    },
+    {
+      "file": "frame_013141_cam0.pgm",
+      "replay_sha256": "41b4ca45f1137dc7d99e2f8a36e77a9575373b6f3ccdba294b68db049f5a8ff3",
+      "live_sha256": "41b4ca45f1137dc7d99e2f8a36e77a9575373b6f3ccdba294b68db049f5a8ff3",
+      "identical": true
+    },
+    {
+      "file": "frame_013141_cam1.pgm",
+      "replay_sha256": "f2296d6716e7fba08c379d59141efef3567cbce82f4d15860e55bdaec137f8fd",
+      "live_sha256": "f2296d6716e7fba08c379d59141efef3567cbce82f4d15860e55bdaec137f8fd",
+      "identical": true
+    },
+    {
+      "file": "frame_013141_cam2.pgm",
+      "replay_sha256": "5ff1e3d048e39592e1460ae835ddf2eb6b048c7e04b1e17be9850ebf90428374",
+      "live_sha256": "5ff1e3d048e39592e1460ae835ddf2eb6b048c7e04b1e17be9850ebf90428374",
+      "identical": true
+    },
+    {
+      "file": "frame_013142_cam0.pgm",
+      "replay_sha256": "6105e228b0bb5b66ffd13658f4ecd4256b35a8f713f61ff691524e09889cd7f3",
+      "live_sha256": "6105e228b0bb5b66ffd13658f4ecd4256b35a8f713f61ff691524e09889cd7f3",
+      "identical": true
+    },
+    {
+      "file": "frame_013142_cam1.pgm",
+      "replay_sha256": "5249b8b0105bc9ec20f1958b256f13d7c2e6bcc2562f04125d717ebcbe5d944e",
+      "live_sha256": "5249b8b0105bc9ec20f1958b256f13d7c2e6bcc2562f04125d717ebcbe5d944e",
+      "identical": true
+    },
+    {
+      "file": "frame_013142_cam2.pgm",
+      "replay_sha256": "1246bee639e81fe9b2d7b6b0c2817a2a83495ac7cdf2b75d452ba72bf7fdd79b",
+      "live_sha256": "1246bee639e81fe9b2d7b6b0c2817a2a83495ac7cdf2b75d452ba72bf7fdd79b",
+      "identical": true
+    },
+    {
+      "file": "frame_013143_cam0.pgm",
+      "replay_sha256": "ad9db8abf1392d4f0d90f1037e6d6c40fcad3f43d04b34677f4a3a4644950a32",
+      "live_sha256": "ad9db8abf1392d4f0d90f1037e6d6c40fcad3f43d04b34677f4a3a4644950a32",
+      "identical": true
+    },
+    {
+      "file": "frame_013143_cam1.pgm",
+      "replay_sha256": "c43e39927f2dee81c09a4acf6abfe6e201c48d13be29e3cc698e148a9be30e15",
+      "live_sha256": "c43e39927f2dee81c09a4acf6abfe6e201c48d13be29e3cc698e148a9be30e15",
+      "identical": true
+    },
+    {
+      "file": "frame_013143_cam2.pgm",
+      "replay_sha256": "270af3b621651e181fe41fb53432aedd5c6ecd5910c31977072e416c980562dc",
+      "live_sha256": "270af3b621651e181fe41fb53432aedd5c6ecd5910c31977072e416c980562dc",
+      "identical": true
+    },
+    {
+      "file": "frame_013144_cam0.pgm",
+      "replay_sha256": "c52b6dbb7a40506798fa5f1398b29451f9bbb810ce4abc9cd95e87201da85b81",
+      "live_sha256": "c52b6dbb7a40506798fa5f1398b29451f9bbb810ce4abc9cd95e87201da85b81",
+      "identical": true
+    },
+    {
+      "file": "frame_013144_cam1.pgm",
+      "replay_sha256": "031372732c36bddf2a50438efe523bdb0f0171c5112a377014055ebd26665786",
+      "live_sha256": "031372732c36bddf2a50438efe523bdb0f0171c5112a377014055ebd26665786",
+      "identical": true
+    },
+    {
+      "file": "frame_013144_cam2.pgm",
+      "replay_sha256": "706ee77e2a6187832c2f841a0ab3d6c14897013f0ff7ea26e2e9c03fd4fe93c6",
+      "live_sha256": "706ee77e2a6187832c2f841a0ab3d6c14897013f0ff7ea26e2e9c03fd4fe93c6",
+      "identical": true
+    },
+    {
+      "file": "frame_013145_cam0.pgm",
+      "replay_sha256": "9cf1b83cc5bd71b31ad20b7e8ed9223dc214c1e3132a24b0e33a34f87d91d4fa",
+      "live_sha256": "9cf1b83cc5bd71b31ad20b7e8ed9223dc214c1e3132a24b0e33a34f87d91d4fa",
+      "identical": true
+    },
+    {
+      "file": "frame_013145_cam1.pgm",
+      "replay_sha256": "9ce19752502755da9722cad1055bff57ad94ca9f7737a1f5fb9ab34ff21feaed",
+      "live_sha256": "9ce19752502755da9722cad1055bff57ad94ca9f7737a1f5fb9ab34ff21feaed",
+      "identical": true
+    },
+    {
+      "file": "frame_013145_cam2.pgm",
+      "replay_sha256": "12e2854eb7c16410c9e1989b8ea18b6ad5a5e63dda38da08aa3d1a28f70c66c2",
+      "live_sha256": "12e2854eb7c16410c9e1989b8ea18b6ad5a5e63dda38da08aa3d1a28f70c66c2",
+      "identical": true
+    },
+    {
+      "file": "frame_013146_cam0.pgm",
+      "replay_sha256": "38fecd6c48be68e78178242aa920131e3ce0e369d908089b7bc1f72324dc8e90",
+      "live_sha256": "38fecd6c48be68e78178242aa920131e3ce0e369d908089b7bc1f72324dc8e90",
+      "identical": true
+    },
+    {
+      "file": "frame_013146_cam1.pgm",
+      "replay_sha256": "6480df4be75dc7800fd387d6214c936499f69649a708b733ea32ebede51f33fd",
+      "live_sha256": "6480df4be75dc7800fd387d6214c936499f69649a708b733ea32ebede51f33fd",
+      "identical": true
+    },
+    {
+      "file": "frame_013146_cam2.pgm",
+      "replay_sha256": "cf8e00a0b31a65792bc332d28cbf9732d26734f5d4ffd105dacd3ff452c51a18",
+      "live_sha256": "cf8e00a0b31a65792bc332d28cbf9732d26734f5d4ffd105dacd3ff452c51a18",
+      "identical": true
+    },
+    {
+      "file": "frame_013147_cam0.pgm",
+      "replay_sha256": "73989af2ef8b2e6df5aee4f2ce4efa27085b4ad5d675a32536e5fd03ed60d0ac",
+      "live_sha256": "73989af2ef8b2e6df5aee4f2ce4efa27085b4ad5d675a32536e5fd03ed60d0ac",
+      "identical": true
+    },
+    {
+      "file": "frame_013147_cam1.pgm",
+      "replay_sha256": "3f31de1e45c9e5323bf1c232619b554e163f3a463ea2b55c6f10ecd9995ca3d8",
+      "live_sha256": "3f31de1e45c9e5323bf1c232619b554e163f3a463ea2b55c6f10ecd9995ca3d8",
+      "identical": true
+    },
+    {
+      "file": "frame_013147_cam2.pgm",
+      "replay_sha256": "c6947678b52b0515a240a463a57288fdf1c67e54eec62c6ec9ca678dd37cf93d",
+      "live_sha256": "c6947678b52b0515a240a463a57288fdf1c67e54eec62c6ec9ca678dd37cf93d",
+      "identical": true
+    },
+    {
+      "file": "frame_013148_cam0.pgm",
+      "replay_sha256": "2e665fe6e8624b177f1bab2ddbb1e489d266e07824eb038d56808bfcab562919",
+      "live_sha256": "2e665fe6e8624b177f1bab2ddbb1e489d266e07824eb038d56808bfcab562919",
+      "identical": true
+    },
+    {
+      "file": "frame_013148_cam1.pgm",
+      "replay_sha256": "7e6073ccde8e56f205aaf46274a7ab94fb853a1087e39d97ae525868370c9530",
+      "live_sha256": "7e6073ccde8e56f205aaf46274a7ab94fb853a1087e39d97ae525868370c9530",
+      "identical": true
+    },
+    {
+      "file": "frame_013148_cam2.pgm",
+      "replay_sha256": "257bd8064b3d02bd761fd63e939748b23f03fbaa84f89b7a4b40ee27bac8e7b5",
+      "live_sha256": "257bd8064b3d02bd761fd63e939748b23f03fbaa84f89b7a4b40ee27bac8e7b5",
+      "identical": true
+    },
+    {
+      "file": "frame_013149_cam0.pgm",
+      "replay_sha256": "4ec5ead9c85d08b23963b11c72a67f2f23787ff62b6438f6e1f8c94fffaa6060",
+      "live_sha256": "4ec5ead9c85d08b23963b11c72a67f2f23787ff62b6438f6e1f8c94fffaa6060",
+      "identical": true
+    },
+    {
+      "file": "frame_013149_cam1.pgm",
+      "replay_sha256": "cb130bf389fbd14cc5ef698f35f5278f5775b2597bbc44361f078444392c1a78",
+      "live_sha256": "cb130bf389fbd14cc5ef698f35f5278f5775b2597bbc44361f078444392c1a78",
+      "identical": true
+    },
+    {
+      "file": "frame_013149_cam2.pgm",
+      "replay_sha256": "8a47638abb3ec78d047f019897bc1c181f106c733dfbff09b32054991b3d8605",
+      "live_sha256": "8a47638abb3ec78d047f019897bc1c181f106c733dfbff09b32054991b3d8605",
+      "identical": true
+    },
+    {
+      "file": "frame_013150_cam0.pgm",
+      "replay_sha256": "96912be760975cdf445df8c619f6fd91613e9841eb7dfd28d26f5b1c93a28456",
+      "live_sha256": "96912be760975cdf445df8c619f6fd91613e9841eb7dfd28d26f5b1c93a28456",
+      "identical": true
+    },
+    {
+      "file": "frame_013150_cam1.pgm",
+      "replay_sha256": "74f285e9b3f27983f83de3a349a2a46ccebd13c685a94f6426e5810dc0ea13cd",
+      "live_sha256": "74f285e9b3f27983f83de3a349a2a46ccebd13c685a94f6426e5810dc0ea13cd",
+      "identical": true
+    },
+    {
+      "file": "frame_013150_cam2.pgm",
+      "replay_sha256": "901cd43296bfce4ec1eccdb04c7ac57b3eac7c0a8ef355025c2e439f4920812a",
+      "live_sha256": "901cd43296bfce4ec1eccdb04c7ac57b3eac7c0a8ef355025c2e439f4920812a",
+      "identical": true
+    },
+    {
+      "file": "frame_013151_cam0.pgm",
+      "replay_sha256": "cf2e537676d6536f388c551b04778a5ae65f10894e503b63c9109acecef6e2ca",
+      "live_sha256": "cf2e537676d6536f388c551b04778a5ae65f10894e503b63c9109acecef6e2ca",
+      "identical": true
+    },
+    {
+      "file": "frame_013151_cam1.pgm",
+      "replay_sha256": "10f03370ed164663a978d71f2c46fb17e40832f208f67eaa66327ab767e58ae9",
+      "live_sha256": "10f03370ed164663a978d71f2c46fb17e40832f208f67eaa66327ab767e58ae9",
+      "identical": true
+    },
+    {
+      "file": "frame_013151_cam2.pgm",
+      "replay_sha256": "ed0dd952012db600707e5ea67402a4ecf1362883fa364e83a608c5af0aca8b25",
+      "live_sha256": "ed0dd952012db600707e5ea67402a4ecf1362883fa364e83a608c5af0aca8b25",
+      "identical": true
+    },
+    {
+      "file": "frame_013152_cam0.pgm",
+      "replay_sha256": "7c4557c2749cdd60e9fe56e6aee460e4a5a3315282eedb1ec2ba6ae210d745a3",
+      "live_sha256": "7c4557c2749cdd60e9fe56e6aee460e4a5a3315282eedb1ec2ba6ae210d745a3",
+      "identical": true
+    },
+    {
+      "file": "frame_013152_cam1.pgm",
+      "replay_sha256": "21627105fd6be670a64e6d7cb59ac3ee7e1e669d8e2223b67b1edc4bb36eb192",
+      "live_sha256": "21627105fd6be670a64e6d7cb59ac3ee7e1e669d8e2223b67b1edc4bb36eb192",
+      "identical": true
+    },
+    {
+      "file": "frame_013152_cam2.pgm",
+      "replay_sha256": "9a62e443478653ea5c9cb1390f2a3540c1dca3bad092bc00ff7b5aa0cd9ef656",
+      "live_sha256": "9a62e443478653ea5c9cb1390f2a3540c1dca3bad092bc00ff7b5aa0cd9ef656",
+      "identical": true
+    },
+    {
+      "file": "frame_013153_cam0.pgm",
+      "replay_sha256": "44b1a7dffa62e9a80b8e7593fe0e8cfc5329b293020ecb0624786c85a897ae77",
+      "live_sha256": "44b1a7dffa62e9a80b8e7593fe0e8cfc5329b293020ecb0624786c85a897ae77",
+      "identical": true
+    },
+    {
+      "file": "frame_013153_cam1.pgm",
+      "replay_sha256": "e24ed1f656de94535e86a0d38d6e61fad3be2a4b99a977f4dcfca4dbf650d231",
+      "live_sha256": "e24ed1f656de94535e86a0d38d6e61fad3be2a4b99a977f4dcfca4dbf650d231",
+      "identical": true
+    },
+    {
+      "file": "frame_013153_cam2.pgm",
+      "replay_sha256": "caaffd25e9ccdecf0f60b4ce119cb749f93beda0e5cd0be812f2a31a55f6ba9a",
+      "live_sha256": "caaffd25e9ccdecf0f60b4ce119cb749f93beda0e5cd0be812f2a31a55f6ba9a",
+      "identical": true
+    },
+    {
+      "file": "frame_013154_cam0.pgm",
+      "replay_sha256": "25f90804b1ed0406940de6d1549d4a062c8a74d6b832d707310344fbc6fe5e78",
+      "live_sha256": "25f90804b1ed0406940de6d1549d4a062c8a74d6b832d707310344fbc6fe5e78",
+      "identical": true
+    },
+    {
+      "file": "frame_013154_cam1.pgm",
+      "replay_sha256": "ddbbb96bc1a85ad2093bb92f60f3a81e228d4bfbebfd424d18be26de2c502288",
+      "live_sha256": "ddbbb96bc1a85ad2093bb92f60f3a81e228d4bfbebfd424d18be26de2c502288",
+      "identical": true
+    },
+    {
+      "file": "frame_013154_cam2.pgm",
+      "replay_sha256": "ce5bb25ec476a83b591b3e6e54e45eb3c4822f15a8dbbd049e45c198d78eecf1",
+      "live_sha256": "ce5bb25ec476a83b591b3e6e54e45eb3c4822f15a8dbbd049e45c198d78eecf1",
+      "identical": true
+    },
+    {
+      "file": "frame_013155_cam0.pgm",
+      "replay_sha256": "7bb71821b816a082f99a9f6266cc953b6e46e91afcaea758326893ad02fadcb4",
+      "live_sha256": "7bb71821b816a082f99a9f6266cc953b6e46e91afcaea758326893ad02fadcb4",
+      "identical": true
+    },
+    {
+      "file": "frame_013155_cam1.pgm",
+      "replay_sha256": "b7f7db969ad2a455a031cd0da56cdf34bcebca45b713ce56fd46037b67005b88",
+      "live_sha256": "b7f7db969ad2a455a031cd0da56cdf34bcebca45b713ce56fd46037b67005b88",
+      "identical": true
+    },
+    {
+      "file": "frame_013155_cam2.pgm",
+      "replay_sha256": "42d3c9e0f81228c300803af4b802f25d9d454e5fc59cf6e9ea4bf8c451312fff",
+      "live_sha256": "42d3c9e0f81228c300803af4b802f25d9d454e5fc59cf6e9ea4bf8c451312fff",
+      "identical": true
+    },
+    {
+      "file": "frame_013156_cam0.pgm",
+      "replay_sha256": "20d115fe9c1dfd06c50528d2cea76c9ef8696e343d8d97bb5f166a1c38554acb",
+      "live_sha256": "20d115fe9c1dfd06c50528d2cea76c9ef8696e343d8d97bb5f166a1c38554acb",
+      "identical": true
+    },
+    {
+      "file": "frame_013156_cam1.pgm",
+      "replay_sha256": "ed844ae2bceda622ce9576793f394fe6933405bfb114dce77bc07904942eaf74",
+      "live_sha256": "ed844ae2bceda622ce9576793f394fe6933405bfb114dce77bc07904942eaf74",
+      "identical": true
+    },
+    {
+      "file": "frame_013156_cam2.pgm",
+      "replay_sha256": "398d2016a2e1a27e188878adddfd65701705831faaf3f1cab896d4abab871978",
+      "live_sha256": "398d2016a2e1a27e188878adddfd65701705831faaf3f1cab896d4abab871978",
+      "identical": true
+    },
+    {
+      "file": "frame_013157_cam0.pgm",
+      "replay_sha256": "4e9a384e1a007ca01b2ffc5e59d8114009b90bc6ad3443e78cabc833ea98469b",
+      "live_sha256": "4e9a384e1a007ca01b2ffc5e59d8114009b90bc6ad3443e78cabc833ea98469b",
+      "identical": true
+    },
+    {
+      "file": "frame_013157_cam1.pgm",
+      "replay_sha256": "bfc52758d18a54a1035bc755f1e0e8df18e393d675327fed448799069f044e7a",
+      "live_sha256": "bfc52758d18a54a1035bc755f1e0e8df18e393d675327fed448799069f044e7a",
+      "identical": true
+    },
+    {
+      "file": "frame_013157_cam2.pgm",
+      "replay_sha256": "7177751e0223d0dd9c079b96f0f064543039a447d98a5ec21dbefd713d64f1eb",
+      "live_sha256": "7177751e0223d0dd9c079b96f0f064543039a447d98a5ec21dbefd713d64f1eb",
+      "identical": true
+    },
+    {
+      "file": "frame_013158_cam0.pgm",
+      "replay_sha256": "0fa1d217ec1ae24ffa9638697735b7a08c6c51650a44af5ac95b644c86f0043a",
+      "live_sha256": "0fa1d217ec1ae24ffa9638697735b7a08c6c51650a44af5ac95b644c86f0043a",
+      "identical": true
+    },
+    {
+      "file": "frame_013158_cam1.pgm",
+      "replay_sha256": "aa48b3a23e568bc5f5eb845ceedd4d01cfad162b0f66924ef4dcf3243aab9206",
+      "live_sha256": "aa48b3a23e568bc5f5eb845ceedd4d01cfad162b0f66924ef4dcf3243aab9206",
+      "identical": true
+    },
+    {
+      "file": "frame_013158_cam2.pgm",
+      "replay_sha256": "a3dce830e51ca393341d14befa915929f8296719b322b6f9a9dd23409d658d0e",
+      "live_sha256": "a3dce830e51ca393341d14befa915929f8296719b322b6f9a9dd23409d658d0e",
+      "identical": true
+    },
+    {
+      "file": "frame_013159_cam0.pgm",
+      "replay_sha256": "e87362d3eb10c8230c60c377092b1d7c309d212c0af649a41bb70e740ce7dfd4",
+      "live_sha256": "e87362d3eb10c8230c60c377092b1d7c309d212c0af649a41bb70e740ce7dfd4",
+      "identical": true
+    },
+    {
+      "file": "frame_013159_cam1.pgm",
+      "replay_sha256": "c0dcd379f571db1564845b4e7d39f21ddd7ec4ca660c32f82b4b9968e19fcd41",
+      "live_sha256": "c0dcd379f571db1564845b4e7d39f21ddd7ec4ca660c32f82b4b9968e19fcd41",
+      "identical": true
+    },
+    {
+      "file": "frame_013159_cam2.pgm",
+      "replay_sha256": "b722413f7269b7c8633d5d6b0036d1fba6addd6588b4e43cceead4d9c45044d3",
+      "live_sha256": "b722413f7269b7c8633d5d6b0036d1fba6addd6588b4e43cceead4d9c45044d3",
+      "identical": true
+    },
+    {
+      "file": "frame_013160_cam0.pgm",
+      "replay_sha256": "aaf5be6fc5865747799a4cc3c90e099e1f2a7598264cdd348d67fb27969988e5",
+      "live_sha256": "aaf5be6fc5865747799a4cc3c90e099e1f2a7598264cdd348d67fb27969988e5",
+      "identical": true
+    },
+    {
+      "file": "frame_013160_cam1.pgm",
+      "replay_sha256": "0256a74440c468ad98640e038ced5fa78d0c7c12a17d9d71e3ca8566e30317dc",
+      "live_sha256": "0256a74440c468ad98640e038ced5fa78d0c7c12a17d9d71e3ca8566e30317dc",
+      "identical": true
+    },
+    {
+      "file": "frame_013160_cam2.pgm",
+      "replay_sha256": "7479595b6471b0c7bfb3339fa32da87c36566919c5fa313b6901f699565e7286",
+      "live_sha256": "7479595b6471b0c7bfb3339fa32da87c36566919c5fa313b6901f699565e7286",
+      "identical": true
+    },
+    {
+      "file": "frame_013161_cam0.pgm",
+      "replay_sha256": "135e7cb576c4572eb4aeb44adc5bd825ef55aa5ba2d0f2fb88d4cfd856b61565",
+      "live_sha256": "135e7cb576c4572eb4aeb44adc5bd825ef55aa5ba2d0f2fb88d4cfd856b61565",
+      "identical": true
+    },
+    {
+      "file": "frame_013161_cam1.pgm",
+      "replay_sha256": "a2d13d803efb59845222b45dc5e7e83a6a1afdf94401271348d7729910c0dc1f",
+      "live_sha256": "a2d13d803efb59845222b45dc5e7e83a6a1afdf94401271348d7729910c0dc1f",
+      "identical": true
+    },
+    {
+      "file": "frame_013161_cam2.pgm",
+      "replay_sha256": "6741e856e12e57637f79cee4f47393f083e8d7118f6a1dfce286dd48f5424e45",
+      "live_sha256": "6741e856e12e57637f79cee4f47393f083e8d7118f6a1dfce286dd48f5424e45",
+      "identical": true
+    },
+    {
+      "file": "frame_013162_cam0.pgm",
+      "replay_sha256": "c434c3a4af1343997694578a779379372a3525cf93b8de6bc8a2eceef472d655",
+      "live_sha256": "c434c3a4af1343997694578a779379372a3525cf93b8de6bc8a2eceef472d655",
+      "identical": true
+    },
+    {
+      "file": "frame_013162_cam1.pgm",
+      "replay_sha256": "84db2813a045f150da4012afe13ff0dd2bc673856090690cb5fcedac29c08d99",
+      "live_sha256": "84db2813a045f150da4012afe13ff0dd2bc673856090690cb5fcedac29c08d99",
+      "identical": true
+    },
+    {
+      "file": "frame_013162_cam2.pgm",
+      "replay_sha256": "f5ea5e4e4935af37f82c18c61cc9f68f402348f50e6a8f236dd85ec85784c41c",
+      "live_sha256": "f5ea5e4e4935af37f82c18c61cc9f68f402348f50e6a8f236dd85ec85784c41c",
+      "identical": true
+    },
+    {
+      "file": "frame_013163_cam0.pgm",
+      "replay_sha256": "7acf32d0c550a21e6dfbf0d453888a23ec26d96371024f19a4732541d99b5340",
+      "live_sha256": "7acf32d0c550a21e6dfbf0d453888a23ec26d96371024f19a4732541d99b5340",
+      "identical": true
+    },
+    {
+      "file": "frame_013163_cam1.pgm",
+      "replay_sha256": "405be84b8a032f047eb1124657a28c252817546e3cc61d9d0e3d1b3559d07f90",
+      "live_sha256": "405be84b8a032f047eb1124657a28c252817546e3cc61d9d0e3d1b3559d07f90",
+      "identical": true
+    },
+    {
+      "file": "frame_013163_cam2.pgm",
+      "replay_sha256": "a29a53d5c1bf643818b332e50c0f47a2a50ea64b4530db5dd09a75a3219cc267",
+      "live_sha256": "a29a53d5c1bf643818b332e50c0f47a2a50ea64b4530db5dd09a75a3219cc267",
+      "identical": true
+    },
+    {
+      "file": "frame_013164_cam0.pgm",
+      "replay_sha256": "3fe608699e8705768b19a941050fcd5bc1f8f64157a4ad13f8bf5c31211cc811",
+      "live_sha256": "3fe608699e8705768b19a941050fcd5bc1f8f64157a4ad13f8bf5c31211cc811",
+      "identical": true
+    },
+    {
+      "file": "frame_013164_cam1.pgm",
+      "replay_sha256": "86438890fcb4dbd8427cdec3420cc29da4db7bbe48bb6e74cd4a230aae3f7ee9",
+      "live_sha256": "86438890fcb4dbd8427cdec3420cc29da4db7bbe48bb6e74cd4a230aae3f7ee9",
+      "identical": true
+    },
+    {
+      "file": "frame_013164_cam2.pgm",
+      "replay_sha256": "790ef4911f33acf4f97e5b6c57eb670e4ef23be7bbc0c4feb05c2cbd6973eca1",
+      "live_sha256": "790ef4911f33acf4f97e5b6c57eb670e4ef23be7bbc0c4feb05c2cbd6973eca1",
+      "identical": true
+    },
+    {
+      "file": "frame_013165_cam0.pgm",
+      "replay_sha256": "229d5b8d5e9d8546b581bc4d2c38d964697e4d68b1cc16b0722e6a4d30e5ee15",
+      "live_sha256": "229d5b8d5e9d8546b581bc4d2c38d964697e4d68b1cc16b0722e6a4d30e5ee15",
+      "identical": true
+    },
+    {
+      "file": "frame_013165_cam1.pgm",
+      "replay_sha256": "07854c0e88400544baaadad7ea29ef9ce95134a8c80287f050c23bd0f61562f1",
+      "live_sha256": "07854c0e88400544baaadad7ea29ef9ce95134a8c80287f050c23bd0f61562f1",
+      "identical": true
+    },
+    {
+      "file": "frame_013165_cam2.pgm",
+      "replay_sha256": "9ea57c16bf95e53485b02aaee92800ff61d0e97d6a037ea2cad050ac21a9c94e",
+      "live_sha256": "9ea57c16bf95e53485b02aaee92800ff61d0e97d6a037ea2cad050ac21a9c94e",
+      "identical": true
+    },
+    {
+      "file": "frame_013166_cam0.pgm",
+      "replay_sha256": "5189fed032f4ecf8acdbb717b660b98d856e0c9a9f4e1150b27c58689f448335",
+      "live_sha256": "5189fed032f4ecf8acdbb717b660b98d856e0c9a9f4e1150b27c58689f448335",
+      "identical": true
+    },
+    {
+      "file": "frame_013166_cam1.pgm",
+      "replay_sha256": "cd3b7d4b72799797eafa9d1638ff5a370317e5654feec4b747e6645f15385da0",
+      "live_sha256": "cd3b7d4b72799797eafa9d1638ff5a370317e5654feec4b747e6645f15385da0",
+      "identical": true
+    },
+    {
+      "file": "frame_013166_cam2.pgm",
+      "replay_sha256": "b8a55962a127f30e10cd6f006c4016a6a41d27fc1548d6a0868e8e4376bcdaf3",
+      "live_sha256": "b8a55962a127f30e10cd6f006c4016a6a41d27fc1548d6a0868e8e4376bcdaf3",
+      "identical": true
+    },
+    {
+      "file": "frame_013167_cam0.pgm",
+      "replay_sha256": "ef15e29a183c14a1c8c954e695dc085974553cc9175cd5ae5c7f4e08b2349f32",
+      "live_sha256": "ef15e29a183c14a1c8c954e695dc085974553cc9175cd5ae5c7f4e08b2349f32",
+      "identical": true
+    },
+    {
+      "file": "frame_013167_cam1.pgm",
+      "replay_sha256": "ad91455ea95d0c96da8c92d6a8d2987da0dc405ac2f32640b4f7acf9c651892b",
+      "live_sha256": "ad91455ea95d0c96da8c92d6a8d2987da0dc405ac2f32640b4f7acf9c651892b",
+      "identical": true
+    },
+    {
+      "file": "frame_013167_cam2.pgm",
+      "replay_sha256": "5bb2f9a8125bb4efac310e2b64836630df131cb2cb1b79f39238007789f001a0",
+      "live_sha256": "5bb2f9a8125bb4efac310e2b64836630df131cb2cb1b79f39238007789f001a0",
+      "identical": true
+    },
+    {
+      "file": "frame_013168_cam0.pgm",
+      "replay_sha256": "29c598f596c88e676b3a0419fdc133545d73f944e3317c0152a55b0712666697",
+      "live_sha256": "29c598f596c88e676b3a0419fdc133545d73f944e3317c0152a55b0712666697",
+      "identical": true
+    },
+    {
+      "file": "frame_013168_cam1.pgm",
+      "replay_sha256": "ae50b90345eece77ad222336d6e6f627d15ac5943e46d331c453b07076a26856",
+      "live_sha256": "ae50b90345eece77ad222336d6e6f627d15ac5943e46d331c453b07076a26856",
+      "identical": true
+    },
+    {
+      "file": "frame_013168_cam2.pgm",
+      "replay_sha256": "2679a7eb22433048910584ffe435675d0c07a1bebd34d5bed46ffddd879fdda0",
+      "live_sha256": "2679a7eb22433048910584ffe435675d0c07a1bebd34d5bed46ffddd879fdda0",
+      "identical": true
+    },
+    {
+      "file": "frame_013169_cam0.pgm",
+      "replay_sha256": "d66176cad8679059da26ca5812f1ce4d3df91bb85b204fc2edadb9898f15162c",
+      "live_sha256": "d66176cad8679059da26ca5812f1ce4d3df91bb85b204fc2edadb9898f15162c",
+      "identical": true
+    },
+    {
+      "file": "frame_013169_cam1.pgm",
+      "replay_sha256": "076021367ccdc13b8874bc0e44e4f5534a116d15a4350829f096c257f91f9759",
+      "live_sha256": "076021367ccdc13b8874bc0e44e4f5534a116d15a4350829f096c257f91f9759",
+      "identical": true
+    },
+    {
+      "file": "frame_013169_cam2.pgm",
+      "replay_sha256": "3b4b3e3b73c635dbe7ee6774dbfca6c90140397af7ae51634f95f9df22de05da",
+      "live_sha256": "3b4b3e3b73c635dbe7ee6774dbfca6c90140397af7ae51634f95f9df22de05da",
+      "identical": true
+    },
+    {
+      "file": "frame_013170_cam0.pgm",
+      "replay_sha256": "4b91a0af61f26a675824bc512e6a2636ec87ad7dae622449d3289330a0b5fb72",
+      "live_sha256": "4b91a0af61f26a675824bc512e6a2636ec87ad7dae622449d3289330a0b5fb72",
+      "identical": true
+    },
+    {
+      "file": "frame_013170_cam1.pgm",
+      "replay_sha256": "f194ac27d50a0b573021121feaddb2b20aa1f8ad1a409853a21b6ee1b92aaae1",
+      "live_sha256": "f194ac27d50a0b573021121feaddb2b20aa1f8ad1a409853a21b6ee1b92aaae1",
+      "identical": true
+    },
+    {
+      "file": "frame_013170_cam2.pgm",
+      "replay_sha256": "842e421a39c788112347c76d1c3b913787e43aea55b722ea0ff5168e30a7c0c0",
+      "live_sha256": "842e421a39c788112347c76d1c3b913787e43aea55b722ea0ff5168e30a7c0c0",
+      "identical": true
+    },
+    {
+      "file": "frame_013171_cam0.pgm",
+      "replay_sha256": "341dffb62fe869638aa8391812fcd3718e98060efc87b427ad189e8fb84690e3",
+      "live_sha256": "341dffb62fe869638aa8391812fcd3718e98060efc87b427ad189e8fb84690e3",
+      "identical": true
+    },
+    {
+      "file": "frame_013171_cam1.pgm",
+      "replay_sha256": "ca40be6f52f4b12a9168b0b50601539d6ffefab911d69f01cb4873d4d29d2eb5",
+      "live_sha256": "ca40be6f52f4b12a9168b0b50601539d6ffefab911d69f01cb4873d4d29d2eb5",
+      "identical": true
+    },
+    {
+      "file": "frame_013171_cam2.pgm",
+      "replay_sha256": "95dfd28fd7db643934baa2a7542ba77ada1c8c4d840bee1d02d1972d379028a3",
+      "live_sha256": "95dfd28fd7db643934baa2a7542ba77ada1c8c4d840bee1d02d1972d379028a3",
+      "identical": true
+    },
+    {
+      "file": "frame_013172_cam0.pgm",
+      "replay_sha256": "6b43537b08fdeb94ea1119c5a2ac6808484269b2733063ee44825269c80f9c68",
+      "live_sha256": "6b43537b08fdeb94ea1119c5a2ac6808484269b2733063ee44825269c80f9c68",
+      "identical": true
+    },
+    {
+      "file": "frame_013172_cam1.pgm",
+      "replay_sha256": "118c620312d73f93c04d3f1d4dc8bf64a278575096c03caafdf2aa5db1a14578",
+      "live_sha256": "118c620312d73f93c04d3f1d4dc8bf64a278575096c03caafdf2aa5db1a14578",
+      "identical": true
+    },
+    {
+      "file": "frame_013172_cam2.pgm",
+      "replay_sha256": "f1043b73dac72b9281ccc9e3b53ccdfee5c369d629bd4487b94a6dcc04822f5a",
+      "live_sha256": "f1043b73dac72b9281ccc9e3b53ccdfee5c369d629bd4487b94a6dcc04822f5a",
+      "identical": true
+    },
+    {
+      "file": "frame_013173_cam0.pgm",
+      "replay_sha256": "7cbb94c0daeb1708b43a5cc7c1e407c4fd7507d52ebc11941bc6cd210aff54fd",
+      "live_sha256": "7cbb94c0daeb1708b43a5cc7c1e407c4fd7507d52ebc11941bc6cd210aff54fd",
+      "identical": true
+    },
+    {
+      "file": "frame_013173_cam1.pgm",
+      "replay_sha256": "68d851761de6eee3992d973ef4abbcdf0d225d2bd68f86eea99378402a26e23d",
+      "live_sha256": "68d851761de6eee3992d973ef4abbcdf0d225d2bd68f86eea99378402a26e23d",
+      "identical": true
+    },
+    {
+      "file": "frame_013173_cam2.pgm",
+      "replay_sha256": "d30e5222f22ee6f5c6431f694e8ad5f91db1a53bd0267ea45c21960e0e2e6873",
+      "live_sha256": "d30e5222f22ee6f5c6431f694e8ad5f91db1a53bd0267ea45c21960e0e2e6873",
+      "identical": true
+    },
+    {
+      "file": "frame_013174_cam0.pgm",
+      "replay_sha256": "b10580b3be2f246f409415b3c9b3ac45c955d090b361a727f2e2aeb4e6de0421",
+      "live_sha256": "b10580b3be2f246f409415b3c9b3ac45c955d090b361a727f2e2aeb4e6de0421",
+      "identical": true
+    },
+    {
+      "file": "frame_013174_cam1.pgm",
+      "replay_sha256": "dae0f2621ebd9e305232508d89b38a3f673b7ba246abd9cb2815e193a2837954",
+      "live_sha256": "dae0f2621ebd9e305232508d89b38a3f673b7ba246abd9cb2815e193a2837954",
+      "identical": true
+    },
+    {
+      "file": "frame_013174_cam2.pgm",
+      "replay_sha256": "6553dcc8b8098f3d940c3f2848e73cba91b69d9965b4c594e6b4672cbaf92613",
+      "live_sha256": "6553dcc8b8098f3d940c3f2848e73cba91b69d9965b4c594e6b4672cbaf92613",
+      "identical": true
+    },
+    {
+      "file": "frame_013175_cam0.pgm",
+      "replay_sha256": "d7b4c2f2d7231938d87f8c1daf857d58c6afdd679cc784d4a97e5405748c2026",
+      "live_sha256": "d7b4c2f2d7231938d87f8c1daf857d58c6afdd679cc784d4a97e5405748c2026",
+      "identical": true
+    },
+    {
+      "file": "frame_013175_cam1.pgm",
+      "replay_sha256": "f351de5bcc2b561eabde1f9138f190d028470349c4795063a21230fb1f28edcb",
+      "live_sha256": "f351de5bcc2b561eabde1f9138f190d028470349c4795063a21230fb1f28edcb",
+      "identical": true
+    },
+    {
+      "file": "frame_013175_cam2.pgm",
+      "replay_sha256": "de539763ec4edc751e3862cc0b603ad41a877c102485e1c7ae75043227db75a0",
+      "live_sha256": "de539763ec4edc751e3862cc0b603ad41a877c102485e1c7ae75043227db75a0",
+      "identical": true
+    },
+    {
+      "file": "frame_013176_cam0.pgm",
+      "replay_sha256": "ac8abdefabbbc138f7e79a4b3d5bbdcfeff3c2bcbb1ca0a7316860286e4005cb",
+      "live_sha256": "ac8abdefabbbc138f7e79a4b3d5bbdcfeff3c2bcbb1ca0a7316860286e4005cb",
+      "identical": true
+    },
+    {
+      "file": "frame_013176_cam1.pgm",
+      "replay_sha256": "9429597aec4d6a04c0e810f04b08757fee34403c85ddee7eadacdeedbc76fd47",
+      "live_sha256": "9429597aec4d6a04c0e810f04b08757fee34403c85ddee7eadacdeedbc76fd47",
+      "identical": true
+    },
+    {
+      "file": "frame_013176_cam2.pgm",
+      "replay_sha256": "e950061a16b35d83295548f32cd15a067667fc18b717d805ee5808799e4eb959",
+      "live_sha256": "e950061a16b35d83295548f32cd15a067667fc18b717d805ee5808799e4eb959",
+      "identical": true
+    },
+    {
+      "file": "frame_013177_cam0.pgm",
+      "replay_sha256": "b2fc86ab22d6d9ffa729684b2a7f5beaf2432912db62b2b40373fb2369853a16",
+      "live_sha256": "b2fc86ab22d6d9ffa729684b2a7f5beaf2432912db62b2b40373fb2369853a16",
+      "identical": true
+    },
+    {
+      "file": "frame_013177_cam1.pgm",
+      "replay_sha256": "76af110956a966027b4a3c86823c39f9c77a19a89f39dd53345d13a2f77c5650",
+      "live_sha256": "76af110956a966027b4a3c86823c39f9c77a19a89f39dd53345d13a2f77c5650",
+      "identical": true
+    },
+    {
+      "file": "frame_013177_cam2.pgm",
+      "replay_sha256": "3eed89c9b6e402a2b736293906a159d52deda40fda00eebed71a56eead251fe7",
+      "live_sha256": "3eed89c9b6e402a2b736293906a159d52deda40fda00eebed71a56eead251fe7",
+      "identical": true
+    },
+    {
+      "file": "frame_013178_cam0.pgm",
+      "replay_sha256": "b9fdbea1fcbfd52cadbda637b94503b355ae4f9153717cd0faebcb116c0ccd1b",
+      "live_sha256": "b9fdbea1fcbfd52cadbda637b94503b355ae4f9153717cd0faebcb116c0ccd1b",
+      "identical": true
+    },
+    {
+      "file": "frame_013178_cam1.pgm",
+      "replay_sha256": "39f25414f5f495c8265c6647a2f7102fcd4a48655d6e17aa3ec0be760bc88ff9",
+      "live_sha256": "39f25414f5f495c8265c6647a2f7102fcd4a48655d6e17aa3ec0be760bc88ff9",
+      "identical": true
+    },
+    {
+      "file": "frame_013178_cam2.pgm",
+      "replay_sha256": "103f46a05988b64faf58731f73ec0f6626e453a93b28aa58c55cf80df3284177",
+      "live_sha256": "103f46a05988b64faf58731f73ec0f6626e453a93b28aa58c55cf80df3284177",
+      "identical": true
+    },
+    {
+      "file": "frame_013179_cam0.pgm",
+      "replay_sha256": "fdfea19599470c120ed93f5974678df4d306ea7dbfa54ce4ce86c5caedab4f9b",
+      "live_sha256": "fdfea19599470c120ed93f5974678df4d306ea7dbfa54ce4ce86c5caedab4f9b",
+      "identical": true
+    },
+    {
+      "file": "frame_013179_cam1.pgm",
+      "replay_sha256": "870bcaf08a5acdab6ba7e0fb162b3f1d35965147ef1614813d8d559b53be62a7",
+      "live_sha256": "870bcaf08a5acdab6ba7e0fb162b3f1d35965147ef1614813d8d559b53be62a7",
+      "identical": true
+    },
+    {
+      "file": "frame_013179_cam2.pgm",
+      "replay_sha256": "4309fe280f38ea53828fc88a1ac3e3bc30981e9c246b04997510b95d6d36a235",
+      "live_sha256": "4309fe280f38ea53828fc88a1ac3e3bc30981e9c246b04997510b95d6d36a235",
+      "identical": true
+    },
+    {
+      "file": "frame_013180_cam0.pgm",
+      "replay_sha256": "9ad2c2b363d2fe77ef8a9d277c82cbe39e31dbd2b88f94f0b9d32e1c65c1bbf9",
+      "live_sha256": "9ad2c2b363d2fe77ef8a9d277c82cbe39e31dbd2b88f94f0b9d32e1c65c1bbf9",
+      "identical": true
+    },
+    {
+      "file": "frame_013180_cam1.pgm",
+      "replay_sha256": "f8d20bc4c875fd44c1feb72104ba9e60f61f22da776d8c153275534e943cf55c",
+      "live_sha256": "f8d20bc4c875fd44c1feb72104ba9e60f61f22da776d8c153275534e943cf55c",
+      "identical": true
+    },
+    {
+      "file": "frame_013180_cam2.pgm",
+      "replay_sha256": "0f177e210d07fdf97b506b5abcf5d7df8dbccd09d4168acb9f2b3d039e08acd3",
+      "live_sha256": "0f177e210d07fdf97b506b5abcf5d7df8dbccd09d4168acb9f2b3d039e08acd3",
+      "identical": true
+    },
+    {
+      "file": "frame_013181_cam0.pgm",
+      "replay_sha256": "5f65a944a27b915a885ccad21d0bbeef6d097ed2e2a91dcb61de11b4c9744395",
+      "live_sha256": "5f65a944a27b915a885ccad21d0bbeef6d097ed2e2a91dcb61de11b4c9744395",
+      "identical": true
+    },
+    {
+      "file": "frame_013181_cam1.pgm",
+      "replay_sha256": "e839c7835f8a7f161cbcc7b954fd8e90e25b6cb5e64c45024105349307fb014a",
+      "live_sha256": "e839c7835f8a7f161cbcc7b954fd8e90e25b6cb5e64c45024105349307fb014a",
+      "identical": true
+    },
+    {
+      "file": "frame_013181_cam2.pgm",
+      "replay_sha256": "819b1a65946d927f2b373100b3b93fbcaed7ee2f98a6554aa1f09b0a657ad12d",
+      "live_sha256": "819b1a65946d927f2b373100b3b93fbcaed7ee2f98a6554aa1f09b0a657ad12d",
+      "identical": true
+    },
+    {
+      "file": "frame_013182_cam0.pgm",
+      "replay_sha256": "be9f28a8842951070ca18e8abad9b2ed2b70b17b79f4277ca2311a13b949acbb",
+      "live_sha256": "be9f28a8842951070ca18e8abad9b2ed2b70b17b79f4277ca2311a13b949acbb",
+      "identical": true
+    },
+    {
+      "file": "frame_013182_cam1.pgm",
+      "replay_sha256": "4e54b1f0c6f9ece9e4e7a0b627648ce846ec9f0c94d597fcd4c44792336593e7",
+      "live_sha256": "4e54b1f0c6f9ece9e4e7a0b627648ce846ec9f0c94d597fcd4c44792336593e7",
+      "identical": true
+    },
+    {
+      "file": "frame_013182_cam2.pgm",
+      "replay_sha256": "b62d1bdc02fd0b202f5ce3a0d2ab33276fe7552d59f94176fb552355b38a01d8",
+      "live_sha256": "b62d1bdc02fd0b202f5ce3a0d2ab33276fe7552d59f94176fb552355b38a01d8",
+      "identical": true
+    },
+    {
+      "file": "frame_013183_cam0.pgm",
+      "replay_sha256": "43d62971597067cbb88483d90569a4e70ab460c52506a247c27c03061112af9a",
+      "live_sha256": "43d62971597067cbb88483d90569a4e70ab460c52506a247c27c03061112af9a",
+      "identical": true
+    },
+    {
+      "file": "frame_013183_cam1.pgm",
+      "replay_sha256": "81bdd23c802067d9878d6146208aac9f3906fb26c62bdce9ac2eed8d3b7241bb",
+      "live_sha256": "81bdd23c802067d9878d6146208aac9f3906fb26c62bdce9ac2eed8d3b7241bb",
+      "identical": true
+    },
+    {
+      "file": "frame_013183_cam2.pgm",
+      "replay_sha256": "47bd800cc7f58692a817e27567b7142fc4937b1637dd44d660c3674de9c5a4ec",
+      "live_sha256": "47bd800cc7f58692a817e27567b7142fc4937b1637dd44d660c3674de9c5a4ec",
+      "identical": true
+    },
+    {
+      "file": "frame_013184_cam0.pgm",
+      "replay_sha256": "d88fb42d84348b97e083ef6635fd1ce7fda34e02d89834c7e643b257380277b0",
+      "live_sha256": "d88fb42d84348b97e083ef6635fd1ce7fda34e02d89834c7e643b257380277b0",
+      "identical": true
+    },
+    {
+      "file": "frame_013184_cam1.pgm",
+      "replay_sha256": "029094ba0ca519e7e6b9c5ff840528c73ac25525ec17a10ffa98d8f54a447fa7",
+      "live_sha256": "029094ba0ca519e7e6b9c5ff840528c73ac25525ec17a10ffa98d8f54a447fa7",
+      "identical": true
+    },
+    {
+      "file": "frame_013184_cam2.pgm",
+      "replay_sha256": "f286f3c200bb1e7d5fb73710587666795ba13f2129c48b3629104bca4b04eb0a",
+      "live_sha256": "f286f3c200bb1e7d5fb73710587666795ba13f2129c48b3629104bca4b04eb0a",
+      "identical": true
+    },
+    {
+      "file": "frame_013185_cam0.pgm",
+      "replay_sha256": "e2557906d4a4a0d286b02f0cfd9a0eece28d0c7884ccb5c35701eac9589d4e9e",
+      "live_sha256": "e2557906d4a4a0d286b02f0cfd9a0eece28d0c7884ccb5c35701eac9589d4e9e",
+      "identical": true
+    },
+    {
+      "file": "frame_013185_cam1.pgm",
+      "replay_sha256": "8988393df20c81f878ec500b1c5648421d10831a1a3f5a5dad44f2ba96bed3f5",
+      "live_sha256": "8988393df20c81f878ec500b1c5648421d10831a1a3f5a5dad44f2ba96bed3f5",
+      "identical": true
+    },
+    {
+      "file": "frame_013185_cam2.pgm",
+      "replay_sha256": "c32d54fde76112b5d6c044aacbb665781533dc1a4995dbfe412b1ad1f14646c9",
+      "live_sha256": "c32d54fde76112b5d6c044aacbb665781533dc1a4995dbfe412b1ad1f14646c9",
+      "identical": true
+    },
+    {
+      "file": "frame_013186_cam0.pgm",
+      "replay_sha256": "a3d678e7045940e2653c07cdce7baa6d687ee94ce3448fa2df6245d8f02617d5",
+      "live_sha256": "a3d678e7045940e2653c07cdce7baa6d687ee94ce3448fa2df6245d8f02617d5",
+      "identical": true
+    },
+    {
+      "file": "frame_013186_cam1.pgm",
+      "replay_sha256": "1e2cb36d31a1409565051b7729f3a95d2aa6a7dda237d59756c55a9707cbb11f",
+      "live_sha256": "1e2cb36d31a1409565051b7729f3a95d2aa6a7dda237d59756c55a9707cbb11f",
+      "identical": true
+    },
+    {
+      "file": "frame_013186_cam2.pgm",
+      "replay_sha256": "e9db52bcef2b2823fde3c4c311a53f1355d93f8f7c0aa6b45e0854f00825907c",
+      "live_sha256": "e9db52bcef2b2823fde3c4c311a53f1355d93f8f7c0aa6b45e0854f00825907c",
+      "identical": true
+    },
+    {
+      "file": "frame_013187_cam0.pgm",
+      "replay_sha256": "7ea8a6150f9de530159bccbef75326e3fdd89161f512fd21b3d8da366ae0766d",
+      "live_sha256": "7ea8a6150f9de530159bccbef75326e3fdd89161f512fd21b3d8da366ae0766d",
+      "identical": true
+    },
+    {
+      "file": "frame_013187_cam1.pgm",
+      "replay_sha256": "920aaf1e1a5e2a404ceebdde2c1381f40b9fa536b4b2c8312d4384f6dc79aa16",
+      "live_sha256": "920aaf1e1a5e2a404ceebdde2c1381f40b9fa536b4b2c8312d4384f6dc79aa16",
+      "identical": true
+    },
+    {
+      "file": "frame_013187_cam2.pgm",
+      "replay_sha256": "baba9d86d0315d353edad27cd0d25e07e59fe374f806ff98edde815ea3941f0b",
+      "live_sha256": "baba9d86d0315d353edad27cd0d25e07e59fe374f806ff98edde815ea3941f0b",
+      "identical": true
+    },
+    {
+      "file": "frame_013188_cam0.pgm",
+      "replay_sha256": "4a751e04625848d44aac1289e8a085b1dff758be37ee10ee282a8a4de1200153",
+      "live_sha256": "4a751e04625848d44aac1289e8a085b1dff758be37ee10ee282a8a4de1200153",
+      "identical": true
+    },
+    {
+      "file": "frame_013188_cam1.pgm",
+      "replay_sha256": "4d3bd96c09bceff98398a9b72366c939ca9256d7158317dfdfafa857aff18343",
+      "live_sha256": "4d3bd96c09bceff98398a9b72366c939ca9256d7158317dfdfafa857aff18343",
+      "identical": true
+    },
+    {
+      "file": "frame_013188_cam2.pgm",
+      "replay_sha256": "69d89300d4e578009c7ddeb56e859794b2de8b28800b854411eeac62d3403953",
+      "live_sha256": "69d89300d4e578009c7ddeb56e859794b2de8b28800b854411eeac62d3403953",
+      "identical": true
+    },
+    {
+      "file": "frame_013189_cam0.pgm",
+      "replay_sha256": "db0cd81f652fd40276f36a36a1e51229c2f3605b11bf137b8caabac518ee59a2",
+      "live_sha256": "db0cd81f652fd40276f36a36a1e51229c2f3605b11bf137b8caabac518ee59a2",
+      "identical": true
+    },
+    {
+      "file": "frame_013189_cam1.pgm",
+      "replay_sha256": "6f5314efbfe500b8b9e2470e8698124594079118a7ebc5c8009f5e4c5675a9a7",
+      "live_sha256": "6f5314efbfe500b8b9e2470e8698124594079118a7ebc5c8009f5e4c5675a9a7",
+      "identical": true
+    },
+    {
+      "file": "frame_013189_cam2.pgm",
+      "replay_sha256": "3ad1f70e3a902445a325d324d0b654b2b3ed4f7de232ee8721a4a454fd0af93b",
+      "live_sha256": "3ad1f70e3a902445a325d324d0b654b2b3ed4f7de232ee8721a4a454fd0af93b",
+      "identical": true
+    },
+    {
+      "file": "frame_013190_cam0.pgm",
+      "replay_sha256": "08b40105a8582faf6be87a133749a96e7a4f592e4c8150f96d15b3e7f431e223",
+      "live_sha256": "08b40105a8582faf6be87a133749a96e7a4f592e4c8150f96d15b3e7f431e223",
+      "identical": true
+    },
+    {
+      "file": "frame_013190_cam1.pgm",
+      "replay_sha256": "7e9773841af74d96021b7086212d1f34ae0afbdbd885b68f89f0bec78523183f",
+      "live_sha256": "7e9773841af74d96021b7086212d1f34ae0afbdbd885b68f89f0bec78523183f",
+      "identical": true
+    },
+    {
+      "file": "frame_013190_cam2.pgm",
+      "replay_sha256": "14d934c31d9b484f364a9b38a9443cd774978f402fa366d81f1c1391f15b64f6",
+      "live_sha256": "14d934c31d9b484f364a9b38a9443cd774978f402fa366d81f1c1391f15b64f6",
+      "identical": true
+    },
+    {
+      "file": "frame_013191_cam0.pgm",
+      "replay_sha256": "4599046cb21de3fda3b0f8175efffa01fca4e980d762d00c1c45a42a39b38209",
+      "live_sha256": "4599046cb21de3fda3b0f8175efffa01fca4e980d762d00c1c45a42a39b38209",
+      "identical": true
+    },
+    {
+      "file": "frame_013191_cam1.pgm",
+      "replay_sha256": "b3c67fc9940b2b7420d27a0fa8551e5ae30bc79e29ab81bec9eaaafbdbb5a7b2",
+      "live_sha256": "b3c67fc9940b2b7420d27a0fa8551e5ae30bc79e29ab81bec9eaaafbdbb5a7b2",
+      "identical": true
+    },
+    {
+      "file": "frame_013191_cam2.pgm",
+      "replay_sha256": "f023585f73728dbaae6a8f072ff42c60832a60b1099f2a901026a03124ae57b1",
+      "live_sha256": "f023585f73728dbaae6a8f072ff42c60832a60b1099f2a901026a03124ae57b1",
+      "identical": true
+    },
+    {
+      "file": "frame_013192_cam0.pgm",
+      "replay_sha256": "5c672063e1d8c54947ac818a5bf07094d7fdf46b55641011e4dc1a3abb9fb630",
+      "live_sha256": "5c672063e1d8c54947ac818a5bf07094d7fdf46b55641011e4dc1a3abb9fb630",
+      "identical": true
+    },
+    {
+      "file": "frame_013192_cam1.pgm",
+      "replay_sha256": "e138aa927fda5afb7ec57b95b350ac402f32e9527b724238879926561046ecc6",
+      "live_sha256": "e138aa927fda5afb7ec57b95b350ac402f32e9527b724238879926561046ecc6",
+      "identical": true
+    },
+    {
+      "file": "frame_013192_cam2.pgm",
+      "replay_sha256": "13c7eed7e1bc614e311230413acef964a95a773fdc2c46075e01c1d0b7bc27ea",
+      "live_sha256": "13c7eed7e1bc614e311230413acef964a95a773fdc2c46075e01c1d0b7bc27ea",
+      "identical": true
+    },
+    {
+      "file": "frame_013193_cam0.pgm",
+      "replay_sha256": "37633e3bf183655440cf1c8e59635a621a272f9bfb0fc15f3028bbdba083504c",
+      "live_sha256": "37633e3bf183655440cf1c8e59635a621a272f9bfb0fc15f3028bbdba083504c",
+      "identical": true
+    },
+    {
+      "file": "frame_013193_cam1.pgm",
+      "replay_sha256": "dfcc44462f1762f9073741af33318c0bdc043bd34bb6e07af316538207d2366a",
+      "live_sha256": "dfcc44462f1762f9073741af33318c0bdc043bd34bb6e07af316538207d2366a",
+      "identical": true
+    },
+    {
+      "file": "frame_013193_cam2.pgm",
+      "replay_sha256": "a72009f46232d82d9f40d2c791f350f905698d1d25cc22cba42a2245eb7d1b7a",
+      "live_sha256": "a72009f46232d82d9f40d2c791f350f905698d1d25cc22cba42a2245eb7d1b7a",
+      "identical": true
+    },
+    {
+      "file": "frame_013194_cam0.pgm",
+      "replay_sha256": "6f0b3d18e86bb90b37f5933ffbd48c92adc0e259a2f1eb335ff5cefeee9e92ad",
+      "live_sha256": "6f0b3d18e86bb90b37f5933ffbd48c92adc0e259a2f1eb335ff5cefeee9e92ad",
+      "identical": true
+    },
+    {
+      "file": "frame_013194_cam1.pgm",
+      "replay_sha256": "04b130ebdfbc28dd463998c65682b349591a7a2a5870be870ee0b67efbc9bf3b",
+      "live_sha256": "04b130ebdfbc28dd463998c65682b349591a7a2a5870be870ee0b67efbc9bf3b",
+      "identical": true
+    },
+    {
+      "file": "frame_013194_cam2.pgm",
+      "replay_sha256": "8b5c1824f6f21fa14a3732566431705206aa9a935317c350299ee13e6335ca0e",
+      "live_sha256": "8b5c1824f6f21fa14a3732566431705206aa9a935317c350299ee13e6335ca0e",
+      "identical": true
+    }
+  ]
+}

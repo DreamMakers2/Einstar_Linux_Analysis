@@ -1,0 +1,1148 @@
+{
+ "schema": "einstar.exstar.hardware_state/1",
+ "generated_at": "2026-11-14T01:41:00+01:00",
+ "generated_by": "usb-agent (DeepSeek Harness subagent)",
+ "repo": {
+  "workdir": "<repo>",
+  "git_head": "04aa6a48dace77fb93169d1e2218878d20afee40",
+  "git_short": "04aa6a4",
+  "note": "Read-only investigation. No source, test or other doc modified; this file and docs/calibration/exstar_hardware_state.md are the only additions."
+ },
+ "confidence_scale": {
+  "A": "code/log/measured evidence, independently cross-checked",
+  "B": "one interpretation step, consistent with A-level facts",
+  "C": "inference without direct confirmation"
+ },
+ "device": {
+  "usb": {
+   "vid_pid": "3267:0003",
+   "product_string": "SHINING-CAM",
+   "manufacturer_string": "Shining3d",
+   "serial_string_descriptor": null,
+   "bus": 1,
+   "port": 5,
+   "devnum": 5,
+   "node": "/dev/bus/usb/001/005",
+   "speed": "High Speed 480 Mbps",
+   "bcdUSB": "0x0200",
+   "bcdDevice": "0x0000",
+   "interface": "1 interface, class ef/02/01 (IAD), 5 endpoints",
+   "endpoints": [
+    "0x01 INT OUT (bInterval 0 -> kernel repairs to 7)",
+    "0x81 INT IN (bInterval 0 -> 7)",
+    "0x02 BULK OUT",
+    "0x82 BULK IN",
+    "0x83 BULK IN"
+   ],
+   "kernel_driver_bound": null,
+   "enumerated_at": "2026-11-14T01:24:37+01:00 (kernel log, boot)",
+   "evidence": [
+    "lsusb -v",
+    "/sys/bus/usb/devices/1-5/*",
+    "journalctl -k",
+    "analysis/usb3/*"
+   ]
+  },
+  "identity_readback": {
+   "method": "read-only Get queries over EP1 (libeinstar probe + project driver probe)",
+   "serial": "<redacted-device-serial>",
+   "product": "EinScan10_01",
+   "firmware": "EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_EN",
+   "fx3": "2.10",
+   "fpga": "3.7",
+   "locale": "EN",
+   "sensor_count": 3,
+   "max_width": 1280,
+   "max_height": 1024,
+   "trigger_period_us": 66666,
+   "trigger_counts": {
+    "mono": 0,
+    "rgb": 0
+   },
+   "illuminator_readback": {
+    "laser_percent": 0,
+    "strobe_route0": 0,
+    "strobe_route1": 0
+   },
+   "exposure_us": [
+    5000,
+    5000,
+    5000
+   ],
+   "gain": [
+    500,
+    500,
+    500
+   ],
+   "temperature_raw": 0,
+   "matches_records": {
+    "serial_matches_2026_11_07_log": true,
+    "firmware_matches_docs_and_factory_snapshot": true,
+    "firmware_matches_exstar_deviceStatus_log_2026_11_14": true,
+    "confidence": "A"
+   }
+  },
+  "blob_readback_2026_11_14": {
+   "tool": "/tmp/einstar-probe-build/einstar-probe (rebuilt from tests/libeinstar-scratch at repo HEAD)",
+   "command_issued": "opcode 0x57 PageRead for pages 0 and 1 (6568 bytes), plus Get* identity/exposure/trigger/temperature queries",
+   "writes_issued": 0,
+   "bytes": 6568,
+   "sha256": "256dd440554387da8fcd5b48baa0b2e8c314a1eb90a89b85b2987bb0f9121148",
+   "fnv1a64": "0x17CB529DD59CCB6A",
+   "cross_check": {
+    "tool": "build/driver/einstar-capture-frames --backend libusb --probe-only",
+    "reported_fnv1a64": "0x17CB529DD59CCB6A",
+    "agrees": true
+   },
+   "private_copy": "<private-inputs>/exstar-20261114/device-readback/calibration.bin",
+   "confidence": "A",
+   "authorisation": "explicitly authorised by the coordinator as one bounded read-only read; read-only classification re-verified in tests/libeinstar-scratch/src/protocol.cpp (is_read_only(PageRead)==true, is_forbidden(PageWrite)==true, allow_writes false without --scan); two reads (libeinstar probe + project driver probe), zero writes",
+   "reads_taken": 2
+  },
+  "firmware_unchanged": {
+   "claim": "no firmware update occurred during the EXStar run",
+   "evidence": [
+    "version banner read before (2026-11-07, 2026-11-11) and after (2026-11-14) is identical",
+    "EXStar log only *checks* fabu_UPDATE/Configure/EinScan10_01_SC130_FX3_V2.10_FPGA_V3.7_EN_IAP.img (FirmwareUpgradeHelperEA.cpp:114) and deviceStatus says isForceFWUpdate=false",
+    "firmware lives in app slots 0x40000/0x1C0000, calibration in the separate data region at 0x400000 (docs/firmware/fx3_analysis.md 4.2, docs/firmware/format.md 7)"
+   ],
+   "confidence": "A-"
+  },
+  "calibration_layers": {
+   "production_records": {
+    "offset": "0x00C..0x2AC",
+    "stride": "0xF8",
+    "fields": "unkeyed 22 x f64: fx fy cx cy dist6 R9 T3",
+    "origin": "T expressed about ~550 mm from the rig origin",
+    "rewritten_by_exstar": false,
+    "evidence": "byte-identical region 0x000..0x39A before/after 2026-11-14",
+    "co_located_with": [
+     "ParaCCM/ParaDark tables 0x2F4..0x39A",
+     "board PN 0x178F",
+     "production date 0x1893"
+    ],
+    "role_confidence": "B (factory/production calibration)"
+   },
+   "app_ccf_slot": {
+    "offset": "0x39B..0x12BB",
+    "content": "u32 type=4, Left/Right 520 B + Tex 264 B, FQFQ at +0xF1C, yyyy-MM-dd hh:mm at +0xA14",
+    "rewritten_by_exstar": true,
+    "dates_written": [
+     "2026-02-09 21:34",
+     "2026-11-14 00:13"
+    ],
+    "role_confidence": "A (app-level EXStar calibration)"
+   },
+   "geometry_comparison": {
+    "method": "R_rel = R1 R0^T ; t_rel = T1 - R_rel T0 ; from the pre-run dump",
+    "production_records": {
+     "left_fx": 1158.7612,
+     "ir_baseline_mm": 160.0916,
+     "ir_rel_rot_deg": 22.08587,
+     "tex_left_mm": 122.8774
+    },
+    "ccf_set_A_2026_02_09": {
+     "left_fx_stored_proven": 1167.1154,
+     "left_fx_best_key": 1159.1154,
+     "ir_baseline_mm": 158.557,
+     "ir_rel_rot_deg": 22.138282,
+     "tex_left_mm": 125.3176
+    },
+    "difference": {
+     "ir_baseline_mm": 1.5346,
+     "ir_baseline_pct": 0.968,
+     "ir_rel_rot_deg": 0.052412,
+     "tex_left_mm": 2.4402
+    },
+    "orthonormality": "det(R)=1.000000000000, max|RR^T-I| <= 2.0e-15 for both layers",
+    "interpretation": "different solves of the same rig that share a bit-exact distortion model; pose/scale differ by ~1% in baseline, ~27x the CCF-to-CCF movement",
+    "shared_distortion": {
+     "max_abs_delta_kc": 5.3e-16,
+     "conclusion": "CCF distortion is inherited bit-exactly from the production records; only pose/scale and a few intrinsics differ"
+    },
+    "intrinsic_deltas_ccfA_best_minus_production": {
+     "Left": {
+      "fx": 0.354,
+      "fy": 0.341,
+      "cx": -0.275,
+      "cy": -0.041
+     },
+     "Right": {
+      "fx": 0.822,
+      "fy": 0.617,
+      "cx": -0.281,
+      "cy": 4.194
+     },
+     "Tex": {
+      "fx": 0.729,
+      "fy": 0.793,
+      "cx": -0.527,
+      "cy": 1.035
+     }
+    }
+   }
+  }
+ },
+ "calibration_storage": {
+  "answer": "BOTH host-side files and device-side non-volatile storage; EXStar wrote the 2026-11-14 calibration to the scanner as well as to disk",
+  "confidence": "A",
+  "device_side": {
+   "addressing": "flat byte space of the 6568-byte custom-info blob, read as 4 KiB pages 0..1",
+   "flash_region": {
+    "base": "0x400000",
+    "extent": "0x100000",
+    "block_size": "0x1000",
+    "blocks": 256,
+    "formula": "(0x400 + index) * 0x1000",
+    "source": "docs/firmware/fx3_analysis.md 4.2 / table at 0x40030324"
+   },
+   "writable_calibration_slots": {
+    "ccf_block": {
+     "offset": "0x39B",
+     "size": "0xF21 (3873)",
+     "content": "4-byte type=4, Left/Right/Tex records, 'FQFQ' magic at +0xF1C, yyyy-MM-dd hh:mm at +0xA14"
+    },
+    "wb_block": {
+     "offset": "0x12BC",
+     "size": "0x99 (153)",
+     "content": "u32 5 marker, wbdata 9x f64, wbdata_noled 9x f64, 'FWFW' marker"
+    }
+   },
+   "production_region_untouched": {
+    "range": "0x000..0x39A",
+    "content": "3 x 22-double camera records, ParaCCM/ParaDark tables, activeData/IDs",
+    "observed": "byte-identical before/after the 2026-11-14 run"
+   },
+   "device_commands": {
+    "read": "camera opcode 0x57 (PageRead), 4 KiB, bulk EP2; verified code + firmware handler FUN_4000BB00",
+    "write": "camera opcode 0x58 (PageWrite), erase+program 4 KiB; firmware handler FUN_4000BC28; NOT implemented in libeinstar and not issued by this investigation",
+    "vendor_api": "execute('ReadData',[offset,size]) / execute('WriteData',[offset,base64])"
+   }
+  },
+  "host_side": {
+   "current_dir": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150",
+   "files": [
+    "LeftCCF.txt",
+    "RightCCF.txt",
+    "TexCCF.txt",
+    "wbdata.txt",
+    "wbdata_noled.txt",
+    "ParaCCM_0.txt",
+    "ParaDark_0.txt",
+    "ParaCCM_noled_0.txt",
+    "ParaDark_noled_0.txt",
+    "activeBox.dat"
+   ],
+   "role": "mirror/cache of the device blob: at connect EXStar reads ReadData(0,6568) and rewrites host files from it; on calibration it packs the host files and writes them back to the device",
+   "confidence": "A for the read-at-connect and write-at-calibration paths; B for 'mirror' as the general rule"
+  },
+  "evidence": [
+   {
+    "id": "E1",
+    "type": "RE (pre-existing)",
+    "source": "analysis/calibration/re/storage_report.md sections 2-4",
+    "fact": "Sn3DEACalibrateController packs the 3 host CCF records into 0xF21 bytes and publishes writeCustomInfo(offset=0x39B, value=0xF21, additionInfo='calibData'); WriteDataRet returns a result. WB written at 0x12BC.",
+    "confidence": "A"
+   },
+   {
+    "id": "E2",
+    "type": "vendor log 2026-02-09",
+    "source": "analysis/logs/session_2026-02-09.log lines 32, 11233, 11812",
+    "fact": "ReadData(0,6568) at connect; WriteData(923,<base64 3873 B>) at 21:34:58 and WriteData(4796,<base64 153 B>) at 21:35:20. The decoded payloads are byte-identical to regions 0x39B..0x12BB and 0x12BC..0x1354 of the private pre-run dump (sha256 ead93b35..., 167ffaf1...).",
+    "confidence": "A"
+   },
+   {
+    "id": "E3",
+    "type": "vendor log 2026-11-14",
+    "source": "<EXStar-install>/Shining3d/EXStar/log/scanservice_20261114_000948_049.log lines 6154-6157, 6233-6235, 7519-7521, 7586-7588",
+    "fact": "00:13:11.941 writeCalibrateResultToDev,bRet = 1 -> cmd=writeCustomInfo -> 'write data , offSet.923' -> 00:13:12.423 'WriteData result.0' -> 'WriteDataRet calibration.'; 00:14:54.314 writeWhiteBalanceResultToDev,bRet = 1 -> 'write data , offSet.4796' -> 00:14:54.996 'WriteData result.0'.",
+    "confidence": "A"
+   },
+   {
+    "id": "E4",
+    "type": "device readback 2026-11-14",
+    "source": "this investigation",
+    "fact": "6568-byte blob now differs from the pre-run dump in exactly 2 regions (CCF 0x39B..0x12BB, WB 0x12BC..0x1354); the new CCF records are byte-identical to the new host Left/Right/TexCCF.txt and the new WB bytes to the new host wbdata/wbdata_noled.",
+    "confidence": "A"
+   },
+   {
+    "id": "E5",
+    "type": "firmware",
+    "source": "docs/firmware/fx3_analysis.md 4.2",
+    "fact": "EP2 dispatch table at 0x40030324 contains {0x1057, arg=2, FUN_4000BB00} read 4 KiB block and {0x1058, arg=*, FUN_4000BC28} erase+program 4 KiB block of the data region 0x400000..0x4FFFFF.",
+    "confidence": "A"
+   }
+  ]
+ },
+ "before_after": {
+  "pre_run_device_dump": {
+   "path": "<device-dump.bin>",
+   "sha256": "<redacted>",
+   "fnv1a64": "0x1879897CA84286A1",
+   "note": "2026-11-07 readback; identical to calibration-second.bin and to the immutable factory snapshot in ~/einstar-private/factory-snapshot-20261111 (4 reads 11-07..11-11 byte-identical)"
+  },
+  "post_run_device_dump": {
+   "path": "<private-inputs>/exstar-20261114/device-readback/calibration.bin",
+   "sha256": "256dd440554387da8fcd5b48baa0b2e8c314a1eb90a89b85b2987bb0f9121148",
+   "fnv1a64": "0x17CB529DD59CCB6A"
+  },
+  "diff": {
+   "differing_bytes": 366,
+   "runs": 53,
+   "regions": [
+    {
+     "range": [
+      "0x000",
+      "0x39B"
+     ],
+     "size": 924,
+     "old_sha256": "bc47878b59f4f886c540b8237212c95931898f4fa0de123c246fae37ddb6418b",
+     "new_sha256": "bc47878b59f4f886c540b8237212c95931898f4fa0de123c246fae37ddb6418b",
+     "identical": true
+    },
+    {
+     "range": [
+      "0x39B",
+      "0x12BC"
+     ],
+     "size": 3874,
+     "old_sha256": "ead93b352015a6e4a27b4aff4ec25592d5f8d9a51e2657d33ee6e574fb7750bd",
+     "new_sha256": "699051f14cb1e83a7ffd1af618460612233f73aed7e767e9ee2dc6aec4173e83",
+     "identical": false
+    },
+    {
+     "range": [
+      "0x12BC",
+      "0x1355"
+     ],
+     "size": 154,
+     "old_sha256": "167ffaf10274196439803f9366844e200e926e5010b8be6e242ec66d71b234eb",
+     "new_sha256": "0649fce68e905f888f5dd540f6bf0fcb4e7d591fe7b9d9ea442fe75cfbc04655",
+     "identical": false
+    },
+    {
+     "range": [
+      "0x1355",
+      "0x19A8"
+     ],
+     "size": 1620,
+     "old_sha256": "24263b4ebb12887cea4fbbd2d3c4d196a5268f9f862d548bdc0dda27a3925601",
+     "new_sha256": "24263b4ebb12887cea4fbbd2d3c4d196a5268f9f862d548bdc0dda27a3925601",
+     "identical": true
+    }
+   ],
+   "interpretation": "only the two vendor-writable calibration slots changed; production and identity regions are byte-identical"
+  },
+  "device_ccf_timestamp_string": {
+   "old": "2026-02-09 21:34",
+   "new": "2026-11-14 00:13",
+   "offset_in_blob": "0xDAF (block +0xA14)"
+  },
+  "device_wb_values": {
+   "wbdata": {
+    "old": [
+     1.62266421,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1.76606286
+    ],
+    "new": [
+     1.6034658,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1.79404747
+    ]
+   },
+   "wbdata_noled": {
+    "old": [
+     1.62598515,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1.76638734
+    ],
+    "new": [
+     1.60523856,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1.79638302
+    ]
+   }
+  }
+ },
+ "provenance": {
+  "naming": {
+   "A": "pre-2026-11-14 calibration of THIS unit (2026-02-09 21:34); identical in repo sources/calibration/res_Einscan-E10_200x150, in EXStar's pre-run backup/bak, and in the pre-run device blob",
+   "B": "installer-shipped CCF set (2024-06-28), NOT this unit's calibration (colour fx ~1571 vs ~1141); identical in repo sources/calibration/ccf_200x150 and EXStar ccf/200x150",
+   "C": "the new EXStar calibration written 2026-11-14 00:13-00:14; present on disk and on the device"
+  },
+  "sets": {
+   "device_pre_run": [
+    {
+     "path": "<device-dump.bin>",
+     "size": 6568,
+     "sha256": "<redacted>",
+     "role": "A (device copy)"
+    },
+    {
+     "path": "<private-inputs>/calibration-second.bin",
+     "size": 6568,
+     "sha256": "<redacted>",
+     "role": "A (device copy, duplicate read)"
+    }
+   ],
+   "device_post_run": [
+    {
+     "path": "<private-inputs>/exstar-20261114/device-readback/calibration.bin",
+     "size": 6568,
+     "sha256": "256dd440554387da8fcd5b48baa0b2e8c314a1eb90a89b85b2987bb0f9121148",
+     "role": "C (device copy)"
+    }
+   ],
+   "win_current_200x150": [
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/LeftCCF.txt",
+     "name": "LeftCCF.txt",
+     "size": 520,
+     "sha256": "7061f68a14809f48b592a2e9e37c9cf194d06c253786f0832e25fa3e8be73f13",
+     "mtime": "2026-11-14T00:13:11+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaCCM_0.txt",
+     "name": "ParaCCM_0.txt",
+     "size": 60,
+     "sha256": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+     "mtime": "2026-11-14T00:09:52+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaCCM_1.txt",
+     "name": "ParaCCM_1.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaCCM_2.txt",
+     "name": "ParaCCM_2.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaCCM_noled_0.txt",
+     "name": "ParaCCM_noled_0.txt",
+     "size": 60,
+     "sha256": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+     "mtime": "2026-11-14T00:09:52+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaCCM_noled_1.txt",
+     "name": "ParaCCM_noled_1.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaCCM_noled_2.txt",
+     "name": "ParaCCM_noled_2.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaDark_0.txt",
+     "name": "ParaDark_0.txt",
+     "size": 12,
+     "sha256": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+     "mtime": "2026-11-14T00:09:52+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaDark_1.txt",
+     "name": "ParaDark_1.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaDark_2.txt",
+     "name": "ParaDark_2.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaDark_noled_0.txt",
+     "name": "ParaDark_noled_0.txt",
+     "size": 12,
+     "sha256": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+     "mtime": "2026-11-14T00:09:52+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaDark_noled_1.txt",
+     "name": "ParaDark_noled_1.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/ParaDark_noled_2.txt",
+     "name": "ParaDark_noled_2.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2024-06-28T08:43:32+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/RightCCF.txt",
+     "name": "RightCCF.txt",
+     "size": 520,
+     "sha256": "a31a0119ed19cf575efbd740b5738bfb8a59427cd319df2b1dec46e346ef33bd",
+     "mtime": "2026-11-14T00:13:11+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/TexCCF.txt",
+     "name": "TexCCF.txt",
+     "size": 264,
+     "sha256": "6e8a74169f79ad8481ec4f51116fe3e0a3cecae0f0a42b39107992454c4ffec9",
+     "mtime": "2026-11-14T00:13:11+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/activeBox.dat",
+     "name": "activeBox.dat",
+     "size": 48,
+     "sha256": "abcad604662d65bea56674df4ec352cacea959d947b99e3dc497e8a449b7f4ba",
+     "mtime": "2026-11-14T00:13:11+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/wbdata.txt",
+     "name": "wbdata.txt",
+     "size": 72,
+     "sha256": "b083003d6ef2351ecc390fb5cd2ea40da30466149f9099fde12563c853d6ed85",
+     "mtime": "2026-11-14T00:14:54+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/200x150/wbdata_noled.txt",
+     "name": "wbdata_noled.txt",
+     "size": 72,
+     "sha256": "add1c3748783384830ed206edd1524e051dd1a2157590497f244235c823c34fe",
+     "mtime": "2026-11-14T00:14:54+01:00"
+    }
+   ],
+   "win_backup_bak": [
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/LeftCCF.txt",
+     "name": "LeftCCF.txt",
+     "size": 520,
+     "sha256": "6879a68d6926caebe19bdaee9a09dd05c50ee03f23cf6c5158801dcf8b5621d7",
+     "mtime": "2026-02-09T21:34:58+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/ParaCCM_0.txt",
+     "name": "ParaCCM_0.txt",
+     "size": 60,
+     "sha256": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+     "mtime": "2026-02-09T21:31:25+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/ParaCCM_noled_0.txt",
+     "name": "ParaCCM_noled_0.txt",
+     "size": 60,
+     "sha256": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+     "mtime": "2026-02-09T21:31:25+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/ParaDark_0.txt",
+     "name": "ParaDark_0.txt",
+     "size": 12,
+     "sha256": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+     "mtime": "2026-02-09T21:31:25+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/ParaDark_noled_0.txt",
+     "name": "ParaDark_noled_0.txt",
+     "size": 12,
+     "sha256": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+     "mtime": "2026-02-09T21:31:25+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/RightCCF.txt",
+     "name": "RightCCF.txt",
+     "size": 520,
+     "sha256": "45b80e2aa8bcece7fe400d79f42c852f67824de0b478f0ea1a0c3aa0b6cf1dc9",
+     "mtime": "2026-02-09T21:34:58+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/TexCCF.txt",
+     "name": "TexCCF.txt",
+     "size": 264,
+     "sha256": "7b0477a524b3af59d6907445f0e289da6f73891ac1714451de502bb240f84e64",
+     "mtime": "2026-02-09T21:34:58+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/wbdata.txt",
+     "name": "wbdata.txt",
+     "size": 72,
+     "sha256": "65072f996ac2473219da4a030fd54720b62fa4f5e4eb16c7a30ec61df402470d",
+     "mtime": "2026-02-09T21:35:20+01:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak/wbdata_noled.txt",
+     "name": "wbdata_noled.txt",
+     "size": 72,
+     "sha256": "22b8ef3b2753450de5dc09e44c643a40e87a2a083a634bd030398069cb851dbf",
+     "mtime": "2026-02-09T21:35:20+01:00"
+    }
+   ],
+   "win_installer_ccf": [
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/ccf/200x150/LeftCCF.txt",
+     "name": "LeftCCF.txt",
+     "size": 520,
+     "sha256": "a6182110954130331bd3e311a6fdc339bf41b4fcbc81d562b6202069b8b54513",
+     "mtime": "2024-06-28T09:23:10+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/ccf/200x150/RightCCF.txt",
+     "name": "RightCCF.txt",
+     "size": 520,
+     "sha256": "c59d46981980a79212348cdb3838f0ad37dfa03a5ba705af59699c0e23ac4da3",
+     "mtime": "2024-06-28T09:23:10+02:00"
+    },
+    {
+     "path": "<EXStar-install>/Shining3d/EXStar/ccf/200x150/TexCCF.txt",
+     "name": "TexCCF.txt",
+     "size": 264,
+     "sha256": "1d7debeae6ce4fd4000a6eb987bc28950e522ff13c80794702fdd248ffbf5980",
+     "mtime": "2024-06-28T09:23:10+02:00"
+    }
+   ],
+   "repo_res_Einscan-E10_200x150": [
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/LeftCCF.txt",
+     "name": "LeftCCF.txt",
+     "size": 520,
+     "sha256": "6879a68d6926caebe19bdaee9a09dd05c50ee03f23cf6c5158801dcf8b5621d7",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaCCM_0.txt",
+     "name": "ParaCCM_0.txt",
+     "size": 60,
+     "sha256": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaCCM_1.txt",
+     "name": "ParaCCM_1.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaCCM_2.txt",
+     "name": "ParaCCM_2.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaCCM_noled_0.txt",
+     "name": "ParaCCM_noled_0.txt",
+     "size": 60,
+     "sha256": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaCCM_noled_1.txt",
+     "name": "ParaCCM_noled_1.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaCCM_noled_2.txt",
+     "name": "ParaCCM_noled_2.txt",
+     "size": 60,
+     "sha256": "ead3721a8eba1a2171688635fe07c7af87dc15e00236ebb1310d050a3c24614e",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaDark_0.txt",
+     "name": "ParaDark_0.txt",
+     "size": 12,
+     "sha256": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaDark_1.txt",
+     "name": "ParaDark_1.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaDark_2.txt",
+     "name": "ParaDark_2.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaDark_noled_0.txt",
+     "name": "ParaDark_noled_0.txt",
+     "size": 12,
+     "sha256": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaDark_noled_1.txt",
+     "name": "ParaDark_noled_1.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/ParaDark_noled_2.txt",
+     "name": "ParaDark_noled_2.txt",
+     "size": 12,
+     "sha256": "7e54178190c0c3db16c6336d6db74e4b857e4e42139b09176afcbaa48797ce69",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/RightCCF.txt",
+     "name": "RightCCF.txt",
+     "size": 520,
+     "sha256": "45b80e2aa8bcece7fe400d79f42c852f67824de0b478f0ea1a0c3aa0b6cf1dc9",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/TexCCF.txt",
+     "name": "TexCCF.txt",
+     "size": 264,
+     "sha256": "7b0477a524b3af59d6907445f0e289da6f73891ac1714451de502bb240f84e64",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/wbdata.txt",
+     "name": "wbdata.txt",
+     "size": 72,
+     "sha256": "65072f996ac2473219da4a030fd54720b62fa4f5e4eb16c7a30ec61df402470d",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/res_Einscan-E10_200x150/wbdata_noled.txt",
+     "name": "wbdata_noled.txt",
+     "size": 72,
+     "sha256": "22b8ef3b2753450de5dc09e44c643a40e87a2a083a634bd030398069cb851dbf",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    }
+   ],
+   "repo_ccf_200x150": [
+    {
+     "path": "sources/calibration/ccf_200x150/LeftCCF.txt",
+     "name": "LeftCCF.txt",
+     "size": 520,
+     "sha256": "a6182110954130331bd3e311a6fdc339bf41b4fcbc81d562b6202069b8b54513",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/ccf_200x150/RightCCF.txt",
+     "name": "RightCCF.txt",
+     "size": 520,
+     "sha256": "c59d46981980a79212348cdb3838f0ad37dfa03a5ba705af59699c0e23ac4da3",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    },
+    {
+     "path": "sources/calibration/ccf_200x150/TexCCF.txt",
+     "name": "TexCCF.txt",
+     "size": 264,
+     "sha256": "1d7debeae6ce4fd4000a6eb987bc28950e522ff13c80794702fdd248ffbf5980",
+     "mtime": "2026-11-07T03:04:28+01:00"
+    }
+   ]
+  },
+  "byte_identity": [
+   "win_current/{Left,Right,Tex}CCF.txt == device blob 0x39B..0x12BB records (C)",
+   "win_current/{wbdata,wbdata_noled}.txt == device blob 0x12BC..0x1354 (C)",
+   "win_backup_bak/{Left,Right,Tex}CCF.txt, wbdata*, Para* == repo_A and == device pre-run blob (A)",
+   "win_installer_ccf/* == repo_B (B)",
+   "EXStar 1.2.2.0 DLLs on the Windows install are byte-identical to sources/web/extracted/EXStar_v1.2.2.0/{Sn3DEACalibrateController,Sn3DCalibDevFile,Sn3DCalibrateData}.dll and syncservice/device/einscan10.2.0.0.dll (A)"
+  ],
+  "factory_ambiguity": {
+   "profile": "~/einstar-private/einstar-profiles/factory-e10.json",
+   "observed": {
+    "kind": "factory",
+    "world_frame": "ir_left",
+    "skew_mode": "bouguet",
+    "provenance": [
+     "source=ccf",
+     "key_mode=best",
+     "ccf_sha256 = CCF set A"
+    ],
+    "conclusion": "our 'factory' profile is the app-level CCF of 2026-02-09, not the production 22-double records"
+   },
+   "key_mode_note": {
+    "IR_KEY_BEST_fx_fy_cx_cy": [
+     8.0,
+     -4.0,
+     -6.0,
+     -1.0
+    ],
+    "confidence_label": "hypothesis (only fx - fy = 12 is forced)",
+    "left_fx_values": {
+     "stored/proven": 1167.1154,
+     "best": 1159.1154,
+     "production_record": 1158.7612
+    },
+    "impact": "differences between calibrations unaffected; absolute intrinsics differ by up to 8 px depending on key mode"
+   },
+   "hypothesis_C": "Linux candidate baseline +0.92% vs CCF A while production records are +0.96% vs CCF A; worth testing whether the app CCF (not the rig) is the scale outlier. Not a conclusion."
+  }
+ },
+ "exstar_session_2026_11_14": {
+  "version": "1.2.2.0 (einscaninfo 2026-11-14T00-09-55.info2: softwareVer 1.2.2.0, installPath C:/Shining3d/EXStar)",
+  "timeline": [
+   {
+    "t": "2026-11-14T00:09:43",
+    "event": "globalPort.ini rewritten"
+   },
+   {
+    "t": "2026-11-14T00:09:46",
+    "event": "DeviceHelper log: connectDeviceBySerial -> attach -> read base-param -> triggerPeriodIO/triggerSwitchIO -> firmware version"
+   },
+   {
+    "t": "2026-11-14T00:09:52.647",
+    "event": "Sn3DDeviceBase 'ReadData result.0' (6568-byte blob read from device)"
+   },
+   {
+    "t": "2026-11-14T00:09:52.651",
+    "event": "deviceStatus: serial <redacted-device-serial>, firmware ...V2.10_FPGA_V3.7_EN, activeTime <redacted-production-date>, calibNum <redacted-part-number>"
+   },
+   {
+    "t": "2026-11-14T00:09:52.654",
+    "event": "ParaCCM_0/ParaDark_0 rewritten from device (content unchanged)"
+   },
+   {
+    "t": "2026-11-14T00:10:11",
+    "event": "res/config.db (SQLCipher) and res/system.ini rewritten"
+   },
+   {
+    "t": "2026-11-14T00:13:11.940",
+    "event": "new Left/Right/TexCCF.txt + activeBox.dat written; '[DP 2023] Send CCF'"
+   },
+   {
+    "t": "2026-11-14T00:13:11.941",
+    "event": "writeCalibrateResultToDev,bRet=1 -> writeCustomInfo offSet.923"
+   },
+   {
+    "t": "2026-11-14T00:13:12.423",
+    "event": "'WriteData result.0' (device acknowledged the CCF write)"
+   },
+   {
+    "t": "2026-11-14T00:14:54.312",
+    "event": "wbdata.txt / wbdata_noled.txt written"
+   },
+   {
+    "t": "2026-11-14T00:14:54.314",
+    "event": "writeWhiteBalanceResultToDev,bRet=1 -> writeCustomInfo offSet.4796"
+   },
+   {
+    "t": "2026-11-14T00:14:54.996",
+    "event": "'WriteData result.0' (device acknowledged the WB write)"
+   },
+   {
+    "t": "2026-11-14T00:14:58",
+    "event": "image stream disabled, session ends; einscaninfo calibration telemetry (binocular 23:10:13-23:13:12, texture 23:13:16-23:14:55 UTC) written"
+   }
+  ],
+  "backup_bak": {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/backup/bak",
+   "dir_mtime": "2026-11-14T00:09:52+01:00",
+   "contents_equal_to": "A (pre-run host set); file mtimes preserved at 2026-02-09 21:31-21:35",
+   "attribution": "created at the start of the 2026-11-14 run (dir mtime 00:09, before the 00:13 CCF write); EXStar logs no backup step, so the copying mechanism is inferred (B)"
+  }
+ },
+ "other_state": [
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/log/DeviceHelper_2026_11_14_00_09_46_120.txt",
+   "size": 760,
+   "sha256_prefix": "64fc50af6e89fc37",
+   "mtime": "2026-11-14T00:09:48",
+   "note": "connect/disconnect trace; read-only base-param reads"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/log/algLog/CAL_20261114_000951_076930_info.log",
+   "size": 4120,
+   "sha256_prefix": "3044838bcce28f57",
+   "mtime": "2026-11-14T00:10:14",
+   "note": "encrypted/base64 calibration algorithm log; not decoded"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/log/algLog/CAL_20261114_000951_076930_stts.log",
+   "size": 68336,
+   "sha256_prefix": "96b60bb674c58539",
+   "mtime": "2026-11-14T00:14:54",
+   "note": "calibration algorithm statistics log"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/log/scanservice_20261114_000948_049.log",
+   "size": 919209,
+   "sha256_prefix": "9372674e4f2518cb",
+   "mtime": "2026-11-14T00:23:59",
+   "note": "plaintext; contains the device ReadData and the two WriteData calls"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/log/EXStar_20261114_000944_607.log",
+   "size": 1409600,
+   "sha256_prefix": "fc6ab8cfccd76f6b",
+   "mtime": "2026-11-14T00:23:59",
+   "note": "UI/process log; deviceStatus, caliInfoChanged 2026-11-14T00:13:11.940, firmware check only"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/log/softwareUpgrade_20261114_000951_135.log",
+   "size": 35034,
+   "sha256_prefix": "b16c8285c354a726",
+   "mtime": "2026-11-14T00:23:55",
+   "note": "updater process; no image flashed"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/einscaninfo/2026-11-14T00-09-55.info2",
+   "size": 1435,
+   "sha256_prefix": "710a0e6248a5cf1e",
+   "mtime": "2026-11-14T00:23:55",
+   "note": "usage telemetry (machine, GPUs, install path)"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/einscaninfo/2026-11-13T23-14-58Z.info2",
+   "size": 1950,
+   "sha256_prefix": "e3aee0e1db393113",
+   "mtime": "2026-11-14T00:14:58",
+   "note": "calibration telemetry: binocular + texture both 'successed'"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/config.db",
+   "size": 204800,
+   "sha256_prefix": "4f2b0c2215147701",
+   "mtime": "2026-11-14T00:10:11",
+   "note": "SQLCipher-encrypted (no SQLite header; same 16-byte salt as the 2024 backup copy) - not readable without the key"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/NavigatorConfig.db",
+   "size": 8192,
+   "sha256_prefix": "23be125a991a4ea6",
+   "mtime": "2026-11-14T00:23:49",
+   "note": "3Dconnexion navigator config; unrelated"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/system.ini",
+   "size": 147,
+   "sha256_prefix": "49879021afd15b2f",
+   "mtime": "2026-11-14T00:10:11",
+   "note": "telemetry/updater flags; forceUpdateFirm is a policy flag, no update occurred"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/ScanSets/scansetting.ini",
+   "size": 88,
+   "sha256_prefix": "aef41cd68d2fbdcc",
+   "mtime": "2026-11-14T00:09:53",
+   "note": "UI language/first-start flags"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/setting.ini",
+   "size": 205,
+   "sha256_prefix": "fe347f456e27c400",
+   "mtime": "2026-11-14T00:09:56",
+   "note": "last file-dialog locations only"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/passport/config/account.json",
+   "size": 510,
+   "sha256_prefix": "9b27884e5c5b96fa",
+   "mtime": "2026-11-14T00:10:10",
+   "note": "account/session metadata; contents deliberately not recorded"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/calibrate_image_read_rapid",
+   "size": 98384850,
+   "files": 75,
+   "mtime": "2026-11-14T00:13:12",
+   "note": "25 x (Left,Right,Tex) 1280x1024 BMPs from the binocular calibration, 1,311,798 B each"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/Einscan-E10/calibrate_image_wb",
+   "size": 7870788,
+   "files": 6,
+   "mtime": "2026-11-14T00:14:55",
+   "note": "2 x (Left,Right,Tex) captures from the white-balance step"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/texcamera",
+   "size": 10488024,
+   "files": 4,
+   "mtime": "2026-11-14T00:14",
+   "note": "raw_0/raw_1 (1,311,798 B) and rgb_0/rgb_1 (3,932,214 B) texture-camera test captures"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/einscan_net_svr/informationCollect_20261114_000954_611.log",
+   "size": 40855,
+   "sha256_prefix": "e5db2483f4d77f06",
+   "mtime": "2026-11-14T00:23:55",
+   "note": "information collector log"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/res/einscan_net_svr/20261114-000958.10336",
+   "size": 3423,
+   "sha256_prefix": "73f466196ffb7012",
+   "mtime": "2026-11-14T00:23:58",
+   "note": "queued telemetry payload"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/backup/Einscan-E10/200x150",
+   "size": null,
+   "note": "installer-time copy (2024-06-28) of ParaCCM/ParaDark only, no CCF; all six ParaCCM files share one hash, all six ParaDark share one hash"
+  },
+  {
+   "path": "<EXStar-install>/Shining3d/EXStar/ccf/200x150",
+   "size": null,
+   "note": "installer-shipped CCF set (set B), byte-identical to repo ccf_200x150"
+  },
+  {
+   "path": "<EXStar-install>/Users/DV3/AppData/Local/App_EA.xml/cache/qmlcache",
+   "note": "Qt QML cache rewritten at 00:09 (app start); no calibration content"
+  },
+  {
+   "path": "<EXStar-install>/Users/DV3/AppData/Local/EXStar Hub",
+   "note": "untouched since 2026-08-03"
+  },
+  {
+   "path": "<EXStar-install>/ProgramData",
+   "note": "no Shining/EXStar/Einstar entry; nothing written by EXStar"
+  },
+  {
+   "path": "<EXStar-install>/Users/DV3/Documents/EXStar",
+   "note": "empty directory, mtime 00:09"
+  }
+ ],
+ "usb_protocol": {
+  "read_path": {
+   "opcode": "0x57 (group 0x10) PageRead",
+   "transport": "bulk EP2 0x02/0x82, 0x1400-byte buffers",
+   "payload": "u16 BE page index at request offset 8",
+   "reply": "status at 4, 4096 bytes at 9",
+   "verified": [
+    "libeinstar implementation (device.cpp)",
+    "FX3 handler FUN_4000BB00",
+    "used for this readback"
+   ]
+  },
+  "write_path": {
+   "opcode": "0x58 (group 0x10) PageWrite",
+   "transport": "bulk EP2",
+   "semantics": "erase 4 KiB sector + program 4096 bytes from request offset 10 (FUN_4000BC28)",
+   "status": "declared in the vendor API (WriteData) and proven in firmware; deliberately NOT implemented in libeinstar; forbidden by the driver safety gate",
+   "never_executed_by_this_investigation": true
+  },
+  "vendor_api": {
+   "ReadData": "offset,size -> base64 bytes (flat space)",
+   "WriteData": "offset,base64 -> result",
+   "observed_2026_02_09": [
+    "ReadData(0,6568)",
+    "WriteData(923,3873)",
+    "WriteData(4796,153)"
+   ],
+   "observed_2026_11_14": [
+    "ReadData(0,6568)",
+    "writeCustomInfo offset 923",
+    "writeCustomInfo offset 4796"
+   ]
+  },
+  "data_region": {
+   "flash": "0x400000..0x4FFFFF (256 x 4 KiB)",
+   "note": "separate from app slots 0x40000/0x1C0000 and FPGA slots 0x80000/0x200000"
+  },
+  "unknown_or_unverified": [
+   "exact USB framing the vendor uses for WriteData inside einscan10.2.0.0.dll (the plugin's execute handler is not fully mapped; analysis/ghidra/Einscan10Device)",
+   "whether 0x58 requires a full 4 KiB block and how a partial write performs read-modify-write inside the device",
+   "meaning of reply byte 8 in page replies (0, unused)",
+   "whether the XOR command mask is ever required (it was not for readback; reply byte 1 = 0x02 in plaintext)",
+   "physical flash size/type: format.md assumes 4 MiB, but the data region starts exactly at 4 MiB"
+  ]
+ },
+ "safety": {
+  "operations_performed": [
+   "libusb enumeration (no claim)",
+   "einstar-probe --info --dump-flash: handshake, Get* identity/queries, 2 x PageRead",
+   "build/driver/einstar-capture-frames --backend libusb --probe-only: ControlChannel open, Get* reads, calibration read, then close"
+  ],
+  "operations_refused": [
+   "opcode 0x58 PageWrite",
+   "system 0x06 firmware update",
+   "system 0x08 reboot",
+   "any strobe/laser/trigger/exposure write",
+   "any EEPROM or USB-descriptor change",
+   "USB 3.0 attempt",
+   "mounting the Windows partition read-write"
+  ],
+  "device_left_idle": {
+   "trigger_counts": "0 / 0 (two independent reads)",
+   "illuminator_readback": "laser 0 %, strobe route0 0, route1 0",
+   "streaming": "not started",
+   "volatile_settings": "unchanged; device reports defaults (period 66666 us, 5000 us / gain 500) consistent with a power cycle",
+   "holder_processes": "none",
+   "kernel_driver": "none bound",
+   "post_run_kernel_log": "no usb 1-5 message (no reset/error)"
+  },
+  "windows_partition": {
+   "mount": "ro (ntfs3)",
+   "writes_attempted": 0
+  }
+ },
+ "open_questions": [
+  {
+   "q": "Is the 2026-02-09 CCF the unit's original factory CCF, or itself a previous EXStar recalibration?",
+   "evidence_that_would_settle": "SHINING service record / original shipment files; the <redacted-production-date> production block is the only factory-dated artefact we hold"
+  },
+  {
+   "q": "Does the device keep any calibration-valid flag or time outside the CCF block?",
+   "evidence_that_would_settle": "byte-diff of the full 1 MiB data region before/after a calibration (only blocks 0/1 were touched here, so no other flag in the 6568 bytes changed)"
+  },
+  {
+   "q": "Exact USB framing/behaviour of 0x58 and whether the vendor performs read-modify-write in the host or device",
+   "evidence_that_would_settle": "USBPcap/Wireshark capture of a Windows WriteData, or a complete map of einscan10.2.0.0.dll execute handler"
+  },
+  {
+   "q": "Physical location/size of the data region at 0x400000",
+   "evidence_that_would_settle": "FX3 SPI part number from board photos/teardown, or a read of block 0xFF"
+  },
+  {
+   "q": "Would a fresh EXStar install with different host files adopt this device's new CCF?",
+   "evidence_that_would_settle": "connect EXStar with the 200x150 dir removed (destructive on the host, not recommended) or a Windows readback session"
+  },
+  {
+   "q": "Which CCF key hypothesis is correct for fx/fy/cx/cy?",
+   "evidence_that_would_settle": "an independent absolute measurement (reference object / known-distance target) or a vendor statement; the production records favour the 'best' key to <1 px but are a different calibration"
+  },
+  {
+   "q": "Which layer should our pipeline trust: production records or the EXStar CCF?",
+   "evidence_that_would_settle": "calibrated reference-object scans solved with each model on the same captured data"
+  }
+ ]
+}

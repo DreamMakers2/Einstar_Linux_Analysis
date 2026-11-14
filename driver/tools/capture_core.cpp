@@ -17,6 +17,7 @@
 #include <limits>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
 #include <system_error>
 #include <thread>
@@ -205,6 +206,10 @@ Status write_text_atomic(const std::string& path, std::string_view content,
 // Small helpers
 // ---------------------------------------------------------------------------
 
+std::string frame_filename(std::uint32_t group, std::uint8_t camera) {
+  return stream_filename(group, camera);
+}
+
 std::string_view camera_name(std::uint8_t camera) noexcept {
   switch (camera) {
     case 0: return "right_ir";
@@ -251,6 +256,163 @@ bool valid_frame(const Frame& frame, std::uint32_t width, std::uint32_t height,
 // ---------------------------------------------------------------------------
 // Recording verification
 // ---------------------------------------------------------------------------
+
+namespace {
+
+std::uint16_t trailer_le16(const std::byte* data) {
+  return static_cast<std::uint16_t>(std::to_integer<std::uint8_t>(data[0])) |
+         static_cast<std::uint16_t>(
+             static_cast<std::uint16_t>(std::to_integer<std::uint8_t>(data[1]))
+             << 8U);
+}
+
+std::uint32_t trailer_le32(const std::byte* data) {
+  return static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(data[0])) |
+         (static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(data[1]))
+          << 8U) |
+         (static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(data[2]))
+          << 16U) |
+         (static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(data[3]))
+          << 24U);
+}
+
+std::uint64_t trailer_le64(const std::byte* data) {
+  return static_cast<std::uint64_t>(trailer_le32(data)) |
+         (static_cast<std::uint64_t>(trailer_le32(data + 4)) << 32U);
+}
+
+//: 36-byte record header + 32-byte trailer payload + 4-byte CRC.
+constexpr std::uint64_t kTrailerRecordBytes =
+    recording::kRecordHeaderSize + recording::kTrailerPayloadSize + 4;
+
+}  // namespace
+
+Result<RecordingTrailerInfo> read_recording_trailer(const std::string& path) {
+  if (path.empty()) {
+    return fail(ErrorCode::InvalidArgument, "recording path is empty");
+  }
+  std::error_code stat_error;
+  const std::uint64_t file_size = std::filesystem::file_size(path, stat_error);
+  if (stat_error) {
+    return fail(ErrorCode::IoError,
+                "cannot stat recording file " + path + ": " +
+                    stat_error.message());
+  }
+  if (file_size < recording::kFileHeaderSize + kTrailerRecordBytes) {
+    return fail(ErrorCode::Protocol,
+                "refusing recording " + path +
+                    ": too small to contain a trailer record (missing or "
+                    "truncated)");
+  }
+  std::ifstream file(path, std::ios::binary);
+  if (!file) {
+    return fail(ErrorCode::IoError, "cannot open recording file: " + path);
+  }
+  std::array<std::byte, recording::kFileHeaderSize> header{};
+  file.read(reinterpret_cast<char*>(header.data()),
+            static_cast<std::streamsize>(header.size()));
+  if (file.gcount() != static_cast<std::streamsize>(header.size())) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path + ": truncated file header");
+  }
+  constexpr char kMagic[8] = {'E', 'I', 'N', 'S', 'T', 'A', 'R', '1'};
+  if (std::memcmp(header.data(), kMagic, sizeof(kMagic)) != 0) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path + ": bad file magic");
+  }
+  const std::uint16_t version = trailer_le16(header.data() + 8);
+  const std::uint16_t header_size = trailer_le16(header.data() + 10);
+  if (version != recording::kFormatVersion ||
+      header_size != recording::kFileHeaderSize) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path +
+                    ": unsupported version/header size (not an EINSTAR1 "
+                    "recording this build can read)");
+  }
+  const std::span<const std::byte> prefix(header.data(), 32);
+  if (recording::RawRecorder::crc32(prefix) !=
+      trailer_le32(header.data() + 32)) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path + ": header CRC mismatch");
+  }
+
+  const std::uint64_t trailer_offset = file_size - kTrailerRecordBytes;
+  file.seekg(static_cast<std::streamoff>(trailer_offset), std::ios::beg);
+  if (!file) {
+    return fail(ErrorCode::IoError,
+                "recording " + path + ": cannot seek to the trailer record");
+  }
+  std::array<std::byte, kTrailerRecordBytes> raw{};
+  file.read(reinterpret_cast<char*>(raw.data()),
+            static_cast<std::streamsize>(raw.size()));
+  if (file.gcount() != static_cast<std::streamsize>(raw.size())) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path +
+                    ": truncated trailer record (missing or partial final "
+                    "record)");
+  }
+  if (trailer_le32(raw.data()) != recording::kRecordMagic) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path +
+                    ": final record is not an ES1R record (trailer missing or "
+                    "the file is still being appended)");
+  }
+  const std::uint32_t total = trailer_le32(raw.data() + 4);
+  const auto type = static_cast<recording::RecordType>(
+      std::to_integer<std::uint8_t>(raw[8]));
+  const std::uint32_t payload_len = trailer_le32(raw.data() + 32);
+  if (total != kTrailerRecordBytes) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path + ": final record length " +
+                    std::to_string(total) + " is not a 72-byte trailer record");
+  }
+  if (type != recording::RecordType::Trailer) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path +
+                    ": final record is not a trailer record");
+  }
+  if (payload_len != recording::kTrailerPayloadSize) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path + ": invalid trailer payload length");
+  }
+  const std::span<const std::byte> covered(raw.data(),
+                                           raw.size() - 4);
+  if (recording::RawRecorder::crc32(covered) !=
+      trailer_le32(raw.data() + raw.size() - 4)) {
+    return fail(ErrorCode::Protocol,
+                "recording " + path + ": trailer record CRC mismatch");
+  }
+
+  const std::byte* payload = raw.data() + recording::kRecordHeaderSize;
+  RecordingTrailerInfo info;
+  info.path = path;
+  info.file_size = file_size;
+  info.trailer_offset = trailer_offset;
+  info.digest = trailer_le64(payload);
+  info.transfers = trailer_le64(payload + 8);
+  info.bytes = trailer_le64(payload + 16);
+  info.version = version;
+  info.flags = trailer_le32(header.data() + 12);
+  info.start_host_ns = trailer_le64(header.data() + 16);
+  info.trailer_present = (trailer_offset + kTrailerRecordBytes == file_size);
+  info.digest_verified = false;  // declared evidence only
+  return info;
+}
+
+RecordingVerifyMode resolve_recording_verify_mode(
+    RecordingVerifyMode requested, bool simulated,
+    std::uint64_t file_size) noexcept {
+  if (requested != RecordingVerifyMode::Auto) {
+    return requested;
+  }
+  if (simulated) {
+    return RecordingVerifyMode::Full;
+  }
+  if (file_size <= kFullVerifyMaxBytes) {
+    return RecordingVerifyMode::Full;
+  }
+  return RecordingVerifyMode::Trailer;
+}
 
 Result<recording::Recording> verify_recording(const std::string& path) {
   if (path.empty()) {
@@ -438,7 +600,12 @@ GroupWriter::GroupWriter(std::string output_directory, std::uint32_t width,
                          std::uint32_t height)
     : directory_(std::move(output_directory)), width_(width), height_(height) {}
 
-Status GroupWriter::prepare() { return ensure_directory(directory_); }
+Status GroupWriter::prepare() {
+  if (sink_) {
+    return Status::success();  // pipe mode: no output directory
+  }
+  return ensure_directory(directory_);
+}
 
 std::string GroupWriter::file_path(std::string_view name) const {
   return join_path(directory_, name);
@@ -521,9 +688,29 @@ Status GroupWriter::add(const Frame& frame) {
   return Status::success();
 }
 
+bool GroupWriter::group_selected(std::uint32_t group) const noexcept {
+  if (selection_) {
+    return selection_->find(group) != selection_->end();
+  }
+  if (group < filter_first_) {
+    return false;
+  }
+  if (filter_last_ != 0xFFFFFFFFU && group > filter_last_) {
+    return false;
+  }
+  return true;
+}
+
 Status GroupWriter::write_group(PendingGroup& pending) {
+  // Absolute dense id: skipped groups still consume an id so a partial replay
+  // keeps the numbering a full replay would produce.
   const std::uint32_t group =
-      static_cast<std::uint32_t>(groups_.size());
+      group_base_ + static_cast<std::uint32_t>(groups_completed_);
+  ++groups_completed_;
+  if (!group_selected(group)) {
+    ++stats_.groups_skipped;
+    return Status::success();
+  }
   if (group > kMaxOutputGroups) {
     return Status::error(
         ErrorCode::Exhausted,
@@ -536,9 +723,6 @@ Status GroupWriter::write_group(PendingGroup& pending) {
   record.device_group = pending.device_group;
   record.host_time_ns = 0;
   bool have_time = false;
-
-  std::array<std::string, kStreamCount> final_names;
-  std::array<std::string, kStreamCount> temporary_names;
 
   // Cross-camera sync check: the three frames of one trigger group must carry
   // the same per-exposure slot id.  The u64 group counter is the grouping key;
@@ -554,15 +738,40 @@ Status GroupWriter::write_group(PendingGroup& pending) {
   for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
     const StreamFrame& stream = *pending.streams[camera];
     record.frame_ids[camera] = stream.frame_id;
-    record.digests[camera] = digest_bytes(kFnvOffset, stream.pixels);
     if (!have_time || stream.host_time_ns < record.host_time_ns) {
       record.host_time_ns = stream.host_time_ns;
       have_time = true;
     }
+    if (compute_digests_) {
+      record.digests[camera] = digest_bytes(kFnvOffset, stream.pixels);
+    }
+  }
+
+  if (sink_) {
+    // Streaming (pipe) output: hand the pixels over instead of touching disk.
+    std::array<std::vector<std::uint8_t>, kStreamCount> pixels;
+    for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
+      pixels[camera] = std::move(pending.streams[camera]->pixels);
+    }
+    Status status = sink_(record, pixels);
+    if (!status.ok()) {
+      return status;
+    }
+    stats_.frames_written += kStreamCount;
+    ++stats_.groups_written;
+    stats_.bytes_written += static_cast<std::uint64_t>(width_) * height_ *
+                            kStreamCount;
+    groups_.push_back(std::move(record));
+    return Status::success();
+  }
+
+  std::array<std::string, kStreamCount> final_names;
+  std::array<std::string, kStreamCount> temporary_names;
+  for (std::uint8_t camera = 0; camera < kStreamCount; ++camera) {
     final_names[camera] = stream_filename(group, camera);
     temporary_names[camera] = final_names[camera] + ".tmp";
     Status status = write_pgm(file_path(temporary_names[camera]), width_, height_,
-                              stream.pixels);
+                              pending.streams[camera]->pixels);
     if (!status.ok()) {
       for (std::uint8_t cleanup = 0; cleanup <= camera; ++cleanup) {
         std::error_code ignored;
@@ -975,7 +1184,14 @@ Result<ManifestWriteResult> write_frames_manifest(const std::string& path,
     out += "  \"recording\": {\"path\": " + json_string(info.recorded_path) +
            ", \"transfers\": " + std::to_string(info.recorded_transfers) +
            ", \"bytes\": " + std::to_string(info.recorded_bytes) +
-           ", \"digest_fnv1a64\": " + std::to_string(info.recorded_digest) + "},\n";
+           ", \"digest_fnv1a64\": " + std::to_string(info.recorded_digest) +
+           ", \"verification\": " + json_string(info.recorded_verification) +
+           ", \"trailer_checked\": " +
+           (info.recorded_trailer_checked ? "true" : "false") +
+           ", \"digest_verified\": " +
+           (info.recorded_digest_verified ? "true" : "false") +
+           ", \"file_size\": " + std::to_string(info.recorded_file_size) +
+           "},\n";
   }
   out += render_device(info.device) + ",\n";
   out += render_reassembly(info.metrics) + ",\n";
@@ -1933,23 +2149,60 @@ Result<CaptureSessionResult> run_capture_session(
   manifest.virtual_throughput_mbps =
       mb_per_second(stats.bytes_received, manifest.metrics.virtual_seconds);
   if (!options.record_path.empty()) {
-    auto recorded = verify_recording(options.record_path);
-    if (!recorded) {
-      std::fprintf(stderr, "recording verification failed: %s\n",
-                   recorded.error().message().c_str());
-      if (failure.ok()) {
-        failure = recorded.error();
-        reason = StopReason::Error;
+    // Finalisation runs inside the stop deadline.  Re-reading a 52 GB
+    // recording here is what made the capture child miss the process-safety
+    // watchdog: for real large recordings only the final 72-byte trailer
+    // record is read/validated (declared evidence, digest NOT recomputed);
+    // small and simulated recordings keep the full verification.
+    std::error_code stat_error;
+    const std::uint64_t recorded_file_size =
+        std::filesystem::file_size(options.record_path, stat_error);
+    const RecordingVerifyMode verify_mode = resolve_recording_verify_mode(
+        options.recording_verify, options.manifest.simulated,
+        stat_error ? 0 : recorded_file_size);
+    manifest.recorded_path = options.record_path;
+    manifest.recorded_file_size = stat_error ? 0 : recorded_file_size;
+    if (verify_mode == RecordingVerifyMode::Full) {
+      auto recorded = verify_recording(options.record_path);
+      if (!recorded) {
+        std::fprintf(stderr, "recording verification failed: %s\n",
+                     recorded.error().message().c_str());
+        if (failure.ok()) {
+          failure = recorded.error();
+          reason = StopReason::Error;
+        }
+      } else {
+        std::uint64_t recorded_bytes = 0;
+        for (const auto& transfer : recorded->transfers) {
+          recorded_bytes += transfer.bytes.size();
+        }
+        manifest.recorded_transfers = recorded->transfers.size();
+        manifest.recorded_bytes = recorded_bytes;
+        manifest.recorded_digest = recorded->trailer_digest;
+        manifest.recorded_verification = "full";
+        manifest.recorded_trailer_checked = true;
+        // verify_recording() recomputed the FNV-1a digest over every transfer
+        // payload and matched the trailer, so this is a verified digest.
+        manifest.recorded_digest_verified = true;
       }
     } else {
-      std::uint64_t recorded_bytes = 0;
-      for (const auto& transfer : recorded->transfers) {
-        recorded_bytes += transfer.bytes.size();
+      auto trailer = read_recording_trailer(options.record_path);
+      if (!trailer) {
+        std::fprintf(stderr, "recording trailer check failed: %s\n",
+                     trailer.error().message().c_str());
+        if (failure.ok()) {
+          failure = trailer.error();
+          reason = StopReason::Error;
+        }
+      } else {
+        manifest.recorded_transfers = trailer->transfers;
+        manifest.recorded_bytes = trailer->bytes;
+        manifest.recorded_digest = trailer->digest;
+        manifest.recorded_verification = "trailer";
+        manifest.recorded_trailer_checked = trailer->trailer_present;
+        manifest.recorded_digest_verified = false;  // declared, not recomputed
+        manifest.recorded_file_size = trailer->file_size;
       }
-      manifest.recorded_path = options.record_path;
-      manifest.recorded_transfers = recorded->transfers.size();
-      manifest.recorded_bytes = recorded_bytes;
-      manifest.recorded_digest = recorded->trailer_digest;
     }
   }
 
@@ -1997,70 +2250,208 @@ Result<CaptureSessionResult> run_capture_session(
 // ---------------------------------------------------------------------------
 
 /// Recover the wire framing of a recording: explicit metadata first, then a
-/// structural probe on the first transfer.  The two formats are unambiguous
-/// because a length-prefixed packet starts with a plausible u32 length followed
-/// by a plausible header, while a raw packet starts with the header itself.
-FramingMode detect_recording_framing(const recording::Recording& recording) {
-  const std::string& metadata = recording.header.metadata;
+/// structural probe on the first transfer payload bytes.  The two formats are
+/// unambiguous because a length-prefixed packet starts with a plausible u32
+/// length followed by a plausible header, while a raw packet starts with the
+/// header itself.  `first_payload` is the prefix captured by the streaming
+/// verifier (empty in a single-pass replay without metadata).
+FramingMode detect_recording_framing(std::string_view metadata,
+                                     std::span<const std::byte> first_payload) {
   const std::size_t key = metadata.find("framing=");
-  if (key != std::string::npos) {
-    std::string value = metadata.substr(key + 8);
+  if (key != std::string_view::npos) {
+    std::string value(metadata.substr(key + 8));
     const std::size_t end = value.find(';');
     if (end != std::string::npos) {
       value = value.substr(0, end);
     }
     return framing_mode_from_string(value);
   }
-  for (const auto& transfer : recording.transfers) {
-    if (transfer.bytes.size() < kStreamHeaderSize) {
-      continue;
-    }
-    const auto* bytes = transfer.bytes.data();
-    if (PacketFramer::header_is_plausible(bytes)) {
-      return FramingMode::Raw;
-    }
-    if (transfer.bytes.size() >= kStreamHeaderSize + kStreamLengthSize) {
-      const std::uint32_t declared = load_be32(bytes);
-      if (declared >= kStreamHeaderSize &&
-          PacketFramer::header_is_plausible(bytes + kStreamLengthSize)) {
-        return FramingMode::LengthPrefixed;
-      }
+  const std::byte* bytes = first_payload.data();
+  if (first_payload.size() >= kStreamHeaderSize &&
+      PacketFramer::header_is_plausible(bytes)) {
+    return FramingMode::Raw;
+  }
+  if (first_payload.size() >= kStreamHeaderSize + kStreamLengthSize) {
+    const std::uint32_t declared = load_be32(bytes);
+    if (declared >= kStreamHeaderSize &&
+        PacketFramer::header_is_plausible(bytes + kStreamLengthSize)) {
+      return FramingMode::LengthPrefixed;
     }
   }
   return FramingMode::Raw;
 }
 
-Result<ReplayReport> replay_recording(const ReplayOptions& options) {
+std::uint64_t peak_rss_kb() {
+#ifdef __linux__
+  std::ifstream status("/proc/self/status");
+  std::string line;
+  while (std::getline(status, line)) {
+    if (line.rfind("VmHWM:", 0) == 0) {
+      std::istringstream values(line.substr(6));
+      std::uint64_t kb = 0;
+      values >> kb;
+      return kb;
+    }
+  }
+#endif
+  return 0;
+}
+
+Result<recording::StreamingVerifyStats> verify_recording_stream(
+    const std::string& path) {
+  if (path.empty()) {
+    return fail(ErrorCode::InvalidArgument, "recording path is empty");
+  }
+  auto stats = recording::verify_recording_stream(path);
+  if (!stats) {
+    return fail(ErrorCode::Protocol,
+                "refusing recording " + path + ": " + stats.error().message() +
+                    " (header CRC, record CRC, layout and trailer are "
+                    "validated)");
+  }
+  return stats;
+}
+
+namespace {
+
+void set_manifest_source(ManifestInfo& manifest,
+                         const StreamReplayOptions& options,
+                         const recording::StreamingVerifyStats& stats) {
+  manifest.source_recording = options.input;
+  if (stats.has_trailer) {
+    manifest.source_transfers = stats.trailer_transfers;
+    manifest.source_bytes = stats.trailer_bytes;
+    manifest.source_digest = stats.trailer_digest;
+  } else {
+    manifest.source_transfers = stats.transfer_records;
+    manifest.source_bytes = stats.payload_bytes;
+    manifest.source_digest = stats.digest;
+  }
+  manifest.source_verified = stats.trailer_verified;
+}
+
+}  // namespace
+
+Result<StreamReplayReport> stream_replay(const StreamReplayOptions& options) {
   if (options.input.empty()) {
     return fail(ErrorCode::InvalidArgument, "recording path is empty");
   }
-  auto recording = verify_recording(options.input);
-  if (!recording) {
-    return fail(recording.error());
-  }
-  std::uint64_t expected_bytes = 0;
-  for (const auto& transfer : recording->transfers) {
-    expected_bytes += transfer.bytes.size();
-  }
-  if (recording->transfers.empty() || expected_bytes == 0) {
-    return fail(ErrorCode::Protocol,
-                "refusing recording " + options.input +
-                    ": it contains no transfer bytes to replay");
+  StreamReplayReport report;
+  report.single_pass = options.single_pass;
+  const auto wall_start = std::chrono::steady_clock::now();
+
+  if (options.verify_only) {
+    auto stats = verify_recording_stream(options.input);
+    if (!stats) {
+      return fail(stats.error());
+    }
+    report.verification = *stats;
+    report.verification_complete = true;
+    report.manifest.tool = options.tool_name;
+    report.manifest.backend = "simulated";
+    report.manifest.simulated = true;
+    report.manifest.live = false;
+    set_manifest_source(report.manifest, options, report.verification);
+    report.wall_seconds = seconds_between(wall_start,
+                                          std::chrono::steady_clock::now());
+    report.throughput_mbps =
+        mb_per_second(report.verification.payload_bytes, report.wall_seconds);
+    report.peak_rss_kb = peak_rss_kb();
+    return report;
   }
 
-  auto directory = prepare_output_directory(options.output_directory);
-  if (!directory) {
-    return fail(directory.error());
+  if (!options.group_sink && options.output_directory.empty()) {
+    return fail(ErrorCode::InvalidArgument, "output directory is empty");
   }
-  GroupWriter writer(*directory);
-  if (Status status = writer.prepare(); !status.ok()) {
+  if (options.selection && options.max_groups != 0) {
+    return fail(ErrorCode::InvalidArgument,
+                "a sparse group selection cannot be combined with --max-groups");
+  }
+  if (options.selection && options.selection->empty()) {
+    return fail(ErrorCode::InvalidArgument, "group selection is empty");
+  }
+
+  // ---- stage 1: full streaming verification (default) ----------------------
+  bool preverified = false;
+  std::span<const std::byte> framing_probe;
+  if (!options.single_pass) {
+    auto verified = verify_recording_stream(options.input);
+    if (!verified) {
+      return fail(verified.error());
+    }
+    report.verification = *verified;
+    report.verification_complete = true;
+    preverified = true;
+    if (report.verification.transfer_records == 0 ||
+        report.verification.payload_bytes == 0) {
+      return fail(ErrorCode::Protocol,
+                  "refusing recording " + options.input +
+                      ": it contains no transfer bytes to replay");
+    }
+    framing_probe = std::span<const std::byte>(
+        report.verification.first_payload_prefix.data(),
+        report.verification.first_payload_prefix_size);
+  }
+
+  // ---- stage 2: pull transfers from disk on demand -------------------------
+  auto opened = recording::RecordingStreamReader::open(options.input);
+  if (!opened) {
+    return fail(opened.error());
+  }
+  std::shared_ptr<recording::RecordingStreamReader> reader = std::move(*opened);
+
+  const FramingMode framing =
+      options.framing
+          ? *options.framing
+          : detect_recording_framing(reader->header().metadata, framing_probe);
+
+  std::string directory;
+  if (!options.group_sink) {
+    auto prepared = prepare_output_directory(options.output_directory);
+    if (!prepared) {
+      return fail(prepared.error());
+    }
+    directory = *prepared;
+  }
+  GroupWriter writer(directory);
+  if (options.group_sink) {
+    writer.set_group_sink(options.group_sink);
+  } else if (Status status = writer.prepare(); !status.ok()) {
     return fail(status);
   }
+  // Group ids are absolute dense ids counted from the start of the stream; the
+  // writer sees every group (including skipped ones), so its completed count is
+  // the full-run id.  `group_base` stays 0 for a single-pass range extraction.
+  writer.set_group_base(0);
+  writer.set_group_selection(options.selection);
+  if (!options.selection) {
+    std::uint32_t last = 0xFFFFFFFFU;
+    if (options.max_groups != 0) {
+      const std::uint64_t candidate =
+          static_cast<std::uint64_t>(options.start_group) +
+          static_cast<std::uint64_t>(options.max_groups) - 1U;
+      last = candidate >= 0xFFFFFFFFULL ? 0xFFFFFFFFU
+                                        : static_cast<std::uint32_t>(candidate);
+    }
+    writer.set_group_filter(options.start_group, last);
+  }
+  writer.set_compute_digests(options.compute_digests);
 
   SimConfig sim;
   sim.expect_interval_quirk = false;
   sim.frames = 0;  // replay mode never generates
-  sim.replay = recording::make_replay_source(*recording);
+  // Align the virtual clock with the capture clock so every replayed completion
+  // can carry the recorded host_time_ns (real cadence/stationarity).
+  sim.clock_start_ns = static_cast<std::int64_t>(reader->header().start_host_ns);
+  if (options.fast_pacing) {
+    // Offline extraction only: the pacing model exists to reproduce live USB
+    // timing, which is irrelevant when frames are pulled from disk and the
+    // recorded host timestamps are carried separately.  No transfer is dropped
+    // or reordered; every byte still flows through the same pipeline.
+    sim.transfer_latency_ns = 0;
+    sim.bandwidth_bytes_per_sec = 1'000'000'000'000ULL;
+  }
+  sim.replay.reader = reader;
 
   PipelineConfig config;
   config.queue_depth = options.queue_depth == 0 ? 8 : options.queue_depth;
@@ -2068,29 +2459,35 @@ Result<ReplayReport> replay_recording(const ReplayOptions& options) {
   config.frame_queue_capacity =
       options.frame_queue_capacity == 0 ? 32 : options.frame_queue_capacity;
   config.partial_frame_timeout_ns = options.partial_frame_timeout_ns;
-  config.framing =
-      options.framing ? *options.framing : detect_recording_framing(*recording);
+  config.framing = framing;
 
   auto transport = std::make_unique<SimulatedTransport>(sim);
   SimulatedTransport* replay_transport = transport.get();
   auto pipeline =
       std::make_unique<AcquisitionPipeline>(std::move(transport), config);
-  const auto wall_start = std::chrono::steady_clock::now();
+  const auto replay_start = std::chrono::steady_clock::now();
   if (Status status = pipeline->start(); !status.ok()) {
     return fail(status);
   }
   const std::int64_t start_ns = pipeline->start_time_ns();
 
+  const std::uint64_t max_iterations =
+      2'000'000ULL + reader->file_size() / 1024ULL;
   bool truncated = false;
-  bool stalled = false;
-  bool exhausted_loop = false;
-  std::size_t iterations = 0;
+  Status run_error;
+  std::uint64_t iterations = 0;
+  std::uint64_t last_received = 0;
   std::size_t tail = 0;
-  std::size_t no_progress = 0;
-  std::uint64_t last_bytes = 0;
-  const std::size_t max_iterations = 2'000'000 + expected_bytes / 2048;
+  auto last_progress = std::chrono::steady_clock::now();
   Frame frame;
-  while (iterations++ < max_iterations) {
+  while (true) {
+    if (++iterations > max_iterations) {
+      run_error = Status::error(
+          ErrorCode::Timeout,
+          "replay exceeded its iteration budget after " +
+              std::to_string(writer.stats().groups_written) + " group(s)");
+      break;
+    }
     (void)pipeline->poll(2);
     bool popped = false;
     while (pipeline->try_pop_frame(frame)) {
@@ -2098,91 +2495,109 @@ Result<ReplayReport> replay_recording(const ReplayOptions& options) {
       Status status = writer.add(frame);
       frame = Frame{};
       if (!status.ok()) {
-        (void)pipeline->stop();
-        return fail(status);
+        run_error = status;
+        break;
       }
       if (options.max_groups != 0 &&
           writer.stats().groups_written >= options.max_groups) {
         truncated = true;
         break;
       }
-    }
-    if (truncated) {
-      break;
-    }
-    const PipelineStats stats = pipeline->stats();
-    if (stats.bytes_received >= expected_bytes) {
-      tail = popped ? 0 : tail + 1;
-      if (tail >= 4) {
+      if (options.selection &&
+          writer.stats().groups_written >= options.selection->size()) {
+        truncated = true;  // every selected group has been produced
         break;
       }
-    } else {
-      if (stats.bytes_received == last_bytes && !popped) {
-        if (++no_progress > 200'000) {
-          stalled = true;
+    }
+    if (!run_error.ok() || truncated) {
+      break;
+    }
+    if (reader->failed()) {
+      run_error = reader->error();
+      break;
+    }
+    if (reader->at_end()) {
+      // Every recorded byte has been handed to the transport; wait for the
+      // in-flight completions and queued frames to drain.
+      if (pipeline->bytes_received() >= reader->stats().payload_bytes) {
+        tail = popped ? 0 : tail + 1;
+        if (tail >= 8) {
           break;
         }
-      } else {
-        no_progress = 0;
-        last_bytes = stats.bytes_received;
       }
     }
-  }
-  if (iterations >= max_iterations) {
-    exhausted_loop = true;
+    const std::uint64_t received = pipeline->bytes_received();
+    if (received != last_received || popped) {
+      last_received = received;
+      last_progress = std::chrono::steady_clock::now();
+    } else if (std::chrono::steady_clock::now() - last_progress >
+               std::chrono::seconds(180)) {
+      run_error = Status::error(
+          ErrorCode::Timeout,
+          "replay stalled after " +
+              std::to_string(writer.stats().groups_written) +
+              " group(s): the simulated transport stopped making progress");
+      break;
+    }
   }
 
-  const auto wall_end = std::chrono::steady_clock::now();
+  const auto replay_end = std::chrono::steady_clock::now();
   const std::int64_t end_ns = replay_transport->virtual_clock().now_ns();
   const Status stop_status = pipeline->stop();
+  if (!run_error.ok()) {
+    writer.discard_pending();
+    return fail(run_error);
+  }
   if (!stop_status.ok()) {
     return fail(stop_status);
   }
-  if (stalled) {
-    return fail(ErrorCode::Timeout,
-                "replay stalled after " + std::to_string(writer.stats().groups_written) +
-                    " group(s): the simulated transport stopped making progress");
+  if (reader->failed()) {
+    return fail(reader->error());
   }
-  if (exhausted_loop) {
-    return fail(ErrorCode::Timeout,
-                "replay exceeded its iteration budget after " +
-                    std::to_string(writer.stats().groups_written) + " group(s)");
-  }
-  if (!truncated && pipeline->stats().bytes_received < expected_bytes) {
+  if (!truncated && !reader->at_end()) {
     return fail(ErrorCode::Protocol,
-                "replay consumed " +
-                    std::to_string(pipeline->stats().bytes_received) + " of " +
-                    std::to_string(expected_bytes) +
-                    " recorded bytes; the recording is truncated or has "
-                    "unsupported transfer statuses");
+                "replay stopped before the recording trailer was reached");
   }
-
   if (truncated) {
     writer.discard_pending();
   } else {
     (void)writer.flush();
   }
 
+  report.transfers_replayed = reader->stats().transfer_records;
+  report.bytes_replayed = reader->stats().payload_bytes;
+  report.non_ok_transfers_replayed = reader->stats().non_ok_transfers;
+  report.record_count_replayed = reader->stats().record_count;
+  if (!preverified) {
+    if (!truncated) {
+      auto final_stats = reader->finish();
+      if (!final_stats) {
+        return fail(final_stats.error());
+      }
+      report.verification = *final_stats;
+      report.verification_complete = true;
+    } else {
+      report.verification = reader->stats();
+      report.verification_complete = false;
+    }
+  }
+
   const PipelineStats stats = pipeline->stats();
-  ReplayReport report;
   report.grouping = writer.stats();
   report.cadence = writer.cadence();
   report.groups = writer.groups();
   report.incomplete_groups = writer.incomplete();
   report.duplicates = writer.duplicates();
   report.absent_group_ids = writer.absent_groups();
-  report.manifest.tool = "einstar-replay-frames";
+  report.stopped_early = truncated;
+  report.manifest.tool = options.tool_name;
   report.manifest.backend = "simulated";
   report.manifest.simulated = true;
   report.manifest.live = false;
-  report.manifest.output_directory = *directory;
+  report.manifest.output_directory = directory;
   report.manifest.requested_groups = options.max_groups;
   report.manifest.stopped_early = truncated;
-  report.manifest.source_recording = options.input;
-  report.manifest.source_transfers = recording->transfers.size();
-  report.manifest.source_bytes = expected_bytes;
-  report.manifest.source_digest = recording->trailer_digest;
-  report.manifest.source_verified = true;
+  set_manifest_source(report.manifest, options, report.verification);
   report.manifest.device.simulated = true;
   report.manifest.device.identified = false;
   report.manifest.device.serial = "SIMULATED";
@@ -2191,32 +2606,66 @@ Result<ReplayReport> replay_recording(const ReplayOptions& options) {
   report.manifest.device.sensor_count = kStreamCount;
   metrics_from_pipeline(report.manifest.metrics, stats);
   report.manifest.metrics.frames_invalid = writer.stats().frames_invalid;
-  report.manifest.metrics.wall_seconds =
-      seconds_between(wall_start, wall_end);
+  report.wall_seconds =
+      seconds_between(wall_start, std::chrono::steady_clock::now());
+  report.replay_seconds = seconds_between(replay_start, replay_end);
+  report.manifest.metrics.wall_seconds = report.wall_seconds;
   report.manifest.metrics.virtual_seconds =
-      end_ns > start_ns
-          ? static_cast<double>(end_ns - start_ns) / 1e9
-          : 0.0;
+      end_ns > start_ns ? static_cast<double>(end_ns - start_ns) / 1e9 : 0.0;
   report.manifest.throughput_mbps =
-      mb_per_second(stats.bytes_received, report.manifest.metrics.wall_seconds);
+      mb_per_second(stats.bytes_received, report.replay_seconds);
   report.manifest.virtual_throughput_mbps = mb_per_second(
       stats.bytes_received, report.manifest.metrics.virtual_seconds);
+  report.throughput_mbps = mb_per_second(report.bytes_replayed,
+                                         report.replay_seconds);
+  report.peak_rss_kb = peak_rss_kb();
 
   if (options.write_manifest) {
-    const std::string path =
-        join_path(*directory, "frames_manifest.json");
+    if (directory.empty()) {
+      return fail(ErrorCode::InvalidArgument,
+                  "--manifest requires an output directory");
+    }
+    const std::string path = join_path(directory, "frames_manifest.json");
     auto written = write_frames_manifest(path, report.manifest, writer);
     if (!written) {
       return fail(written.error());
     }
     report.manifest_path = written->path;
   }
-  if (writer.stats().groups_written == 0) {
+  if (!truncated && writer.stats().groups_written == 0) {
     return fail(ErrorCode::Protocol,
                 "replay verified " + options.input +
-                    " but no complete three-camera group was reassembled "
-                    "(all frames were lost or incomplete)");
+                    " but no requested three-camera group was reassembled "
+                    "(all frames were lost, incomplete or outside the "
+                    "selection)");
   }
+  return report;
+}
+
+Result<ReplayReport> replay_recording(const ReplayOptions& options) {
+  StreamReplayOptions stream;
+  stream.input = options.input;
+  stream.output_directory = options.output_directory;
+  stream.max_groups = options.max_groups;
+  stream.write_manifest = options.write_manifest;
+  stream.queue_depth = options.queue_depth;
+  stream.frame_queue_capacity = options.frame_queue_capacity;
+  stream.partial_frame_timeout_ns = options.partial_frame_timeout_ns;
+  stream.framing = options.framing;
+  stream.tool_name = "einstar-replay-frames";
+  auto result = stream_replay(stream);
+  if (!result) {
+    return fail(result.error());
+  }
+  ReplayReport report;
+  report.manifest = std::move(result->manifest);
+  report.grouping = result->grouping;
+  report.cadence = result->cadence;
+  report.groups = std::move(result->groups);
+  report.incomplete_groups = std::move(result->incomplete_groups);
+  report.duplicates = std::move(result->duplicates);
+  report.absent_group_ids = std::move(result->absent_group_ids);
+  report.manifest_path = std::move(result->manifest_path);
   return report;
 }
 
@@ -2427,6 +2876,7 @@ Result<SimCaptureReport> capture_simulated(const SimCaptureOptions& options) {
       options.timeout_seconds_set || !has_control;
   session.progress_seconds = options.progress_seconds;
   session.record_path = options.recording_path;
+  session.recording_verify = options.recording_verify;
   session.manifest.tool = "einstar-capture-frames";
   session.manifest.backend = "simulated";
   session.manifest.simulated = true;

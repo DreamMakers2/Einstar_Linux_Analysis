@@ -1,0 +1,24 @@
+{
+  "schema": "einstar-offline-extraction-scaling/1",
+  "sample": "first 40 complete groups (160 frames, ~157 MB payload)",
+  "runs": [
+    {
+      "workers": 1,
+      "wall_seconds": 12.3,
+      "rows_per_second": 3.252032520325203,
+      "user_seconds": 12.06,
+      "sys_seconds": 0.25
+    },
+    {
+      "workers": 20,
+      "wall_seconds": 1.9,
+      "rows_per_second": 21.05263157894737,
+      "user_seconds": 22.92,
+      "sys_seconds": 1.09
+    }
+  ],
+  "notes": [
+    "Includes process-pool startup (~0.8-1.0 s) which dominates the 20-worker 40-group sample.",
+    "Full corpus: 13,195 groups in 763.9 s with 20 workers = 17.3 groups/s, 67.9 MPix/s."
+  ]
+}

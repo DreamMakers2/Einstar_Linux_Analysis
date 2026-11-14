@@ -1,0 +1,60 @@
+{
+  "schema": "einstar-stream-replay-report/1",
+  "tool": "einstar-stream-frames",
+  "mode": "frames",
+  "input": "<calibration-session>/raw.e1r",
+  "output": "/tmp/stream_bench/range_a",
+  "start_group": 0,
+  "max_groups": 500,
+  "single_pass": true,
+  "verification": {
+    "complete": false,
+    "record_count": 48066,
+    "metadata_records": 1,
+    "transfer_records": 48065,
+    "non_ok_transfers": 8,
+    "zero_length_transfers": 8,
+    "payload_bytes": 1969952544,
+    "digest": 4676594711350648433,
+    "digest_hex": "0x40E69A1CC0869E71",
+    "file_size": 51977409627,
+    "has_trailer": false,
+    "trailer_digest": 0,
+    "trailer_transfers": 0,
+    "trailer_bytes": 0,
+    "digest_matches": false,
+    "counts_match": false,
+    "trailer_verified": false
+  },
+  "replay": {
+    "transfers_replayed": 48065,
+    "bytes_replayed": 1969952544,
+    "groups_written": 500,
+    "groups_skipped": 0,
+    "groups_incomplete": 0,
+    "missing_camera_frames": 0,
+    "groups_absent": 0,
+    "duplicate_frames": 0,
+    "late_frames": 0,
+    "frames_seen": 1500,
+    "frames_written": 1500,
+    "frames_invalid": 0,
+    "bytes_written": 1966080000,
+    "slot_id_mismatches": 0,
+    "stopped_early": true
+  },
+  "cadence": {
+    "intervals": 499,
+    "fps": 9.87684,
+    "mean_ns": 101246980,
+    "min_ns": 96312868,
+    "max_ns": 250695965
+  },
+  "timing": {
+    "wall_seconds": 5.74403,
+    "replay_seconds": 5.73813,
+    "throughput_mbps": 343.309
+  },
+  "memory": {"peak_rss_kb": 99268},
+  "manifest_path": "/tmp/stream_bench/range_a/frames_manifest.json"
+}

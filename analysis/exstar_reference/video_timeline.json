@@ -1,0 +1,560 @@
+{
+  "schema": "exstar_reference_video_timeline/v1",
+  "source_file": "screencapture/ScreenCapture_EXStar_Calibration.mp4",
+  "analysed_on": "2026-11-14",
+  "method": "ffprobe stream facts; full-decode frame-difference timeline (1992 frames); per-frame colour segmentation of the five status boxes, the 1-5 step chevrons, the alignment reticle and the banner strip; tesseract OCR of full-resolution crops; ffmpeg ebur128/silencedetect and per-channel WAV inspection for audio.",
+  "video_facts": {
+    "container": "MP4 (isom, minor_version 512, compatible isomiso2avc1mp41)",
+    "duration_s": 66.4,
+    "frames": 1992,
+    "width": 1920,
+    "height": 1080,
+    "fps": 30.0,
+    "codec": "h264 (Main, avc1.4d4029, yuv420p, 8-bit)",
+    "bit_rate_bps": 3295815,
+    "has_b_frames": 0,
+    "nb_streams": 2,
+    "audio": {
+      "codec": "aac (LC)",
+      "sample_rate": 48000,
+      "channels": 2,
+      "duration_s": 66.388,
+      "bit_rate_bps": 192005,
+      "content": "digital silence: every decoded sample is zero in both channels (max |sample| = 0, 0 non-zero samples of 1,062,200 per channel); ebur128 integrated loudness -70.0 LUFS, true peak -inf dBFS",
+      "speech_present": false,
+      "narration_present": false,
+      "ui_sounds_present": false
+    },
+    "container_tags": {
+      "encoder": "https://clipchamp.com",
+      "comment": "Create videos with https://clipchamp.com/en/video-editor - free online video editor, video compressor, video converter.",
+      "creation_time": null
+    },
+    "black_bars": "picture content occupies roughly y=110..960 of the 1080-line frame; top and bottom are black"
+  },
+  "audio_analysis": {
+    "verdict": "The stereo AAC track is 66.3875 s of exact digital silence. There is no speech, no narration and no UI sound. No transcript can be extracted because there is nothing to transcribe; the prompt's 'stereo audio track' carries no information.",
+    "method": "ffmpeg ebur128 (I=-70.0 LUFS, LRA 0.0 LU, true peak -inf), silencedetect (silence 0..66.3875 s), per-channel WAV decode with numpy (max abs sample = 0 for c0 and c1).",
+    "implication": "Audio cannot be used to align UI events, and the file cannot be an unmodified capture of a machine that was playing UI sounds."
+  },
+  "edit_analysis": {
+    "verdict": "edited/trimmed: YES (the file is not a continuous raw capture of one session)",
+    "confidence": "high",
+    "evidence": [
+      "Container encoder tag is https://clipchamp.com with the Clipchamp promotional comment; there is no creation_time and no capture-tool handler metadata. The file has been exported by a consumer video editor.",
+      "The video shows BOTH the geometric calibration completion and the white-balance completion. On the read-only Windows partition those two commits are 102.4 s apart (CCF files 00:13:11.94, wbdata 00:14:54.31), yet only 12.03 s of video separates them (48.600 s success modal -> 60.633 s WB success modal). About 85-90 s of the session is therefore absent from the file.",
+      "The 'Calibrating' progress bar is monotonic and smooth (1% at 46.87 s to 83% at 48.50 s, about 1.2%/frame) but the dialog disappears at 48.57-48.60 s with the bar at 85-88%; no frame shows 100% or the completion of the bar.",
+      "The 'Quit calibration' bar advances only to about 22% of its track, holds/pulses there for 0.47 s, and is then replaced by 'Scan Initializing...'; the remaining ~78% of that bar is never shown."
+    ],
+    "not_evidence": [
+      "448 of 1991 consecutive frame pairs are exactly identical, but they are concentrated in genuinely static screens (static modal 48.60-52.77 s, 60.63-64.10 s), so duplicate frames are NOT by themselves evidence of editing.",
+      "No 60->30 fps duplication pattern was found, so no whole-file frame-rate conversion is indicated.",
+      "Audio discontinuity cannot be tested: the track is pure silence."
+    ],
+    "cannot_determine": [
+      "Whether any segment is also time-compressed (speed ramp) rather than cut; the only independent clock in the picture is EXStar's own progress bars, whose real-time rate is unknown.",
+      "The exact cut points: both success modals are static screens with no motion evidence, so a cut inside them is invisible at 30 fps.",
+      "Whether the removed time was operator idle time (board flipping, reading) or app time."
+    ],
+    "on_screen_clock": "The only absolute time shown is the wizard header at 65.77-66.40 s: 'Nov.14 - 00:13' with a green check under the Calibration tab. Minute resolution only; it agrees with the on-disk geometric commit at 00:13:11.94 on Nov 14. It is the calibration record time, not a running clock: it still reads 00:13 after the white-balance stage, which the filesystem dates to 00:14:54."
+  },
+  "acceptance_mechanics": {
+    "trigger": "automatic; no capture button, no mouse click and no keypress is involved during acquisition",
+    "evidence": [
+      "No mouse pointer is visible in the application window from 0.000 s to 46.867 s; the parked pointer first appears at 53.47 s (position about (1132,549) in the 1920x1080 frame), i.e. only after the operator clicked 'Next' on the first reminder modal.",
+      "Marks tick by themselves while the operator only moves the scanner; the counter and the tick appear in the same frame as the alignment state change (first case: frame 76, 2.533 s).",
+      "There is no shutter, capture or confirm control anywhere on the Calibration screen; the only interactive controls used in the whole flow are the two 'Next' buttons of the reminder modals."
+    ],
+    "success_feedback": [
+      "The live view's translucent blue alignment disc and grey target disc collapse into a single bright-green disc with a large check mark drawn at the pattern centre (first seen 2.533 s).",
+      "The corresponding distance box in the right-hand column turns from an empty outlined box into a filled green box with a check; the most recently filled box is drawn blue-on-blue.",
+      "'Height(N / 5)' increments in the same frame as the box changes."
+    ],
+    "failure_feedback": [
+      "Blue disc + grey target disc visible, no check, means 'not aligned'.",
+      "One-line banner across the top of the live view: 'Please, make sure you are pointing at the target circle green.'",
+      "Two-line banner with an icon and an explicit action: 'Too Far' / 'Hold the scanner steadily and move it downwards.' or 'Too close' / 'Hold the scanner steadily and move it upwards.'"
+    ],
+    "hold_requirement": "Not directly observable. The first tick of step 1 occurs in the same frame in which the green state first appears (2.533 s), so any stability hold is shorter than one frame interval (33 ms) or is enforced internally before the visual state change."
+  },
+  "coverage_vs_filesystem": {
+    "disk_session": {
+      "app_start": "00:09:52.65",
+      "geometric_commit": "00:13:11.94",
+      "wb_commit": "00:14:54.31",
+      "span_s": 302
+    },
+    "mapping": [
+      {
+        "video_range": "0.000-46.867 s (geometric acquisition) + 46.867-48.600 s (solve)",
+        "disk_range": "ends at the CCF write, 00:13:11.94",
+        "basis": "The solve dialog's completion precedes the 'Calibration succeeded' modal, and the header records the calibration at 00:13.",
+        "derived_video_t0": "about 00:12:23 on Nov 14"
+      },
+      {
+        "video_range": "48.600 s ('Calibration succeeded')",
+        "disk_range": "00:13:11.94",
+        "basis": "commit immediately follows the solve"
+      },
+      {
+        "video_range": "60.633 s ('White balance calibration successful')",
+        "disk_range": "00:14:54.31 (wbdata.txt)",
+        "basis": "the only WB commit in the session"
+      }
+    ],
+    "conclusion": "The video demonstrably contains events that are 102.4 s apart on disk while showing only 12.0 s between them. It cannot be a continuous record. Segments it definitely does NOT contain: app launch and device connection (00:09:52-00:12:2x, about 150 s of the session), and roughly 85-90 s between the geometric and white-balance commits.",
+    "caveat": "The disk times are from a read-only Windows partition and were supplied by the coordinator, not re-measured here; the on-screen 'Nov.14 - 00:13' agrees with them at minute resolution."
+  },
+  "phases": [
+    {
+      "id": "P0",
+      "start": 0.0,
+      "end": 46.867,
+      "label": "geometric acquisition (5 orientations x 5 distance marks)",
+      "frames": [
+        0,
+        1405
+      ],
+      "note": "Video begins with the wizard already in this state (Height(0/5), step 1/5). No app-startup or device-connection frames exist in the file."
+    },
+    {
+      "id": "P1",
+      "start": 46.867,
+      "end": 48.6,
+      "label": "geometric solve ('Calibrating' dialog with numeric percent)",
+      "frames": [
+        1406,
+        1457
+      ],
+      "note": "Progress bubble: 1% at 46.87 s, 30% at 47.63 s, 54% at 48.03 s, 83% at 48.50 s, last visible 85-88% at 48.53 s; dialog disappears at 48.57-48.60 s without a 100% frame."
+    },
+    {
+      "id": "P2",
+      "start": 48.6,
+      "end": 52.967,
+      "label": "'Calibration succeeded' reminder modal (operator-paced)",
+      "frames": [
+        1458,
+        1588
+      ]
+    },
+    {
+      "id": "P3",
+      "start": 52.967,
+      "end": 60.633,
+      "label": "white-balance stage (7 distance blocks, middle required; capture at 59.733)",
+      "frames": [
+        1589,
+        1818
+      ],
+      "note": "Alignment (blue -> green) 52.97-59.73; success modal replaces the view at 60.633."
+    },
+    {
+      "id": "P4",
+      "start": 60.633,
+      "end": 64.4,
+      "label": "'White balance calibration successful' reminder modal (operator-paced)",
+      "frames": [
+        1819,
+        1931
+      ]
+    },
+    {
+      "id": "P5",
+      "start": 64.4,
+      "end": 65.733,
+      "label": "'Quit calibration' progress dialog",
+      "frames": [
+        1932,
+        1971
+      ],
+      "note": "Bar advances 8->86 px of a ~395 px track (about 22%) from 64.40 to 65.23, then holds/pulses at 84-86 px until 65.70, then the dialog is replaced. No 100% frame is shown."
+    },
+    {
+      "id": "P6",
+      "start": 65.733,
+      "end": 65.767,
+      "label": "'Scan Initializing...' (single frame)",
+      "frames": [
+        1972,
+        1972
+      ]
+    },
+    {
+      "id": "P7",
+      "start": 65.767,
+      "end": 66.4,
+      "label": "Scan tab (Calibration shows 'Nov.14 - 00:13' + green check)",
+      "frames": [
+        1973,
+        1991
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "index": 1,
+      "start": 0.0,
+      "end": 8.733,
+      "angle_label": "90 deg (scanner axis normal to the plate)",
+      "ticks": [
+        {
+          "frame": 76,
+          "t": 2.533,
+          "box": 3
+        },
+        {
+          "frame": 118,
+          "t": 3.933,
+          "box": 2
+        },
+        {
+          "frame": 136,
+          "t": 4.533,
+          "box": 1
+        },
+        {
+          "frame": 208,
+          "t": 6.933,
+          "box": 4
+        },
+        {
+          "frame": 238,
+          "t": 7.933,
+          "box": 5
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "start": 8.733,
+      "end": 19.867,
+      "angle_label": "30 deg tilt",
+      "ticks": [
+        {
+          "frame": 350,
+          "t": 11.667,
+          "box": 4
+        },
+        {
+          "frame": 353,
+          "t": 11.767,
+          "box": 5
+        },
+        {
+          "frame": 479,
+          "t": 15.967,
+          "box": 3
+        },
+        {
+          "frame": 497,
+          "t": 16.567,
+          "box": 2
+        },
+        {
+          "frame": 572,
+          "t": 19.067,
+          "box": 1
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "start": 19.867,
+      "end": 28.1,
+      "angle_label": "30 deg tilt",
+      "ticks": [
+        {
+          "frame": 690,
+          "t": 23.0,
+          "box": 2
+        },
+        {
+          "frame": 693,
+          "t": 23.1,
+          "box": 3
+        },
+        {
+          "frame": 726,
+          "t": 24.2,
+          "box": 4
+        },
+        {
+          "frame": 756,
+          "t": 25.2,
+          "box": 5
+        },
+        {
+          "frame": 819,
+          "t": 27.3,
+          "box": 1
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "start": 28.1,
+      "end": 36.867,
+      "angle_label": "30 deg tilt",
+      "ticks": [
+        {
+          "frame": 911,
+          "t": 30.367,
+          "box": 2
+        },
+        {
+          "frame": 923,
+          "t": 30.767,
+          "box": 3
+        },
+        {
+          "frame": 953,
+          "t": 31.767,
+          "box": 4
+        },
+        {
+          "frame": 995,
+          "t": 33.167,
+          "box": 5
+        },
+        {
+          "frame": 1082,
+          "t": 36.067,
+          "box": 1
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "start": 36.867,
+      "end": 46.867,
+      "angle_label": "30 deg tilt",
+      "ticks": [
+        {
+          "frame": 1187,
+          "t": 39.567,
+          "box": 2
+        },
+        {
+          "frame": 1238,
+          "t": 41.267,
+          "box": 3
+        },
+        {
+          "frame": 1283,
+          "t": 42.767,
+          "box": 4
+        },
+        {
+          "frame": 1322,
+          "t": 44.067,
+          "box": 5
+        },
+        {
+          "frame": 1391,
+          "t": 46.367,
+          "box": 1
+        }
+      ]
+    }
+  ],
+  "tick_count": 25,
+  "banners": [
+    {
+      "start": 2.367,
+      "end": 2.5,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 4.633,
+      "end": 4.7,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 4.933,
+      "end": 5.6,
+      "text": "Too Far",
+      "detail": "Hold the scanner steadily and move it downwards.",
+      "kind": "two_line_distance"
+    },
+    {
+      "start": 10.433,
+      "end": 10.633,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 14.167,
+      "end": 14.633,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 14.767,
+      "end": 15.033,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 17.967,
+      "end": 18.233,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 18.567,
+      "end": 19.033,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 21.7,
+      "end": 21.867,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 28.667,
+      "end": 28.833,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 35.267,
+      "end": 36.033,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 37.367,
+      "end": 37.533,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 54.033,
+      "end": 54.2,
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "kind": "one_line"
+    },
+    {
+      "start": 56.667,
+      "end": 58.2,
+      "text": "Too close",
+      "detail": "Hold the scanner steadily and move it upwards.",
+      "kind": "two_line_distance",
+      "note": "Banner alternates with the one-line 'Please make sure...' message inside this interval (56.67-57.00 Too close, 57.07-57.80 Please make sure, 57.87-58.20 Too close)."
+    }
+  ],
+  "instructions": [
+    {
+      "screen": "Calibration (all five steps)",
+      "region": "right-hand settings pane, x 1195-1890, y 281-410 (1920x1080)",
+      "text": "Note: Please place the calibration board on a horizontal surface.\nHold the device as shown in the figure below. Move it slightly until the dots are aligned and turn green.\nMove the scanner vertically upwards until all distance marks are ticked.",
+      "first_seen": 0.0,
+      "last_seen": 46.8
+    },
+    {
+      "screen": "White Balance",
+      "region": "right-hand settings pane, x 1195-1890, y 281-439",
+      "text": "Please turn the calibration board to the white side, place it horizontally. Hold the scanner as shown in the figure below until the dots are aligned and turn green. Then move the device vertically upward to the middle marked block.\nThe white balance calibration is competed.",
+      "first_seen": 52.967,
+      "last_seen": 60.6,
+      "note": "'competed' is what the app renders (OCR and direct visual read agree); it appears to be a typo for 'completed'."
+    },
+    {
+      "screen": "Reminder modal 1",
+      "region": "centred modal, x 735-1185, y 440-700",
+      "text": "Reminder\nCalibration succeeded\nOnce the calibration is finished, it is recommended to store the plate carefully to avoid scratches or damage to the plate.\nNext",
+      "first_seen": 48.6,
+      "last_seen": 52.93
+    },
+    {
+      "screen": "Reminder modal 2",
+      "region": "centred modal",
+      "text": "Reminder\nWhite balance calibration successful\nOnce the calibration is finished, it is recommended to store the plate carefully to avoid scratches or damage to the plate.\nNext",
+      "first_seen": 60.633,
+      "last_seen": 64.37
+    },
+    {
+      "screen": "White Balance banner",
+      "region": "live-view banner",
+      "text": "Please, make sure you are pointing at the target circle green.",
+      "first_seen": 54.033,
+      "last_seen": 58.2
+    },
+    {
+      "screen": "Scan tab",
+      "region": "main pane",
+      "text": "New project group\nOpen project group",
+      "first_seen": 65.767,
+      "last_seen": 66.4
+    },
+    {
+      "screen": "Board identifier",
+      "region": "right pane, x 1280-1520, y 895-920",
+      "text": "Calibration Board No. <redacted-part-number>",
+      "first_seen": 0.0,
+      "last_seen": 66.4
+    }
+  ],
+  "ui_structure": {
+    "top_nav": [
+      "Device (Einstar)",
+      "Calibration (In Progress; becomes 'Nov.14 - 00:13' with green check after completion)",
+      "Scan",
+      "Post-Processing",
+      "Measurement"
+    ],
+    "calibration_sub_tabs": [
+      "Calibration",
+      "White Balance"
+    ],
+    "geometric_progress_widget": "five chevrons labelled 1..5 across the top of the settings pane; the active chevron is blue",
+    "distance_widget_geometric": "five stacked outlined boxes with the caption 'Height(N / 5)'; all five must be ticked per chevron",
+    "distance_widget_wb": "seven stacked outlined boxes with no caption; only the middle (4th) is required",
+    "guidance_illustration": "3-D render of the scanner over the plate with a blue upward arrow, a red dashed vertical reference through the plate centre, and an angle badge: 90 degrees for step 1, 30 degrees for steps 2-5",
+    "wb_pose": "illustration angle badge reads 90 degrees (scanner normal to the board), board drawn white-side up"
+  },
+  "reproduction_notes": {
+    "live_view_nature": "The plate graphic in the live view is pixel-static: the dot-grid pitch is exactly 38 px at 960-wide (76 px at 1920) and cross-correlation against the 0.5 s frame is 1.000 at 0 px offset at 2.0 s and >=0.99 for the whole 47 s. A raw camera view of a plate seen from a scanner that is being moved would change scale and perspective, so this pane is a normalised/rectified rendering (or a synthetic plate diagram) rather than an unprocessed camera image. The white-balance stage shows a plain white field with only the alignment discs, consistent with the board's blank reverse side.",
+    "dot_pattern": "8 x 8 grid of round dots with some dots rendered larger; the large-dot positions are identical in every frame, so they are part of the printed pattern (coded fiducials), not a detection-confidence overlay.",
+    "acceptance_rate": "25 accepted views in 46.867 s = 1.87 s per accepted view; 21.10 s (45%) of the acquisition was spent in the green/aligned state and 25.77 s in the blue/not-aligned state over 38 green/blue episodes.",
+    "cursor_evidence": "Frame-level brightness test in the 1920x1080 region x 1100-1156, y 532-576 shows no pointer during 0-46.87 s (the same region is covered by the reminder modal 48.6-52.97 s, so it is not usable there), and a parked pointer from 53.47 s onward."
+  },
+  "timeline_confidence": {
+    "frame_accurate": [
+      "phase boundaries",
+      "tick events",
+      "step transitions",
+      "banner intervals",
+      "modal intervals",
+      "progress percentages"
+    ],
+    "approximate": [
+      "absolute wall-clock mapping (minute resolution only)",
+      "internal acceptance criteria"
+    ]
+  },
+  "final_quality_indicators": {
+    "shown": [
+      "Reminder / Calibration succeeded",
+      "Reminder / White balance calibration successful",
+      "header 'Nov.14 - 00:13' with green check"
+    ],
+    "not_shown": [
+      "RMS or reprojection error",
+      "held-out error",
+      "epipolar error",
+      "coverage map",
+      "per-view score or rejected-view count",
+      "covariance/condition number",
+      "solved-vs-fixed parameter statement",
+      "quality grade",
+      "gallery of the captured views"
+    ],
+    "conclusion": "The final quality indicator is a boolean. Whether the calibration is good, marginal or bad is never communicated."
+  }
+}

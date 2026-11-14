@@ -78,6 +78,13 @@ def detect_one(gray: np.ndarray, roi: tuple[int, int, int, int] | None = None,
                           & (pts[:, 1] < roi[3] - edge))
                 if not bool(inside.all()):
                     observation = None          # may be clipped: redo full
+                elif len(observation.points) < int(early_lattice):
+                    # A crop can clip the lattice while every *detected* point
+                    # is still inside the crop (observed on a sparse replay:
+                    # a stale ROI kept 15 of the 36 corner markers and the
+                    # view was then rejected for insufficient stereo overlap).
+                    # Re-run on the full frame; it can only find more markers.
+                    observation = None
                 else:
                     observation = prefer_partial(gray, observation)
                     return DetectionOutcome(observation, used_roi=True,

@@ -95,8 +95,19 @@ class CoverageSpec:
     min_corner_views: int = 1                # §6: "corners >= 1 each"
     min_quality_fraction: float = 0.95       # D7: accepted views inside limits
     min_stationary_views: int = 6            # D7: ~0.3 s dwell at >= 6 poses
+    #: A dwell episode must be long enough to be a real hold, not one sample.
+    #: One decision observation with a long dt only bounds *net* displacement;
+    #: it is not evidence of a stationary interval (the raw 10 Hz trace of the
+    #: real session showed 5-1800 mm/s inside such "stationary" decision gaps).
+    min_dwell_s: float = 0.3
+    min_dwell_observations: int = 2
     stationary_speed_mm_s: float = 3.0
     stationary_rate_deg_s: float = 1.5
+    #: consecutive stationary observations closer than this are one dwell
+    #: interval.  The 10 Hz raw stream is 0.1 s apart and the live decisions
+    #: were 0.24-1.5 s apart; 1.0 s keeps a hold together without merging
+    #: separate pauses.  This is a grouping rule, not a loosened threshold.
+    stationarity_interval_gap_s: float = 1.0
     require_scale_artefact: bool = False     # D8: plan §2 calls it optional
     min_views_per_scale_artefact: int = 5    # plan §2: "imaged in >= 5 poses"
     min_scale_distance_bands: int = 2
@@ -238,8 +249,365 @@ def _quality(view: Mapping[str, Any]) -> Mapping[str, Any]:
     return q if isinstance(q, Mapping) else {}
 
 
+def _quality_metrics(view: Mapping[str, Any]) -> Mapping[str, Any]:
+    metrics = _quality(view).get("metrics")
+    return metrics if isinstance(metrics, Mapping) else {}
+
+
+def _finite(value: Any) -> float | None:
+    """A recorded number, or ``None``.  Booleans are not measurements."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+#: The IR pair is what the D7 quality gate measures.  The colour camera has a
+#: different exposure/focus scale (``DEFAULT_QUALITY`` uses focus 55 and
+#: contrast 5 for ``tex`` against 150/14 for each IR camera) and its
+#: participation is already D6.  It is reported, not silently folded into the
+#: IR minimum: a tex failure must not be presented as an IR quality failure.
+_IR_CAMERAS = ("left", "right")
+_ALL_CAMERAS = ("left", "right", "tex")
+
+
+def quality_observation(view: Mapping[str, Any],
+                         spec: "CoverageSpec") -> dict:
+    """Per-view quality from the metrics the detector actually recorded.
+
+    Two layouts are accepted:
+
+    * the live wizard's nested ``{"metrics": {"left.focus": ..., ...}}``
+      (``guidance.evaluate_frame().as_dict()``), and
+    * a legacy flat ``{"focus": ..., "saturation_frac": ...}`` recording.
+
+    Missing measurements are *never* a pass.  ``quality.passed`` is reported
+    as ``recorded_passed`` but is not itself used as evidence: the session in
+    ``analysis/session03`` has ``passed=True`` on every view because the old
+    D7 read keys that do not exist.
+    """
+    q = _quality(view)
+    metrics = _quality_metrics(view)
+    row: dict[str, Any] = {
+        "view_id": view.get("view_id"),
+        "quality_source": "missing",
+        "active_cameras": [],
+        "inactive_cameras": [],
+        "focus_values": {}, "saturation_values": {}, "contrast_values": {},
+        "focus_min": None, "focus_min_camera": None,
+        "saturation_max": None, "saturation_max_camera": None,
+        "contrast_min": None,
+        "tex_active": None, "tex_focus": None, "tex_saturation": None,
+        "tex_contrast": None, "tex_missing_metrics": [],
+        "missing_metrics": [], "reasons": [], "ok": False,
+        "recorded_passed": (bool(q.get("passed")) if q.get("passed") is not None
+                            else None),
+    }
+
+    nested = any(key in metrics for cam in _ALL_CAMERAS
+                 for key in (f"{cam}.focus", f"{cam}.saturation", f"{cam}.active"))
+    if nested:
+        active: dict[str, bool] = {}
+        for cam in _ALL_CAMERAS:
+            flag = metrics.get(f"{cam}.active")
+            if flag is None:
+                active[cam] = any(f"{cam}.{k}" in metrics
+                                  for k in ("focus", "saturation", "contrast"))
+            else:
+                active[cam] = bool(flag)
+        ir_active = [c for c in _IR_CAMERAS if active.get(c)]
+        row["active_cameras"] = list(ir_active)
+        row["inactive_cameras"] = [c for c in _IR_CAMERAS if not active.get(c)]
+        row["quality_source"] = "nested_metrics"
+        missing: list[str] = []
+        if not ir_active:
+            missing.append("active IR camera")
+        for cam in ir_active:
+            focus = _finite(metrics.get(f"{cam}.focus"))
+            sat = _finite(metrics.get(f"{cam}.saturation"))
+            contrast = _finite(metrics.get(f"{cam}.contrast"))
+            if focus is None:
+                missing.append(f"{cam}.focus")
+            else:
+                row["focus_values"][cam] = focus
+            if sat is None:
+                missing.append(f"{cam}.saturation")
+            else:
+                row["saturation_values"][cam] = sat
+            if contrast is not None:
+                row["contrast_values"][cam] = contrast
+        if row["focus_values"]:
+            cam = min(row["focus_values"], key=row["focus_values"].get)
+            row["focus_min"] = row["focus_values"][cam]
+            row["focus_min_camera"] = cam
+        if row["saturation_values"]:
+            cam = max(row["saturation_values"], key=row["saturation_values"].get)
+            row["saturation_max"] = row["saturation_values"][cam]
+            row["saturation_max_camera"] = cam
+        if row["contrast_values"]:
+            row["contrast_min"] = min(row["contrast_values"].values())
+        # Colour metrics: reported for the UI but not part of the IR gate.
+        row["tex_active"] = bool(active.get("tex"))
+        if row["tex_active"]:
+            row["tex_focus"] = _finite(metrics.get("tex.focus"))
+            row["tex_saturation"] = _finite(metrics.get("tex.saturation"))
+            row["tex_contrast"] = _finite(metrics.get("tex.contrast"))
+            for key in ("tex.focus", "tex.saturation"):
+                cam_key = key.split(".", 1)[1]
+                if _finite(metrics.get(key)) is None:
+                    row["tex_missing_metrics"].append(key)
+        row["missing_metrics"] = missing
+    else:
+        # Legacy aggregate recording.  It describes the IR pair only; there is
+        # no colour number in this layout.
+        focus = _finite(q.get("focus"))
+        sat = _finite(q.get("saturation_frac", q.get("sat_frac")))
+        if focus is None and sat is None:
+            row["quality_source"] = "missing"
+            row["missing_metrics"] = ["focus", "saturation_frac"]
+        else:
+            row["quality_source"] = "legacy_flat"
+            row["active_cameras"] = list(_IR_CAMERAS)   # aggregate IR pair
+            if focus is not None:
+                row["focus_values"]["ir"] = focus
+                row["focus_min"] = focus
+                row["focus_min_camera"] = "ir"
+            else:
+                row["missing_metrics"].append("focus")
+            if sat is not None:
+                row["saturation_values"]["ir"] = sat
+                row["saturation_max"] = sat
+                row["saturation_max_camera"] = "ir"
+            else:
+                row["missing_metrics"].append("saturation_frac")
+        row["tex_active"] = None
+
+    if row["focus_min"] is not None and row["focus_min"] < float(spec.min_focus):
+        row["reasons"].append(
+            f"focus {row['focus_min']:.0f} < {float(spec.min_focus):.0f} "
+            f"({row['focus_min_camera']})")
+    if row["saturation_max"] is not None and \
+            row["saturation_max"] > float(spec.max_saturation_frac):
+        row["reasons"].append(
+            f"saturation {row['saturation_max']:.4f} > "
+            f"{float(spec.max_saturation_frac):.4f} "
+            f"({row['saturation_max_camera']})")
+    if row["missing_metrics"]:
+        row["reasons"].append("missing metrics: " + ", ".join(row["missing_metrics"]))
+    if row["quality_source"] == "missing" and row["recorded_passed"] is True:
+        row["reasons"].append("recorded quality.passed=true but no metrics recorded")
+    row["ok"] = bool(not row["missing_metrics"]
+                     and row["focus_min"] is not None
+                     and row["saturation_max"] is not None
+                     and row["focus_min"] >= float(spec.min_focus)
+                     and row["saturation_max"] <= float(spec.max_saturation_frac))
+    return row
+
+
+def stationarity_observation(view: Mapping[str, Any],
+                             spec: "CoverageSpec") -> dict:
+    """Per-view short-term stationarity from recorded motion, never from poses.
+
+    Precedence:
+
+    1. an explicit ``stationary`` boolean (the controller's own per-view
+       observation), optionally cross-checked against recorded speed/rate;
+    2. recorded short-term motion fields, either at the top level
+       (``stationarity_speed_mm_s`` / ``stationarity_rate_deg_s`` /
+       ``stationarity_window_s``) or inside ``quality.metrics``
+       (``speed_mm_s``, ``motion_deg``, ``dt_s``, ``motion_mm``);
+    3. ``stationarity_source="missing"`` -- which is a *failure* to establish
+       stationarity, never a pass.
+
+    Pose deltas between accepted views are deliberately not consulted: accepted
+    views are sparse and biased towards motion, and duplicate dwell frames are
+    exactly what the live controller currently rejects as redundant.
+    """
+    metrics = _quality_metrics(view)
+    spp = float(spec.stationary_speed_mm_s)
+    rpp = float(spec.stationary_rate_deg_s)
+    window = _finite(view.get("stationarity_window_s"))
+    if window is None:
+        window = _finite(metrics.get("dt_s"))
+    speed = _finite(view.get("stationarity_speed_mm_s"))
+    if speed is None:
+        speed = _finite(metrics.get("speed_mm_s"))
+    if speed is None:
+        motion_mm = _finite(metrics.get("motion_mm"))
+        if motion_mm is not None and window and window > 0:
+            speed = motion_mm / window
+    rate = _finite(view.get("stationarity_rate_deg_s"))
+    if rate is None:
+        rate = _finite(metrics.get("rate_deg_s"))
+    if rate is None:
+        motion_deg = _finite(metrics.get("motion_deg"))
+        if motion_deg is not None and window and window > 0:
+            rate = motion_deg / window
+    blur = _finite(view.get("motion_blur_px"))
+    if blur is None:
+        blur = _finite(metrics.get("motion_blur_px"))
+
+    explicit_raw = view.get("stationary")
+    if explicit_raw is None:
+        explicit_raw = metrics.get("stationary")   # guidance.evaluate_frame
+    explicit = (bool(explicit_raw) if explicit_raw is not None else None)
+    reasons: list[str] = []
+    missing: list[str] = []
+    if explicit is not None:
+        source = "explicit"
+        ok = explicit
+        if not ok:
+            reasons.append("explicit stationary=false")
+        else:
+            if speed is not None and speed > spp:
+                ok = False
+                reasons.append(f"explicit stationary contradicted by speed "
+                               f"{speed:.2f} > {spp:.1f} mm/s")
+            if rate is not None and rate > rpp:
+                ok = False
+                reasons.append(f"explicit stationary contradicted by rotation "
+                               f"{rate:.2f} > {rpp:.1f} deg/s")
+    elif speed is not None or rate is not None:
+        source = "recorded_motion"
+        if speed is None:
+            missing.append("stationarity_speed_mm_s")
+        if rate is None:
+            missing.append("stationarity_rate_deg_s")
+        ok = not missing and speed <= spp and rate <= rpp
+        if missing:
+            reasons.append("missing motion field(s): " + ", ".join(missing))
+        if speed is not None and speed > spp:
+            reasons.append(f"moving at {speed:.2f} mm/s > {spp:.1f}")
+        if rate is not None and rate > rpp:
+            reasons.append(f"rotating at {rate:.2f} deg/s > {rpp:.1f}")
+    else:
+        source = "missing"
+        ok = False
+        missing = ["stationarity_speed_mm_s", "stationarity_rate_deg_s"]
+        reasons.append("no per-view stationarity observation recorded")
+
+    return {
+        "view_id": view.get("view_id"),
+        "group": view.get("group"),
+        "timestamp": _timestamp(view),
+        "stationary": bool(ok),
+        "stationarity_still": bool(view.get("stationarity_still")),
+        "stationarity_source": source,
+        "reported_stationarity_source": view.get("stationarity_source"),
+        "stationarity_speed_mm_s": speed,
+        "stationarity_rate_deg_s": rate,
+        "stationarity_window_s": window,
+        "motion_blur_px": blur,
+        "missing_metrics": missing,
+        "reasons": reasons,
+    }
+
+
+def stationary_intervals(rows: Sequence[Mapping[str, Any]],
+                         gap_s: float = 1.0,
+                         min_dwell_s: float = 0.3,
+                         min_observations: int = 2) -> list[dict]:
+    """Group consecutive stationary observations into distinct dwell episodes.
+
+    A dwell episode is a run of observations whose recorded short-term motion
+    is below the D7 thresholds.  It ends at a moving observation or at a time
+    gap larger than ``gap_s``.  Counting *episodes*, not frames, is what keeps
+    98 consecutive 10 Hz frames of one pause from pretending to be 98 poses.
+    Rows without timestamps are treated as consecutive.
+    """
+    ordered = sorted(rows,
+                     key=lambda r: (_timestamp(r) is None,
+                                    _timestamp(r) or 0.0))
+    intervals: list[dict] = []
+    current: list[Mapping[str, Any]] = []
+    prev_ts: float | None = None
+
+    def flush() -> None:
+        nonlocal current, prev_ts
+        if not current:
+            return
+        speeds = [_finite(r.get("stationarity_speed_mm_s")) for r in current]
+        rates = [_finite(r.get("stationarity_rate_deg_s")) for r in current]
+        speeds = [x for x in speeds if x is not None]
+        rates = [x for x in rates if x is not None]
+        stamps = [_timestamp(r) for r in current]
+        stamps = [x for x in stamps if x is not None]
+        span = (max(stamps) - min(stamps)) if len(stamps) >= 2 else 0.0
+        windows = [_finite(r.get("stationarity_window_s")) for r in current]
+        windows = [x for x in windows if x is not None and x > 0]
+        if not windows and len(stamps) >= 2:
+            windows = list(np.diff(np.asarray(stamps, float)))
+            windows = [float(x) for x in windows if x > 0]
+        step = float(np.median(windows)) if windows else 0.0
+        duration = (span + step) if len(stamps) >= 2 else 0.0
+        qualified = bool(len(current) >= int(min_observations)
+                         and duration + 1e-9 >= float(min_dwell_s))
+        intervals.append({
+            "n_observations": len(current),
+            "start_timestamp": _timestamp(current[0]),
+            "end_timestamp": _timestamp(current[-1]),
+            "start_group": current[0].get("group"),
+            "end_group": current[-1].get("group"),
+            "duration_s": duration,
+            "qualified": qualified,
+            "speed_p50_mm_s": (float(np.median(speeds)) if speeds else None),
+            "rate_p50_deg_s": (float(np.median(rates)) if rates else None),
+        })
+        current = []
+        prev_ts = None
+
+    for row in ordered:
+        ts = _timestamp(row)
+        if row.get("stationarity_still") and row.get("stationary"):
+            # A still-collection pose is a deliberate stationary capture on
+            # its own: one image per pose, no consecutive cadence.  Count each
+            # as one qualified episode of the nominal dwell length.
+            flush()
+            speeds = [_finite(row.get("stationarity_speed_mm_s"))]
+            rates = [_finite(row.get("stationarity_rate_deg_s"))]
+            intervals.append({
+                "n_observations": 1,
+                "start_timestamp": ts, "end_timestamp": ts,
+                "start_group": row.get("group"), "end_group": row.get("group"),
+                "duration_s": float(min_dwell_s),
+                "qualified": True,
+                "speed_p50_mm_s": speeds[0], "rate_p50_deg_s": rates[0],
+            })
+            prev_ts = None
+            continue
+        if not row.get("stationary"):
+            flush()
+            prev_ts = None
+            continue
+        if current and prev_ts is not None and ts is not None \
+                and ts - prev_ts > float(gap_s):
+            flush()
+        current.append(row)
+        prev_ts = ts
+    flush()
+    return intervals
+
+
+def _is_dwell(view: Mapping[str, Any]) -> bool:
+    """A stationary duplicate kept as coverage evidence, not as a solver view.
+
+    The live controller currently rejects these as redundant, which is why a
+    real 297-view session has zero dwell views.  The contract is explicit:
+    ``dwell=True`` views count for D7 quality/stationarity and are excluded
+    from the pose-coverage dimensions (D1-D6) so duplicate poses cannot
+    manufacture distance/tilt/region counts.
+    """
+    flag = view.get("dwell")
+    return bool(flag) if isinstance(flag, (bool, int, float)) else False
+
+
 def _timestamp(view: Mapping[str, Any]) -> float | None:
     ts = view.get("timestamp")
+    if ts is None:
+        ts = view.get("timestamp_s")       # decisions.jsonl spelling
     try:
         return float(ts) if ts is not None else None
     except (TypeError, ValueError):
@@ -329,7 +697,9 @@ def _fmt_bands(bands: Sequence[Sequence[float]]) -> str:
 
 
 def measure(accepted_views: Sequence[Mapping[str, Any]],
-            spec: CoverageSpec | None = None) -> dict:
+            spec: CoverageSpec | None = None,
+            *, stationarity_observations: Sequence[Mapping[str, Any]] | None = None
+            ) -> dict:
     """Measure D1-D8 over the accepted views.
 
     Parameters
@@ -338,9 +708,19 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
         Sequence of dicts with ``view_id``, ``pose`` (R 3x3, t in mm),
         ``n_markers``, ``quality``, ``image_points``, ``shared_markers_ir``,
         ``assignment_ok``, ``timestamp``.  Missing optional keys degrade the
-        relevant dimension instead of raising.
+        relevant dimension instead of raising.  Views flagged ``dwell=True``
+        count only for D7 (they are duplicate stationary evidence) and are
+        excluded from the D1-D6 pose counts.
     spec:
         :class:`CoverageSpec`; the defaults are the architecture §6 values.
+    stationarity_observations:
+        The session-level observation stream: every ingested group/raw frame,
+        accepted or rejected, with its short-term motion fields.  D7
+        stationarity is measured here (distinct dwell intervals), because the
+        accepted set is sparse and dwell duplicates are rejected as redundant.
+        If omitted, stationarity is reported ``unestablished`` -- never as a
+        silent pass or a default fail; the accepted-view stationarity count is
+        still reported separately.
 
     Returns
     -------
@@ -353,18 +733,28 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
     """
     spec = spec or CoverageSpec()
     views = list(accepted_views or [])
-    metrics: list[dict] = []
-    view_of: list[Mapping[str, Any]] = []
+    all_metrics: list[dict] = []
+    all_view_of: list[Mapping[str, Any]] = []
     unusable: list[dict] = []
+    dwell_flags: list[bool] = []
     for v in views:
+        dwell_flags.append(_is_dwell(v))
         m = pose_metrics(v)
         if m is None:
             unusable.append({"view_id": v.get("view_id"), "reason": "no usable pose"})
             continue
-        metrics.append(m)
-        view_of.append(v)
+        all_metrics.append(m)
+        all_view_of.append(v)
 
+    # D1-D6 are pose-coverage dimensions: a duplicate dwell view must not be
+    # able to manufacture a distance band / region / tilt count.  D7 is a
+    # per-observation quality dimension and does count those views.
+    pose_idx = [i for i, v in enumerate(all_view_of) if not _is_dwell(v)]
+    metrics = [all_metrics[i] for i in pose_idx]
+    view_of = [all_view_of[i] for i in pose_idx]
     n = len(metrics)
+    n_all = len(views)
+    n_dwell = int(sum(dwell_flags))
     image_size = _DEFAULT_IMAGE
     checks: dict[str, dict] = {}
     dims: dict[str, dict] = {}
@@ -664,83 +1054,213 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
                   "checks": ["colour"]}
 
     # ---- D7 stationarity / quality -------------------------------------
-    q_rows = []
-    for v in view_of:
-        q = _quality(v)
-        sat = q.get("saturation_frac", q.get("sat_frac"))
-        foc = q.get("focus", q.get("blur"))
-        ok = True
-        if sat is not None:
-            ok = ok and float(sat) <= float(spec.max_saturation_frac)
-        if foc is not None:
-            ok = ok and float(foc) >= float(spec.min_focus)
-        q_rows.append({"view_id": v.get("view_id"), "saturation_frac": sat,
-                       "focus": foc, "ok": bool(ok)})
+    q_rows = [quality_observation(v, spec) for v in views]
+    s_rows = [stationarity_observation(v, spec) for v in views]
+    # D7 stationarity is an acquisition-quality property of the *stream*, not
+    # of the accepted pose set.  Accepted views are sparse and biased towards
+    # motion (duplicate dwell frames are rejected as redundant), so a caller
+    # must supply every ingested observation's motion fields explicitly.
+    stream_supplied = stationarity_observations is not None
+    stream_rows = ([stationarity_observation(o, spec)
+                    for o in (stationarity_observations or [])]
+                   if stream_supplied else [])
+    accepted_intervals = stationary_intervals(
+        s_rows, float(spec.stationarity_interval_gap_s),
+        float(spec.min_dwell_s), int(spec.min_dwell_observations))
+    stream_intervals = (stationary_intervals(
+        stream_rows, float(spec.stationarity_interval_gap_s),
+        float(spec.min_dwell_s), int(spec.min_dwell_observations))
+        if stream_supplied else [])
+    accepted_stationary = int(sum(1 for r in s_rows if r["stationary"]))
+    stream_stationary = int(sum(1 for r in stream_rows if r["stationary"]))
+    if not stream_supplied:
+        stationarity_status = "unestablished"
+    elif any(r["stationarity_source"] != "missing" for r in stream_rows):
+        stationarity_status = "stream"
+    else:
+        stationarity_status = "unestablished"
+    stationarity_established = stationarity_status == "stream"
     n_q_ok = int(sum(1 for r in q_rows if r["ok"]))
-    q_frac = (n_q_ok / n) if n else 0.0
-    quality_ok = n > 0 and q_frac >= float(spec.min_quality_fraction)
+    q_frac = (n_q_ok / n_all) if n_all else 0.0
+    quality_ok = n_all > 0 and q_frac >= float(spec.min_quality_fraction)
+    quality_sources: dict[str, int] = {}
+    for r in q_rows:
+        quality_sources[r["quality_source"]] = quality_sources.get(r["quality_source"], 0) + 1
+    missing_quality_metrics: list[str] = []
+    for r in q_rows:
+        for key in r["missing_metrics"]:
+            if key not in missing_quality_metrics:
+                missing_quality_metrics.append(key)
+    focus_vals = [r["focus_min"] for r in q_rows if r["focus_min"] is not None]
+    sat_vals = [r["saturation_max"] for r in q_rows if r["saturation_max"] is not None]
+    focus_min = float(min(focus_vals)) if focus_vals else None
+    sat_max = float(max(sat_vals)) if sat_vals else None
+    quality_measured = {
+        "n_quality_ok": n_q_ok, "quality_fraction": q_frac, "n_views": n_all,
+        "focus_min": focus_min, "saturation_max": sat_max,
+        "quality_source_counts": quality_sources,
+        "missing_metrics": missing_quality_metrics,
+        "n_views_missing_metrics": int(sum(1 for r in q_rows if r["missing_metrics"])),
+        "tex_note": ("tex focus/saturation are reported per view but not gated by "
+                     "D7: its scale differs (tex focus >= 55, contrast >= 5) and "
+                     "colour participation is D6"),
+    }
+    quality_deficit = {
+        "quality_views": max(0, int(math.ceil(float(spec.min_quality_fraction) * n_all))
+                             - n_q_ok),
+        "missing_quality_metrics": len(missing_quality_metrics),
+    }
+    if quality_ok:
+        q_hint = (f"Quality: {n_q_ok}/{n_all} views within focus >= "
+                  f"{float(spec.min_focus):.0f} and saturation <= "
+                  f"{float(spec.max_saturation_frac):.3f}"
+                  + (f" (focus min {focus_min:.0f}, saturation max {sat_max:.4f})"
+                     if focus_min is not None and sat_max is not None else "")
+                  + ".")
+    else:
+        q_hint = (f"Quality: {n_all - n_q_ok}/{n_all} views outside focus >= "
+                  f"{float(spec.min_focus):.0f} / saturation <= "
+                  f"{float(spec.max_saturation_frac):.3f}"
+                  + (f" (focus min {focus_min:.0f})" if focus_min is not None else "")
+                  + (f" (saturation max {sat_max:.4f})" if sat_max is not None else "")
+                  + (f"; missing metrics: {', '.join(missing_quality_metrics[:6])}"
+                     if missing_quality_metrics else "")
+                  + "; recorded quality.passed is not used without metrics.")
 
-    speeds, rates = [], []
-    order = sorted(range(n), key=lambda i: (_timestamp(view_of[i]) is None,
-                                            _timestamp(view_of[i]) or 0.0))
-    for a, b in zip(order, order[1:]):
-        ta, tb = _timestamp(view_of[a]), _timestamp(view_of[b])
-        if ta is None or tb is None or tb <= ta:
-            continue
-        dt = tb - ta
-        dtrans = float(np.linalg.norm(metrics[b]["t"] - metrics[a]["t"]))
-        drot = _rotation_angle_deg(metrics[a]["R"], metrics[b]["R"])
-        speeds.append(dtrans / dt)
-        rates.append(drot / dt)
-    sp = np.array(speeds, float) if speeds else np.zeros(0, float)
-    rt = np.array(rates, float) if rates else np.zeros(0, float)
-    stationary_flags = []
-    for i, v in enumerate(view_of):
-        explicit = v.get("stationary")
-        if explicit is not None:
-            stationary_flags.append(bool(explicit))
-        elif len(sp):
-            k = max(0, i - 1)
-            stationary_flags.append(bool(sp[min(k, len(sp) - 1)] <= spec.stationary_speed_mm_s
-                                         and rt[min(k, len(rt) - 1)] <= spec.stationary_rate_deg_s))
-        else:
-            stationary_flags.append(False)
-    n_stationary = int(sum(stationary_flags))
-    stationary_ok = n_stationary >= int(spec.min_stationary_views)
+    # The stationarity statistics describe the supplied stream when there is
+    # one; otherwise they describe the accepted observations but the verdict
+    # stays "unestablished" rather than silently passing or failing.
+    selected_rows = stream_rows if stream_supplied else s_rows
+    speeds = np.array([r["stationarity_speed_mm_s"] for r in selected_rows
+                       if r["stationarity_speed_mm_s"] is not None], float)
+    rates = np.array([r["stationarity_rate_deg_s"] for r in selected_rows
+                      if r["stationarity_rate_deg_s"] is not None], float)
+    windows = np.array([r["stationarity_window_s"] for r in selected_rows
+                        if r["stationarity_window_s"] is not None], float)
+    blurs = np.array([r["motion_blur_px"] for r in selected_rows
+                      if r["motion_blur_px"] is not None], float)
+    stationary_flags = [bool(r["stationary"]) for r in s_rows]
+    counted_intervals = ([i for i in stream_intervals if i.get("qualified")]
+                         if stream_supplied
+                         else [i for i in accepted_intervals if i.get("qualified")])
+    n_intervals = len(counted_intervals)
+    n_stationary = stream_stationary if stream_supplied else accepted_stationary
+    stationary_ok = bool(stationarity_established
+                         and n_intervals >= int(spec.min_stationary_views))
+    stationarity_sources: dict[str, int] = {}
+    for r in selected_rows:
+        stationarity_sources[r["stationarity_source"]] = \
+            stationarity_sources.get(r["stationarity_source"], 0) + 1
+    missing_stationarity = int(sum(1 for r in selected_rows
+                                   if r["stationarity_source"] == "missing"))
+    stationarity_measured = {
+        "n_stationary": n_stationary,
+        "n_stationary_intervals": n_intervals,
+        "n_stationary_observations": (stream_stationary if stream_supplied
+                                      else accepted_stationary),
+        "n_views": n_all,
+        "n_stream_observations": len(stream_rows),
+        "accepted_stationary_views": accepted_stationary,
+        "accepted_stationary_fraction": (accepted_stationary / n_all) if n_all else 0.0,
+        "accepted_stationary_intervals": len(
+            [i for i in accepted_intervals if i.get("qualified")]),
+        "n_unqualified_intervals": (
+            len(stream_intervals) - n_intervals if stream_supplied
+            else len(accepted_intervals) - n_intervals),
+        "min_dwell_s": float(spec.min_dwell_s),
+        "min_dwell_observations": int(spec.min_dwell_observations),
+        "dwell_durations_s": [round(float(i.get("duration_s") or 0.0), 3)
+                              for i in counted_intervals],
+        "stationary_fraction": (n_stationary / len(stream_rows))
+                               if (stream_supplied and stream_rows) else 0.0,
+        "n_dwell_views": n_dwell,
+        "stationarity_status": stationarity_status,
+        "stationarity_source": ("stream" if stationarity_established else
+                                ("accepted_only" if accepted_stationary
+                                 else "unestablished")),
+        "stationarity_source_counts": stationarity_sources,
+        "n_missing_stationarity": missing_stationarity,
+        "stationarity_interval_gap_s": float(spec.stationarity_interval_gap_s),
+        "speed_p50_mm_s": float(np.median(speeds)) if len(speeds) else None,
+        "speed_p95_mm_s": float(np.percentile(speeds, 95)) if len(speeds) else None,
+        "rate_p50_deg_s": float(np.median(rates)) if len(rates) else None,
+        "rate_p95_deg_s": float(np.percentile(rates, 95)) if len(rates) else None,
+        "window_s_p50": float(np.median(windows)) if len(windows) else None,
+        "motion_blur_px_max": float(np.max(blurs)) if len(blurs) else None,
+    }
+    stationarity_deficit = {
+        "stationary_views": max(0, int(spec.min_stationary_views) - n_intervals),
+        "stationary_intervals": n_intervals,
+        "unestablished": not stationarity_established,
+        "missing_stationarity_observations": missing_stationarity,
+    }
+    if stationary_ok:
+        s_hint = (f"Stationarity: {n_intervals} distinct dwell interval(s) from "
+                  f"{n_stationary} stationary stream observation(s) "
+                  f"(need {int(spec.min_stationary_views)}; accepted views "
+                  f"{accepted_stationary}/{n_all}).")
+    elif not stationarity_established:
+        s_hint = (f"Stationarity unestablished: no session-level stationarity "
+                  f"observation sequence was supplied (accepted views: "
+                  f"{accepted_stationary}/{n_all} stationary).  The controller "
+                  f"must pass every ingested observation's consecutive motion "
+                  f"fields, not only accepted views; need "
+                  f"{int(spec.min_stationary_views)} distinct dwell intervals.")
+    else:
+        s_hint = (f"Stationarity: only {n_intervals} distinct dwell interval(s) "
+                  f"from {n_stationary} stationary stream observation(s) "
+                  f"(need {int(spec.min_stationary_views)}); median speed "
+                  f"{float(np.median(speeds)):.1f} mm/s, median rotation "
+                  f"{float(np.median(rates)):.2f} deg/s.  Hold each pose still "
+                  f"for ~0.3 s and keep the dwell frames.")
     d7_sat = quality_ok and stationary_ok
-    d7_deficit = {"quality": max(0, int(math.ceil(spec.min_quality_fraction * n)) - n_q_ok),
-                  "stationary_views": max(0, int(spec.min_stationary_views) - n_stationary)}
+    d7_deficit = {"quality": quality_deficit["quality_views"],
+                  "stationary_views": stationarity_deficit["stationary_views"],
+                  "stationarity_unestablished": not stationarity_established,
+                  "missing_stationarity_observations": missing_stationarity}
     d7_hint = ("Quality and dwell are within limits." if d7_sat else
-               (f"Hold each pose still for ~0.3 s: only {n_stationary} of {n} views are "
-                f"below {spec.stationary_speed_mm_s:.0f} mm/s and "
-                f"{spec.stationary_rate_deg_s:.1f} deg/s (need "
-                f"{spec.min_stationary_views})."
-                if not stationary_ok else
-                f"Quality: {n - n_q_ok} of {n} accepted views exceed "
-                f"{spec.max_saturation_frac:.1%} saturation or fall below "
-                f"focus {spec.min_focus:.0f}."))
+               (q_hint if not quality_ok else "") +
+               (" " if not quality_ok and not stationary_ok else "") +
+               (s_hint if not stationary_ok else ""))
+    checks["quality"] = _check(
+        "image quality (focus/saturation)",
+        {"min_focus": float(spec.min_focus),
+         "max_saturation_frac": float(spec.max_saturation_frac),
+         "min_quality_fraction": float(spec.min_quality_fraction),
+         "camera_scope": list(_IR_CAMERAS),
+         "tex_policy": "reported, not gated by D7"},
+        quality_measured, quality_ok, quality_deficit, q_hint)
     checks["stationarity"] = _check(
-        "stationarity / quality",
+        "stationarity (dwell intervals from the observation stream)",
         {"min_stationary_views": int(spec.min_stationary_views),
-         "stationary_speed_mm_s": spec.stationary_speed_mm_s,
-         "stationary_rate_deg_s": spec.stationary_rate_deg_s,
-         "min_quality_fraction": spec.min_quality_fraction,
-         "max_saturation_frac": spec.max_saturation_frac,
-         "min_focus": spec.min_focus},
-        {"n_stationary": n_stationary, "n_quality_ok": n_q_ok,
-         "quality_fraction": q_frac,
-         "speed_p50_mm_s": float(np.median(sp)) if len(sp) else None,
-         "speed_p95_mm_s": float(np.percentile(sp, 95)) if len(sp) else None,
-         "rate_p50_deg_s": float(np.median(rt)) if len(rt) else None,
-         "rate_p95_deg_s": float(np.percentile(rt, 95)) if len(rt) else None},
-        d7_sat, d7_deficit, d7_hint)
+         "stationary_speed_mm_s": float(spec.stationary_speed_mm_s),
+         "stationary_rate_deg_s": float(spec.stationary_rate_deg_s),
+         "stationarity_interval_gap_s": float(spec.stationarity_interval_gap_s),
+         "observation_scope": "every ingested raw/decision observation; not "
+                              "only accepted views",
+         "stream_observation_required": True},
+        stationarity_measured, stationary_ok, stationarity_deficit, s_hint)
     dims["D7"] = {"id": "D7", "label": "stationarity / quality",
-                  "required": checks["stationarity"]["required"],
-                  "measured": checks["stationarity"]["measured"],
+                  "required": {"min_quality_fraction": float(spec.min_quality_fraction),
+                               "min_focus": float(spec.min_focus),
+                               "max_saturation_frac": float(spec.max_saturation_frac),
+                               "min_stationary_views": int(spec.min_stationary_views),
+                               "stationary_speed_mm_s": float(spec.stationary_speed_mm_s),
+                               "stationary_rate_deg_s": float(spec.stationary_rate_deg_s),
+                               "stationarity_interval_gap_s": float(
+                                   spec.stationarity_interval_gap_s)},
+                  "measured": {**quality_measured, **stationarity_measured},
                   "satisfied": d7_sat, "deficit": d7_deficit, "hint": d7_hint,
-                  "detail": {"views": q_rows, "stationary": stationary_flags,
-                             "speed_mm_s": sp.tolist(), "rate_deg_s": rt.tolist()},
-                  "checks": ["stationarity"]}
+                  "detail": {"quality": q_rows, "stationarity": s_rows,
+                             "stream_stationarity": stream_rows,
+                             "stationarity_intervals": (stream_intervals
+                                                        if stream_supplied
+                                                        else accepted_intervals),
+                             "stationarity_status": stationarity_status,
+                             "stationary": stationary_flags,
+                             "speed_mm_s": speeds.tolist(),
+                             "rate_deg_s": rates.tolist()},
+                  "checks": ["quality", "stationarity"]}
 
     # ---- D8 scale artefact ---------------------------------------------
     artefacts = []
@@ -805,11 +1325,13 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
                   "checks": ["scale_artefact"]}
 
     # ---- stability of the *current* pose (guidance input) --------------
-    stable, stability = _stability(metrics, view_of, spec)
+    stable, stability = _stability(all_metrics, all_view_of, spec)
 
     out = {
         "n_views": len(views),
-        "n_usable": n,
+        "n_usable": len(all_metrics),
+        "n_pose_views": n,
+        "n_dwell_views": n_dwell,
         "n_unusable": len(unusable),
         "unusable": unusable,
         "spec": spec.as_dict(),
@@ -831,13 +1353,17 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
     verdict = readiness(out)
     out["ready"] = bool(verdict["ready"])
     out["summary"] = verdict["summary"]
-    if n > 0 and n == len(views):
-        # Compatibility block for ``WizardController._external_coverage``
-        # (agent C): eight dimension keys plus ``ready``.  It is only emitted
-        # when every entry was usable — i.e. when the numbers describe the real
-        # geometry.  If the caller supplied entries without a pose the
+    if n > 0 and n == n_all - n_dwell:
+        # Compatibility block for ``WizardController._external_coverage``:
+        # eight dimension keys plus ``ready``.  It is only emitted when every
+        # non-dwell entry was usable — i.e. when the pose numbers describe the
+        # real geometry.  If the caller supplied entries without a pose the
         # controller must fall back to its own bookkeeping rather than display
         # a measurement that was never taken.
+        #
+        # ``quality`` and ``stationarity`` are the two *separately honest*
+        # halves of D7.  They must not both inherit D7's combined hint: the
+        # GUI shows them as two sub-indicators.
         out["dimensions"] = {
             "distance_bands": dims["D1"],
             "tilt_two_axes": dims["D2"],
@@ -845,35 +1371,32 @@ def measure(accepted_views: Sequence[Mapping[str, Any]],
             "image_regions": dims["D4"],
             "stereo_overlap": dims["D5"],
             "colour_participation": dims["D6"],
-            "quality": _sub_dimension(dims["D7"], "quality", n_q_ok, n,
-                                      float(spec.min_quality_fraction) * n),
-            "stationarity": _sub_dimension(dims["D7"], "stationarity",
-                                           n_stationary,
-                                           int(spec.min_stationary_views),
-                                           int(spec.min_stationary_views)),
+            "quality": _sub_dimension(checks, "quality", "D7"),
+            "stationarity": _sub_dimension(checks, "stationarity", "D7"),
             "scale_artefact": dims["D8"],
         }
     return out
 
 
-def _sub_dimension(parent: Mapping[str, Any], name: str, value: float,
-                   measured_of: float, required: float) -> dict:
-    """One sub-check of a composite dimension, shaped like a dimension."""
-    node = dict(parent)
-    node["id"] = f"{parent['id']}.{name}"
-    node["label"] = name
-    if name == "quality":
-        node["satisfied"] = bool(measured_of > 0 and value >= required)
-        node["measured"] = {"n_quality_ok": value, "n_views": measured_of,
-                            "required_fraction": (required / measured_of
-                                                  if measured_of else None)}
-        node["required"] = {"min_quality_fraction": (required / measured_of
-                                                     if measured_of else None)}
-    else:
-        node["satisfied"] = bool(value >= required)
-        node["measured"] = {"n_stationary": value}
-        node["required"] = {"min_stationary_views": required}
-    node["hint"] = parent.get("hint", "")
+def _sub_dimension(checks: Mapping[str, Any], name: str,
+                   parent_id: str) -> dict:
+    """One sub-check of a composite dimension, shaped like a dimension.
+
+    The node is a copy of its own :func:`_check` record, so ``satisfied``,
+    ``measured``, ``deficit`` and ``hint`` all describe that half only.  The
+    old implementation copied the parent D7 hint into both halves, which is
+    precisely the "both sub-indicators show the combined failure" bug.
+    """
+    source = checks.get(name) or {}
+    node = dict(source)
+    node["id"] = f"{parent_id}.{name}"
+    node["label"] = source.get("label", name)
+    node["parent_id"] = parent_id
+    node["satisfied"] = bool(source.get("satisfied"))
+    node["required"] = source.get("required")
+    node["measured"] = source.get("measured")
+    node["deficit"] = source.get("deficit")
+    node["hint"] = source.get("hint", "")
     return node
 
 
@@ -1004,22 +1527,38 @@ def _stability(metrics: Sequence[Mapping[str, Any]],
     shared = int(v.get("shared_markers_ir", 0) or 0)
     if shared < int(spec.min_shared_markers):
         reasons.append(f"only {shared} shared IR markers (< {spec.min_shared_markers})")
-    ts = [_timestamp(x) for x in views]
-    if len(metrics) >= 2 and ts[-1] is not None and ts[-2] is not None \
-            and ts[-1] > ts[-2]:
-        dt = ts[-1] - ts[-2]
-        speed = float(np.linalg.norm(metrics[-1]["t"] - metrics[-2]["t"])) / dt
-        rate = _rotation_angle_deg(metrics[-2]["R"], metrics[-1]["R"]) / dt
-        if speed > spec.stationary_speed_mm_s:
+
+    obs = stationarity_observation(v, spec)
+    speed = obs["stationarity_speed_mm_s"]
+    rate = obs["stationarity_rate_deg_s"]
+    if obs["stationarity_source"] != "missing":
+        source = obs["stationarity_source"]
+        if speed is not None and speed > spec.stationary_speed_mm_s:
             reasons.append(f"moving at {speed:.1f} mm/s")
-        if rate > spec.stationary_rate_deg_s:
+        if rate is not None and rate > spec.stationary_rate_deg_s:
             reasons.append(f"rotating at {rate:.2f} deg/s")
     else:
-        speed = rate = None
+        # Diagnostic only: the sparse accepted-pose delta can inform the
+        # guidance guard, but it is not stationarity evidence for D7.
+        source = "accepted_pose_delta"
+        ts = [_timestamp(x) for x in views]
+        if len(metrics) >= 2 and ts[-1] is not None and ts[-2] is not None \
+                and ts[-1] > ts[-2]:
+            dt = ts[-1] - ts[-2]
+            speed = float(np.linalg.norm(metrics[-1]["t"] - metrics[-2]["t"])) / dt
+            rate = _rotation_angle_deg(metrics[-2]["R"], metrics[-1]["R"]) / dt
+            if speed > spec.stationary_speed_mm_s:
+                reasons.append(f"moving at {speed:.1f} mm/s")
+            if rate > spec.stationary_rate_deg_s:
+                reasons.append(f"rotating at {rate:.2f} deg/s")
+        else:
+            speed = rate = None
     stable = not reasons
     return stable, {"stable": stable, "reasons": reasons,
                     "last_view": v.get("view_id"),
-                    "last_speed_mm_s": speed, "last_rate_deg_s": rate}
+                    "last_speed_mm_s": speed, "last_rate_deg_s": rate,
+                    "motion_source": source,
+                    "last_dwell": _is_dwell(v)}
 
 
 # ---------------------------------------------------------------------------
@@ -1108,141 +1647,326 @@ def _band_centre(spec: CoverageSpec, i: int) -> float:
     return 0.5 * (lo + hi)
 
 
+_ROW_WORDS = ("top", "middle", "bottom")
+_COL_WORDS = ("left", "centre", "right")
+_CORNER_CELLS = {"top_left": (0, 0), "top_right": (0, 2),
+                 "bottom_left": (2, 0), "bottom_right": (2, 2)}
+
+
+def _cell_words(row: int, col: int) -> str:
+    return f"{_ROW_WORDS[row]}-{_COL_WORDS[col]}"
+
+
+def _image_targets(measurement: Mapping[str, Any],
+                   spec: CoverageSpec) -> list[dict]:
+    """Only the image cells whose measured count is genuinely deficient.
+
+    The old guidance generated all four corners whenever any corner was
+    missing, then effort-sorted them.  On the real session that kept proposing
+    top-left (9 visits) because it was nearest, while top-right and bottom-right
+    stayed at zero.  A satisfied corner is never a guidance target.
+    """
+    checks = measurement.get("checks") or {}
+    targets: list[dict] = []
+    seen: set[tuple[int, int]] = set()
+    corner_check = checks.get("image_corners") or {}
+    if not corner_check.get("satisfied", True):
+        corners = ((corner_check.get("measured") or {}).get("corners") or {})
+        for name, (row, col) in _CORNER_CELLS.items():
+            count = int(corners.get(name, 0) or 0)
+            if count < int(spec.min_corner_views) and (row, col) not in seen:
+                targets.append({"row": row, "col": col, "kind": "corner",
+                                "name": name, "count": count,
+                                "label": f"{_cell_words(row, col)} corner",
+                                "need": int(spec.min_corner_views)})
+                seen.add((row, col))
+    region_check = checks.get("image_regions") or {}
+    if not region_check.get("satisfied", True):
+        counts = ((region_check.get("measured") or {}).get("region_counts")
+                  or [])
+        cells: list[tuple[int, int]] = []
+        if len(counts) >= 9:
+            cells = [(r, c) for r in range(3) for c in range(3)
+                     if counts[r * 3 + c] == 0]
+            if not cells:
+                # Visited-region requirement is ">= 6 visited"; if it is still
+                # unsatisfied there is a zero somewhere, but a partial caller
+                # may only report the grid.  Target the least visited cells.
+                cells = sorted(
+                    ((r, c) for r in range(3) for c in range(3)
+                     if (r, c) != (1, 1)),
+                    key=lambda rc: counts[rc[0] * 3 + rc[1]])[:1]
+        else:
+            cells = [(r, c) for r in range(3) for c in range(3)
+                     if (r, c) != (1, 1)]
+        for (row, col) in cells:
+            if (row, col) in seen:
+                continue
+            count = int(counts[row * 3 + col]) if len(counts) >= 9 else 0
+            targets.append({"row": row, "col": col, "kind": "region",
+                            "name": f"{_cell_words(row, col)}_region",
+                            "count": count,
+                            "label": f"{_cell_words(row, col)} region",
+                            "need": 0})
+            seen.add((row, col))
+    return targets
+
+
 def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
               current: dict | None) -> list[dict]:
-    """Rank candidate pose families for the unsatisfied checks."""
+    """Rank candidate pose families for the genuinely unsatisfied checks.
+
+    A family is generated only when it unlocks at least one unsatisfied
+    check.  Satisfied dimensions may still supply a *carrier* (the current
+    distance band or roll), but they never appear in ``unlocks`` and never lead
+    the operator instruction.
+    """
     checks = measurement.get("checks") or {}
     nx = len(spec.distance_bands_mm)
     families: list[dict] = []
 
+    band_counts = ((checks.get("distance_bands") or {}).get("measured") or {}) \
+        .get("band_counts", [0] * nx)
     band_missing = [i for i in range(nx)
-                    if not (checks.get("distance_bands", {}).get("measured", {})
-                            .get("band_counts", [0] * nx)[i] >= spec.min_views_per_distance_band)]
-    band_counts = (checks.get("distance_bands", {}).get("measured", {})
-                   .get("band_counts", [0] * nx))
-    if not band_missing:
-        # distance is done; still offer a mid band as the carrier of other moves
-        band_missing = [min(range(nx), key=lambda i: (abs(_band_centre(spec, i)
-                                                          - (current or {}).get("distance_mm", 0.0))))]
-    tilt_x_missing = not checks.get("tilt_axis_x", {}).get("satisfied", True)
-    tilt_y_missing = not checks.get("tilt_axis_y", {}).get("satisfied", True)
-    quad_missing = not checks.get("tilt_quadrants", {}).get("satisfied", True)
-    roll_missing = not checks.get("roll_sectors", {}).get("satisfied", True)
-    region_missing = not checks.get("image_regions", {}).get("satisfied", True)
-    corner_missing = not checks.get("image_corners", {}).get("satisfied", True)
+                    if (band_counts[i] if i < len(band_counts) else 0)
+                    < int(spec.min_views_per_distance_band)]
+    distance_required = bool(band_missing)
+    if distance_required:
+        band_choices = [(b, _band_centre(spec, b), True) for b in band_missing]
+    else:
+        cd = None if current is None else current.get("distance_mm")
+        cd = float(cd) if cd is not None else None
+        if cd is not None:
+            b = spec.band_index(cd)
+            if b is None:
+                b = min(range(nx), key=lambda i: abs(_band_centre(spec, i) - cd))
+                target_d = _band_centre(spec, b)
+            else:
+                target_d = min(max(cd, spec.distance_bands_mm[b][0]),
+                               spec.distance_bands_mm[b][1] - 1e-6)
+        else:
+            b = min(range(nx), key=lambda i: abs(_band_centre(spec, i)))
+            target_d = _band_centre(spec, b)
+        band_choices = [(b, target_d, False)]
 
-    tx_choices = [0.0]
-    ty_choices = [0.0]
+    tilt_x_missing = not (checks.get("tilt_axis_x") or {}).get("satisfied", True)
+    tilt_y_missing = not (checks.get("tilt_axis_y") or {}).get("satisfied", True)
+    quad_missing = not (checks.get("tilt_quadrants") or {}).get("satisfied", True)
+    roll_missing = not (checks.get("roll_sectors") or {}).get("satisfied", True)
+    tilt_required = bool(tilt_x_missing or tilt_y_missing or quad_missing)
+    image_targets = _image_targets(measurement, spec)
+    image_choices: list[dict | None] = list(image_targets) or [None]
+    if not (distance_required or tilt_required or roll_missing or image_targets):
+        return []
+
     stats = measurement.get("pose_stats") or {}
     med_x = float(stats.get("tilt_x_centre_deg") or 0.0)
     med_y = float(stats.get("tilt_y_centre_deg") or 0.0)
     exc = float(spec.min_tilt_deg) + 5.0
     if tilt_x_missing or quad_missing:
         tx_choices = [med_x - exc, med_x + exc]
+    else:
+        tx_choices = [float((current or {}).get("tilt_x_deg", med_x))]
     if tilt_y_missing or quad_missing:
         ty_choices = [med_y - exc, med_y + exc]
-    if not (tilt_x_missing or tilt_y_missing or quad_missing):
-        tx_choices = [float((current or {}).get("tilt_x_deg", med_x))]
+    else:
         ty_choices = [float((current or {}).get("tilt_y_deg", med_y))]
 
-    roll_choices = [0.0]
     if roll_missing:
-        counts = checks.get("roll_sectors", {}).get("measured", {}).get("bin_counts", [])
+        counts = ((checks.get("roll_sectors") or {}).get("measured") or {}) \
+            .get("bin_counts", [])
         size = spec.roll_bin_size_deg()
         roll_choices = [((i + 0.5) * size) % 360.0 for i, c in enumerate(counts)
-                        if c < spec.min_views_per_roll_bin] or [0.0]
+                        if c < int(spec.min_views_per_roll_bin)] or [0.0]
+    else:
+        roll_choices = [float((current or {}).get("roll_deg", 0.0))]
 
-    region_choices = [(None, None)]
-    if corner_missing and not region_missing:
-        region_choices = [(0, 0), (0, 2), (2, 0), (2, 2)]
-    elif region_missing:
-        region_choices = [(row, col) for row in range(3) for col in range(3)
-                          if (row, col) != (1, 1)]   # centre is where the plate is
-        if not region_choices:
-            region_choices = [(None, None)]
-
-    for b in band_missing:
+    for b, target_d, dist_required in band_choices:
         for tx in tx_choices:
             for ty in ty_choices:
                 for roll in roll_choices:
-                    for (row, col) in region_choices:
-                        # lateral offset that puts the plate centre in a region
+                    for target in image_choices:
+                        row = None if target is None else int(target["row"])
+                        col = None if target is None else int(target["col"])
                         lat = (0.0, 0.0)
                         if row is not None:
-                            lat = (((col - 1) * 0.30) * _band_centre(spec, b),
-                                   ((row - 1) * 0.24) * _band_centre(spec, b))
-                        R, t = family_pose(_band_centre(spec, b), tx, ty, roll, lat)
+                            lat = (((col - 1) * 0.27) * target_d,
+                                   ((row - 1) * 0.21) * target_d)
+                        # ``target_d`` is the board's distance from the camera
+                        # (norm(t)), not its z translation.  A lateral offset
+                        # therefore reduces z so the corner target stays inside
+                        # the requested 300-560 mm physical band.
+                        z = math.sqrt(max(target_d * target_d
+                                          - lat[0] * lat[0]
+                                          - lat[1] * lat[1], 1.0))
+                        R, t = family_pose(z, tx, ty, roll, lat)
+                        unlocks: list[str] = []
+                        weight = 0
+                        if dist_required:
+                            unlocks.append(f"distance band {b}")
+                            weight += 1
+                        if tilt_required:
+                            unlocks.append(
+                                f"tilt ({'+' if tx >= 0 else '-'}x,"
+                                f"{'+' if ty >= 0 else '-'}y)")
+                            weight += 2
+                        if roll_missing:
+                            unlocks.append(
+                                f"roll sector {int((roll % 360) // 90)}")
+                            weight += 1
+                        if target is not None:
+                            if target["kind"] == "corner":
+                                unlocks.append(
+                                    f"image corner {target['label']} "
+                                    f"(needs {max(0, target['need'] - target['count'])} "
+                                    f"more)")
+                                weight += 3
+                            else:
+                                unlocks.append(
+                                    f"image region {target['label']} (unvisited)")
+                                weight += 2
+                        if not unlocks:
+                            continue
                         fam = {"distance_band": b,
-                               "distance_mm": _band_centre(spec, b),
-                               "tilt_x_deg": float(tx), "tilt_y_deg": float(ty),
+                               "distance_mm": float(target_d),
+                               "pose_z_mm": float(z),
+                               "tilt_x_deg": float(tx),
+                               "tilt_y_deg": float(ty),
                                "roll_deg": float(roll),
-                               "image_region": None if row is None else [int(row), int(col)],
+                               "distance_required": dist_required,
+                               "tilt_required": tilt_required,
+                               "roll_required": roll_missing,
+                               "image_target": target,
+                               "image_region": (None if row is None else
+                                                [int(row), int(col)]),
                                "lateral_mm": [float(lat[0]), float(lat[1])],
-                               "R": R, "t": t,
-                               "unlocks": _unlocks(band_counts[b] if b < len(band_counts) else 0,
-                                                   b, tilt_x_missing, tilt_y_missing,
-                                                   quad_missing, tx, ty,
-                                                   roll_missing, roll,
-                                                   region_missing, corner_missing,
-                                                   row, col)}
+                               "unlock_weight": int(weight),
+                               "unlocks": unlocks,
+                               "R": R, "t": t}
                         if current is not None:
-                            eff = pose_effort((current["R"], current["t"]), (R, t))
+                            eff = pose_effort((current["R"], current["t"]),
+                                              (R, t))
                         else:
-                            eff = {"score": 0.0, "lateral_mm": 0.0, "depth_mm": 0.0,
-                                   "rotation_deg": 0.0, "move_mm": [0.0, 0.0, 0.0]}
+                            eff = {"score": 0.0, "lateral_mm": 0.0,
+                                   "depth_mm": 0.0, "rotation_deg": 0.0,
+                                   "move_mm": [0.0, 0.0, 0.0]}
                         fam["effort"] = eff
                         families.append(fam)
-    # lexicographic: nearest family first, then a deterministic family order
-    families.sort(key=lambda f: (round(float(f["effort"]["score"]), 6),
+    # First unlock *what is genuinely missing* (a corner outweighs a carrier
+    # distance), then nearest family; the rest of the key is deterministic.
+    families.sort(key=lambda f: (-int(f["unlock_weight"]),
+                                 round(float(f["effort"]["score"]), 6),
                                  f["distance_band"], f["tilt_x_deg"],
                                  f["tilt_y_deg"], f["roll_deg"],
-                                 -1 if f["image_region"] is None else f["image_region"][0],
-                                 -1 if f["image_region"] is None else f["image_region"][1]))
+                                 -1 if f["image_region"] is None
+                                 else f["image_region"][0],
+                                 -1 if f["image_region"] is None
+                                 else f["image_region"][1]))
     return families
 
 
-def _unlocks(band_count: int, b: int, tx_missing: bool,
-             ty_missing: bool, quad_missing: bool, tx: float, ty: float,
-             roll_missing: bool, roll: float, region_missing: bool,
-             corner_missing: bool, row: int | None, col: int | None) -> list[str]:
-    out = [f"distance band {b}"]
-    if quad_missing or tx_missing or ty_missing:
-        out.append(f"tilt ({'+' if tx >= 0 else '-'}x,{'+' if ty >= 0 else '-'}y)")
-    if roll_missing:
-        out.append(f"roll sector {int((roll % 360) // 90)}")
-    if (region_missing or corner_missing) and row is not None:
-        out.append(f"image region {row},{col}")
-    return out
+def _instruction(spec: CoverageSpec, fam: Mapping[str, Any],
+                 current: dict | None) -> str:
+    """Short operator sentence, missing information first.
+
+    Distance is stated only when a distance band is genuinely unsatisfied.
+    When D1 is complete the band is an internal carrier: the operator must see
+    the corner/region that is actually missing, not "move to 380-460 mm".
+    """
+    parts: list[str] = []
+    target = fam.get("image_target")
+    if target is not None:
+        if target.get("kind") == "corner":
+            parts.append(f"put the plate centre in the {target['label']} "
+                         f"of the image")
+        else:
+            parts.append(f"put the plate centre in the {target['label']} "
+                         f"of the image")
+    if fam.get("tilt_required"):
+        dtx = fam["tilt_x_deg"] - (current["tilt_x_deg"] if current else 0.0)
+        dty = fam["tilt_y_deg"] - (current["tilt_y_deg"] if current else 0.0)
+        tilts = []
+        if abs(dtx) >= 2.0:
+            tilts.append(f"{abs(dtx):.0f} deg {'left' if dtx < 0 else 'right'}")
+        if abs(dty) >= 2.0:
+            tilts.append(f"{abs(dty):.0f} deg {'down' if dty < 0 else 'up'}")
+        if tilts:
+            parts.append("tilt " + " and ".join(tilts))
+    if fam.get("roll_required"):
+        droll = fam["roll_deg"] - (current["roll_deg"] if current else 0.0)
+        droll = (droll + 180.0) % 360.0 - 180.0
+        if abs(droll) >= 5.0:
+            parts.append(f"roll the plate by {abs(droll):.0f} deg "
+                         f"{'clockwise' if droll < 0 else 'anticlockwise'}")
+    if fam.get("distance_required"):
+        lo, hi = spec.distance_bands_mm[fam["distance_band"]]
+        text = f"move to {lo:.0f}-{hi:.0f} mm"
+        if current is not None:
+            d = fam["distance_mm"] - current["distance_mm"]
+            if abs(d) >= 10.0:
+                text += f" ({'closer' if d < 0 else 'further'}, {abs(d):.0f} mm)"
+        parts.append(text)
+    if not parts:
+        parts.append("hold still")
+    text = ", ".join(parts) + "."
+    return text[:1].upper() + text[1:]
 
 
-def _instruction(spec: CoverageSpec, fam: Mapping[str, Any], current: dict | None) -> str:
-    """Short operator sentence for one pose family (deltas when known)."""
-    lo, hi = spec.distance_bands_mm[fam["distance_band"]]
-    parts = [f"Move to {lo:.0f}-{hi:.0f} mm"]
-    if current is not None:
-        d = fam["distance_mm"] - current["distance_mm"]
-        if abs(d) >= 10.0:
-            parts[0] += f" ({'closer' if d < 0 else 'further'}, {abs(d):.0f} mm)"
-    dtx = fam["tilt_x_deg"] - (current["tilt_x_deg"] if current else 0.0)
-    dty = fam["tilt_y_deg"] - (current["tilt_y_deg"] if current else 0.0)
-    tilts = []
-    if abs(dtx) >= 2.0:
-        tilts.append(f"{abs(dtx):.0f} deg {'left' if dtx < 0 else 'right'}")
-    if abs(dty) >= 2.0:
-        tilts.append(f"{abs(dty):.0f} deg {'down' if dty < 0 else 'up'}")
-    if tilts:
-        parts.append("tilt " + " and ".join(tilts))
-    droll = fam["roll_deg"] - (current["roll_deg"] if current else 0.0)
-    droll = (droll + 180.0) % 360.0 - 180.0
-    if abs(droll) >= 5.0:
-        parts.append(f"roll the plate by {abs(droll):.0f} deg "
-                     f"{'clockwise' if droll < 0 else 'anticlockwise'}")
-    reg = fam["image_region"]
-    if reg is not None:
-        rname = ["top", "middle", "bottom"][reg[0]]
-        cname = ["left", "centre", "right"][reg[1]]
-        parts.append(f"put the plate centre in the {rname}-{cname} of the image")
-    return ", ".join(parts) + "."
+def _dwell_hint(measurement: Mapping[str, Any]) -> str:
+    """The D7 sub-hint, independent of the pose guidance."""
+    checks = measurement.get("checks") or {}
+    hints = []
+    for name in ("quality", "stationarity"):
+        check = checks.get(name) or {}
+        if check and not check.get("satisfied", True):
+            hints.append(str(check.get("hint") or ""))
+    return " ".join(h for h in hints if h)
+
+
+def _pose_affecting_unsatisfied(measurement: Mapping[str, Any]) -> list[str]:
+    """Dimensions D1-D6 that still need a new pose (not D7/D8)."""
+    return [d for d in DIMENSIONS if d not in ("D7", "D8")
+            and not (measurement.get(d) or {}).get("satisfied", False)]
+
+
+def _dwell_hold_result(measurement: Mapping[str, Any],
+                       ready: Mapping[str, Any],
+                       spec: CoverageSpec) -> dict | None:
+    """A hold/dwell instruction when only acquisition quality remains.
+
+    Once every pose dimension is satisfied, generating another pose family
+    would send the operator on an endless walk while D7 stays unsatisfied.
+    Quality/stationarity are acquisition properties: the actionable request is
+    to hold still and keep the dwell frames.
+    """
+    if _pose_affecting_unsatisfied(measurement):
+        return None
+    checks = measurement.get("checks") or {}
+    stat = checks.get("stationarity") or {}
+    qual = checks.get("quality") or {}
+    hints = _dwell_hint(measurement)
+    d8 = measurement.get("D8") or {}
+    if not d8.get("satisfied", True) and d8.get("hint"):
+        hints = (hints + " " + str(d8["hint"])).strip()
+    if not hints:
+        return None
+    if stat and not stat.get("satisfied", True):
+        deficit = stat.get("deficit") or {}
+        need = int(deficit.get("stationary_views") or 0)
+        instruction = (
+            f"Hold the plate still at this pose for ~0.3 s — stationarity "
+            f"needs {need} more distinct dwell interval(s).  Keep the duplicate "
+            f"dwell frames; they are evidence, not redundant solver views.")
+        if qual and not qual.get("satisfied", True):
+            instruction += " " + str(qual.get("hint") or "")
+    else:
+        instruction = hints or "Hold the plate still for a moment."
+    return {"mode": "hold", "instruction": instruction.strip(),
+            "target_pose": None, "target_R": None, "target_t": None,
+            "family": None, "families": [], "unlocks": [], "effort": None,
+            "precise": False, "dwell_hint": hints,
+            "reason": "only acquisition-quality dimensions remain",
+            "readiness": ready.get("summary", "")}
 
 
 def guidance_target(measurement: Mapping[str, Any],
@@ -1289,30 +2013,30 @@ def guidance_target(measurement: Mapping[str, Any],
                     "unlocks": [], "effort": None, "precise": False,
                     "reason": why, "readiness": ready["summary"]}
 
-    families = _families(measurement, spec, cur)
-    if ready["ready"] and not families:
-        return {"mode": "done",
-                "instruction": "Coverage complete — stop when the uncertainty "
-                               "gate is also satisfied.",
-                "target_pose": None, "target_R": None, "target_t": None,
-                "family": None, "families": [], "unlocks": [],
-                "effort": None, "precise": False,
-                "reason": "all dimensions satisfied",
-                "readiness": ready["summary"]}
     if ready["ready"]:
         return {"mode": "done",
                 "instruction": "Coverage complete — the remaining work is the "
                                "uncertainty gate, not more motion.",
                 "target_pose": None, "target_R": None, "target_t": None,
-                "family": families[0], "families": families[:8], "unlocks": [],
-                "effort": families[0].get("effort"), "precise": False,
+                "family": None, "families": [], "unlocks": [],
+                "effort": None, "precise": False, "dwell_hint": "",
                 "reason": "all dimensions satisfied",
                 "readiness": ready["summary"]}
+
+    dwell = _dwell_hold_result(measurement, ready, spec)
+    if dwell is not None:
+        return dwell
+
+    families = _families(measurement, spec, cur)
     if not families:
+        hold = _dwell_hold_result(measurement, ready, spec)
+        if hold is not None:
+            return hold
         return {"mode": "hold", "instruction": "No admissible next family — "
                 "check the plate visibility.", "target_pose": None,
                 "target_R": None, "target_t": None, "family": None,
                 "families": [], "unlocks": [], "effort": None, "precise": False,
+                "dwell_hint": _dwell_hint(measurement),
                 "reason": "no family generated", "readiness": ready["summary"]}
 
     best = families[0]
@@ -1331,6 +2055,7 @@ def guidance_target(measurement: Mapping[str, Any],
         "unlocks": best["unlocks"],
         "effort": best["effort"],
         "precise": False,
+        "dwell_hint": _dwell_hint(measurement),
         "reason": "nearest unsatisfied pose family",
         "readiness": ready["summary"],
     }

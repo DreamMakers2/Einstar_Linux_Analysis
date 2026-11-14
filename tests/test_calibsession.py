@@ -533,11 +533,21 @@ def test_frames_triplets_and_sequential_dwell(tmp_path):
     assert any("similar" in r for r in records[1]["reasons"])
     for k in range(1, len(poses)):
         first, second = records[2 * k], records[2 * k + 1]
-        assert not first["accepted"], (k, first["reasons"])
-        assert any("moving" in r for r in first["reasons"]), first["reasons"]
-        assert first["dwell_state"] == "moving"
-        assert second["accepted"], (k, second["reasons"])
-        assert second["dwell_state"] == "stationary"
+        if first["accepted"]:
+            # A short exposure makes the arrival frame sharp enough to keep;
+            # the repeat is then the duplicate, so each pose still contributes
+            # exactly one accepted view.  (The old gate rejected on absolute
+            # inter-frame displacement regardless of exposure; that was the
+            # dwell-metric defect fixed for session 03.)
+            assert first["dwell_state"] == "stationary", first
+            assert not second["accepted"], (k, second["reasons"])
+            assert any("similar" in r for r in second["reasons"]), second["reasons"]
+        else:
+            assert any(("moving" in r or "motion blur" in r)
+                       for r in first["reasons"]), first["reasons"]
+            assert first["dwell_state"] == "moving", first
+            assert second["accepted"], (k, second["reasons"])
+            assert second["dwell_state"] == "stationary"
     # a repeated pose is not double-counted: each pose contributes once
     assert len({(round(s["pose"]["distance_mm"]), round(s["pose"]["tilt_deg"], 1))
                 for s in accepted}) == len(poses)

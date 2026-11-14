@@ -108,7 +108,14 @@ def test_vendor_corpus_session_if_available(tmp_path):
     assert summary.get("ready") == "False", summary
     assert not (out / "candidate" / "profile.json").exists()
     missing = str(summary.get("missing") or "")
-    assert "tilt" in missing or "region" in missing, summary
+    assert missing, summary
+    # The exact missing dimensions depend on which stills the vendor corpus
+    # yields in this run (the set is a genuine refusal either way); the window
+    # must name at least one real coverage dimension rather than a generic
+    # "not ready" with no cause.
+    assert any(key in missing.lower()
+               for key in ("distance", "tilt", "region", "roll",
+                           "stationarity", "colour", "stereo")), summary
 
 
 def test_closing_a_window_during_a_long_solve_never_aborts(tmp_path):

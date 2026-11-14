@@ -1,0 +1,1990 @@
+{
+  "schema": "einstar-offline-corner-report/1",
+  "features": "/tmp/feat_preflight/features.jsonl",
+  "groups": 800,
+  "groups_with_markers": {
+    "left": 781,
+    "right": 770,
+    "tex": 793
+  },
+  "both_ir_markers_any": 756,
+  "both_ir_markers_min12": 734,
+  "assignment_full_both_ir": 541,
+  "groups_with_pose": 789,
+  "image_cells_centroid": {
+    "left": {
+      "middle-centre": 450,
+      "middle-left": 57,
+      "middle-right": 3,
+      "top-centre": 237,
+      "top-left": 20,
+      "top-right": 14
+    },
+    "right": {
+      "bottom-centre": 290,
+      "bottom-left": 9,
+      "bottom-right": 59,
+      "middle-centre": 368,
+      "middle-right": 43,
+      "top-left": 1
+    },
+    "tex": {}
+  },
+  "image_cells_pose_centre": {
+    "left": {
+      "bottom-centre": 5,
+      "bottom-right": 9,
+      "middle-centre": 440,
+      "middle-left": 59,
+      "middle-right": 9,
+      "top-centre": 227,
+      "top-left": 29,
+      "top-right": 11
+    },
+    "right": {
+      "bottom-centre": 5,
+      "bottom-right": 9,
+      "middle-centre": 440,
+      "middle-left": 59,
+      "middle-right": 9,
+      "top-centre": 227,
+      "top-left": 29,
+      "top-right": 11
+    }
+  },
+  "corner_candidates_pose_any_ir": {
+    "count": 12,
+    "groups": [
+      {
+        "group": 72,
+        "device_group": 73,
+        "host_time_ns": 15063117143779,
+        "marker_counts": {
+          "right": 29,
+          "left": 31,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 337.5426236874239,
+        "pose_rms_px": 0.5023917268291602
+      },
+      {
+        "group": 73,
+        "device_group": 74,
+        "host_time_ns": 15063217134166,
+        "marker_counts": {
+          "right": 14,
+          "left": 27,
+          "tex": 24
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 334.4856226099348,
+        "pose_rms_px": 0.5705375220563571
+      },
+      {
+        "group": 74,
+        "device_group": 75,
+        "host_time_ns": 15063317149099,
+        "marker_counts": {
+          "right": 12,
+          "left": 23,
+          "tex": 14
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 328.41858592294153,
+        "pose_rms_px": 0.5276813214088026
+      },
+      {
+        "group": 75,
+        "device_group": 76,
+        "host_time_ns": 15063417115830,
+        "marker_counts": {
+          "right": 12,
+          "left": 19,
+          "tex": 15
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 321.65399464497324,
+        "pose_rms_px": 0.5532971597193375
+      },
+      {
+        "group": 84,
+        "device_group": 85,
+        "host_time_ns": 15064317156983,
+        "marker_counts": {
+          "right": 10,
+          "left": 21,
+          "tex": 19
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 344.5674027734279,
+        "pose_rms_px": 0.495480490569845
+      },
+      {
+        "group": 85,
+        "device_group": 86,
+        "host_time_ns": 15064417194955,
+        "marker_counts": {
+          "right": 10,
+          "left": 18,
+          "tex": 17
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 351.55381420150576,
+        "pose_rms_px": 0.4061937854441433
+      },
+      {
+        "group": 86,
+        "device_group": 87,
+        "host_time_ns": 15064517138444,
+        "marker_counts": {
+          "right": 8,
+          "left": 18,
+          "tex": 19
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 360.96336366956564,
+        "pose_rms_px": 0.41282485239228484
+      },
+      {
+        "group": 87,
+        "device_group": 88,
+        "host_time_ns": 15064617140974,
+        "marker_counts": {
+          "right": 13,
+          "left": 25,
+          "tex": 11
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 368.6107582223699,
+        "pose_rms_px": 0.6031284179338341
+      },
+      {
+        "group": 88,
+        "device_group": 89,
+        "host_time_ns": 15064717146337,
+        "marker_counts": {
+          "right": 19,
+          "left": 27,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 362.89055214465617,
+        "pose_rms_px": 0.4752419974672434
+      },
+      {
+        "group": 89,
+        "device_group": 90,
+        "host_time_ns": 15064817146977,
+        "marker_counts": {
+          "right": 32,
+          "left": 35,
+          "tex": 35
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 355.9715548403102,
+        "pose_rms_px": 0.4975920849839209
+      },
+      {
+        "group": 92,
+        "device_group": 93,
+        "host_time_ns": 15065117231065,
+        "marker_counts": {
+          "right": 31,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 329.960627029642,
+        "pose_rms_px": 0.5092305863900882
+      },
+      {
+        "group": 737,
+        "device_group": 738,
+        "host_time_ns": 15130459919517,
+        "marker_counts": {
+          "right": 25,
+          "left": 7,
+          "tex": 35
+        },
+        "cells": {
+          "left": "bottom-right",
+          "right": "bottom-right"
+        },
+        "centroid_cells": {
+          "left": "middle-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 364.80931510548504,
+        "pose_rms_px": 0.6085102258989015
+      }
+    ]
+  },
+  "corner_candidates_pose_both_ir": {
+    "count": 12,
+    "groups": [
+      {
+        "group": 72,
+        "device_group": 73,
+        "host_time_ns": 15063117143779,
+        "marker_counts": {
+          "right": 29,
+          "left": 31,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 337.5426236874239,
+        "pose_rms_px": 0.5023917268291602
+      },
+      {
+        "group": 73,
+        "device_group": 74,
+        "host_time_ns": 15063217134166,
+        "marker_counts": {
+          "right": 14,
+          "left": 27,
+          "tex": 24
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 334.4856226099348,
+        "pose_rms_px": 0.5705375220563571
+      },
+      {
+        "group": 74,
+        "device_group": 75,
+        "host_time_ns": 15063317149099,
+        "marker_counts": {
+          "right": 12,
+          "left": 23,
+          "tex": 14
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 328.41858592294153,
+        "pose_rms_px": 0.5276813214088026
+      },
+      {
+        "group": 75,
+        "device_group": 76,
+        "host_time_ns": 15063417115830,
+        "marker_counts": {
+          "right": 12,
+          "left": 19,
+          "tex": 15
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 321.65399464497324,
+        "pose_rms_px": 0.5532971597193375
+      },
+      {
+        "group": 84,
+        "device_group": 85,
+        "host_time_ns": 15064317156983,
+        "marker_counts": {
+          "right": 10,
+          "left": 21,
+          "tex": 19
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 344.5674027734279,
+        "pose_rms_px": 0.495480490569845
+      },
+      {
+        "group": 85,
+        "device_group": 86,
+        "host_time_ns": 15064417194955,
+        "marker_counts": {
+          "right": 10,
+          "left": 18,
+          "tex": 17
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 351.55381420150576,
+        "pose_rms_px": 0.4061937854441433
+      },
+      {
+        "group": 86,
+        "device_group": 87,
+        "host_time_ns": 15064517138444,
+        "marker_counts": {
+          "right": 8,
+          "left": 18,
+          "tex": 19
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 360.96336366956564,
+        "pose_rms_px": 0.41282485239228484
+      },
+      {
+        "group": 87,
+        "device_group": 88,
+        "host_time_ns": 15064617140974,
+        "marker_counts": {
+          "right": 13,
+          "left": 25,
+          "tex": 11
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 368.6107582223699,
+        "pose_rms_px": 0.6031284179338341
+      },
+      {
+        "group": 88,
+        "device_group": 89,
+        "host_time_ns": 15064717146337,
+        "marker_counts": {
+          "right": 19,
+          "left": 27,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 362.89055214465617,
+        "pose_rms_px": 0.4752419974672434
+      },
+      {
+        "group": 89,
+        "device_group": 90,
+        "host_time_ns": 15064817146977,
+        "marker_counts": {
+          "right": 32,
+          "left": 35,
+          "tex": 35
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 355.9715548403102,
+        "pose_rms_px": 0.4975920849839209
+      },
+      {
+        "group": 92,
+        "device_group": 93,
+        "host_time_ns": 15065117231065,
+        "marker_counts": {
+          "right": 31,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 329.960627029642,
+        "pose_rms_px": 0.5092305863900882
+      },
+      {
+        "group": 737,
+        "device_group": 738,
+        "host_time_ns": 15130459919517,
+        "marker_counts": {
+          "right": 25,
+          "left": 7,
+          "tex": 35
+        },
+        "cells": {
+          "left": "bottom-right",
+          "right": "bottom-right"
+        },
+        "centroid_cells": {
+          "left": "middle-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 364.80931510548504,
+        "pose_rms_px": 0.6085102258989015
+      }
+    ]
+  },
+  "corner_candidates_centroid_any_ir": {
+    "count": 72,
+    "groups": [
+      {
+        "group": 72,
+        "device_group": 73,
+        "host_time_ns": 15063117143779,
+        "marker_counts": {
+          "right": 29,
+          "left": 31,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 337.5426236874239,
+        "pose_rms_px": 0.5023917268291602
+      },
+      {
+        "group": 73,
+        "device_group": 74,
+        "host_time_ns": 15063217134166,
+        "marker_counts": {
+          "right": 14,
+          "left": 27,
+          "tex": 24
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 334.4856226099348,
+        "pose_rms_px": 0.5705375220563571
+      },
+      {
+        "group": 74,
+        "device_group": 75,
+        "host_time_ns": 15063317149099,
+        "marker_counts": {
+          "right": 12,
+          "left": 23,
+          "tex": 14
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 328.41858592294153,
+        "pose_rms_px": 0.5276813214088026
+      },
+      {
+        "group": 75,
+        "device_group": 76,
+        "host_time_ns": 15063417115830,
+        "marker_counts": {
+          "right": 12,
+          "left": 19,
+          "tex": 15
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 321.65399464497324,
+        "pose_rms_px": 0.5532971597193375
+      },
+      {
+        "group": 76,
+        "device_group": 77,
+        "host_time_ns": 15063517131753,
+        "marker_counts": {
+          "right": 15,
+          "left": 16,
+          "tex": 0
+        },
+        "cells": {
+          "left": "middle-right",
+          "right": "middle-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 318.29758180919447,
+        "pose_rms_px": 1.4342775211118557
+      },
+      {
+        "group": 77,
+        "device_group": 78,
+        "host_time_ns": 15063617126685,
+        "marker_counts": {
+          "right": 10,
+          "left": 8,
+          "tex": 25
+        },
+        "cells": {
+          "left": null,
+          "right": null
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "top-left"
+        },
+        "pose_distance_mm": null,
+        "pose_rms_px": null
+      },
+      {
+        "group": 82,
+        "device_group": 83,
+        "host_time_ns": 15064117145278,
+        "marker_counts": {
+          "right": 7,
+          "left": 7,
+          "tex": 19
+        },
+        "cells": {
+          "left": null,
+          "right": null
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": null,
+        "pose_rms_px": null
+      },
+      {
+        "group": 84,
+        "device_group": 85,
+        "host_time_ns": 15064317156983,
+        "marker_counts": {
+          "right": 10,
+          "left": 21,
+          "tex": 19
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 344.5674027734279,
+        "pose_rms_px": 0.495480490569845
+      },
+      {
+        "group": 85,
+        "device_group": 86,
+        "host_time_ns": 15064417194955,
+        "marker_counts": {
+          "right": 10,
+          "left": 18,
+          "tex": 17
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 351.55381420150576,
+        "pose_rms_px": 0.4061937854441433
+      },
+      {
+        "group": 86,
+        "device_group": 87,
+        "host_time_ns": 15064517138444,
+        "marker_counts": {
+          "right": 8,
+          "left": 18,
+          "tex": 19
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 360.96336366956564,
+        "pose_rms_px": 0.41282485239228484
+      },
+      {
+        "group": 87,
+        "device_group": 88,
+        "host_time_ns": 15064617140974,
+        "marker_counts": {
+          "right": 13,
+          "left": 25,
+          "tex": 11
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 368.6107582223699,
+        "pose_rms_px": 0.6031284179338341
+      },
+      {
+        "group": 88,
+        "device_group": 89,
+        "host_time_ns": 15064717146337,
+        "marker_counts": {
+          "right": 19,
+          "left": 27,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-left"
+        },
+        "pose_distance_mm": 362.89055214465617,
+        "pose_rms_px": 0.4752419974672434
+      },
+      {
+        "group": 89,
+        "device_group": 90,
+        "host_time_ns": 15064817146977,
+        "marker_counts": {
+          "right": 32,
+          "left": 35,
+          "tex": 35
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 355.9715548403102,
+        "pose_rms_px": 0.4975920849839209
+      },
+      {
+        "group": 92,
+        "device_group": 93,
+        "host_time_ns": 15065117231065,
+        "marker_counts": {
+          "right": 31,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-right",
+          "right": "top-right"
+        },
+        "centroid_cells": {
+          "left": "top-right",
+          "right": "bottom-centre"
+        },
+        "pose_distance_mm": 329.960627029642,
+        "pose_rms_px": 0.5092305863900882
+      },
+      {
+        "group": 107,
+        "device_group": 108,
+        "host_time_ns": 15066748649034,
+        "marker_counts": {
+          "right": 15,
+          "left": 26,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 281.26664845126174,
+        "pose_rms_px": 0.7105287666822342
+      },
+      {
+        "group": 110,
+        "device_group": 111,
+        "host_time_ns": 15067048661389,
+        "marker_counts": {
+          "right": 23,
+          "left": 9,
+          "tex": 39
+        },
+        "cells": {
+          "left": "bottom-centre",
+          "right": "bottom-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 297.35140627049907,
+        "pose_rms_px": 1.1481148095155178
+      },
+      {
+        "group": 111,
+        "device_group": 112,
+        "host_time_ns": 15067148675724,
+        "marker_counts": {
+          "right": 24,
+          "left": 35,
+          "tex": 33
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "middle-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 309.45034991665386,
+        "pose_rms_px": 32.80932172108738
+      },
+      {
+        "group": 112,
+        "device_group": 113,
+        "host_time_ns": 15067248670612,
+        "marker_counts": {
+          "right": 25,
+          "left": 29,
+          "tex": 38
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 290.5372052479565,
+        "pose_rms_px": 0.7283314609346483
+      },
+      {
+        "group": 113,
+        "device_group": 114,
+        "host_time_ns": 15067348668758,
+        "marker_counts": {
+          "right": 29,
+          "left": 32,
+          "tex": 37
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 289.89555175882356,
+        "pose_rms_px": 0.5487562950209669
+      },
+      {
+        "group": 137,
+        "device_group": 138,
+        "host_time_ns": 15069748693825,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 379.5340835716551,
+        "pose_rms_px": 0.4275410587508646
+      },
+      {
+        "group": 156,
+        "device_group": 157,
+        "host_time_ns": 15071648696713,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 360.57085732745827,
+        "pose_rms_px": 0.4854483225535073
+      },
+      {
+        "group": 157,
+        "device_group": 158,
+        "host_time_ns": 15071748699693,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 350.97315053081394,
+        "pose_rms_px": 0.4513335875696022
+      },
+      {
+        "group": 158,
+        "device_group": 159,
+        "host_time_ns": 15071848713879,
+        "marker_counts": {
+          "right": 40,
+          "left": 39,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 343.1600293651733,
+        "pose_rms_px": 0.4364330625349461
+      },
+      {
+        "group": 159,
+        "device_group": 160,
+        "host_time_ns": 15071948769897,
+        "marker_counts": {
+          "right": 39,
+          "left": 39,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 337.80717473862427,
+        "pose_rms_px": 0.43015688558013554
+      },
+      {
+        "group": 160,
+        "device_group": 161,
+        "host_time_ns": 15072048684344,
+        "marker_counts": {
+          "right": 39,
+          "left": 39,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 335.5279301080721,
+        "pose_rms_px": 0.5074693942110301
+      },
+      {
+        "group": 161,
+        "device_group": 162,
+        "host_time_ns": 15072148684878,
+        "marker_counts": {
+          "right": 38,
+          "left": 38,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 330.2667491774675,
+        "pose_rms_px": 0.444323637789818
+      },
+      {
+        "group": 162,
+        "device_group": 163,
+        "host_time_ns": 15072248689069,
+        "marker_counts": {
+          "right": 35,
+          "left": 38,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 325.5388961072732,
+        "pose_rms_px": 0.5525535522856547
+      },
+      {
+        "group": 164,
+        "device_group": 165,
+        "host_time_ns": 15072448702214,
+        "marker_counts": {
+          "right": 38,
+          "left": 38,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 316.54098276430733,
+        "pose_rms_px": 0.48414524565061956
+      },
+      {
+        "group": 165,
+        "device_group": 166,
+        "host_time_ns": 15072548705541,
+        "marker_counts": {
+          "right": 35,
+          "left": 37,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 311.73999753802707,
+        "pose_rms_px": 0.45392861676975826
+      },
+      {
+        "group": 166,
+        "device_group": 167,
+        "host_time_ns": 15072648710546,
+        "marker_counts": {
+          "right": 32,
+          "left": 37,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 307.7875460126719,
+        "pose_rms_px": 0.6289909587952743
+      },
+      {
+        "group": 167,
+        "device_group": 168,
+        "host_time_ns": 15072748703150,
+        "marker_counts": {
+          "right": 29,
+          "left": 35,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 304.0282757705065,
+        "pose_rms_px": 0.5390765402343348
+      },
+      {
+        "group": 168,
+        "device_group": 169,
+        "host_time_ns": 15072848694010,
+        "marker_counts": {
+          "right": 28,
+          "left": 29,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 298.407780615807,
+        "pose_rms_px": 0.7107687856840981
+      },
+      {
+        "group": 169,
+        "device_group": 170,
+        "host_time_ns": 15072948707266,
+        "marker_counts": {
+          "right": 29,
+          "left": 29,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 295.057421782856,
+        "pose_rms_px": 0.5419363361379561
+      },
+      {
+        "group": 170,
+        "device_group": 171,
+        "host_time_ns": 15073048698927,
+        "marker_counts": {
+          "right": 27,
+          "left": 25,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 294.1924831349293,
+        "pose_rms_px": 0.6062576767021295
+      },
+      {
+        "group": 171,
+        "device_group": 172,
+        "host_time_ns": 15073148702020,
+        "marker_counts": {
+          "right": 26,
+          "left": 24,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 294.97711882523294,
+        "pose_rms_px": 0.7486088604435259
+      },
+      {
+        "group": 172,
+        "device_group": 173,
+        "host_time_ns": 15073248705870,
+        "marker_counts": {
+          "right": 26,
+          "left": 24,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 295.9135437834514,
+        "pose_rms_px": 0.7257796906461131
+      },
+      {
+        "group": 173,
+        "device_group": 174,
+        "host_time_ns": 15073348800684,
+        "marker_counts": {
+          "right": 25,
+          "left": 26,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 299.77619083481903,
+        "pose_rms_px": 0.4797367999604819
+      },
+      {
+        "group": 174,
+        "device_group": 175,
+        "host_time_ns": 15073448706876,
+        "marker_counts": {
+          "right": 27,
+          "left": 29,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 303.2611159050706,
+        "pose_rms_px": 0.6553396167154423
+      },
+      {
+        "group": 175,
+        "device_group": 176,
+        "host_time_ns": 15073548758501,
+        "marker_counts": {
+          "right": 28,
+          "left": 29,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 305.19309247118224,
+        "pose_rms_px": 0.4703533130784392
+      },
+      {
+        "group": 176,
+        "device_group": 177,
+        "host_time_ns": 15073648710298,
+        "marker_counts": {
+          "right": 26,
+          "left": 26,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 308.2310779743565,
+        "pose_rms_px": 0.38542560796449493
+      },
+      {
+        "group": 177,
+        "device_group": 178,
+        "host_time_ns": 15073748717974,
+        "marker_counts": {
+          "right": 26,
+          "left": 23,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 305.3773241473264,
+        "pose_rms_px": 8.17271208171951
+      },
+      {
+        "group": 178,
+        "device_group": 179,
+        "host_time_ns": 15073848720574,
+        "marker_counts": {
+          "right": 25,
+          "left": 25,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 307.372875409134,
+        "pose_rms_px": 0.3540904760188084
+      },
+      {
+        "group": 179,
+        "device_group": 180,
+        "host_time_ns": 15073948727761,
+        "marker_counts": {
+          "right": 25,
+          "left": 26,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 303.02635423872664,
+        "pose_rms_px": 0.5370047516601535
+      },
+      {
+        "group": 180,
+        "device_group": 181,
+        "host_time_ns": 15074048735183,
+        "marker_counts": {
+          "right": 26,
+          "left": 27,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 302.8351118391899,
+        "pose_rms_px": 0.7745213101675819
+      },
+      {
+        "group": 181,
+        "device_group": 182,
+        "host_time_ns": 15074148751943,
+        "marker_counts": {
+          "right": 27,
+          "left": 29,
+          "tex": 28
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 305.8176332284429,
+        "pose_rms_px": 0.475085626309293
+      },
+      {
+        "group": 182,
+        "device_group": 183,
+        "host_time_ns": 15074248710113,
+        "marker_counts": {
+          "right": 29,
+          "left": 31,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 310.2760535569579,
+        "pose_rms_px": 0.5146260592416233
+      },
+      {
+        "group": 183,
+        "device_group": 184,
+        "host_time_ns": 15074348769486,
+        "marker_counts": {
+          "right": 30,
+          "left": 31,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 320.9488304248307,
+        "pose_rms_px": 0.4528190045587884
+      },
+      {
+        "group": 184,
+        "device_group": 185,
+        "host_time_ns": 15074448733562,
+        "marker_counts": {
+          "right": 32,
+          "left": 34,
+          "tex": 32
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 338.16830907241393,
+        "pose_rms_px": 0.46878164507887327
+      },
+      {
+        "group": 185,
+        "device_group": 186,
+        "host_time_ns": 15074548726972,
+        "marker_counts": {
+          "right": 33,
+          "left": 35,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 355.3726999726131,
+        "pose_rms_px": 0.41039045995465345
+      },
+      {
+        "group": 189,
+        "device_group": 190,
+        "host_time_ns": 15074948738387,
+        "marker_counts": {
+          "right": 34,
+          "left": 34,
+          "tex": 35
+        },
+        "cells": {
+          "left": "top-centre",
+          "right": "top-centre"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 381.09308862982124,
+        "pose_rms_px": 0.5005554873466088
+      },
+      {
+        "group": 514,
+        "device_group": 515,
+        "host_time_ns": 15107741352756,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 488.8218489191095,
+        "pose_rms_px": 0.42650461001863876
+      },
+      {
+        "group": 515,
+        "device_group": 516,
+        "host_time_ns": 15107841353524,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 487.250145850557,
+        "pose_rms_px": 0.39771221745714064
+      },
+      {
+        "group": 516,
+        "device_group": 517,
+        "host_time_ns": 15107941325991,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 484.6601023546218,
+        "pose_rms_px": 0.3952561520467207
+      },
+      {
+        "group": 519,
+        "device_group": 520,
+        "host_time_ns": 15108241351922,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 477.4824102245118,
+        "pose_rms_px": 0.3963777062891996
+      },
+      {
+        "group": 520,
+        "device_group": 521,
+        "host_time_ns": 15108341348491,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 475.00135059558323,
+        "pose_rms_px": 0.41672830835342106
+      },
+      {
+        "group": 521,
+        "device_group": 522,
+        "host_time_ns": 15108441356085,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 472.1752316320469,
+        "pose_rms_px": 0.43300722517930806
+      },
+      {
+        "group": 522,
+        "device_group": 523,
+        "host_time_ns": 15108541355129,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 468.65390333273444,
+        "pose_rms_px": 0.4165665935459614
+      },
+      {
+        "group": 523,
+        "device_group": 524,
+        "host_time_ns": 15108641353666,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 465.31517644325885,
+        "pose_rms_px": 0.370084042414246
+      },
+      {
+        "group": 524,
+        "device_group": 525,
+        "host_time_ns": 15108741334034,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 462.391882696202,
+        "pose_rms_px": 0.46639419760016126
+      },
+      {
+        "group": 525,
+        "device_group": 526,
+        "host_time_ns": 15108841366088,
+        "marker_counts": {
+          "right": 38,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 459.6309397343562,
+        "pose_rms_px": 0.4488390731288393
+      },
+      {
+        "group": 526,
+        "device_group": 527,
+        "host_time_ns": 15108941345500,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 457.97657153190215,
+        "pose_rms_px": 0.4329249718176474
+      },
+      {
+        "group": 527,
+        "device_group": 528,
+        "host_time_ns": 15109041355073,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 456.34002663561864,
+        "pose_rms_px": 0.4204254853999344
+      },
+      {
+        "group": 528,
+        "device_group": 529,
+        "host_time_ns": 15109141356994,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 453.4909479668752,
+        "pose_rms_px": 0.43305976809928404
+      },
+      {
+        "group": 529,
+        "device_group": 530,
+        "host_time_ns": 15109241384125,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 451.08180708374755,
+        "pose_rms_px": 0.5069836552814094
+      },
+      {
+        "group": 530,
+        "device_group": 531,
+        "host_time_ns": 15109342892950,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 449.4380100492813,
+        "pose_rms_px": 0.4028082530995919
+      },
+      {
+        "group": 531,
+        "device_group": 532,
+        "host_time_ns": 15109441325065,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 446.6409765277118,
+        "pose_rms_px": 0.43030701034241864
+      },
+      {
+        "group": 532,
+        "device_group": 533,
+        "host_time_ns": 15109541329706,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 442.9769573038725,
+        "pose_rms_px": 0.45621578886359376
+      },
+      {
+        "group": 533,
+        "device_group": 534,
+        "host_time_ns": 15109641333925,
+        "marker_counts": {
+          "right": 40,
+          "left": 40,
+          "tex": 40
+        },
+        "cells": {
+          "left": "middle-left",
+          "right": "middle-left"
+        },
+        "centroid_cells": {
+          "left": "middle-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 440.0357433359118,
+        "pose_rms_px": 0.4268216184365946
+      },
+      {
+        "group": 734,
+        "device_group": 735,
+        "host_time_ns": 15130159981900,
+        "marker_counts": {
+          "right": 22,
+          "left": 25,
+          "tex": 31
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 335.63295025330706,
+        "pose_rms_px": 0.4128172601171011
+      },
+      {
+        "group": 735,
+        "device_group": 736,
+        "host_time_ns": 15130259905660,
+        "marker_counts": {
+          "right": 24,
+          "left": 26,
+          "tex": 34
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 327.3685649214346,
+        "pose_rms_px": 0.6308743233138084
+      },
+      {
+        "group": 736,
+        "device_group": 737,
+        "host_time_ns": 15130359908850,
+        "marker_counts": {
+          "right": 27,
+          "left": 26,
+          "tex": 35
+        },
+        "cells": {
+          "left": "top-left",
+          "right": "top-left"
+        },
+        "centroid_cells": {
+          "left": "top-left",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 318.647520077818,
+        "pose_rms_px": 0.7095011446572953
+      },
+      {
+        "group": 737,
+        "device_group": 738,
+        "host_time_ns": 15130459919517,
+        "marker_counts": {
+          "right": 25,
+          "left": 7,
+          "tex": 35
+        },
+        "cells": {
+          "left": "bottom-right",
+          "right": "bottom-right"
+        },
+        "centroid_cells": {
+          "left": "middle-centre",
+          "right": "bottom-right"
+        },
+        "pose_distance_mm": 364.80931510548504,
+        "pose_rms_px": 0.6085102258989015
+      }
+    ]
+  }
+}

@@ -494,6 +494,15 @@ def _pose_absorption(result: CalibrationResult, names: Sequence[str]) -> dict[st
     measurement of the parameter: the pose absorbs it (the classic
     focal-length/depth and k1/pose degeneracies).  The joint covariance is
     used when the estimator stored one; otherwise an empty dict is returned.
+
+    The gauge camera (``left``) is excluded from the *downgrade* the caller
+    applies, because the board pose **is** the left-camera pose in this gauge
+    (``extrinsics['left'] = identity``): every left-camera intrinsic is
+    structurally correlated with it.  Measured on the 297-view session,
+    ``|corr(left.fx, view.tz)| = 0.962`` and ``|corr(left.cx, view.tx)| = 0.991``
+    while the right/tex cameras sit at 0.22-0.79 for the same parameters, and
+    the correlations did not change when the principal point was freed.  The
+    numbers are still reported so the correlation remains auditable.
     """
     cov = result.covariance
     info = result.info.get("param_names") or []
@@ -591,12 +600,17 @@ def observability_gate(result: CalibrationResult, coverage: Mapping[str, Any] | 
             ratio = s / max(b["budget"], 1e-12)
         v = _verdict(ratio)
         pose_corr = absorption.get(nm)
+        gauge = nm.split(".")[0] == "left"
         note = ""
-        if pose_corr is not None and pose_corr >= 0.95 and v == "constrained":
+        if gauge and pose_corr is not None and pose_corr >= 0.95:
+            note = ("structural gauge correlation: the board pose is the left-camera "
+                    "pose, so this |corr| is a property of the parameterisation and "
+                    "is not used to downgrade the verdict")
+        if not gauge and pose_corr is not None and pose_corr >= 0.95 and v == "constrained":
             v = "weak"
             note = (f"downgraded: |corr|={pose_corr:.3f} with a board pose — the "
                     "pose absorbs this parameter")
-        elif pose_corr is not None and pose_corr >= 0.99 and v != "unobservable":
+        elif not gauge and pose_corr is not None and pose_corr >= 0.99 and v != "unobservable":
             v = "unobservable"
             note = (f"downgraded: |corr|={pose_corr:.3f} with a board pose")
         counts[v] += 1
@@ -709,16 +723,43 @@ def observability_gate(result: CalibrationResult, coverage: Mapping[str, Any] | 
         reasons.append("model sensitivity unknown (no held-out analysis supplied)")
     else:
         worth = bool(ms.get("worth_freeing"))
+        # The gate asks whether the *candidate's* distortion policy is the one
+        # the held-out evidence supports, in both directions:
+        #   holds kc + freeing not worth it        -> pass
+        #   holds kc + freeing worth it            -> fail (under-modelled)
+        #   frees kc + freeing worth it            -> pass
+        #   frees kc + freeing not worth it        -> fail (over-fitted model)
+        # The shipped gate only implemented the last two cases, so a candidate
+        # that correctly held the factory distortion could never pass after the
+        # analysis delivered its (negative) result.
+        kc_fields = ("k1", "k2", "p1", "p2", "k3")
+        kc_free = [names[i] for i in np.where(free)[0]
+                   if names[i].split(".")[-1] in kc_fields]
+        frees_kc = bool(kc_free)
+        rel = float(ms.get("relative_improvement", 0.0) or 0.0)
+        ok = (worth if frees_kc else not worth) and bool(ms.get("ok", True))
         gates["model_sensitivity"] = {
-            "required": True, "status": "pass" if worth else "fail",
-            "pass": worth, "value": ms,
-            "note": "held-out prediction change when the distortion model is "
-                    "fixed; training RMS is deliberately not used",
+            "required": True, "status": "pass" if ok else "fail",
+            "pass": bool(ok), "value": ms, "distortion_free": frees_kc,
+            "freed_distortion_parameters": kc_free,
+            "note": ("held-out prediction change when the distortion model is "
+                     "freed; training RMS is deliberately not used.  A candidate "
+                     "that holds the factory distortion passes when freeing it is "
+                     "not worth it, and a candidate that frees it passes only when "
+                     "it is."),
         }
-        if not worth and ms.get("ok"):
-            reasons.append(f"model sensitivity: freeing distortion changes held-out "
-                           f"error by only {ms.get('relative_improvement', 0.0):.1%} "
+        if not ms.get("ok", True):
+            reasons.append("model sensitivity: the held-out refit did not "
+                           "converge, so the comparison is not interpretable "
+                           f"({ms.get('reason') or 'no reason recorded'})")
+        elif frees_kc and not worth:
+            reasons.append(f"model sensitivity: the model frees distortion but "
+                           f"freeing it changes held-out error by only {rel:.1%} "
                            f"(< 10 %)")
+        elif not frees_kc and worth:
+            reasons.append(f"model sensitivity: the model holds the factory "
+                           f"distortion although freeing it would improve "
+                           f"held-out error by {rel:.1%} (>= 10 %)")
 
     # ---- overall -------------------------------------------------------
     blocking = [k for k, g in gates.items()
@@ -853,6 +894,42 @@ def _model_sensitivity_key(observations: Sequence[Observation],
     return (h.hexdigest(),)
 
 
+def _sensitivity_refit(observations: Sequence[Observation], pitch: float,
+                       init: Mapping[str, CameraIntrinsics], free_kc: bool,
+                       max_nfev: int = 400) -> tuple[CalibrationResult, dict]:
+    """Fit one side of the held-out model comparison with the analytic LM.
+
+    The shipped code called :func:`calib.calibrate.calibrate` (SciPy TRF with a
+    finite-difference Jacobian).  At 238 training views that problem has ~1460
+    free parameters, so a single numeric Jacobian costs >1460 residual
+    evaluations; with ``max_nfev=400`` SciPy stopped *before completing one
+    Jacobian* and both "fitted" models were still at the initial guess.  The
+    analysis then reported a 0.018 % held-out difference -- two unfitted models
+    compared to each other.  The analytic LM (``calib.solvers``) fits the same
+    model to convergence in tens of seconds, so the comparison is between real
+    fits and is also cheaper, because it never evaluates n+1 residuals per
+    Jacobian column.  The SciPy engine remains the fallback when the solver
+    layer is unavailable.
+    """
+    try:
+        from calib import solvers
+        problem = solvers.make_problem(list(observations), pitch_mm=float(pitch),
+                                      init_cameras=dict(init))
+        out = solvers.solve_joint(problem, backend="lm", robust="huber",
+                                  f_scale=0.8, free_kc=free_kc, free_intrinsics=True,
+                                  covariance=False,
+                                  max_iter=max(12, min(40, int(max_nfev) // 20)))
+        result = out.get("result")
+        if result is not None:
+            return result, dict(out.get("diagnostics") or {})
+    except Exception:                                # pragma: no cover - fallback
+        pass
+    res = calibrate(list(observations), pitch, dict(init), free_kc=free_kc,
+                    free_intrinsics=True, max_nfev=max_nfev)
+    return res, {"solver_status": "scipy-engine", "success": bool(
+        res.info.get("success", True)), "nit": res.info.get("nfev")}
+
+
 def model_sensitivity_analysis(observations: Sequence[Observation],
                                result: CalibrationResult,
                                *, pitch: float = plate.DEFAULT_PITCH_MM,
@@ -886,12 +963,11 @@ def model_sensitivity_analysis(observations: Sequence[Observation],
                                 result.cameras[c].cx, result.cameras[c].cy,
                                 result.cameras[c].kc.copy()) for c in CAMERAS}
     try:
-        r_free = calibrate(train, pitch, init, free_kc=True, free_intrinsics=True,
-                           max_nfev=max_nfev)
-        r_fixed = calibrate(train, pitch, init, free_kc=False, free_intrinsics=True,
-                            max_nfev=max_nfev)
+        r_free, d_free = _sensitivity_refit(train, pitch, init, True, max_nfev)
+        r_fixed, d_fixed = _sensitivity_refit(train, pitch, init, False, max_nfev)
     except Exception as exc:                       # pragma: no cover - defensive
         return {"ok": False, "reason": f"refit failed: {exc}"}
+    converged = (bool(d_free.get("success")) and bool(d_fixed.get("success")))
     e_free = _rms(_pnp_residuals(r_free, held, pitch))
     e_fixed = _rms(_pnp_residuals(r_fixed, held, pitch))
     delta = e_fixed - e_free
@@ -906,9 +982,17 @@ def model_sensitivity_analysis(observations: Sequence[Observation],
         "worth_freeing": bool(rel >= 0.10),
         "train_rms_free_kc_px": float(r_free.residual_rms),
         "train_rms_fixed_kc_px": float(r_fixed.residual_rms),
+        "backend": d_free.get("solver_status"), "refit_converged": converged,
+        "refit_iterations": [d_free.get("nit"), d_fixed.get("nit")],
         "note": "selection uses the held-out change; the training RMS is reported "
                 "only to show it moves the other way",
     }
+    if not converged:
+        # A comparison between two *unfitted* models is not evidence either way.
+        out["ok"] = False
+        out["reason"] = (f"refit did not converge ({d_free.get('solver_status')}, "
+                         f"{d_fixed.get('solver_status')}); the held-out change is "
+                         "not interpretable")
     _MODEL_SENSITIVITY_CACHE[key] = copy.deepcopy(out)
     _MODEL_SENSITIVITY_ORDER.append(key)
     while len(_MODEL_SENSITIVITY_ORDER) > _MODEL_SENSITIVITY_MAX:

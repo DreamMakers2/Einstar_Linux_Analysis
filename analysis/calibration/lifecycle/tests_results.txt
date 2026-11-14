@@ -1,0 +1,24 @@
+........................................................................ [ 59%]
+..............................................F..                        [100%]
+=================================== FAILURES ===================================
+___________ test_observability_refuses_overparameterised_distortion ____________
+tests/test_wizard_failures.py:172: in test_observability_refuses_overparameterised_distortion
+    assert gate["counts"]["unobservable"] >= 10, gate["counts"]
+E   AssertionError: {'constrained': 16, 'weak': 19, 'unobservable': 4}
+E   assert 4 >= 10
+=============================== warnings summary ===============================
+tests/test_wizard_controller.py: 9 warnings
+tests/test_wizard_failures.py: 1 warning
+  <repo>/.venv/lib/python3.14/site-packages/numpy/_core/fromnumeric.py:3862: RuntimeWarning: Mean of empty slice
+    return _methods._mean(a, axis=axis, dtype=dtype,
+
+tests/test_wizard_controller.py: 9 warnings
+tests/test_wizard_failures.py: 1 warning
+  <repo>/.venv/lib/python3.14/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+    ret = ret.dtype.type(ret / rcount)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_wizard_failures.py::test_observability_refuses_overparameterised_distortion
+1 failed, 120 passed, 20 warnings in 259.04s (0:04:19)
+EXIT:1

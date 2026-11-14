@@ -29,9 +29,12 @@ from tools.wizard import capture, types  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def test_command_uses_verified_safe_settings_and_session_dir(tmp_path):
-    # the verified device settings apply to the real (libusb) acquisition path
+    # diagnostic mode: the historical --session-dir layout, which is the only
+    # mode that records the lossless raw.e1r stream.  Production (the default)
+    # is --out/--status-file with no recording; see
+    # tests/test_production_storage.py.
     config = capture.CaptureConfig(session_dir=tmp_path / "session",
-                                   backend="libusb")
+                                   backend="libusb", record=True)
     cmd = config.command()
     assert cmd[0].endswith("einstar-capture-frames")
     assert "--session-dir" in cmd
@@ -50,7 +53,7 @@ def test_command_uses_verified_safe_settings_and_session_dir(tmp_path):
     # ring/max-seconds are passed through
     config2 = capture.CaptureConfig(session_dir=tmp_path / "s2", ring=12,
                                     max_seconds=30, groups=0,
-                                    backend="libusb")
+                                    backend="libusb", record=True)
     cmd2 = config2.command()
     assert cmd2[cmd2.index("--ring") + 1] == "12"
     assert cmd2[cmd2.index("--max-seconds") + 1] == "30"
@@ -60,7 +63,7 @@ def test_simulated_backend_does_not_send_device_commands(tmp_path):
     # the simulator has no command channel: the tool rejects laser/strobe/
     # exposure/gain on that backend
     config = capture.CaptureConfig(session_dir=tmp_path / "session",
-                                   backend="simulated")
+                                   backend="simulated", record=True)
     cmd = config.command()
     for flag in ("--laser", "--strobe", "--exposure-us", "--gain"):
         assert flag not in cmd, flag
@@ -207,6 +210,10 @@ def _write_status(tmp_path: Path, **overrides) -> Path:
         "trigger_counts": {"mono": 0, "rgb": 0},
         "trigger_period_us": 0,
         "laser_percent": 0,
+        # Shutdown evidence is mandatory: a stopped state without the cleanup
+        # readback is not a verified safe stop (see the 52 GB regression).
+        "cleanup_attempted": True,
+        "cleanup_verified": True,
         "simulated": False,
         "live": True,
     }
@@ -248,7 +255,8 @@ def test_safe_final_state_fails_closed(tmp_path, overrides, fragment):
 def test_simulated_backend_without_trigger_fields_still_verifies(tmp_path):
     _write_status(tmp_path, simulated=True, laser_percent=None,
                   trigger_counts=None, trigger_period_us=None,
-                  state="stopped", stop_reason="max_seconds")
+                  state="stopped", stop_reason="max_seconds",
+                  cleanup_attempted=True, cleanup_verified=True)
     supervisor = capture.LiveCaptureProcess(
         capture.CaptureConfig(session_dir=tmp_path, backend="simulated"))
     verdict = supervisor.check_safe_final_state()
@@ -324,3 +332,13 @@ def test_an_explicit_capture_deadline_is_still_honoured(tmp_path):
     with pytest.raises(ValueError):
         capture.CaptureConfig.from_mapping({"timeout_seconds": 0},
                                            session_dir=tmp_path / "s")
+
+
+def test_stopped_status_without_cleanup_readback_fails_closed(tmp_path):
+    """A stopped state alone is not a verified safe stop."""
+    _write_status(tmp_path, cleanup_attempted=None, cleanup_verified=None)
+    supervisor = capture.LiveCaptureProcess(
+        capture.CaptureConfig(session_dir=tmp_path))
+    verdict = supervisor.check_safe_final_state()
+    assert verdict["ok"] is False
+    assert any("never attempted" in r for r in verdict["reasons"]), verdict

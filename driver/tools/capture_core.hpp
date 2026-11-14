@@ -26,13 +26,16 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <span>
 #include <string>
 #include <string_view>
 #include <thread>
+#include <unordered_set>
 #include <vector>
 
 #include "einstar/frame.hpp"
@@ -49,6 +52,9 @@ inline constexpr std::uint32_t kFrameBytes = kFrameWidth * kFrameHeight;
 inline constexpr std::uint8_t kStreamCount = 3;
 inline constexpr std::uint32_t kMaxOutputGroups = 999999;  // six decimal digits
 
+/// `frame_%06u_cam%u.pgm` inside a frames directory (the reconstruction layout).
+std::string frame_filename(std::uint32_t group, std::uint8_t camera);
+
 /// USB stream index -> role (hardware-observed camera association).
 std::string_view camera_name(std::uint8_t camera) noexcept;
 /// "stream0" ... "stream2"; out-of-range cameras return "".
@@ -63,6 +69,62 @@ std::string_view stream_key(std::uint8_t camera) noexcept;
 /// transfer count and byte count match the content.  Returns
 /// `ErrorCode::Protocol` with a precise message on corruption.
 Result<recording::Recording> verify_recording(const std::string& path);
+
+/// Streaming equivalent of `verify_recording`: validates the same structure and
+/// the trailer, but never retains transfer payloads (O(1 MiB) memory).  This is
+/// the verification used by `einstar-replay-frames` and
+/// `einstar-stream-frames`.
+Result<recording::StreamingVerifyStats> verify_recording_stream(
+    const std::string& path);
+
+/// Bounded, trailer-only evidence for a recording: reads the 64-byte file header
+/// and the **last 72 bytes** only, validates the file magic/version/header CRC
+/// and the ES1R trailer record (magic, length 72, type 3, payload 32, CRC),
+/// then returns the *declared* digest/transfer/byte counts.
+///
+/// This never recomputes the FNV-1a digest over the payloads and therefore
+/// never reads more than 136 bytes; `digest_verified` must stay false.  The
+/// live capture stop path uses it so finalisation fits the process-safety
+/// watchdog deadline on a 52 GB recording.  Independent full verification is
+/// `einstar-stream-frames --verify-only`.
+struct RecordingTrailerInfo {
+  std::string path;
+  std::uint64_t file_size = 0;
+  std::uint64_t trailer_offset = 0;
+  std::uint64_t digest = 0;
+  std::uint64_t transfers = 0;
+  std::uint64_t bytes = 0;
+  std::uint16_t version = 0;
+  std::uint32_t flags = 0;
+  std::uint64_t start_host_ns = 0;
+  /// Always true for a successful call: the trailer is physically the final
+  /// record (offset + 72 == file size) and its CRC and structure are valid.
+  bool trailer_present = false;
+  /// Always false: only the declared digest was read, never recomputed.
+  bool digest_verified = false;
+};
+
+Result<RecordingTrailerInfo> read_recording_trailer(const std::string& path);
+
+enum class RecordingVerifyMode : std::uint8_t {
+  /// Full re-read for small files / the simulator, bounded trailer check for
+  /// real multi-gigabyte recordings (the default).
+  Auto = 0,
+  /// Always read + validate only the final trailer record (bounded).
+  Trailer = 1,
+  /// Always load and re-verify the whole recording (small files, tests).
+  Full = 2,
+};
+
+/// Recordings up to this size are cheap enough to fully verify during stop
+/// (512 MiB is ~0.5-1 s including digest recomputation and memory).
+inline constexpr std::uint64_t kFullVerifyMaxBytes = 512ULL * 1024ULL * 1024ULL;
+
+/// Resolve `Auto`: full verification for simulated captures and small files,
+/// trailer-only for real large recordings.  Explicit modes are preserved.
+RecordingVerifyMode resolve_recording_verify_mode(
+    RecordingVerifyMode requested, bool simulated,
+    std::uint64_t file_size) noexcept;
 
 // ---------------------------------------------------------------------------
 // Grouping and PGM output
@@ -114,6 +176,9 @@ struct GroupingStats {
   std::uint64_t duplicate_frames = 0;
   std::uint64_t late_frames = 0;        // frame for an already-written group
   std::uint64_t bytes_written = 0;
+  /// Complete groups that were decoded but deliberately not written because
+  /// they fell outside the requested group range/selection.
+  std::uint64_t groups_skipped = 0;
   std::uint64_t missing_camera_frames = 0;  // sum over incomplete groups
   /// The three cameras of a group did not report the same 8-bit exposure slot
   /// id.  On the reference unit they always match; a non-zero count means the
@@ -163,6 +228,49 @@ class GroupWriter {
     ring_size_ = ring_size;
   }
   [[nodiscard]] std::uint32_t ring_size() const noexcept { return ring_size_; }
+
+  /// Absolute dense group id of the first group this writer may write.  Ids are
+  /// `group_base + completed_groups`, so a replay that starts at group N keeps
+  /// the full-run numbering instead of renumbering from zero.
+  void set_group_base(std::uint32_t base) noexcept { group_base_ = base; }
+  [[nodiscard]] std::uint32_t group_base() const noexcept { return group_base_; }
+
+  /// Inclusive absolute dense-id range that is written.  Groups outside it are
+  /// decoded and counted but not written (`groups_skipped`).  `last` defaults to
+  /// "no upper bound".
+  void set_group_filter(std::uint32_t first, std::uint32_t last) noexcept {
+    filter_first_ = first;
+    filter_last_ = last;
+  }
+
+  /// Sparse alternative to the contiguous filter: only these absolute ids are
+  /// written.  `nullptr` disables the selection.
+  void set_group_selection(
+      std::shared_ptr<const std::unordered_set<std::uint32_t>> selection) {
+    selection_ = std::move(selection);
+  }
+
+  /// Skip the per-frame FNV digest in the group record (saves ~1 byte/ns on a
+  /// full-corpus replay where the digest is not consumed).  Default true.
+  void set_compute_digests(bool enabled) noexcept { compute_digests_ = enabled; }
+
+  /// Deliver complete groups to a callback instead of writing PGM files (the
+  /// `--pipe` streaming path).  `record.files` is empty in that mode; pixels are
+  /// moved out of the writer, so the callback must not retain the vectors.
+  using GroupSink = std::function<Status(
+      const GroupRecord&,
+      std::array<std::vector<std::uint8_t>, kStreamCount>& pixels)>;
+  void set_group_sink(GroupSink sink) { sink_ = std::move(sink); }
+
+  [[nodiscard]] std::uint64_t groups_completed() const noexcept {
+    return groups_completed_;
+  }
+  [[nodiscard]] std::uint64_t groups_skipped() const noexcept {
+    return stats_.groups_skipped;
+  }
+  [[nodiscard]] std::size_t pending_group_count() const noexcept {
+    return pending_.size();
+  }
   /// Complete triplets removed by the ring so far.
   [[nodiscard]] std::uint64_t groups_evicted() const noexcept {
     return groups_evicted_;
@@ -204,10 +312,19 @@ class GroupWriter {
   void evict_old_groups();
   [[nodiscard]] std::string file_path(std::string_view name) const;
 
+  [[nodiscard]] bool group_selected(std::uint32_t group) const noexcept;
+
   std::string directory_;
   std::uint32_t width_ = kFrameWidth;
   std::uint32_t height_ = kFrameHeight;
   std::uint32_t ring_size_ = 0;
+  std::uint32_t group_base_ = 0;
+  std::uint32_t filter_first_ = 0;
+  std::uint32_t filter_last_ = 0xFFFFFFFFU;
+  std::shared_ptr<const std::unordered_set<std::uint32_t>> selection_;
+  GroupSink sink_;
+  bool compute_digests_ = true;
+  std::uint64_t groups_completed_ = 0;
   std::uint64_t groups_evicted_ = 0;
   std::map<std::uint64_t, PendingGroup> pending_;
   std::set<std::uint64_t> written_device_groups_;
@@ -337,6 +454,13 @@ struct ManifestInfo {
   std::uint64_t recorded_transfers = 0;
   std::uint64_t recorded_bytes = 0;
   std::uint64_t recorded_digest = 0;
+  /// "full" = whole file re-read and the trailer digest recomputed;
+  /// "trailer" = bounded final-record check only, so the counts/digest are
+  /// declared by the trailer and are NOT independently verified here.
+  std::string recorded_verification = "none";
+  bool recorded_trailer_checked = false;
+  bool recorded_digest_verified = false;
+  std::uint64_t recorded_file_size = 0;
 
   DeviceInfo device;
   RunMetrics metrics;
@@ -595,6 +719,10 @@ struct CaptureSessionOptions {
   bool timeout_seconds_set = false;
   double progress_seconds = 0.0;
   std::string record_path;       // empty: no raw recording
+  /// How the stop path finalises/validates `record_path`.  Auto (default)
+  /// fully verifies small/simulated recordings and only checks the bounded
+  /// trailer for real large recordings so the watchdog deadline is met.
+  RecordingVerifyMode recording_verify = RecordingVerifyMode::Auto;
   ManifestInfo manifest;         // template: tool/backend/device/simulation
 };
 
@@ -668,6 +796,83 @@ struct ReplayReport {
 Result<ReplayReport> replay_recording(const ReplayOptions& options);
 
 // ---------------------------------------------------------------------------
+// Streaming replay (memory-bounded, optional pipe output)
+// ---------------------------------------------------------------------------
+
+struct StreamReplayOptions {
+  std::string input;
+  /// Empty only for `verify_only` or when a `group_sink` is installed.
+  std::string output_directory;
+  /// First absolute dense group id to write (earlier groups are decoded,
+  /// validated and counted, never written).  0 = from the beginning.
+  std::uint32_t start_group = 0;
+  /// Stop after this many *written* groups.  0 = every group.
+  std::uint32_t max_groups = 0;
+  bool write_manifest = false;
+  /// Only verify the whole recording; no pipeline, no output directory.
+  bool verify_only = false;
+  /// Skip the separate full verification pass and rely on the replay pass's own
+  /// validation.  Frames may be written before a late corruption is detected;
+  /// the run still fails and reports it.  Default false (verify first).
+  bool single_pass = false;
+  /// Offline fast replay: drop the virtual USB pacing model (zero transfer
+  /// latency, effectively unbounded simulated bandwidth).  Recorded capture
+  /// host timestamps are still carried per transfer, so group timing, ids,
+  /// payload bytes and verification are unchanged; only the simulation's event
+  /// cadence (and therefore replay wall time) differs.
+  bool fast_pacing = false;
+  std::uint32_t queue_depth = 8;
+  std::uint32_t frame_queue_capacity = 32;
+  std::int64_t partial_frame_timeout_ns = 500'000'000;
+  std::optional<FramingMode> framing;
+  /// Optional sparse selection of absolute dense group ids (e.g. the stage-1
+  /// refinement list).  Mutually exclusive with a non-zero `max_groups` range.
+  std::shared_ptr<const std::unordered_set<std::uint32_t>> selection;
+  /// Called for every complete written group instead of PGM output.
+  GroupWriter::GroupSink group_sink;
+  bool compute_digests = true;
+  std::string tool_name = "einstar-stream-frames";
+};
+
+struct StreamReplayReport {
+  /// Verification pass (or the replay pass in single-pass mode).
+  recording::StreamingVerifyStats verification;
+  /// True when the digest/counts were checked over the whole file.  False for a
+  /// stopped-early single pass: the unread tail was never verified.
+  bool verification_complete = false;
+  bool single_pass = false;
+  bool stopped_early = false;
+  ManifestInfo manifest;
+  GroupingStats grouping;
+  CadenceStats cadence;
+  std::vector<GroupRecord> groups;
+  std::vector<IncompleteGroup> incomplete_groups;
+  std::vector<DuplicateFrame> duplicates;
+  std::vector<std::uint64_t> absent_group_ids;
+  std::string manifest_path;
+  /// Replay-pass counters (partial when `stopped_early`).
+  std::uint64_t transfers_replayed = 0;
+  std::uint64_t bytes_replayed = 0;
+  std::uint64_t non_ok_transfers_replayed = 0;
+  std::uint64_t record_count_replayed = 0;
+  /// Timing / memory of the whole call (verification + replay).
+  double wall_seconds = 0.0;
+  double replay_seconds = 0.0;
+  double throughput_mbps = 0.0;          // replay-pass payload MB/s
+  std::uint64_t peak_rss_kb = 0;
+};
+
+/// Memory-bounded replay: verify (unless single_pass), then drive the existing
+/// pipeline/SimulatedTransport from a `RecordingStreamReader` on demand while
+/// writing only the requested group range/selection.  With `group_sink` set no
+/// files are written; the sink receives complete groups (the `--pipe` path).
+Result<StreamReplayReport> stream_replay(const StreamReplayOptions& options);
+
+/// Peak resident set size of this process in KiB (Linux /proc VmHWM; 0 when
+/// unavailable).  Cheap enough to call once at the end of a tool run.
+std::uint64_t peak_rss_kb();
+
+// ---------------------------------------------------------------------------
 // Deterministic simulated capture
 // ---------------------------------------------------------------------------
 
@@ -677,6 +882,8 @@ struct SimCaptureOptions {
   std::uint64_t seed = 1;
   std::string faults = "clean";
   std::string recording_path;  // empty = no recording
+  /// Same semantics as CaptureSessionOptions::recording_verify.
+  RecordingVerifyMode recording_verify = RecordingVerifyMode::Auto;
   std::uint32_t queue_depth = 8;
   std::uint32_t trigger_period_us = 40'000;
   std::uint32_t bandwidth_bytes_per_sec = 300'000'000;

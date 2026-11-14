@@ -168,6 +168,15 @@ class SessionWorker(QtCore.QThread):
         self._decision_times: list[float] = []
         self.preview_count = 0
         self.decision_count = 0
+        #: accounting that makes the newest-frame policy explicit to the
+        #: operator instead of looking like an unexplained 2,004/13,195 gap.
+        self.preview_total = 0
+        self.decision_total = 0
+        self.superseded = 0
+        self._decision_lags: list[float] = []
+        self._submit_at: float | None = None
+        self.end_acquisition: dict = {}
+        self.end_info: dict = {}
 
     # -- control -------------------------------------------------------
     def request_stop(self) -> None:
@@ -190,8 +199,14 @@ class SessionWorker(QtCore.QThread):
             return self._latest
 
     def _on_runner_decision(self, payload: dict) -> None:
+        now = time.monotonic()
         self.decision_count += 1
-        self._decision_times.append(time.monotonic())
+        self.decision_total += 1
+        self._decision_times.append(now)
+        if self._submit_at is not None:
+            self._decision_lags.append((now - self._submit_at) * 1000.0)
+            del self._decision_lags[:-2000]
+            self._submit_at = None
         if len(self._decision_times) > 2000:
             del self._decision_times[:1000]
         with self._lock:
@@ -218,9 +233,19 @@ class SessionWorker(QtCore.QThread):
                 "p95_ms": gaps[min(len(gaps) - 1, int(0.95 * len(gaps)))],
                 "max_ms": gaps[-1],
             }
+        lags = sorted(self._decision_lags)
+        lag = {"count": len(lags),
+               "p50_ms": (lags[len(lags) // 2] if lags else None),
+               "p95_ms": (lags[min(len(lags) - 1, int(0.95 * len(lags)))]
+                          if lags else None),
+               "max_ms": (lags[-1] if lags else None)}
         return {"preview": summary(self._preview_times),
                 "decision": summary(self._decision_times),
+                "decision_lag": lag,
                 "groups_seen": int(self.groups_seen),
+                "preview_total": int(self.preview_total),
+                "decision_total": int(self.decision_total),
+                "superseded": int(self.superseded),
                 "recorded_only": int(self.recorded_only),
                 "async_decisions": bool(self.async_decisions)}
 
@@ -247,6 +272,7 @@ class SessionWorker(QtCore.QThread):
         with self._lock:
             self._latest = payload_preview
         self.preview_count += 1
+        self.preview_total += 1
         self._preview_times.append(time.monotonic())
         if len(self._preview_times) > 2000:
             del self._preview_times[:1000]
@@ -301,6 +327,7 @@ class SessionWorker(QtCore.QThread):
                         try:
                             q.put_nowait(group)
                         except queue.Full:
+                            self.superseded += 1
                             self.recorded_only += 1
                             try:
                                 self.controller.record_only(group)
@@ -328,8 +355,10 @@ class SessionWorker(QtCore.QThread):
                     if not self.runner.submit(group):
                         self.controller.record_only(group)
                         self.recorded_only += 1
+                        self.superseded += 1
                     else:
-                        self._last_decision_at = time.monotonic()
+                        self._submit_at = time.monotonic()
+                        self._last_decision_at = self._submit_at
                         self._count += 1
                         if self.max_groups and self._count >= self.max_groups:
                             break
@@ -367,9 +396,91 @@ class SessionWorker(QtCore.QThread):
                                     "session completion is not claimed")
                 else:
                     self.runner = None
-            self.finished_ok.emit({"groups_ingested": self._count,
-                                   "stopped": self._stop.is_set(),
-                                   "complete": not (reader_alive or runner_alive)})
+            acquisition = self._finalize_source()
+            self.finished_ok.emit(self._end_info(
+                groups_ingested=self._count, reader_alive=reader_alive,
+                runner_alive=runner_alive, acquisition=acquisition))
+
+    def _finalize_source(self) -> dict:
+        """Stop and verify the acquisition before reporting the worker done.
+
+        This is the regression fix for the 52 GB session: stopping the reader
+        used to end the session while the capture child kept recording for
+        180 s.  Every exit path now stops the supervised source and keeps the
+        acquisition verdict.
+        """
+        verdict: dict = {}
+        try:
+            stopper = getattr(self.source, "stop", None)
+            if callable(stopper):
+                verdict = dict(stopper(reason="worker stopped") or {})
+        except Exception as exc:
+            verdict = {"ok": False, "verified": False, "safe": False,
+                       "state": "failed",
+                       "reasons": [f"source stop failed: "
+                                   f"{type(exc).__name__}: {exc}"]}
+        acquisition: dict = {}
+        try:
+            state_fn = getattr(self.source, "acquisition_state", None)
+            if callable(state_fn):
+                acquisition = dict(state_fn() or {})
+            else:
+                capture = getattr(self.source, "capture", None)
+                state_fn = getattr(capture, "acquisition_state", None)
+                if callable(state_fn):
+                    acquisition = dict(state_fn() or {})
+        except Exception as exc:
+            acquisition = {"state": "failed", "verified": False,
+                           "safe": False, "terminal": True,
+                           "reasons": [f"acquisition state unavailable: "
+                                       f"{type(exc).__name__}: {exc}"]}
+        kind = str(getattr(self.source, "kind", "") or "").lower()
+        if not acquisition and not kind.endswith("live"):
+            # Replay/synthetic/vendor sources own no scanner, so there is no
+            # acquisition to verify.  This is an explicit not_applicable
+            # verdict, not a failed/unverified one; treating absence as
+            # failure broke every headless replay/synthetic finish.
+            acquisition = {"state": "not_applicable", "verified": None,
+                           "safe": None, "terminal": True, "reasons": []}
+        if not verdict:
+            # Preserve the tri-state verified/safe values (True/False/None):
+            # None means "no scanner was involved" (replay/synthetic/vendor)
+            # and must not be flattened to False, which the window would
+            # correctly read as an unverified live shutdown.
+            verdict = {"ok": bool(acquisition.get("verified")),
+                       "verified": acquisition.get("verified"),
+                       "safe": acquisition.get("safe"),
+                       "state": acquisition.get("state"),
+                       "reasons": list(acquisition.get("reasons") or [])}
+        verdict["acquisition"] = acquisition
+        self.end_acquisition = acquisition
+        return verdict
+
+    def _end_info(self, **values) -> dict:
+        acquisition = values.pop("acquisition", None) or self.end_acquisition
+        info = dict(values)
+        if not acquisition or acquisition.get("state") in (
+                "not_applicable", None):
+            acquisition = dict(acquisition or {})
+            acquisition.setdefault("state", "not_applicable")
+            acquisition.setdefault("verified", None)
+            acquisition.setdefault("safe", None)
+            acquisition.setdefault("terminal", True)
+        info.update({
+            "stop_requested": bool(self._stop.is_set()),
+            "acquisition": acquisition,
+            "source_final_verdict": (getattr(self.source, "final_verdict", None)
+                                     or None),
+            "complete": bool(values.get("complete", True))
+                        and acquisition.get("verified") is not False,
+            "verified": bool(acquisition.get("verified")),
+            "safe": bool(acquisition.get("safe")),
+            "capture_state": acquisition.get("state"),
+            "capture_reasons": list(acquisition.get("reasons") or []),
+            "capture_conflicts": list(acquisition.get("conflicts") or []),
+        })
+        self.end_info = info
+        return info
 
     def _run_sync(self) -> None:
         period = 1.0 / self.pace_hz if self.pace_hz > 0 else 0.0
@@ -458,5 +569,35 @@ class SessionWorker(QtCore.QThread):
                 self.runner.request_stop()
                 self.runner.wait(15000)
                 self.runner = None
-            self.finished_ok.emit({"groups_ingested": self._count,
-                                   "stopped": self._stop.is_set()})
+            acquisition = self._finalize_source()
+            self.finished_ok.emit(self._end_info(
+                groups_ingested=self._count, reader_alive=False,
+                runner_alive=False, complete=not self._stop.is_set()
+                or bool(acquisition.get("verified", True)),
+                acquisition=acquisition))
+
+
+class StopWorker(QtCore.QThread):
+    """Run the controller's verified acquisition stop off the GUI thread.
+
+    Used when the reader ended while the acquisition is still live (or its
+    verification is pending): the window must keep painting while the child is
+    stopped, the readback is checked and the recording is finalized.
+    """
+
+    done = QtCore.Signal(dict)
+
+    def __init__(self, controller, reason: str = "window stop", parent=None):
+        super().__init__(parent)
+        self.controller = controller
+        self.reason = str(reason)
+
+    def run(self) -> None:  # noqa: D401
+        try:
+            stop = getattr(self.controller, "stop_capture", None)
+            result = dict(stop(reason=self.reason) or {}) if callable(stop) else {}
+        except Exception as exc:
+            result = {"attempted": True, "verified": False, "safe": False,
+                      "ok": False, "state": "failed",
+                      "reasons": [f"{type(exc).__name__}: {exc}"]}
+        self.done.emit(result)

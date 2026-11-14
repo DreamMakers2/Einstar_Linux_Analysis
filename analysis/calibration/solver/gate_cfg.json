@@ -1,0 +1,732 @@
+{
+ "held_kc": {
+  "condition_scaled": 1636.5786606728198,
+  "rank": 18,
+  "n_free": 18,
+  "weak_directions": 0,
+  "counts": {
+   "constrained": 10,
+   "weak": 8,
+   "unobservable": 0
+  },
+  "blocking": [
+   "model_sensitivity"
+  ],
+  "reasons": [
+   "model sensitivity unknown (no held-out analysis supplied)"
+  ],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.5175712241547717,
+    "sigma_units": 0.5175712241547717,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 1.4787749261564909,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9619944958535842
+   },
+   "left.fy": {
+    "sigma": 0.5242474908905479,
+    "sigma_units": 0.5242474908905479,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 1.497849973972994,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9587025071343733
+   },
+   "right.fx": {
+    "sigma": 0.4572596833173805,
+    "sigma_units": 0.4572596833173805,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 1.3064562380496587,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7843236308861607
+   },
+   "right.fy": {
+    "sigma": 0.4675792863999528,
+    "sigma_units": 0.4675792863999528,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 1.3359408182855794,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7886675906001894
+   },
+   "tex.fx": {
+    "sigma": 0.4516077978717811,
+    "sigma_units": 0.4516077978717811,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 1.2903079939193747,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7742965693277775
+   },
+   "tex.fy": {
+    "sigma": 0.45509333114809764,
+    "sigma_units": 0.45509333114809764,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 1.300266660423136,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.77064975361687
+   },
+   "right.rx": {
+    "sigma": 7.338025957024628e-05,
+    "sigma_units": 0.00420437917294958,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.0420437917294958,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5920516834599882
+   },
+   "right.ry": {
+    "sigma": 0.0001457399228758037,
+    "sigma_units": 0.008350282487345671,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.08350282487345671,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6624392607619585
+   },
+   "right.rz": {
+    "sigma": 5.8372203477170513e-05,
+    "sigma_units": 0.003344480900120739,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.03344480900120739,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.636193039250382
+   },
+   "right.tx": {
+    "sigma": 0.0534568241772298,
+    "sigma_units": 0.0534568241772298,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.8909470696204967,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.34283663130646336
+   },
+   "right.ty": {
+    "sigma": 0.03307364015131882,
+    "sigma_units": 0.03307364015131882,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.5512273358553137,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.10831597521790595
+   },
+   "right.tz": {
+    "sigma": 0.1521055288472105,
+    "sigma_units": 0.1521055288472105,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 2.5350921474535086,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.28903302002161513
+   },
+   "tex.rx": {
+    "sigma": 7.326573042960882e-05,
+    "sigma_units": 0.004197817136559793,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.04197817136559793,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5549824522967548
+   },
+   "tex.ry": {
+    "sigma": 0.00012195661990141328,
+    "sigma_units": 0.0069875996040321625,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.06987599604032162,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5894168321913376
+   },
+   "tex.rz": {
+    "sigma": 5.5522088828249865e-05,
+    "sigma_units": 0.0031811813596091757,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.031811813596091754,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5089249647481082
+   },
+   "tex.tx": {
+    "sigma": 0.04592305500758245,
+    "sigma_units": 0.04592305500758245,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.7653842501263742,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.3340404781866189
+   },
+   "tex.ty": {
+    "sigma": 0.033131591505708234,
+    "sigma_units": 0.033131591505708234,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.5521931917618039,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.16131080840939266
+   },
+   "tex.tz": {
+    "sigma": 0.14245393439300164,
+    "sigma_units": 0.14245393439300164,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 2.374232239883361,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.3439473967801102
+   }
+  },
+  "eigen_tail": [
+   0.26294370817451485,
+   0.025683919079210884,
+   0.024021419880046694,
+   0.01807461597383183,
+   0.009827611124173172,
+   0.006241966397715495,
+   0.003888622971539917,
+   0.0024108666350801133
+  ],
+  "weakest": {
+   "rank": 17,
+   "eigenvalue": 0.0024108666350801133,
+   "explained_fraction": 0.0001339370352822285,
+   "dominant": [
+    {
+     "param": "right.ry",
+     "component": -0.52764709914923,
+     "sigma_units": -6.410010789480575e-06
+    },
+    {
+     "param": "tex.ry",
+     "component": -0.4875801953318879,
+     "sigma_units": -5.185020172330933e-06
+    },
+    {
+     "param": "left.fx",
+     "component": 0.32487268007560133,
+     "sigma_units": 0.02315817478011184
+    },
+    {
+     "param": "left.fy",
+     "component": 0.3211480508003875,
+     "sigma_units": 0.02341184605006048
+    },
+    {
+     "param": "tex.fx",
+     "component": 0.25208557628733985,
+     "sigma_units": 0.01681653786812259
+    },
+    {
+     "param": "tex.fy",
+     "component": 0.23452851785894005,
+     "sigma_units": 0.016906212566954654
+    },
+    {
+     "param": "right.fy",
+     "component": 0.22290689532147392,
+     "sigma_units": 0.01654355182829296
+    },
+    {
+     "param": "right.fx",
+     "component": 0.21823312084548113,
+     "sigma_units": 0.016001400039436457
+    }
+   ]
+  },
+  "free_names": [
+   "left.fx",
+   "left.fy",
+   "right.fx",
+   "right.fy",
+   "tex.fx",
+   "tex.fy",
+   "right.rx",
+   "right.ry",
+   "right.rz",
+   "right.tx",
+   "right.ty",
+   "right.tz",
+   "tex.rx",
+   "tex.ry",
+   "tex.rz",
+   "tex.tx",
+   "tex.ty",
+   "tex.tz"
+  ],
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "unobservable": [],
+    "weak": [
+     "left.fx",
+     "left.fy",
+     "right.fx",
+     "right.fy",
+     "tex.fx",
+     "tex.fy",
+     "right.tz",
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.008350282487345671,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.00420437917294958,
+     "right.ry": 0.008350282487345671,
+     "right.rz": 0.003344480900120739
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.018175162624814438,
+    "limit_mm": 0.06,
+    "ratio": 0.30291937708024064
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "unknown",
+    "pass": false,
+    "note": "not computed: needs held-out observations (observability_gate(..., compute_model_sensitivity=True))"
+   }
+  }
+ },
+ "held_kc_noprior": {
+  "condition_scaled": 1633.5848613475066,
+  "rank": 18,
+  "n_free": 18,
+  "weak_directions": 0,
+  "counts": {
+   "constrained": 10,
+   "weak": 8,
+   "unobservable": 0
+  },
+  "blocking": [
+   "model_sensitivity"
+  ],
+  "reasons": [
+   "model sensitivity unknown (no held-out analysis supplied)"
+  ],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.517398866246723,
+    "sigma_units": 0.517398866246723,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5778222309311737,
+    "ratio": 1.4782824749906374,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9742433104910144
+   },
+   "left.fy": {
+    "sigma": 0.5240872746309645,
+    "sigma_units": 0.5240872746309645,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5778222309311737,
+    "ratio": 1.4973922132313273,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.972491428389499
+   },
+   "right.fx": {
+    "sigma": 0.45715161265513904,
+    "sigma_units": 0.45715161265513904,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5778222309311737,
+    "ratio": 1.3061474647289688,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.8550989964976256
+   },
+   "right.fy": {
+    "sigma": 0.4674707553986764,
+    "sigma_units": 0.4674707553986764,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5778222309311737,
+    "ratio": 1.3356307297105041,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.8616341590642403
+   },
+   "tex.fx": {
+    "sigma": 0.4515454162288352,
+    "sigma_units": 0.4515454162288352,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5778222309311737,
+    "ratio": 1.290129760653815,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.8498084734601937
+   },
+   "tex.fy": {
+    "sigma": 0.45503088762425636,
+    "sigma_units": 0.45503088762425636,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5778222309311737,
+    "ratio": 1.3000882503550182,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.8487995792044271
+   },
+   "right.rx": {
+    "sigma": 7.342625792153404e-05,
+    "sigma_units": 0.004207014684342928,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.04207014684342928,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.49349494093709745
+   },
+   "right.ry": {
+    "sigma": 0.00014562426154257678,
+    "sigma_units": 0.008343655581098912,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.08343655581098912,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6689289828077674
+   },
+   "right.rz": {
+    "sigma": 5.836993826514079e-05,
+    "sigma_units": 0.0033443511130317335,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.033443511130317335,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.742876302805613
+   },
+   "right.tx": {
+    "sigma": 0.05341050626758309,
+    "sigma_units": 0.05341050626758309,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.8901751044597183,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.29589395013607733
+   },
+   "right.ty": {
+    "sigma": 0.03307174405336919,
+    "sigma_units": 0.03307174405336919,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.5511957342228199,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.07205368827898878
+   },
+   "right.tz": {
+    "sigma": 0.15201903122625726,
+    "sigma_units": 0.15201903122625726,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 2.533650520437621,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.20791633809023666
+   },
+   "tex.rx": {
+    "sigma": 7.330912876231507e-05,
+    "sigma_units": 0.004200303677861766,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.04200303677861766,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.4641952268388275
+   },
+   "tex.ry": {
+    "sigma": 0.0001218629517425501,
+    "sigma_units": 0.0069822328138545425,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.06982232813854541,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6087157645097848
+   },
+   "tex.rz": {
+    "sigma": 5.5517540266774336e-05,
+    "sigma_units": 0.003180920746233772,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.031809207462337716,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6473757620412288
+   },
+   "tex.tx": {
+    "sigma": 0.04589531553578813,
+    "sigma_units": 0.04589531553578813,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.7649219255964689,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.22023362043288314
+   },
+   "tex.ty": {
+    "sigma": 0.03312625223292943,
+    "sigma_units": 0.03312625223292943,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.5521042038821572,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.1222348516032994
+   },
+   "tex.tz": {
+    "sigma": 0.14236857450631624,
+    "sigma_units": 0.14236857450631624,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 2.3728095751052707,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.219299345694359
+   }
+  },
+  "eigen_tail": [
+   0.26308843226515594,
+   0.025704370144661867,
+   0.024003190469545164,
+   0.01807668454044793,
+   0.00981676836758692,
+   0.006241350168678953,
+   0.003893388216471098,
+   0.0024153938414663728
+  ],
+  "weakest": {
+   "rank": 17,
+   "eigenvalue": 0.0024153938414663728,
+   "explained_fraction": 0.00013418854674813178,
+   "dominant": [
+    {
+     "param": "right.ry",
+     "component": -0.5270294145526461,
+     "sigma_units": -6.406928012640942e-06
+    },
+    {
+     "param": "tex.ry",
+     "component": -0.4868764079726815,
+     "sigma_units": -5.1811239242400155e-06
+    },
+    {
+     "param": "left.fx",
+     "component": 0.325161622890457,
+     "sigma_units": 0.02317568320017092
+    },
+    {
+     "param": "left.fy",
+     "component": 0.32163714039191343,
+     "sigma_units": 0.023431191145489867
+    },
+    {
+     "param": "tex.fx",
+     "component": 0.2525979508419989,
+     "sigma_units": 0.016835443718226956
+    },
+    {
+     "param": "tex.fy",
+     "component": 0.23492182410577372,
+     "sigma_units": 0.01692590357134903
+    },
+    {
+     "param": "right.fy",
+     "component": 0.22329331683108877,
+     "sigma_units": 0.01656115309294707
+    },
+    {
+     "param": "right.fx",
+     "component": 0.21857241431874155,
+     "sigma_units": 0.016017287846614003
+    }
+   ]
+  },
+  "free_names": [
+   "left.fx",
+   "left.fy",
+   "right.fx",
+   "right.fy",
+   "tex.fx",
+   "tex.fy",
+   "right.rx",
+   "right.ry",
+   "right.rz",
+   "right.tx",
+   "right.ty",
+   "right.tz",
+   "tex.rx",
+   "tex.ry",
+   "tex.rz",
+   "tex.tx",
+   "tex.ty",
+   "tex.tz"
+  ],
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "unobservable": [],
+    "weak": [
+     "left.fx",
+     "left.fy",
+     "right.fx",
+     "right.fy",
+     "tex.fx",
+     "tex.fy",
+     "right.tz",
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.008343655581098912,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.004207014684342928,
+     "right.ry": 0.008343655581098912,
+     "right.rz": 0.0033443511130317335
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.01849245545805781,
+    "limit_mm": 0.06,
+    "ratio": 0.3082075909676302
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "unknown",
+    "pass": false,
+    "note": "not computed: needs held-out observations (observability_gate(..., compute_model_sensitivity=True))"
+   }
+  }
+ }
+}

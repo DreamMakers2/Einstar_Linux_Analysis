@@ -639,7 +639,12 @@ class LiveSource:
         config = _capture.CaptureConfig.from_mapping(
             capture_args, session_dir=self.session_dir)
         self.capture = _capture.LiveCaptureProcess(config)
-        self.poll_interval_s = float(config.poll_interval_s)
+        # The ring is written at ~10 Hz.  A 100 ms poll lands on every group
+        # boundary and measurably capped the preview at 8.45 Hz; a 30 ms poll
+        # keeps the newest group within a third of a frame period without
+        # touching USB, the capture tool or the decision cadence.
+        self.poll_interval_s = max(0.01, min(0.05,
+                                           float(config.poll_interval_s)))
         #: how many unseen groups may wait before the oldest are dropped; -1
         #: keeps every group in order (used by tests that need completeness)
         self.max_lag = int(max_lag)
@@ -647,8 +652,9 @@ class LiveSource:
         #: about 50 s of headroom, enough to finalise the recording and status.
         self.min_free_gb = float(min_free_gb)
         self.dropped_for_lag = 0
-        #: groups dropped by the lag bound (recorded for diagnostics; the frames
-        #: themselves stay in the capture tool's raw recording)
+        #: groups dropped by the lag bound.  In production mode the capture
+        #: tool keeps no raw stream, so these frames are simply not decided;
+        #: diagnostic mode still holds them in the tool's ``raw.e1r``.
         self.skipped: list[dict] = []
         self.final_verdict: dict | None = None
         self._started = False
@@ -695,24 +701,52 @@ class LiveSource:
     def resume(self) -> dict:
         return self.capture.resume()
 
+    def acquisition_state(self) -> dict:
+        """Authoritative acquisition evidence from the supervised child."""
+        try:
+            return dict(self.capture.acquisition_state())
+        except Exception as exc:
+            return {"schema": "einstar.acquisition-state/1",
+                    "state": "failed", "verified": False, "safe": False,
+                    "terminal": True,
+                    "reasons": [f"acquisition state unavailable: "
+                                f"{type(exc).__name__}: {exc}"]}
+
     def stop(self, reason: str = "user request") -> dict:
-        """Stop the capture, wait for exit and verify the safe final state."""
+        """Stop the capture, wait for exit and verify the full contract.
+
+        The source is not "stopped" when the reader loop ends; it is stopped
+        when the child has exited, the cleanup readback is verified and the
+        recording is finalized.  The verdict carries that evidence.
+        """
         self._stop_requested = True
-        self.capture.stop(reason=reason)
-        verdict = self.capture.check_safe_final_state()
-        self.final_verdict = verdict
+        stopper = getattr(self.capture, "stop_and_verify", None)
+        try:
+            if callable(stopper):
+                stopper(reason=reason)
+            else:  # pragma: no cover - older supervisor
+                self.capture.stop(reason=reason)
+        finally:
+            verdict = self.capture.check_safe_final_state()
+            verdict["acquisition"] = self.acquisition_state()
+            self.final_verdict = verdict
         return verdict
 
     def close(self) -> None:
         if self._closed:
             return
         self._closed = True
-        if self._started and self.capture.running:
+        if self._started:
             try:
                 self.stop(reason="source closed")
             except Exception:
                 pass
         self.capture.close()
+        if self._started and self.final_verdict is None:
+            try:
+                self.final_verdict = self.capture.check_safe_final_state()
+            except Exception:
+                pass
 
     def __enter__(self) -> "LiveSource":
         self.start()
@@ -735,7 +769,8 @@ class LiveSource:
             # second and ends up showing a view from seconds ago.  A calibration
             # frame that stale is worthless (the plate has moved), so the older
             # backlog is dropped and the newest group is processed instead.  The
-            # frames are still in the capture tool's raw recording.
+            # frames are not retained by production storage; a diagnostic
+            # session still has them in the tool's raw.e1r recording.
             dropped = 0
             if self.max_lag >= 0 and len(pending) > self.max_lag + 1:
                 keep = pending[-(self.max_lag + 1):]
@@ -790,6 +825,16 @@ class LiveSource:
                 raise SourceError(
                     "capture process exited unexpectedly: " + detail)
             if status.get("state") == "stopped" and self.capture.process_exited():
+                disposition = self.capture.check_safe_final_state()
+                self.final_verdict = disposition
+                if not disposition.get("ok"):
+                    # A stopped status alone is not a verified completion: the
+                    # process may have been SIGKILLed between the stopped
+                    # status and the frames-manifest/final state.
+                    raise SourceError(
+                        "capture ended without a verified completion: "
+                        + "; ".join(str(r) for r in
+                                    (disposition.get("reasons") or ["unknown"])))
                 # one final drain so files written just before exit are not lost
                 files = scan_frame_files(self.frames_dir)
                 for gid in sorted(files):

@@ -1,0 +1,147 @@
+{
+ "schema": "einstar.recon.profile/1",
+ "kind": "candidate",
+ "validation": "pending",
+ "image_width": 1280,
+ "image_height": 1024,
+ "units": "mm",
+ "plate_pitch_mm": 28.0,
+ "color_status": "stale",
+ "cameras": {
+  "ir_left": {
+   "fx": 1159.3462904648209,
+   "fy": 1158.0797854097814,
+   "cx": 623.9122318977746,
+   "cy": 534.5629450574738,
+   "skew": 0.0,
+   "dist": [
+    -0.16202550808552876,
+    0.17329795771292744,
+    0.00018672474681613593,
+    0.00014679614540291652,
+    0.018457014016192375
+   ],
+   "R": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "T": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "ir_right": {
+   "fx": 1158.5513109440285,
+   "fy": 1157.096067878431,
+   "cx": 635.5014370289109,
+   "cy": 494.5090595487099,
+   "skew": 0.0,
+   "dist": [
+    -0.16205012000663044,
+    0.1779246629803719,
+    0.0008378695489299481,
+    2.422668790114102e-05,
+    0.012359554278068785
+   ],
+   "R": [
+    0.9263316473432027,
+    -0.0019786547220852135,
+    0.37670381476156967,
+    0.001697473520195897,
+    0.9999979778454562,
+    0.0010783731481778668,
+    -0.3767051867363608,
+    -0.00035948642428773375,
+    0.9263331328714494
+   ],
+   "T": [
+    -157.06387086828204,
+    -0.21626336263807616,
+    30.582324893705525
+   ]
+  },
+  "color": {
+   "fx": 1141.3168077178068,
+   "fy": 1139.9735420364213,
+   "cx": 633.1023849680892,
+   "cy": 521.1249788233655,
+   "skew": 0.0,
+   "dist": [
+    -0.1510098335785174,
+    0.1664357844770093,
+    0.0005756404561523299,
+    -7.375679496206352e-05,
+    0.031132636860223162
+   ],
+   "R": [
+    0.9558777314714882,
+    -0.0014951246579182804,
+    0.29376100333294547,
+    0.0017919897281808213,
+    0.9999981195304414,
+    -0.0007414232227582781,
+    -0.29375934240417884,
+    0.0012351266487431929,
+    0.9558786132205417
+   ],
+   "T": [
+    -122.23402914883737,
+    -0.0771787035851319,
+    12.562411474343778
+   ]
+  }
+ },
+ "session": {
+  "dir": "<calibration-session>",
+  "mode": "high",
+  "goal": "full",
+  "accepted_views": 297,
+  "rejected_views": 1707,
+  "fitted_views": 293,
+  "culled_views": [
+   6,
+   36,
+   129,
+   161
+  ],
+  "residual_rms_px": 0.6514382711713813,
+  "last_pose_distance_mm": null,
+  "offline_analysis": "analysis/calibration/solver/final/final_metrics.json"
+ },
+ "model": {
+  "distortion": "factory values, fixed (dist not estimated)",
+  "principal_point": "HARD-FIXED to the factory value for all three cameras (cx/cy not optimised, no prior, no movement)",
+  "free_intrinsics": [
+   "fx",
+   "fy"
+  ],
+  "free_extrinsics": [
+   "right.rx..tz",
+   "tex.rx..tz"
+  ],
+  "free_rig_parameters": 18,
+  "free_views": "per-view r6 (nuisance)",
+  "free_kc": false,
+  "priors": "none"
+ },
+ "provenance": [
+  "tool=analysis/calibration/solver (offline solver harness)",
+  "mode=high",
+  "pitch_mm=28",
+  "views=297 accepted, 293 fitted (4 culled)",
+  "factory_sha256=8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4",
+  "world_frame=ir_left",
+  "principal_point=factory (hard fixed; delta to factory is exactly 0.0 px)",
+  "distortion=factory (fixed)",
+  "skew=absolute K[0,1] in pixels (C++ convention)",
+  "host-side analysis only; never activated; factory profile untouched"
+ ]
+}

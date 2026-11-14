@@ -4,10 +4,54 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-12.  This working tree: **429 Python tests**, 13/13 driver
-C++ tests, 1/1 reconstruction C++ tests, plus 8 real parent/child process-safety
-tests.  The previous published HEAD was `aa030c7`; this milestone is committed
-separately.
+Date: 2026-11-14.  This working tree: **573 Python tests**, 12/12 driver
+C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
+parent/child process-safety tests.
+
+---
+
+## 0b. The Windows reference (2026-11-14)
+
+The user ran a fresh EXStar calibration on Windows on the same scanner.  This
+milestone mined it, and the result changes one conclusion materially.
+
+| finding | number | source |
+|---|---|---|
+| reference recording | 66.400 s, 1992 frames, 1920x1080, **audio silent**, **edited by Clipchamp** (~85–90 s of the session is missing) | `calibration/exstar_reference_video_analysis.md` |
+| EXStar's real operator work | **25 poses** (5 orientations x 5 distances), **1.87 s/accepted view**, geometric 48.6 s, white balance 7.7 s, **automatic acceptance, zero clicks** during acquisition | same |
+| on-disk session | 00:09:52 → 00:14:55 = **5 min 03 s** (3 min 19 s geometry, 1 min 42 s white balance) | same, mtimes |
+| EXStar's new calibration | baseline 158.5570 → **158.6128 mm** (+0.035 %), IR rotation 22.1383° → 22.1290°, `fx` −0.67/−1.11/−0.15 px | `calibration/exstar_vs_factory_vs_linux.md` |
+| distortion | **bit-identical** across 2024 → 2026-02 → 2026-11 and equal to the device's factory records: EXStar has **never re-estimated distortion** | same |
+| white balance | diagonal gains only (slot0 1.6035, slot2 1.7940); CCM and dark **unchanged bytes**; algorithm recovered from `Sn3DColorCorrect.dll` (centred-window grey-world, dark-subtracted, green pinned) | `calibration/white_balance.md` |
+| device writes | EXStar **wrote** the new CCF (0x39B) and WB (0x12BC) into the scanner's flash; post-run readback `256dd440…` has byte-identical CCF/WB and the date string `2026-11-14 00:13` | `calibration/exstar_hardware_state.md` |
+| **the scale question** | the scanner stores **two** vendor calibrations 1 % apart: factory records **160.0916 mm** and the CCF **158.557/158.6128 mm**.  Our 160.0137 mm reproduces the **factory** record to **0.08 mm** and its colour extrinsic to **0.0005 mm / 0.04°**, while the CCF's colour extrinsic is **8°** off | `exstar_vs_factory_vs_linux.md` §5 |
+| vendor corpus refit | our fit on the vendor's own 25 fresh images: baseline **160.210 mm**, RMS **0.314 px**; the vendor CCF explains its own images at **1.420 px** and a rig-scale x1.0100 collapses it to 0.445 px | `calibration/exstar_vendor_corpus_refit.md` |
+| model selection | held-out error prefers free PP+distortion (0.7512 vs 0.7567 px) and moves `fx` **down**/baseline **up**, i.e. **away** from the CCF and onto the device record; no model variant reaches 158.56 mm | same |
+| missing views | base session **6/8** → recovered overlay **7/8** (D7 only); plan = **4 holds, ~1.6 min** | `calibration/missing_views_workflow.md` |
+| production capture | default no longer records `raw.e1r`: **40 views 75.1 MB**, 60 views 112.8 MB (vs 7.0 / 10.5 GB lossless); 256 MiB ring = 6.94 s; crash-truncated journal recovers the intact prefix | `calibration/production_capture.md` |
+
+**Not achieved:** an absolute length reference.  The 1 % branch question is now
+*localised* (two vendor datasets, not our fit), but only a measured plate pitch
+or a certified artefact can decide it.
+
+---
+
+## 0a. Session-03 recovery (2026-11-13)
+
+The irreplaceable 52 GB physical session was recovered read-only and audited;
+see [`calibration/session03_recovery.md`](calibration/session03_recovery.md).
+
+| finding | result |
+|---|---|
+| recording integrity | full 52 GB stream verify: trailer digest MATCH, 1,266,761 transfers, 13,195 groups / 39,585 frames, 76.2 s at 681 MB/s / 5.9 MB RSS |
+| displayed 5/8 cause | GUI counted D7 twice and dropped D8; honest pre-fix count was 6/8 (D4 + D7) |
+| D4 right corners | **recovered from the raw recording** (groups 89, 5682, 4019, 6241); no new capture needed |
+| D7 stationarity | genuinely fail: only 2–3 distinct dwell poses in 22 min; the old 5 was an artifact, the corrected verdict is 2–3 < 6 |
+| 297-view evidence | 293 fitted after culling `[6,36,129,161]`; hard-fixed factory principal point + held distortion; RMS 0.6514 px, held-out 0.770 ± 0.019, epipolar 0.333 vs 0.465 factory; **standard target only** |
+| scale | unvalidated; IR baseline 160.014 vs factory 158.557 mm (+0.92 %), indistinguishable from the pitch question |
+| acquisition contradiction | reader stopped 180 s before the capture child; `cancel()` did not stop it; shutdown SIGKILLed the child during a 52 GB re-verify. Fixed with one authoritative state machine and bounded trailer-only finalisation |
+| remaining before activation | 4 short distinct dwell holds (~2 s) + an independent length artefact; do not repeat the 297-view session |
+| runtime | full replay 98.9 s / 525 MB/s / 103 MB RSS; feature cache 763.9 s, 17.3 groups/s, 91.5 MB; stage-1 retention 143.6 s |
 
 ---
 

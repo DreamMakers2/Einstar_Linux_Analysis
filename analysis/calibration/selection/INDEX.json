@@ -1,0 +1,61 @@
+{
+ "schema": "einstar-selection-comparison/1",
+ "question": "were the 297 live-accepted views sufficient, and is a selection from the full recording better?",
+ "inputs": {
+  "features": "analysis/calibration/offline/features/features.jsonl (13,195 groups, real 10 Hz host_time_ns)",
+  "stage1": "analysis/calibration/offline/selection/{stage1_groups.txt,selection_summary.json}",
+  "recording": "<calibration-session>/raw.e1r (read-only, 52 GB)"
+ },
+ "variants": {
+  "a_297": {
+   "views": 293,
+   "rms_px": 0.6514,
+   "sigma_fx": {
+    "left": 0.203,
+    "right": 0.182,
+    "tex": 0.197
+   },
+   "condition_scaled": 1804,
+   "heldout_mean_px": 0.77,
+   "coverage": "5/8 (D4,D5,D7 fail)",
+   "source": "analysis/calibration/solver/final"
+  },
+  "b_150": {
+   "views": 145,
+   "rms_px": 0.7,
+   "sigma_fx": {
+    "left": 0.268,
+    "right": 0.238,
+    "tex": 0.242
+   },
+   "condition_scaled": 1772,
+   "heldout_mean_px": 0.837,
+   "coverage": "4/8 (D2,D4,D5,D7 fail)",
+   "file": "variant_b.json"
+  },
+  "c_200": {
+   "views": 165,
+   "rms_px": 1.002,
+   "sigma_fx": {
+    "left": 0.22,
+    "right": 0.198,
+    "tex": 0.208
+   },
+   "condition_scaled": 804,
+   "heldout_mean_px": 1.204,
+   "coverage": "6/8 (D4 now passes; D5,D7 fail)",
+   "file": "variant_c.json"
+  }
+ },
+ "files": {
+  "groups_b.json": "150 selected groups from the 297 accepted",
+  "groups_c.json": "200 selected groups from the full corpus (includes corner views 89/5682/4019/6241)",
+  "groups_union.txt": "343 groups extracted and detected in one pass",
+  "coverage_d1_d8.json": "D1-D8 for the three variants (tools.wizard.coverage, one common source)",
+  "extraction.json": "stream-extraction report (42.3 GB replayed, 54 s)",
+  "variant_b.json / variant_c.json": "fit + validation of each selection",
+  "selection_report.md": "the comparison write-up (mirrored at docs/calibration/selection_comparison.md)"
+ },
+ "conclusion": "(c) is better on coverage (D4 satisfied, 6/8 vs 5/8) and conditioning (804 vs 1804) but worse on precision (held-out 1.20 vs 0.77 px, RMS 1.00 vs 0.65). The 297 were sufficient for precision and insufficient for corner observability; the right fix is to add corner views to the accepted set, not to replace it.",
+ "activation": "none; analysis only"
+}

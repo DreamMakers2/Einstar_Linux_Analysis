@@ -1,0 +1,26 @@
+{
+ "added_after_core_run": true,
+ "core_suites": {
+  "binary": "build/driver/einstar-capture-frames (simulated backend; no USB)",
+  "command": "pytest tests/test_capture_safety.py tests/test_capture_volatile.py tests/test_capture_acquisition_state.py tests/test_wizard_*.py (except coverage/guidance) tests/test_lifecycle_digest.py",
+  "known_unrelated_failure": {
+   "reason": "exercises calib.observability/calib.solvers (owned by another agent); counts observed constrained=16 weak=19 unobservable=4 versus the test's >=10 expectation. Not touched by the acquisition/lifecycle change.",
+   "reproduced_before_and_after_lifecycle_change": true,
+   "test": "tests/test_wizard_failures.py::test_observability_refuses_overparameterised_distortion"
+  },
+  "result": "120 passed, 1 failed, 259.04 s"
+ },
+ "focused_lifecycle_suites": "all acquisition_state/lifecycle_stop/progress/guidance_view/coverage_wiring/acquisition_ui tests passed (see tests_results.txt)",
+ "focused_ui_close": "tests/test_wizard_acquisition_ui.py (2 passed): worker-end truth table and shutdown stop-before-metrics ordering",
+ "gui_smoke": {
+  "command": "pytest tests/test_wizard_gui.py tests/test_qt_teardown.py",
+  "known_unrelated_failure": {
+   "reason": "missing-label wording from the coverage engine ('distance' instead of containing 'tilt'/'region'); acceptance/wording policy owned by the coverage agent, not the lifecycle path.",
+   "test": "tests/test_wizard_gui.py::test_vendor_corpus_session_if_available"
+  },
+  "qt_close_during_solve": "passed",
+  "result": "7 passed, 1 failed, 75.61 s"
+ },
+ "no_scanner": "No physical calibration session or scanner hardware was used.",
+ "schema": "einstar.lifecycle.test-summary/1"
+}

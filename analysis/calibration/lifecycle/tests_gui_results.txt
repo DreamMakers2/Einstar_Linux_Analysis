@@ -1,0 +1,11 @@
+...F....                                                                 [100%]
+=================================== FAILURES ===================================
+___________________ test_vendor_corpus_session_if_available ____________________
+tests/test_wizard_gui.py:111: in test_vendor_corpus_session_if_available
+    assert "tilt" in missing or "region" in missing, summary
+E   AssertionError: {'state': 'recording', 'accepted': '13', 'rejected': '7', 'coverage': '4/8', ...}
+E   assert ('tilt' in 'distance' or 'region' in 'distance')
+=========================== short test summary info ============================
+FAILED tests/test_wizard_gui.py::test_vendor_corpus_session_if_available - As...
+1 failed, 7 passed in 75.61s (0:01:15)
+EXIT:1

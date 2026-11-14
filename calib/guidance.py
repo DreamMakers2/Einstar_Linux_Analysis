@@ -53,11 +53,20 @@ DEFAULT_QUALITY = {
     "max_motion_mm": 3.0,           # dwell threshold: reported, not a rejection
     "max_motion_deg": 1.5,
     # A single frame is sharp or it is not; motion *between* frames does not
-    # blur a 1.2 ms exposure.  Reject only motion so extreme that the pose or
-    # marker association is unlikely to be trustworthy (>= 4 cm/frame at
-    # 10 Hz = 0.4 m/s), and let the measured focus/contrast gates reject blur.
+    # blur a 1.2 ms exposure.  Rejection is therefore driven by speed and
+    # exposure blur with an honest dt, not by an absolute inter-decision
+    # displacement.  The old absolute gate rejected 287 decisions on the live
+    # backlog because dt was 0.5-15 s: 223 mm/17 deg between two seconds is
+    # ordinary walking speed, not a pose failure.
+    #
+    # ``max_motion_reject_*`` survives only as a *pose-discontinuity sanity
+    # check for genuinely adjacent samples* (the 10 Hz raw stream), where a
+    # 4 cm / 8 deg jump in one 100 ms frame indicates a tracking/association
+    # problem rather than hand motion.  It is never applied across a sparse
+    # decision gap.
     "max_motion_reject_mm": 40.0,
     "max_motion_reject_deg": 8.0,
+    "max_adjacent_pair_dt_s": 0.15,
     # Physical blur during the exposure, not motion between frames:
     # blur_mm = board speed (mm/s) * exposure time (s).  A 1.2 ms IR exposure
     # tolerates ordinary hand motion; a 5 ms colour exposure needs a slower
@@ -253,8 +262,10 @@ def evaluate_frame(images: dict[str, np.ndarray],
         dt = None
         if previous_timestamp is not None and timestamp > previous_timestamp:
             dt = float(timestamp - previous_timestamp)
+        speed = rate_deg_s = None
         if dt is not None and dt > 1e-6:
             speed = d / dt
+            rate_deg_s = ang / dt
             exposure_s = float(q.get("exposure_s", 0.0012) or 0.0012)
             blur_mm = speed * exposure_s
             # Projected blur: f * blur / depth (small-angle approximation).
@@ -262,22 +273,38 @@ def evaluate_frame(images: dict[str, np.ndarray],
             depth_mm = max(50.0, float(abs(pose[1][2])))
             blur_px = f_px * blur_mm / depth_mm
             metrics["speed_mm_s"] = speed
+            metrics["stationarity_speed_mm_s"] = speed
+            metrics["stationarity_rate_deg_s"] = rate_deg_s
+            metrics["stationarity_window_s"] = dt
             metrics["exposure_s"] = exposure_s
             metrics["motion_blur_mm"] = blur_mm
             metrics["motion_blur_px"] = blur_px
+            # This is a *measured* acquisition-quality observation, not an
+            # acceptance verdict: D7 counts these over every ingested frame.
+            metrics["stationary"] = bool(speed <= float(q["max_motion_mm"])
+                                         and rate_deg_s <= float(q["max_motion_deg"]))
             if blur_mm > float(q["max_motion_blur_mm"]) or \
                     blur_px > float(q["max_motion_blur_px"]):
                 reasons.append(
                     f"motion blur ({blur_mm:.2f} mm / {blur_px:.2f} px at "
                     f"{speed:.0f} mm/s and {exposure_s * 1e3:.1f} ms exposure)")
-        if d > q["max_motion_reject_mm"] or ang > q["max_motion_reject_deg"]:
-            reasons.append(f"moving too fast for a reliable pose "
-                           f"({d:.1f} mm, {ang:.2f} deg between frames)")
-        elif d > q["max_motion_mm"] or ang > q["max_motion_deg"]:
-            # Informational: the frame is kept if it is sharp.  The session's
-            # stationarity coverage still asks for a few dwell views, but the
-            # operator is no longer stopped every time the plate moves.
+            # Absolute displacement is a sanity guard only for genuinely
+            # adjacent samples.  A large legal hand movement over seconds is
+            # not a reliability problem when each frame has its own pose.
+            if dt <= float(q["max_adjacent_pair_dt_s"]) and (
+                    d > float(q["max_motion_reject_mm"])
+                    or ang > float(q["max_motion_reject_deg"])):
+                reasons.append(
+                    f"pose discontinuity between adjacent frames "
+                    f"({d:.1f} mm, {ang:.2f} deg in {dt:.3f} s)")
+            elif d > float(q["max_motion_mm"]) or ang > float(q["max_motion_deg"]):
+                # Informational and, importantly, still sharp: the frame is
+                # kept.  Stationarity is D7's business; this is not a reject.
+                metrics["motion_warning"] = True
+        elif d > float(q["max_motion_mm"]) or ang > float(q["max_motion_deg"]):
+            # dt is unknown: report motion but never turn it into a rejection.
             metrics["motion_warning"] = True
+            metrics["motion_dt_unknown"] = True
     if previous_timestamp is not None:
         metrics["dt_s"] = float(timestamp - previous_timestamp)
 
@@ -378,13 +405,53 @@ DEFAULT_ACCEPT = {
 }
 
 
+def quality_stationarity(quality: FrameQuality,
+                        speed_mm_s: float = 3.0,
+                        rate_deg_s: float = 1.5) -> Optional[dict]:
+    """Short-term stationarity from one ``FrameQuality`` record.
+
+    This is the same observation :mod:`tools.wizard.coverage` consumes: a
+    per-frame measured speed/rate over an honest ``dt``.  It is ``None`` when
+    the frame has no time base, so a missing measurement can never be turned
+    into a dwell verdict.
+    """
+    metrics = getattr(quality, "metrics", {}) or {}
+    speed = metrics.get("stationarity_speed_mm_s", metrics.get("speed_mm_s"))
+    rate = metrics.get("stationarity_rate_deg_s")
+    window = metrics.get("stationarity_window_s", metrics.get("dt_s"))
+    if rate is None:
+        motion_deg = metrics.get("motion_deg")
+        if motion_deg is not None and window:
+            rate = float(motion_deg) / float(window)
+    explicit = metrics.get("stationary")
+    if (speed is None or rate is None) and explicit is not None:
+        return {"stationary": bool(explicit), "speed_mm_s": speed,
+                "rate_deg_s": rate, "window_s": window, "source": "explicit"}
+    if speed is None or rate is None:
+        return None
+    return {"stationary": bool(float(speed) <= float(speed_mm_s)
+                              and float(rate) <= float(rate_deg_s)),
+            "speed_mm_s": float(speed), "rate_deg_s": float(rate),
+            "window_s": (float(window) if window is not None else None),
+            "source": "recorded_motion"}
+
+
 def acceptance(quality: FrameQuality,
                predicted_rel_gain: Optional[float],
                nearest_pose: Optional[tuple] = None,
                pose: Optional[tuple] = None,
                new_coverage_bin: bool = False,
-               policy: Optional[dict] = None) -> dict:
-    """Accept/reject one frame set, with every reason made explicit."""
+               policy: Optional[dict] = None,
+               admit_dwell: bool = False) -> dict:
+    """Accept/reject one frame set, with every reason made explicit.
+
+    ``admit_dwell`` is the controller opt-in for D7: when the frame is a good
+    quality stationary duplicate, it may be admitted as ``dwell=True`` evidence
+    instead of being discarded as redundant.  The caller must keep such views
+    out of the solver (``tools.wizard.coverage.measure`` excludes ``dwell=True``
+    from D1-D6) and pass them to D7.  The default remains ``False`` so existing
+    callers are unchanged.
+    """
     p = dict(DEFAULT_ACCEPT)
     if policy:
         p.update(policy)
@@ -402,9 +469,26 @@ def acceptance(quality: FrameQuality,
         dist = abs(float(pose[1][2] - t0[2]))
         if ang < p["min_pose_separation_deg"] and dist < p["min_pose_separation_mm"]:
             reasons.append(f"too similar to an accepted view ({ang:.1f} deg, {dist:.1f} mm)")
+    stationarity = quality_stationarity(quality)
     ok = len(reasons) == 0
+    dwell = False
+    rejected_reasons: list[str] = []
+    if (admit_dwell and not ok and quality.passed and stationarity is not None
+            and stationarity["stationary"]):
+        redundancy = [r for r in reasons
+                      if r.startswith("redundant") or r.startswith("too similar")]
+        if redundancy and len(redundancy) == len(reasons):
+            dwell = True
+            ok = True
+            rejected_reasons = reasons
+            reasons = ["dwell view admitted for stationarity evidence "
+                       "(not used for solver geometry)"]
     return {"accept": bool(ok), "reasons": reasons, "predicted_rel_gain": gain,
-            "threshold": need}
+            "threshold": need, "dwell": bool(dwell),
+            "stationary": (None if stationarity is None
+                           else bool(stationarity["stationary"])),
+            "stationarity": stationarity,
+            "rejected_reasons": rejected_reasons}
 
 
 # ---------------------------------------------------------------------------

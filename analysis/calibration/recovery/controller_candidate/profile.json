@@ -1,0 +1,146 @@
+{
+ "schema": "einstar.recon.profile/1",
+ "kind": "candidate",
+ "validation": "pending",
+ "image_width": 1280,
+ "image_height": 1024,
+ "units": "mm",
+ "plate_pitch_mm": 28.0,
+ "color_status": "stale",
+ "cameras": {
+  "ir_left": {
+   "fx": 1158.2871486431168,
+   "fy": 1156.9568845400013,
+   "cx": 622.4679460657871,
+   "cy": 535.6361122287094,
+   "skew": 0.0,
+   "dist": [
+    -0.158773809568037,
+    0.15284953867330175,
+    0.0006426905285593339,
+    0.00037990211555930843,
+    0.049064067595092416
+   ],
+   "R": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ],
+   "T": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  "ir_right": {
+   "fx": 1156.6109546301802,
+   "fy": 1155.4802048869979,
+   "cx": 635.1440050261668,
+   "cy": 495.31048030233063,
+   "skew": 0.0,
+   "dist": [
+    -0.1557891817487517,
+    0.12802353780549106,
+    0.0013800415644428462,
+    0.00015108600603142664,
+    0.0996741284516223
+   ],
+   "R": [
+    0.9264788975589335,
+    -0.002380619798424624,
+    0.3763391888009519,
+    0.002011966130476136,
+    0.9999970339566551,
+    0.001372614360358009,
+    -0.3763413402355274,
+    -0.0005145165379196699,
+    0.9264809393087692
+   ],
+   "T": [
+    -157.11975580913375,
+    -0.24411223460143228,
+    30.515487536246074
+   ]
+  },
+  "color": {
+   "fx": 1140.2967114610733,
+   "fy": 1138.9357812753917,
+   "cx": 634.1868588299556,
+   "cy": 519.2163788999408,
+   "skew": 0.0,
+   "dist": [
+    -0.15413479679264633,
+    0.18337130037943492,
+    0.0004941317892334969,
+    0.00037450853575129024,
+    0.016627191796555554
+   ],
+   "R": [
+    0.9564070247829594,
+    -0.001677122926535138,
+    0.2920321732352397,
+    0.001210739801875889,
+    0.9999976868616679,
+    0.0017777458889818398,
+    -0.2920344792228136,
+    -0.001346673680937039,
+    0.956406843040689
+   ],
+   "T": [
+    -122.2844270280685,
+    -0.04771057565775434,
+    12.454412647790177
+   ]
+  }
+ },
+ "session": {
+  "dir": "analysis/calibration/recovery/session_recovered",
+  "mode": "high",
+  "goal": "full",
+  "accepted_views": 301,
+  "rejected_views": 1707,
+  "residual_rms_px": 12.731012923329631,
+  "last_pose_distance_mm": null
+ },
+ "provenance": [
+  "tool=tools/wizard/controller.py",
+  "wizard_version=0.1.0",
+  "mode=high",
+  "pitch_mm=28",
+  "views=301",
+  "factory_sha256=8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4",
+  "world_frame=ir_left",
+  "skew=absolute K[0,1] in pixels (C++ convention)",
+  "host-side only; never written to the scanner"
+ ],
+ "scale": {
+  "validated": false,
+  "label": "unvalidated",
+  "note": "absolute scale is not validated: no length artefact"
+ },
+ "candidate": {
+  "schema": "einstar.wizard.candidate/1",
+  "created_utc": "2026-11-13T18:10:02+00:00",
+  "session_dir": "analysis/calibration/recovery/session_recovered",
+  "software_version": "bcb7594-dirty",
+  "input_hashes": {
+   "session.json": "3729b6e62682a089e8f854adc98610a1c56c8da5eab8189c85cc5fb5b8fd64bd"
+  },
+  "model": {
+   "free_parameters": [],
+   "n_free_parameters": 0,
+   "distortion_model": "opencv5",
+   "pitch_mm": 28.0,
+   "color_status": "stale"
+  },
+  "validation_report_sha256": "964491041376001a1ca349e38722778dffffaf21f9f108b0a76253932da8db85",
+  "validation_state": "pending",
+  "note": "candidate only: not activated, factory untouched"
+ }
+}

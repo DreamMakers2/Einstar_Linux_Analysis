@@ -1,0 +1,17 @@
+{
+ "bright_centroid_span_px": [
+  0.0962,
+  0.1421
+ ],
+ "bright_centroid_std_px": [
+  0.0163,
+  0.0267
+ ],
+ "conclusion": "The final ring is a static plate: centroid variation is sub-pixel and the frame mean is stable. These groups were never evaluated by the decision pipeline.",
+ "first_group": 13075,
+ "frame_mean_std": 0.0081,
+ "last_group": 13194,
+ "ring_groups": 120,
+ "schema": "einstar.lifecycle.ring_static/1",
+ "usable_groups": 120
+}

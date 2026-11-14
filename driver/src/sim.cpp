@@ -78,7 +78,7 @@ std::uint64_t simulated_frame_digest(std::uint32_t frame_index,
 }
 
 SimulatedTransport::SimulatedTransport(SimConfig config)
-    : config_(std::move(config)) {
+    : config_(std::move(config)), clock_(config_.clock_start_ns) {
   if (config_.frame_size == 0) {
     config_.frame_size = 1280U * 1024U;
   }
@@ -430,6 +430,11 @@ void SimulatedTransport::ensure_stream(std::size_t bytes) {
 std::size_t SimulatedTransport::serve_replay(
     std::span<std::byte> destination, TransferStatus& status) {
   status = TransferStatus::Ok;
+  if (config_.replay.reader) {
+    // Streaming replay: payload bytes are pulled from disk on demand, so the
+    // recording is never materialised in memory.
+    return config_.replay.reader->read(destination, status);
+  }
   const auto& transfers = *config_.replay.transfers;
   while (replay_index_ < transfers.size()) {
     const recording::ReplayTransfer& record = transfers[replay_index_];
@@ -487,15 +492,19 @@ TransferId SimulatedTransport::submit_bulk_in(
   TransferStatus status = TransferStatus::Ok;
   std::size_t take = 0;
   std::int64_t available_at = now;
+  std::int64_t recorded_host_ns = 0;
 
   const auto halt_it = halted_.find(endpoint);
   const bool is_halted = halt_it != halted_.end() && halt_it->second;
 
   if (is_halted) {
     status = TransferStatus::Stall;
-  } else if (config_.replay.transfers) {
+  } else if (config_.replay.transfers || config_.replay.reader) {
     take = serve_replay(destination, status);
     delivered_bytes_ += take;
+    if (config_.replay.reader) {
+      recorded_host_ns = config_.replay.reader->last_host_time_ns();
+    }
   } else {
     submit_counter_++;
     if (chance(config_.faults.timeout_probability, submit_counter_, 0x80, 0)) {
@@ -548,6 +557,7 @@ TransferId SimulatedTransport::submit_bulk_in(
   pending.ready_ns = schedule(take, now, available_at);
   pending.bytes = take;
   pending.status = status;
+  pending.completion_host_ns = recorded_host_ns;
   pending.epoch = 0;
   pending.done = false;
   scheduled_++;
@@ -577,7 +587,13 @@ void SimulatedTransport::emulate_completion(Pending& pending) {
   completion.status =
       pending.cancelled ? TransferStatus::Cancelled : pending.status;
   completion.bytes_transferred = pending.cancelled ? 0 : pending.bytes;
-  completion.host_time_ns = clock_.now_ns();
+  // Replay reports the recorded capture timestamp so frame host times (and the
+  // cadence/stationarity derived from them) are the real capture timing, not
+  // the virtual replay clock.  Everything else uses the virtual clock.
+  completion.host_time_ns = (!pending.cancelled &&
+                             pending.completion_host_ns > 0)
+                                ? pending.completion_host_ns
+                                : clock_.now_ns();
   completion.user = pending.user;
   if (completion.status == TransferStatus::Timeout) {
     timeouts_++;

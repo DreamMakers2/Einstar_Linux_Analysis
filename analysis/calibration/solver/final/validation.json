@@ -1,0 +1,467 @@
+{
+ "schema": "einstar-solver-validation/1",
+ "candidate": "final/profile.json",
+ "activation": "never performed (analysis only); no file written to the session candidate/ directory",
+ "pp_treatment": {
+  "mode": "hard-fixed at the factory value (not optimised, no prior)",
+  "factory_cx_cy": {
+   "left.cx": 623.9122318977746,
+   "left.cy": 534.5629450574738,
+   "right.cx": 635.5014370289109,
+   "right.cy": 494.5090595487099,
+   "tex.cx": 633.1023849680892,
+   "tex.cy": 521.1249788233655
+  },
+  "delta_to_factory_px": {
+   "left.cx": 0.0,
+   "left.cy": 0.0,
+   "right.cx": 0.0,
+   "right.cy": 0.0,
+   "tex.cx": 0.0,
+   "tex.cy": 0.0
+  },
+  "note": "the 2.0 px drift seen with the 1 px prior is gone because the parameters are not free"
+ },
+ "n_views_fit": 293,
+ "culled_views": [
+  6,
+  36,
+  129,
+  161
+ ],
+ "residual_rms_px": 0.6514382711713813,
+ "view_rms": {
+  "median": 0.4685023873361559,
+  "p90": 0.952956583370638,
+  "max": 1.9304689739174818
+ },
+ "heldout_rms_mean_px": 0.7695889861873474,
+ "heldout_sd_px": 0.018845561560109032,
+ "epipolar": {
+  "fitted_ir": {
+   "n": 10725,
+   "sampson_rms_px": 0.3328326885392479,
+   "sampson_p90_px": 0.524736054619075
+  },
+  "factory_ir": {
+   "n": 10725,
+   "sampson_rms_px": 0.46519149180748126,
+   "sampson_p90_px": 0.748393150387282
+  },
+  "fitted_rgb": {
+   "n": 11034,
+   "sampson_rms_px": 0.6296938464567815,
+   "sampson_p90_px": 1.0415945412243957
+  },
+  "factory_rgb": {
+   "n": 11034,
+   "sampson_rms_px": 31.344573386592682,
+   "sampson_p90_px": 37.6398292165314
+  }
+ },
+ "rig": {
+  "baseline_fit_mm": 160.01370221913672,
+  "baseline_factory_mm": 158.55702724431998,
+  "baseline_error_mm": 1.4566749748167354,
+  "baseline_error_pct": 0.9187072942356252,
+  "baseline_sigma_mm": 0.01819537318310154,
+  "ir_rotation_fit_deg": 22.130020423477703,
+  "ir_rotation_factory_deg": 22.138282490475216,
+  "rgb_translation_fit_mm": 122.87789882872279,
+  "rgb_translation_factory_mm": 125.317604126271,
+  "pitch_mm": 28.0,
+  "scale_note": "metric scale is the plate pitch (28.0 mm nominal, 27.72 mm CCF-effective); no length artefact was measured, so absolute scale is unvalidated",
+  "ir_relative_sigma": {
+   "rotation_deg": 0.003852585933327375,
+   "translation_mm": 0.01819537318310154
+  }
+ },
+ "gate": {
+  "passed": true,
+  "blocking": [],
+  "counts": {
+   "constrained": 17,
+   "weak": 1,
+   "unobservable": 0
+  },
+  "reasons": [],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.20622530581218892,
+    "sigma_units": 0.20622530581218892,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792756554720143,
+    "ratio": 0.589215159463397,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9406001543528152
+   },
+   "left.fy": {
+    "sigma": 0.20789439266212353,
+    "sigma_units": 0.20789439266212353,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792756554720143,
+    "ratio": 0.5939839790346387,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9355244245657497
+   },
+   "right.fx": {
+    "sigma": 0.1832142041913079,
+    "sigma_units": 0.1832142041913079,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792756554720143,
+    "ratio": 0.5234691548323084,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.617360185226054
+   },
+   "right.fy": {
+    "sigma": 0.18759551895287005,
+    "sigma_units": 0.18759551895287005,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792756554720143,
+    "ratio": 0.5359871970082002,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.6206010667674078
+   },
+   "tex.fx": {
+    "sigma": 0.19927172203422797,
+    "sigma_units": 0.19927172203422797,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792756554720143,
+    "ratio": 0.5693477772406513,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.6022575970325991
+   },
+   "tex.fy": {
+    "sigma": 0.20212654511547964,
+    "sigma_units": 0.20212654511547964,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5792756554720143,
+    "ratio": 0.5775044146156562,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.5975119236332299
+   },
+   "right.rx": {
+    "sigma": 2.6427851647378422e-05,
+    "sigma_units": 0.0015142043609926434,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.015142043609926433,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.2075613937943141
+   },
+   "right.ry": {
+    "sigma": 5.794693730532177e-05,
+    "sigma_units": 0.003320114943304121,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.033201149433041206,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6923928109719721
+   },
+   "right.rz": {
+    "sigma": 2.1563359079655577e-05,
+    "sigma_units": 0.0012354894673893676,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.012354894673893675,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.1697812163367498
+   },
+   "right.tx": {
+    "sigma": 0.020319039536682966,
+    "sigma_units": 0.020319039536682966,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.33865065894471613,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.6088545274043319
+   },
+   "right.ty": {
+    "sigma": 0.011803639333289768,
+    "sigma_units": 0.011803639333289768,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.19672732222149614,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.2195486300442444
+   },
+   "right.tz": {
+    "sigma": 0.05981811870128354,
+    "sigma_units": 0.05981811870128354,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.9969686450213924,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.580023462429661
+   },
+   "tex.rx": {
+    "sigma": 3.019738454441994e-05,
+    "sigma_units": 0.0017301826867288448,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.01730182686728845,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.2522594240748185
+   },
+   "tex.ry": {
+    "sigma": 5.012148620549962e-05,
+    "sigma_units": 0.002871749622498303,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.02871749622498303,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6364095564028086
+   },
+   "tex.rz": {
+    "sigma": 2.277632661969405e-05,
+    "sigma_units": 0.001304987388119938,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.013049873881199379,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.1547396288651588
+   },
+   "tex.tx": {
+    "sigma": 0.018241441074812608,
+    "sigma_units": 0.018241441074812608,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.3040240179135435,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.4893558167975497
+   },
+   "tex.ty": {
+    "sigma": 0.013657225372296904,
+    "sigma_units": 0.013657225372296904,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.22762042287161507,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.265313555020427
+   },
+   "tex.tz": {
+    "sigma": 0.06473188086904015,
+    "sigma_units": 0.06473188086904015,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.0788646811506692,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.52151101312314
+   }
+  },
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "unobservable": [],
+    "weak": [
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.003320114943304121,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.0015142043609926434,
+     "right.ry": 0.003320114943304121,
+     "right.rz": 0.0012354894673893676
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.01819537318310154,
+    "limit_mm": 0.06,
+    "ratio": 0.30325621971835903
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "distortion_free": false,
+    "freed_distortion_parameters": [],
+    "note": "held-out prediction change when the distortion model is freed; training RMS is deliberately not used.  A candidate that holds the factory distortion passes when freeing it is not worth it, and a candidate that frees it passes only when it is."
+   }
+  },
+  "model_sensitivity": {
+   "ok": true,
+   "n_views": 293,
+   "n_train_views": 234,
+   "n_heldout_views": 59,
+   "heldout_rms_free_kc_px": 0.3684513396164752,
+   "heldout_rms_fixed_kc_px": 0.3683981281536353,
+   "delta_px": -5.321146283987499e-05,
+   "relative_improvement": -0.00014444010100312965,
+   "worth_freeing": false,
+   "train_rms_free_kc_px": 0.6583641186315249,
+   "train_rms_fixed_kc_px": 0.6590222974308705,
+   "backend": "`ftol` termination condition is satisfied.",
+   "refit_converged": true,
+   "refit_iterations": [
+    15,
+    6
+   ],
+   "note": "selection uses the held-out change; the training RMS is reported only to show it moves the other way"
+  },
+  "identifiability": {
+   "condition_scaled": 1803.543553283301,
+   "rank": 18,
+   "n_free": 18,
+   "weak_directions": 0,
+   "direction_floor": 0.001,
+   "eigen_tail": [
+    0.26556273442960876,
+    0.023632196938740496,
+    0.0195197764394606,
+    0.014112536298174284,
+    0.008832981724419472,
+    0.006350440822598363,
+    0.004168316238340405,
+    0.0022771165790610205
+   ],
+   "weakest": {
+    "rank": 17,
+    "eigenvalue": 0.0022771165790610205,
+    "explained_fraction": 0.00012650647661450115,
+    "dominant": [
+     {
+      "param": "right.ry",
+      "component": -0.5361777416995104,
+      "sigma_units": -2.4909965569196425e-06
+     },
+     {
+      "param": "tex.ry",
+      "component": -0.46827479910802217,
+      "sigma_units": -2.0425329387208595e-06
+     },
+     {
+      "param": "left.fx",
+      "component": 0.3398071810385804,
+      "sigma_units": 0.009053444416489404
+     },
+     {
+      "param": "left.fy",
+      "component": 0.33253833361831436,
+      "sigma_units": 0.009102396519109674
+     },
+     {
+      "param": "right.fy",
+      "component": 0.24116684670975894,
+      "sigma_units": 0.006611023728951408
+     },
+     {
+      "param": "tex.fx",
+      "component": 0.23741532524117503,
+      "sigma_units": 0.006731016592265666
+     },
+     {
+      "param": "right.fx",
+      "component": 0.2250751207241243,
+      "sigma_units": 0.006362258860236178
+     },
+     {
+      "param": "tex.fy",
+      "component": 0.21717163308329157,
+      "sigma_units": 0.006830086035845296
+     }
+    ]
+   },
+   "decades_raw": 10.245242206337126
+  }
+ },
+ "model_sensitivity": {
+  "ok": true,
+  "n_views": 293,
+  "n_train_views": 234,
+  "n_heldout_views": 59,
+  "heldout_rms_free_kc_px": 0.3684513396164752,
+  "heldout_rms_fixed_kc_px": 0.3683981281536353,
+  "delta_px": -5.321146283987499e-05,
+  "relative_improvement": -0.00014444010100312965,
+  "worth_freeing": false,
+  "train_rms_free_kc_px": 0.6583641186315249,
+  "train_rms_fixed_kc_px": 0.6590222974308705,
+  "backend": "`ftol` termination condition is satisfied.",
+  "refit_converged": true,
+  "refit_iterations": [
+   15,
+   6
+  ],
+  "note": "selection uses the held-out change; the training RMS is reported only to show it moves the other way"
+ },
+ "profile": {
+  "path": "<repo>/analysis/calibration/solver/final/profile.json",
+  "sha256": "c1b9c42c9fede1c7c3aa96c5d7ad2d5ec7aabb942dff904ae78920767a6d5870",
+  "schema": "einstar.recon.profile/1",
+  "validation": "pending (analysis only; never activated)"
+ },
+ "verdict": "defensible as an internally consistent calibration at target 'standard' (sigma_fx budget 0.75 px); the principal point and distortion are the factory values by construction, so nothing here re-measures them. NOT defensible for activation: absolute scale is unvalidated (no length artefact), the IR baseline differs from the factory by +1.457 mm (0.92 %), and the split-half reproducibility of fx is 1.2-2.3x the analytic sigma (~0.3-0.4 px at 297 views, at/over the 0.35 px 'high' target)"
+}

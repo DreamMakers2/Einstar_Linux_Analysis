@@ -51,6 +51,13 @@ def parse(argv=None):
                     help="use the deterministic demo controller (layout/snapshot tests)")
     ap.add_argument("--resume", action="store_true",
                     help="continue the session already in --session-dir")
+    ap.add_argument("--complete-session", default="",
+                    help="Capture Missing Views: open an existing session READ-ONLY "
+                         "and capture only the few dwell poses it still needs, into "
+                         "--session-dir as a new extension session. The base "
+                         "recording is never modified and nothing is re-recorded.")
+    ap.add_argument("--extension-json", default="",
+                    help="with --headless, write the extension status to this path")
     ap.add_argument("--headless", action="store_true")
     ap.add_argument("--duration", type=float, default=8.0)
     ap.add_argument("--snapshot-out", default="")
@@ -101,6 +108,14 @@ def main(argv=None) -> int:
             # controller cannot report fps and the wizard shows a false stall
             capture=getattr(source, "capture", None))
 
+    if args.complete_session:
+        if not hasattr(controller, "begin_extension"):
+            print("wizard: this controller cannot complete an existing session")
+            return 2
+        info = controller.begin_extension(args.complete_session)
+        print(f"wizard: complete-session {info}")
+        if not info.get("ok", True):
+            return 2
     if args.resume:
         info = controller.resume()
         print(f"wizard: resume {info}")

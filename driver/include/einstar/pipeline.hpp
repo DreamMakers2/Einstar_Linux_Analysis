@@ -89,6 +89,10 @@ class AcquisitionPipeline {
   void set_frame_callback(FrameCallback callback);
 
   [[nodiscard]] PipelineStats stats() const;
+  /// O(1) counter read for hot loops.  `stats()` also snapshots (and sorts) the
+  /// latency histograms, which costs milliseconds once they fill; a replay loop
+  /// that polls hundreds of thousands of times must not call it per iteration.
+  [[nodiscard]] std::uint64_t bytes_received() const;
   [[nodiscard]] Status last_error() const;
   [[nodiscard]] const PipelineConfig& config() const noexcept { return config_; }
   [[nodiscard]] const Transport& transport() const noexcept { return *transport_; }

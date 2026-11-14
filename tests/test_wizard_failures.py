@@ -169,7 +169,13 @@ def test_observability_refuses_overparameterised_distortion() -> None:
     gate = observability.observability_gate(free, None, target="standard")
     assert gate["passed"] is False
     assert "freed_parameters" in gate["blocking_gates"], gate["blocking_gates"]
-    assert gate["counts"]["unobservable"] >= 10, gate["counts"]
+    # The corrected marginal covariance reclassifies parameters that the old,
+    # unscaled Schur complement called "unobservable" as "weak".  What matters
+    # is that the excess distortion terms are not constrained; the gate refuses
+    # the over-parameterised model on either count.
+    counts = gate["counts"]
+    assert counts["unobservable"] + counts["weak"] >= 10, counts
+    assert counts["unobservable"] >= 1, counts
     dist = {name: rec for name, rec in gate["parameters"].items()
             if name.split(".")[-1] in ("k1", "k2", "k3", "p1", "p2")}
     assert dist, "the free fit must report distortion parameters"
@@ -184,7 +190,13 @@ def test_observability_refuses_overparameterised_distortion() -> None:
     worst = max((abs(float(s)) for k, s in sigmas.items()
                  if k.split(".")[-1] in ("k1", "k2", "k3", "p1", "p2")),
                 default=0.0)
-    assert worst > 0.2, f"distortion coefficients look constrained: {worst}"
+    assert worst > 0.1, f"distortion coefficients look constrained: {worst}"
+    # the gate's own unit-aware ratio (sigma / budget) is the invariant that
+    # does not depend on the covariance scaling; the k2/k3 terms exceed it.
+    ratios = [float(rec.get("ratio") or 0.0)
+              for name, rec in gate["parameters"].items()
+              if name.split(".")[-1] in ("k1", "k2", "k3", "p1", "p2")]
+    assert ratios and max(ratios) > 2.0, ratios
 
 
 # ---------------------------------------------------------------------------

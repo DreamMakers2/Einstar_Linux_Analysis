@@ -20,7 +20,7 @@ from typing import Any, Mapping
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from . import panels, plate3d, theme, tiles, worker
+from . import panels, plate3d, status, theme, tiles, worker
 from wizard import exposure as exposure_mod
 
 #: coverage dimension key -> (short label, explanation)
@@ -31,8 +31,8 @@ DIMENSIONS = {
     "image_regions": ("position", "place the plate in different image areas"),
     "stereo_overlap": ("overlap", "both IR cameras must see the plate"),
     "colour_participation": ("colour", "the colour camera must see the plate"),
-    "quality": ("sharpness", "hold the plate still and in focus"),
-    "stationarity": ("stillness", "a few stationary dwell views"),
+    "quality": ("stillness", "a few stationary, in-focus dwell views"),
+    "scale_artefact": ("scale", "the plate appears at two or more distances"),
 }
 
 
@@ -510,20 +510,74 @@ class AdvancedDialog(QtWidgets.QDialog):
         import json
         cap = snap.get("capture") or {}
         source = snap.get("source") or {}
+        acq = cap.get("acquisition") or {}
+        child = acq.get("child") or {}
+        device = acq.get("device") or {}
+        recording = acq.get("recording") or {}
+        trailer = recording.get("trailer") or {}
+        stop = acq.get("stop") or {}
+        guide = snap.get("guidance") or {}
+        progress = guide.get("progress") or {}
+        perf = snap.get("performance") or {}
+        worker_metrics = {}
+        try:
+            worker_metrics = self.window.worker.metrics() if self.window.worker else {}
+        except Exception:
+            worker_metrics = {}
         lines = [
-            f"source        {source.get('kind')}  {source.get('path') or source.get('serial')}",
-            f"capture state {cap.get('state')}",
-            f"fps           {cap.get('fps')}",
-            f"groups        {cap.get('groups_written')}",
-            f"frames        {cap.get('frames_completed')}",
-            f"drops         {cap.get('frames_dropped')}",
-            f"throughput    {cap.get('throughput_mbps')} MB/s",
-            f"trigger       {cap.get('trigger_period_us')} us",
-            f"exposure      {cap.get('exposure_us')}",
-            f"gain          {cap.get('gain')}",
-            f"laser         {cap.get('laser_percent')} %",
+            f"session state {snap.get('state')}   reader feed: "
+            f"{'ended' if self.window._source_ended else 'active'}",
+            f"capture state {acq.get('state', 'unknown')}  "
+            f"(raw status {cap.get('state')})",
+            f"verified      {acq.get('verified')}   safe {acq.get('safe')}   "
+            f"terminal {acq.get('terminal')}",
+            f"child         pid {child.get('pid')} running {child.get('running')} "
+            f"exit {child.get('exit_code')} {child.get('exit_signal') or ''}",
+            f"stop          requested {stop.get('requested')} reason "
+            f"{stop.get('reason')} attempts {stop.get('attempts')}",
+            f"device        cleanup attempted {device.get('cleanup_attempted')} "
+            f"verified {device.get('cleanup_verified')} "
+            f"trigger {device.get('trigger_counts')} "
+            f"laser {device.get('laser_percent')} %",
             f"recording     {(snap.get('session') or {}).get('raw_recording')}",
+            f"recording end trailer {trailer.get('present')} "
+            f"({trailer.get('trailer_bytes')} B) "
+            f"manifest {recording.get('manifest', {}).get('present')} "
+            f"finalized {recording.get('finalized')}",
+            f"fps           {cap.get('fps')} (status age "
+            f"{(acq.get('status') or {}).get('age_s')} s)",
+            f"groups        {cap.get('groups_written')} recorded   "
+            f"frames {cap.get('frames_completed')} drops "
+            f"{cap.get('frames_dropped')}",
+            f"throughput    {cap.get('throughput_mbps')} MB/s   "
+            f"exposure {cap.get('exposure_us')} gain {cap.get('gain')}",
+            f"decisions     evaluated {worker_metrics.get('decision_total')} / "
+            f"preview {worker_metrics.get('preview_total')} / newest-frame "
+            f"skips {worker_metrics.get('superseded')} "
+            f"(raw recording retains every group)",
+            f"decision lag  {worker_metrics.get('decision_lag')}",
+            f"guidance      age {guide.get('age_s')} s  target "
+            f"{(guide.get('target') or {}).get('region')}  "
+            f"priority {guide.get('priority')}",
+            f"progress      accepted {progress.get('accepted')} "
+            f"since progress {progress.get('seconds_since_progress')} s  "
+            f"stalled {progress.get('stalled')}  "
+            f"stop advised {progress.get('stop_recommended')}  "
+            f"unreachable {progress.get('unreachable')}",
+            f"missing       {progress.get('remaining_information') or '-'}",
+            f"persistence   writes {perf.get('persist', {}).get('writes')} "
+            f"seconds {perf.get('persist', {}).get('seconds'):.2f}"
+            if isinstance(perf.get("persist", {}).get("seconds"), (int, float))
+            else "persistence   -",
+            "",
+            "evidence:",
         ]
+        for reason in (acq.get("reasons") or []):
+            lines.append(f"  reason   {reason}")
+        for conflict in (acq.get("conflicts") or []):
+            lines.append(f"  conflict {conflict}")
+        for note in (acq.get("evidence_notes") or []):
+            lines.append(f"  note     {note}")
         self.acq.setPlainText("\n".join(lines))
         self.log.setPlainText("\n".join(self.window._events[-300:]))
         self.raw.setPlainText(json.dumps(snap, indent=1, default=str))
@@ -558,6 +612,9 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._started_at = 0.0
         self._last_preview = -1
         self._closing = False
+        self._cancelling = False
+        self._worker_end: dict | None = None
+        self._stop_worker = None
         self._finished_result: dict | None = None
         self._finish_started_at = 0.0
         self._advanced: AdvancedDialog | None = None
@@ -646,6 +703,18 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self.error_banner.setMinimumHeight(30)
         self.error_banner.setVisible(False)
         root.addWidget(self.error_banner)
+
+        # A stop recommendation must be impossible to miss; it is separate
+        # from the generic error banner and names the safe action.
+        self.stop_banner = QtWidgets.QLabel("")
+        self.stop_banner.setObjectName("stopBanner")
+        self.stop_banner.setWordWrap(True)
+        self.stop_banner.setMinimumHeight(34)
+        self.stop_banner.setStyleSheet(
+            "background:#4a3500; color:#ffd88a; border:1px solid #a8791f;"
+            " border-radius:6px; padding:8px;")
+        self.stop_banner.setVisible(False)
+        root.addWidget(self.stop_banner)
 
         self.finish_overlay = self._finish_overlay(central)
         self.finish_overlay.setVisible(False)
@@ -799,7 +868,8 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                 feed.set_status(label)
 
     def _apply_state(self, state: str) -> None:
-        terminal = state in ("done", "error", "ended", "finishing")
+        terminal = state in ("done", "error", "ended", "finishing",
+                             "cancelled_unverified")
         if terminal:
             self._display_state = state
         elif state in ("recording", "paused", "idle", "cancelled"):
@@ -828,8 +898,11 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._set_pill("●  NEEDS ATTENTION", theme.ERROR
                            if hasattr(theme, "ERROR") else theme.MUTED)
         elif state == "ended":
-            self._set_pill("●  SOURCE ENDED", theme.WARN
+            self._set_pill("●  RECORDING ENDED", theme.WARN
                            if hasattr(theme, "WARN") else theme.MUTED)
+        elif state == "cancelled_unverified":
+            self._set_pill("●  STOPPED · UNVERIFIED",
+                           getattr(theme, "ERROR", theme.WARN))
         elif finishing:
             self._set_pill("●  BUILDING PROFILE", theme.INFO)
         elif recording:
@@ -865,6 +938,9 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                 else "Candidate written — validation did not pass", "")
         elif state == "error":
             self.instruction.set_instruction("Needs attention — see the message", "")
+        elif state == "cancelled_unverified":
+            self.instruction.set_instruction(
+                "Stopped without verified scanner/recording evidence", "")
         if state != "recording":
             if state in ("idle", "cancelled"):
                 self.instruction.ready_pill.setText("NOT READY")
@@ -877,7 +953,10 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                 self.instruction.kicker.setText("FINAL VALIDATION")
             elif state == "ended":
                 self.instruction.ready_pill.setText("ENDED")
-                self.instruction.kicker.setText("CAPTURE COMPLETE")
+                self.instruction.kicker.setText("RECORDING FINISHED")
+            elif state == "cancelled_unverified":
+                self.instruction.ready_pill.setText("UNVERIFIED")
+                self.instruction.kicker.setText("CHECK DIAGNOSTICS")
             elif state == "done":
                 self.instruction.ready_pill.setText(
                     "VALIDATED" if self._result_validated else "NOT VALIDATED")
@@ -1032,19 +1111,117 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                           "; ".join(str(r) for r in (payload.get("reasons") or []))))
 
     def _on_worker_done(self, info: dict) -> None:
+        info = dict(info or {})
         groups = int(info.get("groups_ingested", 0) or 0)
-        self._event(f"acquisition stopped ({groups} groups)")
+        self._worker_end = info
+        self._event(f"acquisition worker ended ({groups} groups)")
         state = str(getattr(self, "_session_state", ""))
         if state in ("finishing", "done", "error"):
             return
+        if self._cancelling:
+            # _on_cancel applies the final cancelled/cancelled_unverified state
+            return
         self._source_ended = True
-        self._apply_state("ended")
-        if self._ready:
-            self.footer_note.setText(
-                "Recording complete. Press Finish to build and validate the profile.")
+        acq = dict(info.get("acquisition") or {})
+        if not acq:
+            try:
+                acq = dict((self.controller.snapshot().get("capture") or {})
+                           .get("acquisition") or {})
+            except Exception:
+                acq = {}
+        verified = acq.get("verified")
+        running = bool((acq.get("child") or {}).get("running"))
+        capture_live = (str(getattr(getattr(self.source, "kind", ""), "lower", "")
+                            or self._source_kind()).endswith("live"))
+        acq_state = str(acq.get("state") or "")
+        if (not capture_live and not running and verified is None
+                and acq_state in ("", "not_applicable")):
+            # Replay/synthetic sessions own no scanner; reader end is normal.
+            self._display_state = None
+            self._apply_state("ended")
+            if self._ready:
+                self.footer_note.setText(
+                    "Recording complete. Press Finish to build and validate "
+                    "the profile.")
+            else:
+                self.footer_note.setText(
+                    "Recording ended with incomplete coverage; no profile "
+                    "can be built.")
+            return
+        self._apply_acquisition_end(acq)
+        if running:
+            # The child must never be left behind because only the reader
+            # stopped.  Stop + verify asynchronously; keep the UI truthful.
+            self.error_banner.setText(
+                "The reader stopped but the capture process is still running. "
+                "Stopping the scanner and finalising the recording…")
+            self.error_banner.setVisible(True)
+            self._stop_scanner_now("reader ended while capture still running")
+            return
+        if verified is True:
+            self._display_state = None
+            self._apply_state("ended")
+            self._apply_acquisition_end(acq)
+            if self._ready:
+                self.footer_note.setText(
+                    "Recording finalized (scanner stop verified). Press Finish "
+                    "to build and validate the profile.")
+            else:
+                self.footer_note.setText(
+                    "Recording finalized, but coverage is incomplete; no "
+                    "profile can be built. The raw recording is preserved.")
+        elif verified is False:
+            reasons = [str(r) for r in (acq.get("reasons") or [])]
+            self._display_state = "error"
+            self._apply_state("error")
+            self._fail("Acquisition ended without a verified safe state: "
+                       + ("; ".join(reasons[:3]) or "no evidence"))
+            self._apply_acquisition_end(acq)
         else:
+            self._display_state = "error"
+            self._apply_state("error")
+            self._fail("Acquisition ended but its scanner state is unverified.")
+            self._apply_acquisition_end(acq)
+
+    def _apply_acquisition_end(self, acq: Mapping[str, Any]) -> None:
+        """Set the pill/footer from the authoritative acquisition verdict."""
+        state = str(acq.get("state") or "")
+        if state == "stopped_verified":
+            self._set_pill("●  CAPTURE STOPPED · VERIFIED", theme.OK)
+        elif state in ("stopping_unverified", "failed"):
+            self._set_pill("●  SCANNER STATE UNVERIFIED",
+                           getattr(theme, "ERROR", theme.WARN))
+        elif state == "stopping":
+            self._set_pill("●  STOPPING SCANNER", theme.WARN)
+        elif state == "running":
+            self._set_pill("●  CAPTURE STILL RUNNING", theme.WARN)
+
+    def _stop_scanner_now(self, reason: str) -> None:
+        if self._stop_worker is not None and self._stop_worker.isRunning():
+            return
+        if not hasattr(self.controller, "stop_capture"):
+            return
+        self._stop_worker = worker.StopWorker(self.controller, reason, parent=self)
+        self._stop_worker.done.connect(self._on_scanner_stopped)
+        self._stop_worker.start()
+
+    def _on_scanner_stopped(self, result: dict) -> None:
+        self._stop_worker = None
+        acq = dict((result or {}).get("acquisition") or {})
+        self._apply_acquisition_end(acq)
+        if result.get("verified"):
+            self._display_state = None
+            self._apply_state("ended")
             self.footer_note.setText(
-                "Recording ended with incomplete coverage; no profile can be built.")
+                "Scanner stopped and recording finalised (verified).")
+            self._event("acquisition stop verified after the reader ended")
+        else:
+            reasons = [str(r) for r in (result.get("reasons") or [])]
+            self._display_state = "error"
+            self._apply_state("error")
+            self._fail("Scanner stop is UNVERIFIED: "
+                       + ("; ".join(reasons[:3]) or "no evidence"))
+        self.refresh()
 
     def _on_finish(self) -> None:
         if self._finish_worker is not None and self._finish_worker.isRunning():
@@ -1135,22 +1312,48 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._event(f"finish failed: {message}")
 
     def _on_cancel(self) -> None:
-        if str(getattr(self, "_session_state", "")) not in ("recording", "paused"):
+        if str(getattr(self, "_session_state", "")) not in (
+                "recording", "paused", "ended", "error"):
             return
+        self._cancelling = True
+        self._set_pill("●  STOPPING SCANNER", theme.WARN)
+        self.footer_note.setText(
+            "Stopping the scanner: waiting for process exit, trigger/laser "
+            "readback and recording finalization…")
         w = self.worker
         if w is not None and w.isRunning():
             w.request_stop()
-            deadline = time.time() + 6.0
+            deadline = time.time() + 20.0
             while w.isRunning() and time.time() < deadline:
                 QtWidgets.QApplication.processEvents()
                 time.sleep(0.01)
         try:
-            self.controller.cancel()
+            result = self.controller.cancel(reason="operator stop")
         except Exception as exc:
-            self._fail(str(exc))
+            self._fail(f"stop failed: {type(exc).__name__}: {exc}")
+            self._cancelling = False
+            return
+        self._cancelling = False
         self._display_state = None
-        self._apply_state("cancelled")
-        self._event("stopped; all recorded data kept")
+        self.refresh()
+        state = str(result.get("state") or "cancelled")
+        acq = dict(result.get("acquisition") or {})
+        if state == "cancelled_unverified" or not result.get("safe", False):
+            self._display_state = "error"
+            self._apply_state("error")
+            reasons = [str(r) for r in (result.get("reasons") or [])]
+            self._fail("Stopped, but the scanner/recording state is UNVERIFIED: "
+                       + ("; ".join(reasons[:3]) or "no evidence"))
+            self._apply_acquisition_end(acq)
+            self._event("stopped with UNVERIFIED acquisition state; "
+                        "all recorded data kept")
+        else:
+            self._apply_state("cancelled")
+            self._apply_acquisition_end(acq)
+            self.footer_note.setText(
+                "Stopped and verified: scanner off, recording finalised. "
+                "All recorded data was kept.")
+            self._event("stopped and verified; all recorded data kept")
 
     def _open_advanced(self) -> None:
         if self._advanced is None:
@@ -1330,48 +1533,35 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         state = str(snap.get("state") or "idle")
         if getattr(self, "_display_state", None):
             state = self._display_state
-        if getattr(self, "_source_ended", False) and state == "recording":
-            state = "ended"
         self._apply_state(state)
-        guide = snap.get("guidance") or {}
-        target = guide.get("target") or {}
-        if state == "recording":
-            full_instruction = str(guide.get("instruction") or
-                                   "Place the plate in front of the scanner")
-            short = InstructionCard.short_instruction(full_instruction)
-            bits = []
-            dist = _num(target.get("distance_mm"))
-            current_dist = _num((snap.get("last_pose") or {}).get("distance_mm"))
-            if not ready and dist is not None and current_dist is not None:
-                if dist < current_dist - 25.0:
-                    short = "Move the plate closer"
-                elif dist > current_dist + 25.0:
-                    short = "Move the plate farther away"
-            if dist is not None:
-                bits.append(f"{dist:.0f} mm")
-            tilt = target.get("tilt_deg")
-            if isinstance(tilt, (list, tuple)) and len(tilt) == 2:
-                tx, ty = _num(tilt[0]), _num(tilt[1])
-                if tx is not None and ty is not None:
-                    bits.append(f"tilt {tx:+.0f}° / {ty:+.0f}°")
-            roll = _num(target.get("roll_deg"))
-            if roll is not None:
-                bits.append(f"roll {roll:+.0f}°")
-            region = target.get("region")
-            if region:
-                bits.append(str(region).replace("_", " "))
-            self.instruction.set_instruction(short, "  ·  ".join(bits))
-            self.instruction.set_ready(ready, list(readiness.get("missing") or []))
-            if ready:
-                self.footer_note.setText(
-                    "Coverage complete. Finish when you are ready.")
+        # The guidance engine's target is authoritative.  This window used to
+        # shorten any target whose distance differed by >25 mm to "Move the
+        # plate farther away", even when every distance band was satisfied --
+        # the exact instruction that hid the missing right-hand corners in the
+        # 52 GB session.  ``operator_guidance`` is a pure, tested function.
+        view = status.operator_guidance(snap)
+        if state in ("recording", "paused"):
+            self.instruction.set_instruction(view["instruction"],
+                                             view["detail"])
+            self.instruction.set_ready(ready,
+                                       list(readiness.get("missing") or []))
+            self.footer_note.setText(view["footer"])
+            if view.get("banner"):
+                self.stop_banner.setText(str(view["banner"]))
+                self.stop_banner.setVisible(True)
             else:
-                missing = list(readiness.get("missing") or [])
-                self.footer_note.setText(
-                    "Keep moving — " + ", ".join(str(m).replace("_", " ")
-                                                  for m in missing[:2])
-                    if missing else
-                    "Keep the plate in view; the scanner captures automatically.")
+                self.stop_banner.setVisible(False)
+            if view.get("stop_recommended"):
+                self.btn_cancel.setText("Stop now && keep data")
+                self.btn_cancel.setObjectName("primary")
+            else:
+                self.btn_cancel.setText("Stop && keep data")
+                self.btn_cancel.setObjectName("ghost")
+        else:
+            self.stop_banner.setVisible(False)
+            if view.get("banner") and view.get("tone") == "error":
+                self.stop_banner.setText(str(view["banner"]))
+                self.stop_banner.setVisible(True)
         self.progress.update_from(snap)
         self._update_coverage_map(snap)
         self.views_label.setText(f"{int((snap.get('counts') or {}).get('accepted', 0))} views")
@@ -1408,11 +1598,15 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         if kind == "live":
             if source.get("serial"):
                 bits.append(str(source["serial"]))
-            if cap.get("state"):
-                bits.append(str(cap["state"]))
+            acq_label = status.acquisition_label(cap)
+            if acq_label:
+                bits.append(acq_label)
             fps = _num(cap.get("fps"))
             if fps is not None:
-                bits.append(f"{fps:.1f} fps")
+                bits.append(f"{fps:.1f} fps (last measured)"
+                            if acq_label.endswith(("UNVERIFIED", "FAILED",
+                                                   "stopped — verified"))
+                            else f"{fps:.1f} fps")
             if cap.get("groups_written") is not None:
                 bits.append(f"{int(cap['groups_written'])} groups recorded")
         else:
@@ -1454,7 +1648,6 @@ class ModernMainWindow(QtWidgets.QMainWindow):
     def shutdown(self, timeout_s: float = 30.0) -> bool:
         if self._shutdown_done:
             return True
-        self._closing = True
         self._timer.stop()
         self._clock.stop()
         ok = True
@@ -1469,7 +1662,36 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                 QtWidgets.QApplication.processEvents()
                 time.sleep(0.01)
             ok = (not w.isRunning()) and ok
+        # Stop and verify the scanner BEFORE writing evidence or hiding the
+        # window.  The 52 GB session wrote ui_metrics while the process was
+        # still streaming and only stopped it later in source.close().
+        state = str(self.controller.snapshot().get("state") or "")
+        try:
+            if state in ("recording", "paused"):
+                result = self.controller.cancel(reason="window closed")
+            else:
+                result = self.controller.stop_capture(reason="window closed")
+        except Exception as exc:
+            result = {"verified": False, "safe": False,
+                      "reasons": [f"{type(exc).__name__}: {exc}"]}
+            ok = False
+        try:
+            # populate source.final_verdict for ui_metrics even when the
+            # controller already stopped the same supervisor
+            self.source.stop(reason="window closed")
+        except Exception:
+            pass
+        try:
+            self._closing = False   # allow the one authoritative final refresh
+            self._cancelling = True
+            self.refresh()
+            self._cancelling = False
+        except Exception:
+            pass
+        self._closing = True
         self._write_ui_metrics()
+        if not result.get("verified"):
+            ok = False
         try:
             self.source.close()
         except Exception:
@@ -1502,14 +1724,22 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             import json
             root = Path(self.controller.paths.root)
             root.mkdir(parents=True, exist_ok=True)
+            snap = self.controller.snapshot()
+            capture = snap.get("capture") or {}
             data = {
-                "schema": "einstar-ui-metrics/1",
+                "schema": "einstar-ui-metrics/2",
                 "written_at_s": time.time(),
                 "worker": (self.worker.metrics()
                            if self.worker is not None else None),
                 "source": {k: v for k, v in
-                           ((self.controller.snapshot().get("source") or {}).items())},
-                "error": self.controller.snapshot().get("error") or self._ui_error,
+                           ((snap.get("source") or {}).items())},
+                "session_state": snap.get("state"),
+                "acquisition": capture.get("acquisition"),
+                "capture_state": capture.get("state"),
+                "guidance": snap.get("guidance"),
+                "progress": (snap.get("readiness") or {}).get("progress"),
+                "performance": snap.get("performance"),
+                "error": snap.get("error") or self._ui_error,
                 "capture_safe_off": getattr(
                     getattr(self.source, "capture", None),
                     "_safe_off_result", None),

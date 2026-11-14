@@ -58,6 +58,8 @@ class CaptureSource:
             groups=0,
             trigger_us=int(self.trigger_us),
             laser_percent=int(self.laser_percent),
+            # scanning keeps the raw stream it has always recorded
+            record=True,
             extra_args=tuple(self.extra_args))
         self.process = capture_mod.LiveCaptureProcess(config)
         state = self.process.start()

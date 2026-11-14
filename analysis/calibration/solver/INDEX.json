@@ -1,0 +1,94 @@
+{
+ "schema": "einstar-solver-evidence/1",
+ "session": "<calibration-session> (297 accepted views)",
+ "observations_source": "analysis/session03/session.json -> resume.views (891 groups, 34202 points, exact)",
+ "factory_profile": "<private-inputs>/einstar-profiles/factory-e10.json (read-only, sha256 8259f97c...)",
+ "files": {
+  "e1_held_prior.json": "297-view fit, factory distortion held, cx/cy 1 px prior; per-view RMS, solver diagnostics, cameras/extrinsics",
+  "e1_free5_prior.json": "297-view fit, all five distortion coefficients free, cx/cy 1 px prior",
+  "cfg_held_kc.json": "model-selection config: distortion held + cx/cy prior; rig sigmas, pose absorption, identifiability, held-out split",
+  "cfg_held_kc_noprior.json": "same without the principal-point prior",
+  "cfg_k1.json": "k1 free per camera only",
+  "cfg_k1k2.json": "k1,k2 free per camera",
+  "cfg_free5.json": "all five Brown-Conrady coefficients free (the live model)",
+  "cfg_*.npz": "packed solution x, 39x39 marginal information, covariance diagonal and 39x39 rig block (compacted; full matrices were 45 MB each)",
+  "gate_fixed.json": "observability gate output for held_kc / k1 / free5 recomputed with the corrected marginal information (the \u00a71 table)",
+  "gate_cfg.json": "the same gate with the shipped marginal-information construction (shows the 33/33, weak-focal numbers as the session produced them)",
+  "benchmark_backends.json": "analytic LM vs SciPy finite-difference vs SciPy analytic Jacobian vs native calib_ref on the same 60-view problem",
+  "splithalf.json / splithalf_summary.json": "3 random halves (148 views each), refit, parameter spread vs predicted sigma",
+  "corner_counterfactual.json": "Fisher-information effect of 48 synthetic corner/edge views on PP / k1 / k2 / fx",
+  "final/final_metrics.json": "the chosen candidate: cull, refit, gate, held-out folds, epipolar, baseline, scale",
+  "final/validation.json": "independent validation summary of the candidate",
+  "final/profile.json": "candidate profile, einstar.recon.profile/1, analysis only",
+  "final/final_result.npz": "packed candidate solution + covariance diagnostics"
+ },
+ "reproduce": {
+  "fits": "from /tmp/solver_work/common.py: load_observations() rebuilds calibrate.Observation objects from session.json; fit(...) calls calib.solvers.solve_joint",
+  "gate": "tools.wizard.observability.observability_gate(result, coverage, target='high', free_mask=<solver free mask minus cx/cy>)",
+  "cull+final": "/tmp/solver_work/final_model.py",
+  "corner": "/tmp/solver_work/corner2.py",
+  "split_half": "/tmp/solver_work/splithalf.py",
+  "benchmark": "/tmp/solver_work/benchmark.py"
+ },
+ "notes": [
+  "npz files are compacted to the rig block and diagonals; re-fit to regenerate full matrices",
+  "no file in the session candidate/ directory was written and no profile was activated"
+ ],
+ "final_candidate": {
+  "profile": "final/profile.json (schema einstar.recon.profile/1, loads with calib.recon_profile.load)",
+  "validation": "final/validation.json",
+  "metrics": "final/final_metrics.json",
+  "model": "factory distortion HELD; principal point HARD-FIXED at the factory value (not optimised, no prior); fx,fy + right/tex extrinsics free",
+  "views": "293 of 297 (culled [6,36,129,161])",
+  "residual_rms_px": 0.6514,
+  "view_rms": {
+   "median": 0.4685,
+   "p90": 0.953,
+   "max": 1.9305
+  },
+  "heldout_rms_px": {
+   "mean": 0.77,
+   "sd": 0.019,
+   "folds": 3
+  },
+  "gate": {
+   "passed": true,
+   "counts": {
+    "constrained": 17,
+    "weak": 1,
+    "unobservable": 0
+   },
+   "condition_scaled": 1803.5,
+   "rank": "18/18"
+  },
+  "activation": "never; no file written to the session candidate/ directory",
+  "principal_point": {
+   "mode": "hard-fixed",
+   "delta_to_factory_px": 0.0,
+   "factory_cx_cy": {
+    "left.cx": 623.9122318977746,
+    "left.cy": 534.5629450574738,
+    "right.cx": 635.5014370289109,
+    "right.cy": 494.5090595487099,
+    "tex.cx": 633.1023849680892,
+    "tex.cy": 521.1249788233655
+   },
+   "note": "an earlier variant used the production 1 px prior and moved left.cx by -2.02 px; that was a soft-prior MAP estimate and is NOT the delivered candidate"
+  },
+  "epipolar_sampson_px": {
+   "ir_fitted": 0.333,
+   "ir_factory": 0.465,
+   "rgb_fitted": 0.63,
+   "rgb_factory": 31.345
+  },
+  "rig": {
+   "baseline_fit_mm": 160.014,
+   "baseline_factory_mm": 158.557,
+   "baseline_error_pct": 0.92,
+   "ir_rotation_fit_deg": 22.13,
+   "ir_rotation_factory_deg": 22.138,
+   "rgb_translation_fit_mm": 122.878,
+   "rgb_translation_factory_mm": 125.318
+  }
+ }
+}

@@ -36,6 +36,9 @@ struct FaultConfig {
 
 struct SimConfig {
   std::uint64_t seed = 1;
+  /// Initial value of the virtual clock.  Replay sets it to the recording's
+  /// `start_host_ns` so recorded completion timestamps are comparable.
+  std::int64_t clock_start_ns = 0;
   /// Number of frames the simulated device produces.  Once exhausted, reads
   /// complete with Timeout so a pipeline can drain and stop.
   std::uint32_t frames = 0;
@@ -143,6 +146,9 @@ class SimulatedTransport final : public Transport {
     bool done = false;
     std::size_t bytes = 0;
     TransferStatus status = TransferStatus::Ok;
+    /// Replay only: capture-clock timestamp of the recorded transfer. 0 = use
+    /// the virtual clock.
+    std::int64_t completion_host_ns = 0;
   };
 
   struct Event {

@@ -559,6 +559,11 @@ void AcquisitionPipeline::set_frame_callback(FrameCallback callback) {
   callback_ = std::move(callback);
 }
 
+std::uint64_t AcquisitionPipeline::bytes_received() const {
+  std::lock_guard lock(poll_mutex_);
+  return stats_.bytes_received;
+}
+
 PipelineStats AcquisitionPipeline::stats() const {
   std::lock_guard lock(poll_mutex_);
   PipelineStats snapshot = stats_;

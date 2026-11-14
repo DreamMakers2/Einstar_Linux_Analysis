@@ -1,0 +1,1413 @@
+{
+ "held_kc": {
+  "condition_scaled": 1697.8267928560322,
+  "rank": 18,
+  "n_free": 18,
+  "weak_directions": 0,
+  "counts": {
+   "constrained": 15,
+   "weak": 3,
+   "unobservable": 0
+  },
+  "blocking": [
+   "model_sensitivity"
+  ],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.20178983844546947,
+    "sigma_units": 0.20178983844546947,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 0.5765423955584842,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9619944958533129,
+    "note": "downgraded: |corr|=0.962 with a board pose \u2014 the pose absorbs this parameter"
+   },
+   "left.fy": {
+    "sigma": 0.2041343080066544,
+    "sigma_units": 0.2041343080066544,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 0.5832408800190126,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9587025071341374,
+    "note": "downgraded: |corr|=0.959 with a board pose \u2014 the pose absorbs this parameter"
+   },
+   "right.fx": {
+    "sigma": 0.18136506220927645,
+    "sigma_units": 0.18136506220927645,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 0.5181858920265042,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7843236308851808
+   },
+   "right.fy": {
+    "sigma": 0.1854230029859624,
+    "sigma_units": 0.1854230029859624,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 0.5297800085313211,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7886675905988031
+   },
+   "tex.fx": {
+    "sigma": 0.19568517271195082,
+    "sigma_units": 0.19568517271195082,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 0.5591004934627166,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.774296569325341
+   },
+   "tex.fy": {
+    "sigma": 0.1981220144911622,
+    "sigma_units": 0.1981220144911622,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578209835586852,
+    "ratio": 0.5660628985461778,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7706497536144568
+   },
+   "right.rx": {
+    "sigma": 2.632016894496544e-05,
+    "sigma_units": 0.0015080345966178165,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.015080345966178164,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5920516834608935
+   },
+   "right.ry": {
+    "sigma": 5.687480420685627e-05,
+    "sigma_units": 0.003258686241685764,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.03258686241685764,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6624392607633723
+   },
+   "right.rz": {
+    "sigma": 2.1334408076602555e-05,
+    "sigma_units": 0.0012223715411991427,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.012223715411991427,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.63619303925934
+   },
+   "right.tx": {
+    "sigma": 0.019814373535484466,
+    "sigma_units": 0.019814373535484466,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.3302395589247411,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.34283663131066155
+   },
+   "right.ty": {
+    "sigma": 0.011730529114082469,
+    "sigma_units": 0.011730529114082469,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.19550881856804117,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.10831597521934283
+   },
+   "right.tz": {
+    "sigma": 0.05836948210049922,
+    "sigma_units": 0.05836948210049922,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.972824701674987,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.28903302001160186
+   },
+   "tex.rx": {
+    "sigma": 3.029458318129139e-05,
+    "sigma_units": 0.0017357517583960036,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.017357517583960036,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5549824522965858
+   },
+   "tex.ry": {
+    "sigma": 4.908249923562727e-05,
+    "sigma_units": 0.002812220054155532,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.028122200541555318,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5894168321999552
+   },
+   "tex.rz": {
+    "sigma": 2.3069903340728235e-05,
+    "sigma_units": 0.0013218080951984863,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.013218080951984863,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.508924964746743
+   },
+   "tex.tx": {
+    "sigma": 0.017983801543483727,
+    "sigma_units": 0.017983801543483727,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.2997300257247288,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.3340404781818437
+   },
+   "tex.ty": {
+    "sigma": 0.013737798202184081,
+    "sigma_units": 0.013737798202184081,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.2289633033697347,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.1613108084094203
+   },
+   "tex.tz": {
+    "sigma": 0.06334541867605477,
+    "sigma_units": 0.06334541867605477,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.0557569779342462,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.34394739678860003
+   }
+  },
+  "free_names": [
+   "left.fx",
+   "left.fy",
+   "right.fx",
+   "right.fy",
+   "tex.fx",
+   "tex.fy",
+   "right.rx",
+   "right.ry",
+   "right.rz",
+   "right.tx",
+   "right.ty",
+   "right.tz",
+   "tex.rx",
+   "tex.ry",
+   "tex.rz",
+   "tex.tx",
+   "tex.ty",
+   "tex.tz"
+  ],
+  "covariance": {
+   "n_residuals": 68404,
+   "n_free": 1806,
+   "rank": 1806,
+   "condition": 713600.0911413361,
+   "sigma_px": 0.3538460450905698,
+   "robust": "huber",
+   "rcond": 1e-10,
+   "n_prior_rows": 6,
+   "condition_scaled": 278.25665715583574,
+   "rank_scaled": 1806,
+   "estimator": "robust_sandwich",
+   "eig_min": 6.059781839344209e-12,
+   "trace": 8.562810892024885
+  },
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "unobservable": [],
+    "weak": [
+     "left.fx",
+     "left.fy",
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.003258686241685764,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.0015080345966178165,
+     "right.ry": 0.003258686241685764,
+     "right.rz": 0.0012223715411991427
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.01817516262483537,
+    "limit_mm": 0.06,
+    "ratio": 0.30291937708058947
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "unknown",
+    "pass": false,
+    "note": "not computed: needs held-out observations (observability_gate(..., compute_model_sensitivity=True))"
+   }
+  },
+  "reasons": [
+   "model sensitivity unknown (no held-out analysis supplied)"
+  ],
+  "eigen_tail": [
+   0.2724176532931917,
+   0.025232947376352337,
+   0.020497153301355424,
+   0.014289859388943333,
+   0.009164493066850373,
+   0.006402141018537552,
+   0.004389200391948885,
+   0.002399831124892717
+  ],
+  "weakest": {
+   "rank": 17,
+   "eigenvalue": 0.002399831124892717,
+   "explained_fraction": 0.00013332395138292873,
+   "dominant": [
+    {
+     "param": "right.ry",
+     "component": 0.5348244367915231,
+     "sigma_units": 2.5042944788048846e-06
+    },
+    {
+     "param": "tex.ry",
+     "component": 0.4585691025865279,
+     "sigma_units": 2.034646190188185e-06
+    },
+    {
+     "param": "left.fx",
+     "component": -0.34434247886001657,
+     "sigma_units": -0.009112227739590332
+    },
+    {
+     "param": "left.fy",
+     "component": -0.33757152044513017,
+     "sigma_units": -0.009207168742169676
+    },
+    {
+     "param": "right.fy",
+     "component": -0.24940965020230368,
+     "sigma_units": -0.006749476282243018
+    },
+    {
+     "param": "tex.fx",
+     "component": -0.23384303614244664,
+     "sigma_units": -0.006770077780042956
+    },
+    {
+     "param": "right.fx",
+     "component": -0.228521705752634,
+     "sigma_units": -0.006512351571714083
+    },
+    {
+     "param": "tex.fy",
+     "component": -0.2172721519133836,
+     "sigma_units": -0.0068488383412086936
+    }
+   ]
+  }
+ },
+ "k1": {
+  "condition_scaled": 2197.3461672313892,
+  "rank": 21,
+  "n_free": 21,
+  "weak_directions": 0,
+  "counts": {
+   "constrained": 17,
+   "weak": 4,
+   "unobservable": 0
+  },
+  "blocking": [
+   "model_sensitivity"
+  ],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.20799188465345145,
+    "sigma_units": 0.20799188465345145,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5783525432404533,
+    "ratio": 0.5942625275812898,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9586414496674044,
+    "note": "downgraded: |corr|=0.959 with a board pose \u2014 the pose absorbs this parameter"
+   },
+   "left.fy": {
+    "sigma": 0.21145662766223208,
+    "sigma_units": 0.21145662766223208,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5783525432404533,
+    "ratio": 0.6041617933206631,
+    "verdict": "weak",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9567312734394077,
+    "note": "downgraded: |corr|=0.957 with a board pose \u2014 the pose absorbs this parameter"
+   },
+   "left.k1": {
+    "sigma": 0.00024367599609012702,
+    "sigma_units": 0.10011087968931429,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 0.28603108482661227,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.31552046754183954,
+    "effect_px_at_corner": 0.10011087968931429,
+    "coefficient_sigma": 0.00024367599609012702
+   },
+   "right.fx": {
+    "sigma": 0.18933389945944737,
+    "sigma_units": 0.18933389945944737,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5783525432404533,
+    "ratio": 0.5409539984555639,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7889121086799469
+   },
+   "right.fy": {
+    "sigma": 0.19310623822922834,
+    "sigma_units": 0.19310623822922834,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5783525432404533,
+    "ratio": 0.5517321092263667,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7927421346622131
+   },
+   "right.k1": {
+    "sigma": 0.00030134766181740517,
+    "sigma_units": 0.12415451979479211,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 0.3547271994136918,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.1792182838053875,
+    "effect_px_at_corner": 0.12415451979479211,
+    "coefficient_sigma": 0.00030134766181740517
+   },
+   "tex.fx": {
+    "sigma": 0.20175152216878195,
+    "sigma_units": 0.20175152216878195,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5783525432404533,
+    "ratio": 0.5764329204822342,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7771270085299372
+   },
+   "tex.fy": {
+    "sigma": 0.20331595803698102,
+    "sigma_units": 0.20331595803698102,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.5783525432404533,
+    "ratio": 0.5809027372485173,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7728531997363617
+   },
+   "tex.k1": {
+    "sigma": 0.0003114183749356294,
+    "sigma_units": 0.13214810755503215,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 0.37756602158580616,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.22257041168457023,
+    "effect_px_at_corner": 0.13214810755503215,
+    "coefficient_sigma": 0.0003114183749356294
+   },
+   "right.rx": {
+    "sigma": 2.633729559393112e-05,
+    "sigma_units": 0.0015090158813207519,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.015090158813207518,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6084213642115128
+   },
+   "right.ry": {
+    "sigma": 5.940931660094586e-05,
+    "sigma_units": 0.003403903104990695,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.03403903104990695,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6635094240667236
+   },
+   "right.rz": {
+    "sigma": 2.1521476841024958e-05,
+    "sigma_units": 0.0012330897918792735,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.012330897918792733,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6486928149358597
+   },
+   "right.tx": {
+    "sigma": 0.02021931676987582,
+    "sigma_units": 0.02021931676987582,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.3369886128312637,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.3741782688178009
+   },
+   "right.ty": {
+    "sigma": 0.011751388376633611,
+    "sigma_units": 0.011751388376633611,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.19585647294389352,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.11423185728710093
+   },
+   "right.tz": {
+    "sigma": 0.06069800705191074,
+    "sigma_units": 0.06069800705191074,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.011633450865179,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.29039706440226154
+   },
+   "tex.rx": {
+    "sigma": 3.038606354421606e-05,
+    "sigma_units": 0.001740993197099912,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.017409931970999118,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5596084669699649
+   },
+   "tex.ry": {
+    "sigma": 5.1003466935954236e-05,
+    "sigma_units": 0.0029222833959652184,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.029222833959652184,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5934957535716644
+   },
+   "tex.rz": {
+    "sigma": 2.3225014659471003e-05,
+    "sigma_units": 0.0013306953191171552,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.013306953191171552,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.5107032570576883
+   },
+   "tex.tx": {
+    "sigma": 0.01817121118733057,
+    "sigma_units": 0.01817121118733057,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.30285351978884284,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.35654919260893453
+   },
+   "tex.ty": {
+    "sigma": 0.013790112481905897,
+    "sigma_units": 0.013790112481905897,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.22983520803176496,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.15160933015537378
+   },
+   "tex.tz": {
+    "sigma": 0.06652698662475975,
+    "sigma_units": 0.06652698662475975,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.1087831104126626,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.35164961691147656
+   }
+  },
+  "free_names": [
+   "left.fx",
+   "left.fy",
+   "left.k1",
+   "right.fx",
+   "right.fy",
+   "right.k1",
+   "tex.fx",
+   "tex.fy",
+   "tex.k1",
+   "right.rx",
+   "right.ry",
+   "right.rz",
+   "right.tx",
+   "right.ty",
+   "right.tz",
+   "tex.rx",
+   "tex.ry",
+   "tex.rz",
+   "tex.tx",
+   "tex.ty",
+   "tex.tz"
+  ],
+  "covariance": {
+   "n_residuals": 68404,
+   "n_free": 1809,
+   "rank": 1809,
+   "condition": 728750.1310414985,
+   "sigma_px": 0.35350149420734306,
+   "robust": "huber",
+   "rcond": 1e-10,
+   "n_prior_rows": 6,
+   "condition_scaled": 286.56236704770225,
+   "rank_scaled": 1809,
+   "estimator": "robust_sandwich",
+   "eig_min": 6.031745504915945e-12,
+   "trace": 8.824232446177794
+  },
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "pass",
+    "pass": true,
+    "unobservable": [],
+    "weak": [
+     "left.fx",
+     "left.fy",
+     "right.tz",
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.003403903104990695,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.0015090158813207519,
+     "right.ry": 0.003403903104990695,
+     "right.rz": 0.0012330897918792735
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.01848021470315947,
+    "limit_mm": 0.06,
+    "ratio": 0.3080035783859912
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "unknown",
+    "pass": false,
+    "note": "not computed: needs held-out observations (observability_gate(..., compute_model_sensitivity=True))"
+   }
+  },
+  "reasons": [
+   "model sensitivity unknown (no held-out analysis supplied)"
+  ],
+  "eigen_tail": [
+   0.155544760251699,
+   0.024941676366755643,
+   0.020261765258726656,
+   0.01351326767502115,
+   0.008867522822452368,
+   0.0063811138782123005,
+   0.0043279724384094635,
+   0.0021139115136318133
+  ],
+  "weakest": {
+   "rank": 20,
+   "eigenvalue": 0.0021139115136318133,
+   "explained_fraction": 0.00010066245303008632,
+   "dominant": [
+    {
+     "param": "right.ry",
+     "component": 0.5239530610007751,
+     "sigma_units": 2.447083256155399e-06
+    },
+    {
+     "param": "tex.ry",
+     "component": 0.4475951566891008,
+     "sigma_units": 1.983701245118795e-06
+    },
+    {
+     "param": "left.fx",
+     "component": -0.3422463164028953,
+     "sigma_units": -0.00895330971756086
+    },
+    {
+     "param": "left.fy",
+     "component": -0.33600688377980015,
+     "sigma_units": -0.009106694321927098
+    },
+    {
+     "param": "right.fy",
+     "component": -0.25118346932013635,
+     "sigma_units": -0.006759363882966418
+    },
+    {
+     "param": "tex.fx",
+     "component": -0.23309559240265737,
+     "sigma_units": -0.006700933129158704
+    },
+    {
+     "param": "right.fx",
+     "component": -0.23175295559896184,
+     "sigma_units": -0.0065622405062324765
+    },
+    {
+     "param": "tex.fy",
+     "component": -0.21405047258122786,
+     "sigma_units": -0.006727371438555253
+    }
+   ]
+  }
+ },
+ "free5": {
+  "condition_scaled": 7545.707595903676,
+  "rank": 33,
+  "n_free": 33,
+  "weak_directions": 1,
+  "counts": {
+   "constrained": 22,
+   "weak": 5,
+   "unobservable": 6
+  },
+  "blocking": [
+   "freed_parameters",
+   "model_sensitivity"
+  ],
+  "parameters": {
+   "left.fx": {
+    "sigma": 0.2872014836249302,
+    "sigma_units": 0.2872014836249302,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578308643908568,
+    "ratio": 0.8205756674998006,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9459618974952274
+   },
+   "left.fy": {
+    "sigma": 0.29152042554835567,
+    "sigma_units": 0.29152042554835567,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578308643908568,
+    "ratio": 0.8329155015667306,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.9438684823034154
+   },
+   "left.k1": {
+    "sigma": 0.0013929196025639612,
+    "sigma_units": 0.572383843245263,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 1.6353824092721803,
+    "verdict": "weak",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.10114538440619149,
+    "effect_px_at_corner": 0.572383843245263,
+    "coefficient_sigma": 0.0013929196025639612
+   },
+   "left.k2": {
+    "sigma": 0.009903908546618963,
+    "sigma_units": 2.0394833302844138,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 5.82709522938404,
+    "verdict": "unobservable",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.12399940128596942,
+    "effect_px_at_corner": 2.0394833302844138,
+    "coefficient_sigma": 0.009903908546618963
+   },
+   "left.p1": {
+    "sigma": 3.995613350119669e-05,
+    "sigma_units": 0.046387253129679694,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.3,
+    "ratio": 0.13253500894194198,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.5530098700921184,
+    "effect_px_at_corner": 0.046387253129679694,
+    "coefficient_sigma": 3.995613350119669e-05
+   },
+   "left.p2": {
+    "sigma": 4.6251834380910414e-05,
+    "sigma_units": 0.053696275418517556,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.3,
+    "ratio": 0.153417929767193,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.5145784362548216,
+    "effect_px_at_corner": 0.053696275418517556,
+    "coefficient_sigma": 4.6251834380910414e-05
+   },
+   "left.k3": {
+    "sigma": 0.01969494586442565,
+    "sigma_units": 2.0324531919039583,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.05,
+    "ratio": 5.8070091197255955,
+    "verdict": "unobservable",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.15828413457898424,
+    "effect_px_at_corner": 2.0324531919039583,
+    "coefficient_sigma": 0.01969494586442565
+   },
+   "right.fx": {
+    "sigma": 0.2829525968029071,
+    "sigma_units": 0.2829525968029071,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578308643908568,
+    "ratio": 0.8084359908654488,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.8001909892240314
+   },
+   "right.fy": {
+    "sigma": 0.28614003774281704,
+    "sigma_units": 0.28614003774281704,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578308643908568,
+    "ratio": 0.8175429649794773,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.8060536307743887
+   },
+   "right.k1": {
+    "sigma": 0.001512867848815989,
+    "sigma_units": 0.6233894397188191,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 1.7811126849109118,
+    "verdict": "weak",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.044583957653665456,
+    "effect_px_at_corner": 0.6233894397188191,
+    "coefficient_sigma": 0.001512867848815989
+   },
+   "right.k2": {
+    "sigma": 0.01150889649822363,
+    "sigma_units": 2.3832593788228746,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 6.809312510922499,
+    "verdict": "unobservable",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.06895069536676246,
+    "effect_px_at_corner": 2.3832593788228746,
+    "coefficient_sigma": 0.01150889649822363
+   },
+   "right.p1": {
+    "sigma": 4.152286049508803e-05,
+    "sigma_units": 0.04827098023589905,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.3,
+    "ratio": 0.137917086388283,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.12724242140812153,
+    "effect_px_at_corner": 0.04827098023589905,
+    "coefficient_sigma": 4.152286049508803e-05
+   },
+   "right.p2": {
+    "sigma": 4.7728861652202226e-05,
+    "sigma_units": 0.055485554463858694,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.3,
+    "ratio": 0.15853015561102485,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.32952852840372043,
+    "effect_px_at_corner": 0.055485554463858694,
+    "coefficient_sigma": 4.7728861652202226e-05
+   },
+   "right.k3": {
+    "sigma": 0.023895464042648407,
+    "sigma_units": 2.4867508439508987,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.05,
+    "ratio": 7.105002411288282,
+    "verdict": "unobservable",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.06509387941515359,
+    "effect_px_at_corner": 2.4867508439508987,
+    "coefficient_sigma": 0.023895464042648407
+   },
+   "tex.fx": {
+    "sigma": 0.29852212432671305,
+    "sigma_units": 0.29852212432671305,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578308643908568,
+    "ratio": 0.8529203552191802,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7898627828892043
+   },
+   "tex.fy": {
+    "sigma": 0.2963393187803521,
+    "sigma_units": 0.2963393187803521,
+    "unit": "px",
+    "sigma_unit": "px",
+    "budget": 0.35,
+    "plan_budget": 0.578308643908568,
+    "ratio": 0.8466837679438631,
+    "verdict": "constrained",
+    "kind": "intrinsic",
+    "max_abs_corr_with_pose": 0.7869103277614926
+   },
+   "tex.k1": {
+    "sigma": 0.0015053444332801197,
+    "sigma_units": 0.6387109318351235,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 1.8248883766717816,
+    "verdict": "weak",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.08845383631157634,
+    "effect_px_at_corner": 0.6387109318351235,
+    "coefficient_sigma": 0.0015053444332801197
+   },
+   "tex.k2": {
+    "sigma": 0.010030970047077531,
+    "sigma_units": 2.2023987817594723,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.01,
+    "ratio": 6.292567947884207,
+    "verdict": "unobservable",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.1136368679334757,
+    "effect_px_at_corner": 2.2023987817594723,
+    "coefficient_sigma": 0.010030970047077531
+   },
+   "tex.p1": {
+    "sigma": 5.046854879860907e-05,
+    "sigma_units": 0.05953563677309144,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.3,
+    "ratio": 0.17010181935168983,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.13477763411401286,
+    "effect_px_at_corner": 0.05953563677309144,
+    "coefficient_sigma": 5.046854879860907e-05
+   },
+   "tex.p2": {
+    "sigma": 4.687772332471024e-05,
+    "sigma_units": 0.05529969010494599,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.3,
+    "ratio": 0.15799911458555999,
+    "verdict": "constrained",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.20357289729179265,
+    "effect_px_at_corner": 0.05529969010494599,
+    "coefficient_sigma": 4.687772332471024e-05
+   },
+   "tex.k3": {
+    "sigma": 0.018027524640697623,
+    "sigma_units": 2.0482062097712923,
+    "unit": "px_at_corner",
+    "sigma_unit": "coeff",
+    "budget": 0.35,
+    "plan_budget": 0.05,
+    "ratio": 5.852017742203692,
+    "verdict": "unobservable",
+    "kind": "distortion",
+    "max_abs_corr_with_pose": 0.10072595558075095,
+    "effect_px_at_corner": 2.0482062097712923,
+    "coefficient_sigma": 0.018027524640697623
+   },
+   "right.rx": {
+    "sigma": 2.651992188605449e-05,
+    "sigma_units": 0.0015194795970875443,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.015194795970875443,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6887432881651652
+   },
+   "right.ry": {
+    "sigma": 9.226694041194957e-05,
+    "sigma_units": 0.005286506274189767,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.052865062741897666,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6300254810239454
+   },
+   "right.rz": {
+    "sigma": 2.2380852609425267e-05,
+    "sigma_units": 0.0012823283964244233,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.012823283964244233,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6132150789350685
+   },
+   "right.tx": {
+    "sigma": 0.020950246076615418,
+    "sigma_units": 0.020950246076615418,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.3491707679435903,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.4059728529712612
+   },
+   "right.ty": {
+    "sigma": 0.011799990003372547,
+    "sigma_units": 0.011799990003372547,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.19666650005620911,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.1569860449885132
+   },
+   "right.tz": {
+    "sigma": 0.061450097578940634,
+    "sigma_units": 0.061450097578940634,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.024168292982344,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.34434382275474934
+   },
+   "tex.rx": {
+    "sigma": 3.0509983196434267e-05,
+    "sigma_units": 0.0017480932701707443,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.017480932701707443,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6394187370826726
+   },
+   "tex.ry": {
+    "sigma": 7.406308356718879e-05,
+    "sigma_units": 0.004243502106124639,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.042435021061246386,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.6228317406650331
+   },
+   "tex.rz": {
+    "sigma": 2.3458807031503858e-05,
+    "sigma_units": 0.0013440906353169902,
+    "unit": "deg",
+    "sigma_unit": "deg",
+    "budget": 0.1,
+    "plan_budget": 0.02,
+    "ratio": 0.013440906353169902,
+    "verdict": "constrained",
+    "kind": "rotation",
+    "max_abs_corr_with_pose": 0.48474349339171396
+   },
+   "tex.tx": {
+    "sigma": 0.018509407702192514,
+    "sigma_units": 0.018509407702192514,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.30849012836987527,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.35583142074956486
+   },
+   "tex.ty": {
+    "sigma": 0.01376432574756074,
+    "sigma_units": 0.01376432574756074,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 0.22940542912601233,
+    "verdict": "constrained",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.1872026354377304
+   },
+   "tex.tz": {
+    "sigma": 0.06763985994705438,
+    "sigma_units": 0.06763985994705438,
+    "unit": "mm",
+    "sigma_unit": "mm",
+    "budget": 0.06,
+    "plan_budget": 0.1,
+    "ratio": 1.127330999117573,
+    "verdict": "weak",
+    "kind": "translation",
+    "max_abs_corr_with_pose": 0.34881722884786903
+   }
+  },
+  "free_names": [
+   "left.fx",
+   "left.fy",
+   "left.k1",
+   "left.k2",
+   "left.p1",
+   "left.p2",
+   "left.k3",
+   "right.fx",
+   "right.fy",
+   "right.k1",
+   "right.k2",
+   "right.p1",
+   "right.p2",
+   "right.k3",
+   "tex.fx",
+   "tex.fy",
+   "tex.k1",
+   "tex.k2",
+   "tex.p1",
+   "tex.p2",
+   "tex.k3",
+   "right.rx",
+   "right.ry",
+   "right.rz",
+   "right.tx",
+   "right.ty",
+   "right.tz",
+   "tex.rx",
+   "tex.ry",
+   "tex.rz",
+   "tex.tx",
+   "tex.ty",
+   "tex.tz"
+  ],
+  "covariance": {
+   "n_residuals": 68404,
+   "n_free": 1821,
+   "rank": 1821,
+   "condition": 756692.5672239441,
+   "sigma_px": 0.35340673732470607,
+   "robust": "huber",
+   "rcond": 1e-10,
+   "n_prior_rows": 6,
+   "condition_scaled": 439.1680991598033,
+   "rank_scaled": 1821,
+   "estimator": "robust_sandwich",
+   "eig_min": 5.944566702828694e-12,
+   "trace": 10.213323747603226
+  },
+  "gates": {
+   "freed_parameters": {
+    "required": true,
+    "status": "fail",
+    "pass": false,
+    "unobservable": [
+     "left.k2",
+     "left.k3",
+     "right.k2",
+     "right.k3",
+     "tex.k2",
+     "tex.k3"
+    ],
+    "weak": [
+     "left.k1",
+     "right.k1",
+     "tex.k1",
+     "right.tz",
+     "tex.tz"
+    ],
+    "note": "a parameter that is free but unobservable is absorbed by the board poses; do not free it (plan \u00a75)"
+   },
+   "stereo_rotation": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_deg": 0.005286506274189767,
+    "worst_parameter": "right.ry",
+    "limit_deg": 0.1,
+    "per_axis_deg": {
+     "right.rx": 0.0015194795970875443,
+     "right.ry": 0.005286506274189767,
+     "right.rz": 0.0012823283964244233
+    },
+    "note": "plan \u00a77c: only the stereo rotation is genuinely constrained on a one-axis sweep"
+   },
+   "baseline": {
+    "required": true,
+    "status": "constrained",
+    "pass": true,
+    "value_mm": 0.01864860864746253,
+    "limit_mm": 0.06,
+    "ratio": 0.31081014412437546
+   },
+   "colour": {
+    "required": false,
+    "status": "not_applicable",
+    "pass": true,
+    "note": "no colour views in the accepted set; colour stays 'unknown' and must not be marked ok"
+   },
+   "model_sensitivity": {
+    "required": true,
+    "status": "unknown",
+    "pass": false,
+    "note": "not computed: needs held-out observations (observability_gate(..., compute_model_sensitivity=True))"
+   }
+  },
+  "reasons": [
+   "6 free parameter(s) are unobservable: left.k2, left.k3, right.k2, right.k3, tex.k2, tex.k3",
+   "model sensitivity unknown (no held-out analysis supplied)"
+  ],
+  "eigen_tail": [
+   0.013152962109038728,
+   0.008538857797290054,
+   0.00630653223193147,
+   0.0037924259339494576,
+   0.003287233798911907,
+   0.00281727686495733,
+   0.0019079539283565208,
+   0.000874072354951615
+  ],
+  "weakest": {
+   "rank": 32,
+   "eigenvalue": 0.000874072354951615,
+   "explained_fraction": 2.648704105913985e-05,
+   "dominant": [
+    {
+     "param": "right.ry",
+     "component": 0.5642479449221791,
+     "sigma_units": 2.6334077610171043e-06
+    },
+    {
+     "param": "tex.ry",
+     "component": 0.4632164270692111,
+     "sigma_units": 2.0517479159710674e-06
+    },
+    {
+     "param": "left.fx",
+     "component": -0.2971078877285628,
+     "sigma_units": -0.007740384355524204
+    },
+    {
+     "param": "left.fy",
+     "component": -0.2946436516751018,
+     "sigma_units": -0.007936668110424969
+    },
+    {
+     "param": "right.fy",
+     "component": -0.28207539455480607,
+     "sigma_units": -0.007565938823812614
+    },
+    {
+     "param": "tex.fx",
+     "component": -0.26883912398504684,
+     "sigma_units": -0.007699292937782055
+    },
+    {
+     "param": "right.fx",
+     "component": -0.2636064986801665,
+     "sigma_units": -0.007439094977543558
+    },
+    {
+     "param": "tex.fy",
+     "component": -0.24300824883593852,
+     "sigma_units": -0.007629252118374295
+    }
+   ]
+  }
+ }
+}

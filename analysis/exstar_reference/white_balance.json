@@ -1,0 +1,851 @@
+{
+ "schema": "einstar.exstar.white-balance/1",
+ "generated_utc": "2026-11-14T00:49:47Z",
+ "subject": {
+  "device": "Einscan-E10 / Einstar",
+  "resource_dir": "res/Einscan-E10/200x150",
+  "run": "EXStar calibration session 2026-11-14 00:09-00:14 (geometry 00:13:11, white balance 00:14:54)",
+  "read_only_mount": true,
+  "private_fixture": "~/einstar-private/exstar-20261114/ (copies; not in the repository)"
+ },
+ "files": {
+  "wbdata.txt": {
+   "size": 72,
+   "sha256_new": "b083003d6ef2351ecc390fb5cd2ea40da30466149f9099fde12563c853d6ed85",
+   "sha256_backup": "65072f996ac2473219da4a030fd54720b62fa4f5e4eb16c7a30ec61df402470d",
+   "changed_by_run": true,
+   "mtime_utc": "2026-11-13T23:14:54Z"
+  },
+  "wbdata_noled.txt": {
+   "size": 72,
+   "sha256_new": "add1c3748783384830ed206edd1524e051dd1a2157590497f244235c823c34fe",
+   "sha256_backup": "22b8ef3b2753450de5dc09e44c643a40e87a2a083a634bd030398069cb851dbf",
+   "changed_by_run": true,
+   "mtime_utc": "2026-11-13T23:14:54Z"
+  },
+  "ParaCCM_0.txt": {
+   "size": 60,
+   "sha256_new": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+   "sha256_backup": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+   "changed_by_run": false,
+   "mtime_utc": "2026-11-13T23:09:52Z"
+  },
+  "ParaCCM_noled_0.txt": {
+   "size": 60,
+   "sha256_new": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+   "sha256_backup": "cc2133df272e51f96d87d54d0c1b5352641e27f1bd62f245b52ae44da68a9fc1",
+   "changed_by_run": false,
+   "mtime_utc": "2026-11-13T23:09:52Z"
+  },
+  "ParaDark_0.txt": {
+   "size": 12,
+   "sha256_new": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+   "sha256_backup": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+   "changed_by_run": false,
+   "mtime_utc": "2026-11-13T23:09:52Z"
+  },
+  "ParaDark_noled_0.txt": {
+   "size": 12,
+   "sha256_new": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+   "sha256_backup": "e675f08ebee1a4e725adda40db6c0da50fcecbfe7596df00de161c6a524d8854",
+   "changed_by_run": false,
+   "mtime_utc": "2026-11-13T23:09:52Z"
+  },
+  "LeftCCF.txt": {
+   "size": 520,
+   "sha256_new": "7061f68a14809f48b592a2e9e37c9cf194d06c253786f0832e25fa3e8be73f13",
+   "sha256_backup": "6879a68d6926caebe19bdaee9a09dd05c50ee03f23cf6c5158801dcf8b5621d7",
+   "changed_by_run": true,
+   "mtime_utc": "2026-11-13T23:13:11Z"
+  },
+  "RightCCF.txt": {
+   "size": 520,
+   "sha256_new": "a31a0119ed19cf575efbd740b5738bfb8a59427cd319df2b1dec46e346ef33bd",
+   "sha256_backup": "45b80e2aa8bcece7fe400d79f42c852f67824de0b478f0ea1a0c3aa0b6cf1dc9",
+   "changed_by_run": true,
+   "mtime_utc": "2026-11-13T23:13:11Z"
+  },
+  "TexCCF.txt": {
+   "size": 264,
+   "sha256_new": "6e8a74169f79ad8481ec4f51116fe3e0a3cecae0f0a42b39107992454c4ffec9",
+   "sha256_backup": "7b0477a524b3af59d6907445f0e289da6f73891ac1714451de502bb240f84e64",
+   "changed_by_run": true,
+   "mtime_utc": "2026-11-13T23:13:11Z"
+  },
+  "activeBox.dat": {
+   "size": 48,
+   "sha256_new": "abcad604662d65bea56674df4ec352cacea959d947b99e3dc497e8a449b7f4ba",
+   "sha256_backup": null,
+   "changed_by_run": null,
+   "mtime_utc": "2026-11-13T23:13:11Z"
+  }
+ },
+ "decoded": {
+  "wbdata.txt": {
+   "type": "9 x float64 LE, row-major 3x3",
+   "new": [
+    1.6034658,
+    1.0,
+    1.79404747
+   ],
+   "previous_2026_02": [
+    1.622664,
+    1.0,
+    1.766063
+   ],
+   "channel_order": "BGR of the interleaved buffer it multiplies (matrix[0] = slot0 gain, matrix[8] = slot2 gain)",
+   "note": "strictly diagonal; the centre entry is hard-coded 1.0 by the algorithm"
+  },
+  "wbdata_noled.txt": {
+   "new": [
+    1.60523856,
+    1.0,
+    1.79638302
+   ],
+   "previous_2026_02": [
+    1.625985,
+    1.0,
+    1.766387
+   ]
+  },
+  "ParaCCM_0.txt": {
+   "altered_by_run": false,
+   "note": "mtime 00:09:52 but SHA-256 identical to backup and to 2024 factory: not re-derived",
+   "values_3x3_offsets_reference_gains": [
+    1.7775974,
+    -0.2794515,
+    0.11373954,
+    -0.538879,
+    1.812549,
+    -0.9321591,
+    -0.19702657,
+    -0.4894055,
+    1.8633826,
+    -0.04169192,
+    -0.04369194,
+    -0.04496306,
+    1.6290193,
+    1.0,
+    1.76829
+   ]
+  },
+  "ParaDark_0.txt": {
+   "altered_by_run": false,
+   "values": [
+    0.04502069,
+    0.0455484,
+    0.04504853
+   ],
+   "note": "16-bit-identical to the pre-run backup"
+  },
+  "LeftCCF/RightCCF/TexCCF.txt": {
+   "role": "GEOMETRY (camera intrinsics + extrinsics), not colour",
+   "altered_by_run": true,
+   "evidence": "LeftCCF decodes as fx=1166.44, fy=1154.98, cx=617.09, cy=533.42, k1=-1.9998 plus a 3x4 extrinsic block; all 33/65 doubles are geometry-shaped and the changed entries are the intrinsic/extrinsic ones",
+   "note": "this run re-fitted the geometry too (caliInfoChanged calibrateTime 2026-11-14T00:13:11.940)"
+  },
+  "activeBox.dat": {
+   "values": [
+    -3000,
+    -3000,
+    -3000,
+    -3000,
+    200,
+    200
+   ],
+   "role": "depth working volume, unrelated to colour"
+  }
+ },
+ "capture_protocol": {
+  "source": "EXStar log: log/scanservice_20261114_000948_049.log lines 7491-7517 and log/EXStar_20261114_000944_607.log lines ~8380-8420",
+  "algorithm": "SNColorAlgorithm::snWhiteBalanceCali (Sn3DColorCorrect.dll, export RVA 0x747b0) called by EAWhiteBalanceAlgManager::calcWhiteBalance (Sn3DCalibrateAlgorithmWrapper.dll)",
+  "only_the_colour_camera_is_reconfigured": true,
+  "condition_1_illuminator_on": {
+   "cmd": "setCameraExp cameraID=2 5000 us; setCameraGain cameraID=2 200; setLaserBrightness 0; setLedBrightness ledID=0 0; setLedBrightness ledID=1 400"
+  },
+  "condition_2_illuminator_off": {
+   "cmd": "setCameraExp cameraID=2 5000 us; setCameraGain cameraID=2 400; setLaserBrightness 0; setLedBrightness ledID=0 0; setLedBrightness ledID=1 0"
+  },
+  "readback": "StrobeLuminance {LUMINANCE:400, ROUTEINDEX:1} and {LUMINANCE:0, ROUTEINDEX:1}: ledID 1 == strobe route 1",
+  "outputs": "wbdata.txt (illuminator on) and wbdata_noled.txt (illuminator off); logged as MatrixWB[0]=1.60347 ... MatrixWB[8]=1.79405",
+  "failure_path": "wrapper logs 'whiteBalance false.write default WB.' when the algorithm refuses (over-exposure / illegal-pixel rate)",
+  "algorithm_validity_gate": {
+   "recovered": "counts pixels whose brightest channel exceeds a clip level; returns false when that fraction exceeds a threshold, logging 'ERROR! Out of Exposure, Illegal Nums Rate is:%.4f'",
+   "note": "EXStar also has snTestColorMatrixWB comparing a 'White calibrate rate' against a 'standard rate'; the numeric standard was not recovered"
+  }
+ },
+ "recovered_estimator": {
+  "statement": "gains are grey-world means over a centred window, each channel normalised to green, after subtracting a per-channel dark current, with over-exposed pixels rejected",
+  "pseudocode": [
+   "rows = H/divisor ; cols = W/divisor ; r0 = H/2 - rows/2 ; c0 = W/2 - cols/2",
+   "for each pixel in [r0,r0+rows) x [c0,c0+cols):",
+   "    if max(slot0,slot1,slot2) > clip_level: n_bad += 1 ; continue",
+   "    sums[i] += slot_i - dark_i",
+   "if n_bad/N > max_bad_rate: return false",
+   "matrix[0] = sums[1]/sums[0] ; matrix[4] = 1.0 ; matrix[8] = sums[1]/sums[2]"
+  ],
+  "decompiled_from": {
+   "dll": "Sn3DColorCorrect.dll",
+   "sha256": "1d50e0abf6700303ef78ada146f22df52feaa085771ef1936c0f3ff22541b399",
+   "function": "FUN_18007ace0 (called by the exported SNColorAlgorithm::snWhiteBalanceCali)",
+   "evidence": "REA/Ghidra 12.1.4 decompilation; the store to matrix+0x10 is the literal 0x3f800000"
+  },
+  "slot_mapping": {
+   "exstar_slot0": "Bayer phase (odd row, odd column) of the stored mosaic",
+   "exstar_slot2": "Bayer phase (even row, even column)",
+   "our_engine_slot0": "phase (even, even) \u2014 cv2.COLOR_BayerRG2BGR puts it in output slot 0 (verified with a synthetic 4-level mosaic)",
+   "consequence": "EXStar's diag(...) is REVERSED relative to our BGR buffer; applying it verbatim mis-corrects by 10.3 % / 11.4 %"
+  }
+ },
+ "frames": {
+  "imageTex1.bmp": {
+   "role": "tex, illuminator on",
+   "path_private": "~/einstar-private/exstar-20261114/wb/imageTex1.bmp",
+   "sha256": "a3dd461de2148bb17622fb5daece698a890926ba43d462bb78b550a12364017b",
+   "size": 1311798,
+   "geometry": "1280x1024, 8-bit, single-channel Bayer mosaic (uncompressed BMP, 54-byte header)",
+   "bayer_phase_spread_pct": 29.06,
+   "phase_means_dn": {
+    "p00": 21.55,
+    "g": 27.03,
+    "p11": 20.94
+   },
+   "mean_dn": 24.14,
+   "max_dn": 255,
+   "saturated_fraction_pct": 0.329,
+   "plate_pixels_over_200dn": 5040
+  },
+  "imageTex2.bmp": {
+   "role": "tex, illuminator off",
+   "path_private": "~/einstar-private/exstar-20261114/wb/imageTex2.bmp",
+   "sha256": "dd20d78461927588f56c4ec2ace002e95672893f2cd45dc774b0a7ce122cb03d",
+   "size": 1311798,
+   "geometry": "1280x1024, 8-bit, single-channel Bayer mosaic (uncompressed BMP, 54-byte header)",
+   "bayer_phase_spread_pct": 35.15,
+   "phase_means_dn": {
+    "p00": 25.47,
+    "g": 33.18,
+    "p11": 24.55
+   },
+   "mean_dn": 29.09,
+   "max_dn": 255,
+   "saturated_fraction_pct": 0.556,
+   "plate_pixels_over_200dn": 8523
+  },
+  "imageLeft1.bmp": {
+   "sha256": "ae3fcf2789eeb76f00c6b224eba7e6291742fac24b420c05c8a41086ba263535",
+   "size": 1311798,
+   "geometry": "1280x1024, 8-bit, mono (no CFA)",
+   "bayer_phase_spread_pct": 0.2,
+   "mean_dn": 144.77,
+   "max_dn": 255,
+   "saturated_fraction_pct": 21.154,
+   "role": "IR camera, illuminator ON, blown"
+  },
+  "imageLeft2.bmp": {
+   "sha256": "b77396ab7042091a68cac13ba89b7cf4533b367866480b7f2e5f98f28835525b",
+   "size": 1311798,
+   "geometry": "1280x1024, 8-bit, mono (no CFA)",
+   "bayer_phase_spread_pct": 1.46,
+   "mean_dn": 11.45,
+   "max_dn": 255,
+   "saturated_fraction_pct": 0.002,
+   "role": "IR camera, illuminator OFF (dark)"
+  },
+  "imageRight1.bmp": {
+   "sha256": "084781b5806fff9185046acde4f432a4ffaefecffdc2b5bfa626effb1b567eb9",
+   "size": 1311798,
+   "geometry": "1280x1024, 8-bit, mono (no CFA)",
+   "bayer_phase_spread_pct": 0.22,
+   "mean_dn": 155.58,
+   "max_dn": 255,
+   "saturated_fraction_pct": 26.862,
+   "role": "IR camera, illuminator ON, blown"
+  },
+  "imageRight2.bmp": {
+   "sha256": "af82666bcf613c25c24b769255743224b64fc9b37e792814b34ecfb050d9ee83",
+   "size": 1311798,
+   "geometry": "1280x1024, 8-bit, mono (no CFA)",
+   "bayer_phase_spread_pct": 0.91,
+   "mean_dn": 11.53,
+   "max_dn": 255,
+   "saturated_fraction_pct": 0.001,
+   "role": "IR camera, illuminator OFF (dark)"
+  }
+ },
+ "window_fit_divisor_sweep": [
+  {
+   "divisor": 1,
+   "window_wh": [
+    1280,
+    1024
+   ],
+   "led_on": {
+    "slot0": 1.68494,
+    "slot2": 1.57351,
+    "err_slot0_pct": 5.08,
+    "err_slot2_pct": -12.29
+   },
+   "led_off": {
+    "slot0": 1.72121,
+    "slot2": 1.59554,
+    "err_slot0_pct": 7.22,
+    "err_slot2_pct": -11.18
+   },
+   "max_abs_err_pct": 12.29
+  },
+  {
+   "divisor": 2,
+   "window_wh": [
+    640,
+    512
+   ],
+   "led_on": {
+    "slot0": 1.63214,
+    "slot2": 1.69603,
+    "err_slot0_pct": 1.79,
+    "err_slot2_pct": -5.46
+   },
+   "led_off": {
+    "slot0": 1.64641,
+    "slot2": 1.71171,
+    "err_slot0_pct": 2.57,
+    "err_slot2_pct": -4.71
+   },
+   "max_abs_err_pct": 5.46
+  },
+  {
+   "divisor": 3,
+   "window_wh": [
+    426,
+    341
+   ],
+   "led_on": {
+    "slot0": 1.5975,
+    "slot2": 1.75505,
+    "err_slot0_pct": -0.37,
+    "err_slot2_pct": -2.17
+   },
+   "led_off": {
+    "slot0": 1.60818,
+    "slot2": 1.76884,
+    "err_slot0_pct": 0.18,
+    "err_slot2_pct": -1.53
+   },
+   "max_abs_err_pct": 2.17
+  },
+  {
+   "divisor": 4,
+   "window_wh": [
+    320,
+    256
+   ],
+   "led_on": {
+    "slot0": 1.59036,
+    "slot2": 1.76248,
+    "err_slot0_pct": -0.82,
+    "err_slot2_pct": -1.76
+   },
+   "led_off": {
+    "slot0": 1.60147,
+    "slot2": 1.77436,
+    "err_slot0_pct": -0.23,
+    "err_slot2_pct": -1.23
+   },
+   "max_abs_err_pct": 1.76
+  },
+  {
+   "divisor": 5,
+   "window_wh": [
+    256,
+    204
+   ],
+   "led_on": {
+    "slot0": 1.58743,
+    "slot2": 1.7636,
+    "err_slot0_pct": -1.0,
+    "err_slot2_pct": -1.7
+   },
+   "led_off": {
+    "slot0": 1.59986,
+    "slot2": 1.77764,
+    "err_slot0_pct": -0.33,
+    "err_slot2_pct": -1.04
+   },
+   "max_abs_err_pct": 1.7
+  },
+  {
+   "divisor": 6,
+   "window_wh": [
+    213,
+    170
+   ],
+   "led_on": {
+    "slot0": 1.58713,
+    "slot2": 1.76692,
+    "err_slot0_pct": -1.02,
+    "err_slot2_pct": -1.51
+   },
+   "led_off": {
+    "slot0": 1.6001,
+    "slot2": 1.78022,
+    "err_slot0_pct": -0.32,
+    "err_slot2_pct": -0.9
+   },
+   "max_abs_err_pct": 1.51
+  },
+  {
+   "divisor": 8,
+   "window_wh": [
+    160,
+    128
+   ],
+   "led_on": {
+    "slot0": 1.58539,
+    "slot2": 1.76675,
+    "err_slot0_pct": -1.13,
+    "err_slot2_pct": -1.52
+   },
+   "led_off": {
+    "slot0": 1.59834,
+    "slot2": 1.78123,
+    "err_slot0_pct": -0.43,
+    "err_slot2_pct": -0.84
+   },
+   "max_abs_err_pct": 1.52
+  },
+  {
+   "divisor": 10,
+   "window_wh": [
+    128,
+    102
+   ],
+   "led_on": {
+    "slot0": 1.58371,
+    "slot2": 1.76594,
+    "err_slot0_pct": -1.23,
+    "err_slot2_pct": -1.57
+   },
+   "led_off": {
+    "slot0": 1.59679,
+    "slot2": 1.7831,
+    "err_slot0_pct": -0.53,
+    "err_slot2_pct": -0.74
+   },
+   "max_abs_err_pct": 1.57
+  },
+  {
+   "divisor": 12,
+   "window_wh": [
+    106,
+    85
+   ],
+   "led_on": {
+    "slot0": 1.58521,
+    "slot2": 1.76687,
+    "err_slot0_pct": -1.14,
+    "err_slot2_pct": -1.52
+   },
+   "led_off": {
+    "slot0": 1.59555,
+    "slot2": 1.78099,
+    "err_slot0_pct": -0.6,
+    "err_slot2_pct": -0.86
+   },
+   "max_abs_err_pct": 1.52
+  },
+  {
+   "divisor": 16,
+   "window_wh": [
+    80,
+    64
+   ],
+   "led_on": {
+    "slot0": 1.58909,
+    "slot2": 1.76924,
+    "err_slot0_pct": -0.9,
+    "err_slot2_pct": -1.38
+   },
+   "led_off": {
+    "slot0": 1.59426,
+    "slot2": 1.77901,
+    "err_slot0_pct": -0.68,
+    "err_slot2_pct": -0.97
+   },
+   "max_abs_err_pct": 1.38
+  }
+ ],
+ "hypotheses": {
+  "a_plate_roi_no_dark": {
+   "exstar_order": [
+    1.457141,
+    1.0,
+    1.383923
+   ],
+   "err_pct": {
+    "slot0": -9.13,
+    "slot2": -22.86
+   },
+   "verdict": "rejected"
+  },
+  "a_e_plate_roi_with_dark": {
+   "exstar_order": [
+    1.611705,
+    1.0,
+    1.504789
+   ],
+   "err_pct": {
+    "slot0": 0.51,
+    "slot2": -16.12
+   },
+   "verdict": "rejected: the p00-phase gain is 16 % low"
+  },
+  "a_e_central_window_with_dark": {
+   "exstar_order": [
+    1.585387,
+    1.0,
+    1.766746
+   ],
+   "err_pct": {
+    "slot0": -1.13,
+    "slot2": -1.52
+   },
+   "verdict": "accepted (best fit)"
+  },
+  "a_central_window_no_dark": {
+   "exstar_order": [
+    1.423758,
+    1.0,
+    1.537428
+   ],
+   "err_pct": {
+    "slot0": -11.21,
+    "slot2": -14.3
+   },
+   "verdict": "rejected"
+  },
+  "b_ccm_target": {
+   "plate_after_wb_then_ccm_bgr": [
+    1.69963,
+    0.15702,
+    1.32988
+   ],
+   "output_spread_pct": 145.23,
+   "plate_after_wb_then_ccm_rgb_rows": [
+    1.77876,
+    0.17573,
+    1.23189
+   ],
+   "output_spread_pct_alt": 150.93,
+   "ccm_implies_neutral_input": {
+    "slot0_over_g": 0.561228,
+    "slot2_over_g": 0.755263,
+    "level": 0.762398
+   },
+   "achieved_input": {
+    "slot0_over_g": 0.664545,
+    "slot2_over_g": 0.620461
+   },
+   "verdict": "rejected: applying the stored gains then the stored CCM leaves the plate 145 % away from neutral"
+  },
+  "c_colour_shading": {
+   "cells": 29,
+   "slot0_gain_p05_p50_p95": [
+    1.5684,
+    1.6072,
+    1.6604
+   ],
+   "slot0_span_pct": 5.87,
+   "slot2_gain_p05_p50_p95": [
+    1.6362,
+    1.7503,
+    1.7789
+   ],
+   "slot2_span_pct": 8.72,
+   "outside_window_residual_cast_pct": 1.93,
+   "verdict": "real but small: a single diagonal gain leaves 1.1-1.9 % cast over the plate outside the window; per-position shading correction is not justified by this data"
+  },
+  "d_exposure_and_gain": {
+   "led_on_frame": {
+    "exposure_us": 5000,
+    "analogue_gain": 200,
+    "illuminator_route1": 400
+   },
+   "led_off_frame": {
+    "exposure_us": 5000,
+    "analogue_gain": 400,
+    "illuminator_route1": 0
+   },
+   "our_reproduction_rel_diff_pct": {
+    "slot0": 0.82,
+    "slot2": 0.82
+   },
+   "exstar_stored_rel_diff_pct": {
+    "slot0": 0.11,
+    "slot2": 0.13
+   },
+   "verdict": "dark subtraction makes the ratio nearly exposure/gain invariant; the residual 0.8 % vs EXStar's 0.1 % bounds our reproduction to about 1 %"
+  },
+  "e_dark_level": {
+   "para_dark_bgr": [
+    0.04502069,
+    0.0455484,
+    0.04504853
+   ],
+   "effect": "disabling the subtraction moves the central-window gains by -11 % / -14 % (see a_central_window_no_dark)",
+   "verdict": "required; the values are EXStar's own stored ParaDark, and are close enough across channels that their order is not identifiable"
+  }
+ },
+ "chosen_estimator": {
+  "id": "exstar-central-window-greyworld",
+  "window_divisor": 8,
+  "window_px_full_res": [
+   160,
+   128
+  ],
+  "clip_level": 0.95,
+  "subtract_dark": true,
+  "dark_current_slot_order": [
+   0.04502069,
+   0.0455484,
+   0.04504853
+  ],
+  "gains_engine_slot_order": {
+   "led_on": [
+    1.766746,
+    1.0,
+    1.585387
+   ],
+   "led_off": [
+    1.781225,
+    1.0,
+    1.598342
+   ]
+  },
+  "gains_exstar_order": {
+   "led_on": [
+    1.585387,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.766746
+   ],
+   "led_off": [
+    1.598342,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    1.781225
+   ]
+  },
+  "residual_vs_exstar": {
+   "led_on_pct": {
+    "slot0": -1.13,
+    "slot2": -1.52
+   },
+   "led_off_pct": {
+    "slot0": -0.43,
+    "slot2": -0.84
+   }
+  },
+  "residual_explanation": "systematic ~-1 % bias on both gains; candidates are the demosaic difference (phase means vs a bilinear-debayered image), which frame of the burst was saved, and the exact window divisor. Not resolved."
+ },
+ "validation": {
+  "method": "estimate on the centred window, then re-measure on the disjoint lit-plate annulus; both after dark subtraction",
+  "per_condition": {
+   "led_on": {
+    "window_before": {
+     "r_over_g": 0.702366,
+     "b_over_g": 0.650437,
+     "max_cast": 0.349563,
+     "n_pixels": 5120,
+     "mean_slots": [
+      37.798633,
+      58.112695,
+      40.816406
+     ]
+    },
+    "window_after": {
+     "r_over_g": 1.0,
+     "b_over_g": 1.0,
+     "max_cast": 0.0,
+     "n_pixels": 5120,
+     "mean_slots": [
+      46.497853,
+      46.497853,
+      46.497853
+     ]
+    },
+    "outside_before": {
+     "r_over_g": 0.685784,
+     "b_over_g": 0.650484,
+     "max_cast": 0.349516,
+     "n_pixels": 27891,
+     "mean_slots": [
+      41.659854,
+      64.044369,
+      43.92062
+     ]
+    },
+    "outside_after": {
+     "r_over_g": 0.98073,
+     "b_over_g": 1.016978,
+     "max_cast": 0.01927,
+     "n_pixels": 27891,
+     "mean_slots": [
+      53.319651,
+      52.429527,
+      51.419232
+     ]
+    },
+    "outside_pixels": 27891
+   },
+   "led_off": {
+    "window_before": {
+     "r_over_g": 0.677728,
+     "b_over_g": 0.62261,
+     "max_cast": 0.37739,
+     "n_pixels": 5120,
+     "mean_slots": [
+      50.456641,
+      81.040527,
+      54.923437
+     ]
+    },
+    "window_after": {
+     "r_over_g": 1.0,
+     "b_over_g": 1.0,
+     "max_cast": 0.0,
+     "n_pixels": 5120,
+     "mean_slots": [
+      69.425685,
+      69.425685,
+      69.425685
+     ]
+    },
+    "outside_before": {
+     "r_over_g": 0.667698,
+     "b_over_g": 0.626161,
+     "max_cast": 0.373839,
+     "n_pixels": 26398,
+     "mean_slots": [
+      54.468066,
+      86.98731,
+      58.081294
+     ]
+    },
+    "outside_after": {
+     "r_over_g": 0.988067,
+     "b_over_g": 1.015901,
+     "max_cast": 0.015901,
+     "n_pixels": 26398,
+     "mean_slots": [
+      76.570937,
+      75.372468,
+      74.47302
+     ]
+    },
+    "outside_pixels": 26398
+   }
+  },
+  "max_cast_outside_window_pct": 1.93,
+  "window_after": "1.000000 / 1.000000 by construction (consistency check, not evidence)",
+  "before_cast_pct": {
+   "window_raw": 37.74,
+   "outside_raw": 37.38
+  },
+  "claim": "after dark subtraction and one diagonal gain the in-window cast falls from 37.74 % to 0.00 % and the cast over the rest of the lit plate from 37.38 % to 1.93 %"
+ },
+ "unknowns": [
+  "The window divisor is not identifiable from two numbers: divisors 4..16 all fit within 1.8 %, and 3 also fits. div=8 is a choice, not a measurement.",
+  "The physical colour of the (even,even) and (odd,odd) phases is NOT established by these files. Every number here is defined against phase position and the engine's slot order, so the estimate is unaffected; only an absolute colour claim would need the label.",
+  "Whether the stored frames are exactly the ones handed to snWhiteBalanceCali is unverified (the wrapper passes vecImgT, whose contents are not logged).",
+  "The CCM (ParaCCM_0.txt) is inconsistent with the stored WB gains under a 'WB then CCM' model: the plate lands 145 % away from neutral. Why was not determined; the CCM is not used by this layer.",
+  "EXStar's numeric 'standard rate' in snTestColorMatrixWB was not recovered, so its own acceptance threshold is unknown.",
+  "No colorimetric validation exists: the plate is white ceramic of unknown spectral reflectance, the illuminant spectrum is unmeasured, and no colour chart was used."
+ ],
+ "reproduction": [
+  "python -m calib.white_balance estimate --led-on <on.bmp> --led-off <off.bmp> --out wb.json --divisor 8 --dark 0.04502069 0.0455484 0.04504853",
+  "python -m calib.white_balance validate wb.json --led-on <on.bmp> --led-off <off.bmp>",
+  "pytest tests/test_white_balance.py -q"
+ ],
+ "limitations": [
+  "Numbers derived from one calibration session on one unit.",
+  "The EXStar frames are private data and are not redistributed; the repository test skips without them."
+ ],
+ "window_measurement": {
+  "led_on": {
+   "n_total": 5120,
+   "n_valid": 5120,
+   "n_clipped": 0,
+   "clipped_fraction": 0.0,
+   "sum_slots": [
+    528.431322,
+    933.603957,
+    588.880938
+   ],
+   "mean_slots": [
+    0.103209,
+    0.182345,
+    0.115016
+   ],
+   "mean_slots_dn": [
+    26.3184,
+    46.4979,
+    29.329
+   ],
+   "window_row0_col0_rows_cols": [
+    224,
+    280,
+    64,
+    80
+   ],
+   "frame": "imageTex1.bmp"
+  },
+  "led_off": {
+   "n_total": 5120,
+   "n_valid": 5120,
+   "n_clipped": 0,
+   "clipped_fraction": 0.0,
+   "sum_slots": [
+    782.584263,
+    1393.958859,
+    872.127997
+   ],
+   "mean_slots": [
+    0.152848,
+    0.272258,
+    0.170337
+   ],
+   "mean_slots_dn": [
+    38.9764,
+    69.4257,
+    43.4361
+   ],
+   "window_row0_col0_rows_cols": [
+    224,
+    280,
+    64,
+    80
+   ],
+   "frame": "imageTex2.bmp"
+  },
+  "note": "mean_slots_dn is the dark-subtracted mean inside the centred 160x128 window"
+ },
+ "frame_p99_dn": {
+  "imageTex1.bmp": 76.0,
+  "imageTex2.bmp": 119.0,
+  "imageLeft1.bmp": 255.0,
+  "imageLeft2.bmp": 16.0,
+  "imageRight1.bmp": 255.0,
+  "imageRight2.bmp": 17.0
+ }
+}

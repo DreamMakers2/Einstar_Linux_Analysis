@@ -1,0 +1,30 @@
+........................................................................ [ 62%]
+...........................................                              [100%]
+=============================== warnings summary ===============================
+tests/test_wizard_controller.py::test_accept_materialises_and_manifest_round_trip
+tests/test_wizard_controller.py::test_duplicate_is_rejected_as_redundant
+tests/test_wizard_controller.py::test_incomplete_group_is_rejected_with_a_specific_reason
+tests/test_wizard_controller.py::test_mirrored_assignment_is_rejected
+tests/test_wizard_controller.py::test_same_twelve_group_replay_gives_identical_manifest
+tests/test_wizard_controller.py::test_snapshot_matches_the_gui_contract
+tests/test_wizard_controller.py::test_finish_writes_a_pending_candidate_and_report
+tests/test_wizard_controller.py::test_cancel_keeps_data_and_writes_no_profile
+tests/test_wizard_controller.py::test_factory_profile_is_never_modified
+  <repo>/.venv/lib/python3.14/site-packages/numpy/_core/fromnumeric.py:3862: RuntimeWarning: Mean of empty slice
+    return _methods._mean(a, axis=axis, dtype=dtype,
+
+tests/test_wizard_controller.py::test_accept_materialises_and_manifest_round_trip
+tests/test_wizard_controller.py::test_duplicate_is_rejected_as_redundant
+tests/test_wizard_controller.py::test_incomplete_group_is_rejected_with_a_specific_reason
+tests/test_wizard_controller.py::test_mirrored_assignment_is_rejected
+tests/test_wizard_controller.py::test_same_twelve_group_replay_gives_identical_manifest
+tests/test_wizard_controller.py::test_snapshot_matches_the_gui_contract
+tests/test_wizard_controller.py::test_finish_writes_a_pending_candidate_and_report
+tests/test_wizard_controller.py::test_cancel_keeps_data_and_writes_no_profile
+tests/test_wizard_controller.py::test_factory_profile_is_never_modified
+  <repo>/.venv/lib/python3.14/site-packages/numpy/_core/_methods.py:142: RuntimeWarning: invalid value encountered in scalar divide
+    ret = ret.dtype.type(ret / rcount)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+115 passed, 18 warnings in 102.49s (0:01:42)
+exit=0

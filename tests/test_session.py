@@ -47,7 +47,7 @@ def test_session_rejects_motion_then_accepts_dwell():
     R1, t1 = scene.views[1]
     d1 = sess.ingest(FrameSet({}, timestamp=0.1), grids=_grids(scene, R1, t1, rng, 1))
     assert not d1.accepted
-    assert any("moving" in r for r in d1.reasons)
+    assert any(("moving" in r or "motion blur" in r) for r in d1.reasons), d1.reasons
     # same pose again: now stationary, but identical to the first -> redundant
     d2 = sess.ingest(FrameSet({}, timestamp=0.2), grids=_grids(scene, R0, t0, rng, 0))
     assert not d2.accepted

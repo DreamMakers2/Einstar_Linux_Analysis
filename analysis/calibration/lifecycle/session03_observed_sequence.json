@@ -1,0 +1,137 @@
+{
+ "capture_stderr": [
+  "warning: volatile settings change rejected: volatile settings: gain camera 0: device status 3 for camera/0x27",
+  "process safety: cleanup deadline exceeded; illuminator state UNVERIFIED; forcing SIGKILL"
+ ],
+ "control_file": "stop",
+ "coverage_with_stationarity_stream": {
+  "D1_band_counts": [
+   32,
+   97,
+   152
+  ],
+  "D4_corners": {
+   "bottom_left": 2,
+   "bottom_right": 0,
+   "top_left": 9,
+   "top_right": 0
+  },
+  "D4_regions_visited": 7,
+  "satisfied": [
+   "D1",
+   "D2",
+   "D3",
+   "D5",
+   "D6",
+   "D7",
+   "D8"
+  ],
+  "unsatisfied": [
+   "D4"
+  ]
+ },
+ "frames_manifest_present": false,
+ "observed_contradiction": {
+  "cause": "controller.cancel() set state=cancelled at the reader stop without stopping self.capture; the capture child kept recording for the gap; on GUI close source.close()/capture.stop() was sent, teardown exceeded the 5 s process-safety deadline during 52 GB recording verification, the watchdog SIGKILLed the child, and final status stayed \"stopping\" with no frames_manifest.json. Cleanup readback and the .e1r trailer were already written, so the device was off and the raw stream is closed, but recording finalization is unverified.",
+  "cleanup_attempted": true,
+  "cleanup_verified": true,
+  "control_stop_written_at_ui_shutdown": true,
+  "controller_cancel_stopped_capture": false,
+  "frames_manifest_missing": true,
+  "reader_stopped_while_capture_running": true,
+  "recording_finalization_verified": false,
+  "safe_claim_allowed": false,
+  "status_state": "stopping",
+  "stderr_claims_illuminator_unverified_sigkill": true
+ },
+ "observed_status": {
+  "bytes_received": 51926738976,
+  "bytes_written": 51884851200,
+  "cleanup_attempted": true,
+  "cleanup_verified": true,
+  "disk_free_bytes": 25143050240,
+  "elapsed_s": 1345.590177,
+  "exposure_us": [
+   2096,
+   2096,
+   20000
+  ],
+  "frames_completed": 39586,
+  "frames_dropped": 1,
+  "frames_invalid": 0,
+  "frames_written": 39585,
+  "gain": [
+   105,
+   105,
+   300
+  ],
+  "groups_evicted": 13075,
+  "groups_on_disk": 120,
+  "groups_requested": 0,
+  "groups_written": 13195,
+  "laser_percent": 0,
+  "last_group": 13195,
+  "latest_group": 13194,
+  "live": true,
+  "output_directory": "<recorded-session>/frames",
+  "ring_size": 120,
+  "schema": "einstar-live-status-v1",
+  "simulated": false,
+  "state": "stopping",
+  "stop_reason": "control:stop",
+  "throughput_mbps": 38.59,
+  "transfer_timeouts": 8,
+  "trigger_counts": {
+   "mono": 0,
+   "rgb": 0
+  },
+  "trigger_period_us": 100000
+ },
+ "recording_trailer": {
+  "crc_valid": true,
+  "digest_verified": false,
+  "file_bytes": 51977409627,
+  "note": "CRC-valid trailer record present; transfer digest/count matching requires the C++ verifier",
+  "path": "<recorded-session>/raw.e1r",
+  "present": true,
+  "record_type": 3,
+  "trailer_bytes": 51926738976,
+  "trailer_digest": 2411183461415716298,
+  "trailer_transfers": 1266761
+ },
+ "schema": "einstar.lifecycle.evidence/1",
+ "session": "einstar-calibration-03 (recorded; no scanner used)",
+ "timeline": {
+  "controller_cancel_stopped_capture": false,
+  "decision_groups": 2004,
+  "groups_recorded": 13195,
+  "groups_recorded_after_reader_stop": 2404,
+  "last_decided_group": 10790,
+  "last_decision_timestamp_s": 1794587173.9416602,
+  "reader_stopped_to_ui_metrics_s": 180.6,
+  "session_elapsed_s": 1166.496547460556,
+  "session_started_at_s": 1794586007.918558,
+  "session_state": "cancelled",
+  "status_elapsed_s": 1345.590177,
+  "ui_metrics_written_at_s": 1794587354.559832
+ },
+ "ui_metrics_worker": {
+  "async_decisions": true,
+  "decision": {
+   "count": 1004,
+   "hz": 1.5696452761488033,
+   "max_ms": 14116.139072999431,
+   "p50_ms": 509.1907500009256,
+   "p95_ms": 1215.1726219999546
+  },
+  "groups_seen": 10792,
+  "preview": {
+   "count": 1792,
+   "hz": 8.450717345406263,
+   "max_ms": 357.7209809991473,
+   "p50_ms": 112.50107899832074,
+   "p95_ms": 259.6622710007068
+  },
+  "recorded_only": 8788
+ }
+}

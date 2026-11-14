@@ -1,0 +1,197 @@
+{
+  "schema": "einstar-offline-benchmarks/1",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i9-14900K (32 threads)",
+    "ram_gb": 62,
+    "python": "3.14.9"
+  },
+  "recording": {
+    "path": "<calibration-session>/raw.e1r",
+    "size_bytes": 51977409627,
+    "sha256": "b3053e3375672927fea739b1d11eab59880be63619f1884eb7c6428d33b3020b",
+    "trailer_digest_hex": "0x21763E9549FB05CA"
+  },
+  "full_verify": {
+    "wall_seconds": 76.2436,
+    "throughput_mbps": 681.064,
+    "peak_rss_kb": 5980,
+    "records": 1266763,
+    "transfers": 1266761,
+    "payload_bytes": 51926738976,
+    "digest_hex": "0x21763E9549FB05CA",
+    "trailer_verified": true,
+    "cpu_user_seconds": 63.474,
+    "cpu_sys_seconds": 10.129
+  },
+  "full_replay_stats": {
+    "wall_seconds": 98.8772,
+    "replay_seconds": 98.856,
+    "throughput_mbps": 525.277,
+    "peak_rss_kb": 103664,
+    "groups_written": 13195,
+    "frames_written": 39585,
+    "frames_seen": 39586,
+    "groups_incomplete": 1,
+    "trailer_verified": true,
+    "digest_hex": "0x21763E9549FB05CA",
+    "cadence_fps": 9.80687,
+    "cadence_mean_ns": 101969384,
+    "cpu_user_seconds": 75.445,
+    "cpu_sys_seconds": 11.858
+  },
+  "decode_ranges": {
+    "/tmp/stream_bench/range_a": {
+      "input": "<calibration-session>/raw.e1r",
+      "start_group": 0,
+      "max_groups": 500,
+      "single_pass": true,
+      "groups_written": 500,
+      "groups_skipped": 0,
+      "frames_written": 1500,
+      "frames_seen": 1500,
+      "wall_seconds": 5.74403,
+      "replay_seconds": 5.73813,
+      "throughput_mbps": 343.309,
+      "peak_rss_kb": 99268,
+      "verification_complete": false,
+      "trailer_verified": false,
+      "digest_hex": "0x40E69A1CC0869E71",
+      "cpu_user_seconds": 4.594,
+      "cpu_sys_seconds": 0.97
+    },
+    "/tmp/stream_bench/range_b": {
+      "input": "<calibration-session>/raw.e1r",
+      "start_group": 6000,
+      "max_groups": 500,
+      "single_pass": true,
+      "groups_written": 500,
+      "groups_skipped": 6000,
+      "frames_written": 1500,
+      "frames_seen": 19500,
+      "wall_seconds": 53.1861,
+      "replay_seconds": 53.1741,
+      "throughput_mbps": 481.086,
+      "peak_rss_kb": 98928,
+      "verification_complete": false,
+      "trailer_verified": false,
+      "digest_hex": "0x42E3C4DFDA050C2F",
+      "cpu_user_seconds": 37.951,
+      "cpu_sys_seconds": 6.065
+    },
+    "/tmp/stream_bench/range_c": {
+      "input": "<calibration-session>/raw.e1r",
+      "start_group": 12700,
+      "max_groups": 0,
+      "single_pass": true,
+      "groups_written": 495,
+      "groups_skipped": 12700,
+      "frames_written": 1485,
+      "frames_seen": 39586,
+      "wall_seconds": 103.243,
+      "replay_seconds": 103.23,
+      "throughput_mbps": 503.02,
+      "peak_rss_kb": 98768,
+      "verification_complete": true,
+      "trailer_verified": true,
+      "digest_hex": "0x21763E9549FB05CA",
+      "cpu_user_seconds": 79.136,
+      "cpu_sys_seconds": 10.881
+    }
+  },
+  "pacing_equivalence": {
+    "range": "0-499",
+    "paced_seconds": 7.077,
+    "fast_seconds": 5.744,
+    "directory_sha256_paced": "61cf7c2f0092b40a8540749fd4c4c27f2ed1469d9ce4e1be0de24ed4e728d72e",
+    "directory_sha256_fast": "61cf7c2f0092b40a8540749fd4c4c27f2ed1469d9ce4e1be0de24ed4e728d72e",
+    "identical": true,
+    "files": 1500
+  },
+  "byte_identity_vs_live_frames": {
+    "range": "13075-13194",
+    "files_compared": 360,
+    "mismatches": 0,
+    "all_identical": true
+  },
+  "notes": [
+    "Full verify and full replay stats ran on the raw 51,977,409,627-byte recording read-only.",
+    "Decode ranges A/B are single-pass (tail not reached); range C runs to EOF and re-verifies the trailer.",
+    "Byte identity compares streaming replay output with the 120 groups retained by the live capture ring."
+  ],
+  "feature_extraction": {
+    "features_path": "analysis/calibration/offline/features/features.jsonl",
+    "features_bytes": 91539233,
+    "groups": 13195,
+    "frames": 39585,
+    "payload_bytes": 51884851200,
+    "workers": 20,
+    "max_inflight_groups": 160,
+    "wall_seconds": 763.94,
+    "groups_per_second": 17.27,
+    "megapixels_per_second": 67.92,
+    "peak_rss_orchestrator_kb": 97384,
+    "peak_rss_worker_max_kb": 1236544,
+    "cpp_peak_rss_kb": 103632,
+    "groups_with_errors": 480,
+    "groups_without_detection": 169,
+    "trailer_verified": true,
+    "digest_hex": "0x21763E9549FB05CA",
+    "recording_sha256": "b3053e3375672927fea739b1d11eab59880be63619f1884eb7c6428d33b3020b",
+    "single_vs_multi_workers": {
+      "sample_groups": 40,
+      "one_worker_seconds": 12.3,
+      "twenty_workers_seconds": 1.9
+    }
+  },
+  "corner_analysis": {
+    "groups": 13195,
+    "both_ir_markers_any": 11117,
+    "both_ir_markers_min12": 10150,
+    "full_assignment_both_ir": 4960,
+    "groups_with_pose": 11785,
+    "pose_corner_any_ir": 280,
+    "pose_corner_any_ir_plausible": 177,
+    "pose_corner_both_ir": 70,
+    "pose_corner_both_ir_plausible": 52,
+    "centroid_corner_any_ir": 486,
+    "plausible_criteria": {
+      "distance_mm": [
+        200,
+        800
+      ],
+      "reprojection_rms_px_max": 2.0
+    }
+  },
+  "stage1_selection": {
+    "eligible_groups": 3943,
+    "selected_groups": 1200,
+    "distance_bands": {
+      "300-380": 217,
+      "380-460": 506,
+      "460-560": 458,
+      "560-700": 19
+    },
+    "tilt_bands_deg": {
+      "0-15": 559,
+      "15-30": 438,
+      "30-50": 203
+    }
+  },
+  "stage1_frames": {
+    "groups": 1200,
+    "frames": 3600,
+    "bytes_on_disk": 4831838208,
+    "wall_seconds": 143.626,
+    "replay_seconds": 82.893,
+    "replay_throughput_mbps": 624.3,
+    "peak_rss_kb": 99960,
+    "trailer_verified": true,
+    "byte_identity_overlap_with_live": {
+      "groups": 3,
+      "files": 9,
+      "mismatches": 0
+    },
+    "cpu_user_seconds": 114.689,
+    "cpu_sys_seconds": 16.789
+  }
+}

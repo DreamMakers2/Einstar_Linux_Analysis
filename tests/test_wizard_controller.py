@@ -214,8 +214,12 @@ def test_snapshot_matches_the_gui_contract(tmp_path):
         assert key in snapshot["counts"]
     for key in ("distance_bands", "tilt_two_axes", "roll_sectors",
                 "image_regions", "stereo_overlap", "colour_participation",
-                "quality", "stationarity"):
+                "quality", "scale_artefact"):
         assert key in snapshot["coverage"]["dimensions"], key
+    dimensions = snapshot["coverage"]["dimensions"]
+    assert len(dimensions) == 8 and snapshot["coverage"]["total"] == 8
+    subchecks = dimensions["quality"].get("subchecks") or {}
+    assert set(subchecks) == {"quality", "stationarity"}
     assert snapshot["session"]["factory_sha256"]
     json.dumps(snapshot)  # must be JSON-serialisable
     # and it must not block on the session lock while ingest could run

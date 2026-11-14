@@ -65,6 +65,8 @@ struct Options {
   std::uint32_t groups = 0;
   Backend backend = Backend::Simulated;
   std::string record_path;
+  einstar::capture::RecordingVerifyMode recording_verify =
+      einstar::capture::RecordingVerifyMode::Auto;
   std::vector<std::string> exposure_specs;
   std::vector<std::string> gain_specs;
   TriggerMode trigger_mode = TriggerMode::Default;
@@ -151,6 +153,11 @@ void print_usage() {
       "                       with --control, 0 (the default) is unbounded\n"
       "  --backend NAME       simulated (default, deterministic) or libusb\n"
       "  --record FILE        also record the exact raw byte stream (RawRecorder)\n"
+      "  --verify-recording M finalisation check for --record: auto (default;\n"
+      "                       full for small/simulated recordings, bounded\n"
+      "                       trailer check for large real ones), trailer or\n"
+      "                       full. Trailer-only evidence is declared, never a\n"
+      "                       recomputed digest.\n"
       "  --control PATH       poll a command file (start|pause|resume|stop; last\n"
       "                       line wins) and run until told to stop\n"
       "  --ring N             keep only the newest N complete groups in OUT;\n"
@@ -379,6 +386,7 @@ int run_simulated(const Options& options) {
   }
 
   SimCaptureOptions capture;
+  capture.recording_verify = options.recording_verify;
   capture.output_directory = options.output_directory;
   capture.groups = options.groups;
   capture.seed = options.seed;
@@ -1297,6 +1305,7 @@ int run_libusb(const Options& options) {
       options.timeout_seconds_set || options.control_path.empty();
   session.progress_seconds = options.progress_seconds;
   session.record_path = options.record_path;
+  session.recording_verify = options.recording_verify;
   session.manifest.tool = "einstar-capture-frames";
   session.manifest.backend = "libusb";
   session.manifest.simulated = false;
@@ -1385,6 +1394,20 @@ int main(int argc, char** argv) try {
       }
     } else if (argument == "--record" && i + 1 < argc) {
       options.record_path = argv[++i];
+    } else if (argument == "--verify-recording" && i + 1 < argc) {
+      const std::string_view mode = argv[++i];
+      if (mode == "auto") {
+        options.recording_verify =
+            einstar::capture::RecordingVerifyMode::Auto;
+      } else if (mode == "trailer") {
+        options.recording_verify =
+            einstar::capture::RecordingVerifyMode::Trailer;
+      } else if (mode == "full") {
+        options.recording_verify =
+            einstar::capture::RecordingVerifyMode::Full;
+      } else {
+        return usage_error("--verify-recording must be auto, trailer or full");
+      }
     } else if (argument == "--exposure-us" && i + 1 < argc) {
       options.exposure_specs.emplace_back(argv[++i]);
     } else if (argument == "--gain" && i + 1 < argc) {

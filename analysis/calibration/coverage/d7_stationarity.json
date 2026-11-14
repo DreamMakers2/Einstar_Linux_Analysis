@@ -1,0 +1,431 @@
+{
+  "schema": "einstar.coverage.d7_stationarity/1",
+  "source": {
+    "session": "<calibration-session>",
+    "manifest_sha256": "c418520960095511a6deda47b37b475fa2b8578fa3eb2d1e71854e69d77d9c5a",
+    "decisions_sha256": "2e87e3498d1c1a657b596fbfed8098a812c0399a1a225cec62e7d7359e4d519a",
+    "status_sha256": "12caa220e83538a669dd13a02c3d8594f374da1a58620df779ad1ff7c9394fe3",
+    "factory_profile": "<private-inputs>/einstar-profiles/factory-e10.json",
+    "factory_sha256": "8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4"
+  },
+  "before": {
+    "manifest_readiness": {
+      "ready": false,
+      "missing": [
+        "image corners",
+        "stationarity / quality"
+      ],
+      "reason": "not ready: 2 dimension(s) unsatisfied over 297 accepted views -> D4, D7",
+      "satisfied": 5,
+      "total": 8,
+      "unsatisfied_dimensions": [
+        "D4",
+        "D7"
+      ]
+    },
+    "manifest_coverage_dimensions": {
+      "distance_bands": {
+        "satisfied": true,
+        "measured": {
+          "band_counts": [
+            32,
+            97,
+            152
+          ],
+          "bands_mm": [
+            [
+              300.0,
+              380.0
+            ],
+            [
+              380.0,
+              460.0
+            ],
+            [
+              460.0,
+              560.0
+            ]
+          ],
+          "distance_mm": {
+            "min": 287.8278956232726,
+            "max": 620.379401350203,
+            "span": 332.55150572693043
+          }
+        },
+        "hint": "Distance coverage complete: 300-380, 380-460, 460-560 mm."
+      },
+      "tilt_two_axes": {
+        "satisfied": true,
+        "measured": {
+          "tilt_x": {
+            "positive": 47,
+            "negative": 47,
+            "centre_deg": 12.860809415468879
+          },
+          "tilt_y": {
+            "positive": 30,
+            "negative": 79,
+            "centre_deg": 6.7053340066938105
+          },
+          "quadrants": {
+            "+x+y": 8,
+            "+x-y": 15,
+            "-x+y": 2,
+            "-x-y": 9
+          },
+          "tilt_x_deg_range": {
+            "min": -21.548752848016647,
+            "max": 47.270371678954405,
+            "span": 68.81912452697105
+          },
+          "tilt_y_deg_range": {
+            "min": -32.542500914243,
+            "max": 45.95316892763062,
+            "span": 78.49566984187362
+          }
+        },
+        "hint": "Two-axis tilt covered (>= 15 deg in all four quadrants)."
+      },
+      "roll_sectors": {
+        "satisfied": true,
+        "measured": {
+          "bin_counts": [
+            91,
+            55,
+            76,
+            75
+          ],
+          "roll_deg_range": {
+            "min": 0.25307619430525985,
+            "max": 359.9646828844604,
+            "span": 359.7116066901551
+          },
+          "n_bins_covered": 4
+        },
+        "hint": "All four in-plane roll sectors visited."
+      },
+      "image_regions": {
+        "satisfied": false,
+        "measured": {
+          "regions_visited": 7,
+          "region_counts": [
+            9,
+            30,
+            0,
+            38,
+            198,
+            5,
+            2,
+            15,
+            0
+          ],
+          "corners": {
+            "top_left": 9,
+            "top_right": 0,
+            "bottom_left": 2,
+            "bottom_right": 0
+          }
+        },
+        "hint": "Point the plate at the top-right, bottom-right of the image. Corners never visited: top right, bottom right."
+      },
+      "stereo_overlap": {
+        "satisfied": true,
+        "measured": {
+          "min_shared": 18,
+          "median_shared": 38.0,
+          "n_shared_ok": 297,
+          "n_views": 297,
+          "ambiguous_assignment": 0,
+          "n_markers_left_min": 28,
+          "n_markers_right_min": 28
+        },
+        "hint": "Stereo overlap complete: every view shares >= 12 IR markers with an unambiguous orientation witness."
+      },
+      "colour_participation": {
+        "satisfied": true,
+        "measured": {
+          "n_views_with_colour": 297,
+          "n_views": 297,
+          "participation_fraction": 1.0,
+          "min_colour_markers_seen": 31,
+          "max_colour_markers_seen": 40
+        },
+        "hint": "Colour participates in 297 of 297 views (100 %)."
+      },
+      "quality": {
+        "satisfied": false,
+        "measured": {
+          "n_stationary": 5,
+          "n_quality_ok": 297,
+          "quality_fraction": 1.0,
+          "speed_p50_mm_s": 24.31316635804925,
+          "speed_p95_mm_s": 67.43051415144922,
+          "rate_p50_deg_s": 3.112488048238649,
+          "rate_p95_deg_s": 10.531917473575206
+        },
+        "hint": "Hold each pose still for ~0.3 s: only 5 of 297 views are below 3 mm/s and 1.5 deg/s (need 6)."
+      },
+      "stationarity": {
+        "satisfied": false,
+        "measured": {
+          "n_stationary": 5,
+          "n_quality_ok": 297,
+          "quality_fraction": 1.0,
+          "speed_p50_mm_s": 24.31316635804925,
+          "speed_p95_mm_s": 67.43051415144922,
+          "rate_p50_deg_s": 3.112488048238649,
+          "rate_p95_deg_s": 10.531917473575206
+        },
+        "hint": "Hold each pose still for ~0.3 s: only 5 of 297 views are below 3 mm/s and 1.5 deg/s (need 6)."
+      }
+    },
+    "legacy_quality_passes": 297,
+    "legacy_quality_note": "flat quality.saturation_frac/focus keys were absent, so every view passed silently",
+    "legacy_stationarity": {
+      "n_stationary": 5,
+      "speed_p50_mm_s": 24.31316635804925,
+      "rate_p50_deg_s": 3.112488048238649
+    },
+    "legacy_stationarity_note": "speed between consecutive ACCEPTED poses; sparse and biased towards motion"
+  },
+  "accepted_only": {
+    "satisfied": false,
+    "quality": {
+      "n_quality_ok": 297,
+      "quality_fraction": 1.0,
+      "n_views": 297,
+      "focus_min": 171.82473754882812,
+      "saturation_max": 0.00994720458984375,
+      "quality_source_counts": {
+        "nested_metrics": 297
+      },
+      "missing_metrics": [],
+      "n_views_missing_metrics": 0,
+      "tex_note": "tex focus/saturation are reported per view but not gated by D7: its scale differs (tex focus >= 55, contrast >= 5) and colour participation is D6"
+    },
+    "stationarity": {
+      "n_stationary": 0,
+      "n_stationary_intervals": 0,
+      "n_stationary_observations": 0,
+      "n_views": 297,
+      "n_stream_observations": 0,
+      "accepted_stationary_views": 0,
+      "accepted_stationary_fraction": 0.0,
+      "accepted_stationary_intervals": 0,
+      "n_unqualified_intervals": 0,
+      "min_dwell_s": 0.3,
+      "min_dwell_observations": 2,
+      "dwell_durations_s": [],
+      "stationary_fraction": 0.0,
+      "n_dwell_views": 0,
+      "stationarity_status": "unestablished",
+      "stationarity_source": "unestablished",
+      "stationarity_source_counts": {
+        "missing": 13,
+        "recorded_motion": 284
+      },
+      "n_missing_stationarity": 13,
+      "stationarity_interval_gap_s": 1.0,
+      "speed_p50_mm_s": 25.63351397736054,
+      "speed_p95_mm_s": 86.51176164168436,
+      "rate_p50_deg_s": 3.907989975893357,
+      "rate_p95_deg_s": 12.85228274027437,
+      "window_s_p50": 0.59104323387146,
+      "motion_blur_px_max": 0.4347418570575009
+    },
+    "quality_hint": "Quality: 297/297 views within focus >= 150 and saturation <= 0.050 (focus min 172, saturation max 0.0099).",
+    "stationarity_hint": "Stationarity unestablished: no session-level stationarity observation sequence was supplied (accepted views: 0/297 stationary).  The controller must pass every ingested observation's consecutive motion fields, not only accepted views; need 6 distinct dwell intervals.",
+    "deficit": {
+      "quality": 0,
+      "stationary_views": 6,
+      "stationarity_unestablished": true,
+      "missing_stationarity_observations": 13
+    }
+  },
+  "with_stream": {
+    "satisfied": false,
+    "quality": {
+      "n_quality_ok": 297,
+      "quality_fraction": 1.0,
+      "n_views": 297,
+      "focus_min": 171.82473754882812,
+      "saturation_max": 0.00994720458984375,
+      "quality_source_counts": {
+        "nested_metrics": 297
+      },
+      "missing_metrics": [],
+      "n_views_missing_metrics": 0,
+      "tex_note": "tex focus/saturation are reported per view but not gated by D7: its scale differs (tex focus >= 55, contrast >= 5) and colour participation is D6"
+    },
+    "stationarity": {
+      "n_stationary": 138,
+      "n_stationary_intervals": 4,
+      "n_stationary_observations": 138,
+      "n_views": 297,
+      "n_stream_observations": 2004,
+      "accepted_stationary_views": 0,
+      "accepted_stationary_fraction": 0.0,
+      "accepted_stationary_intervals": 0,
+      "n_unqualified_intervals": 7,
+      "min_dwell_s": 0.3,
+      "min_dwell_observations": 2,
+      "dwell_durations_s": [
+        4.095,
+        1.188,
+        0.978,
+        48.998
+      ],
+      "stationary_fraction": 0.0688622754491018,
+      "n_dwell_views": 0,
+      "stationarity_status": "stream",
+      "stationarity_source": "stream",
+      "stationarity_source_counts": {
+        "missing": 1029,
+        "recorded_motion": 975
+      },
+      "n_missing_stationarity": 1029,
+      "stationarity_interval_gap_s": 1.0,
+      "speed_p50_mm_s": 23.531657241484037,
+      "speed_p95_mm_s": 121.64322035741763,
+      "rate_p50_deg_s": 3.5214829061893944,
+      "rate_p95_deg_s": 17.5436806002869,
+      "window_s_p50": 0.5119268894195557,
+      "motion_blur_px_max": 2.2446767533439744
+    },
+    "quality_hint": "Quality: 297/297 views within focus >= 150 and saturation <= 0.050 (focus min 172, saturation max 0.0099).",
+    "stationarity_hint": "Stationarity: only 4 distinct dwell interval(s) from 138 stationary stream observation(s) (need 6); median speed 23.5 mm/s, median rotation 3.52 deg/s.  Hold each pose still for ~0.3 s and keep the dwell frames.",
+    "deficit": {
+      "quality": 0,
+      "stationary_views": 2,
+      "stationarity_unestablished": false,
+      "missing_stationarity_observations": 1029
+    }
+  },
+  "dwell_admission_hypothetical": {
+    "stationary_decisions": 138,
+    "stationary_quality_pass": 134,
+    "rejected_as_redundant_or_duplicate": 134,
+    "reason_counts": {
+      "duplicate_pose": 32,
+      "redundant_view": 102
+    },
+    "admitted_as_dwell_views": 134,
+    "readiness": {
+      "ready": false,
+      "satisfied": 6,
+      "unsatisfied_dimensions": [
+        "D4",
+        "D7"
+      ],
+      "unsatisfied": [
+        "image corners",
+        "stationarity (dwell intervals from the observation stream)"
+      ],
+      "summary": "not ready: 2 dimension(s) unsatisfied over 431 accepted views -> D4, D7"
+    },
+    "D7": {
+      "satisfied": false,
+      "quality": {
+        "n_quality_ok": 431,
+        "quality_fraction": 1.0,
+        "n_views": 431,
+        "focus_min": 171.82473754882812,
+        "saturation_max": 0.00994720458984375,
+        "quality_source_counts": {
+          "nested_metrics": 431
+        },
+        "missing_metrics": [],
+        "n_views_missing_metrics": 0,
+        "tex_note": "tex focus/saturation are reported per view but not gated by D7: its scale differs (tex focus >= 55, contrast >= 5) and colour participation is D6"
+      },
+      "stationarity": {
+        "n_stationary": 138,
+        "n_stationary_intervals": 4,
+        "n_stationary_observations": 138,
+        "n_views": 431,
+        "n_stream_observations": 2004,
+        "accepted_stationary_views": 134,
+        "accepted_stationary_fraction": 0.3109048723897912,
+        "accepted_stationary_intervals": 3,
+        "n_unqualified_intervals": 7,
+        "min_dwell_s": 0.3,
+        "min_dwell_observations": 2,
+        "dwell_durations_s": [
+          4.095,
+          1.188,
+          0.978,
+          48.998
+        ],
+        "stationary_fraction": 0.0688622754491018,
+        "n_dwell_views": 134,
+        "stationarity_status": "stream",
+        "stationarity_source": "stream",
+        "stationarity_source_counts": {
+          "missing": 1029,
+          "recorded_motion": 975
+        },
+        "n_missing_stationarity": 1029,
+        "stationarity_interval_gap_s": 1.0,
+        "speed_p50_mm_s": 23.531657241484037,
+        "speed_p95_mm_s": 121.64322035741763,
+        "rate_p50_deg_s": 3.5214829061893944,
+        "rate_p95_deg_s": 17.5436806002869,
+        "window_s_p50": 0.5119268894195557,
+        "motion_blur_px_max": 2.2446767533439744
+      },
+      "quality_hint": "Quality: 431/431 views within focus >= 150 and saturation <= 0.050 (focus min 172, saturation max 0.0099).",
+      "stationarity_hint": "Stationarity: only 4 distinct dwell interval(s) from 138 stationary stream observation(s) (need 6); median speed 23.5 mm/s, median rotation 3.52 deg/s.  Hold each pose still for ~0.3 s and keep the dwell frames.",
+      "deficit": {
+        "quality": 0,
+        "stationary_views": 2,
+        "stationarity_unestablished": false,
+        "missing_stationarity_observations": 1029
+      }
+    },
+    "D4": {
+      "satisfied": false,
+      "measured": {
+        "regions_visited": 7,
+        "region_counts": [
+          9,
+          30,
+          0,
+          38,
+          198,
+          5,
+          2,
+          15,
+          0
+        ],
+        "corners": {
+          "top_left": 9,
+          "top_right": 0,
+          "bottom_left": 2,
+          "bottom_right": 0
+        }
+      }
+    }
+  },
+  "raw_frame_caveat": {
+    "manifest_accepted_views": 297,
+    "decisions": 2004,
+    "groups_written": 13195,
+    "frames_written": 39585,
+    "trigger_period_us": 100000,
+    "ring_size": 120,
+    "ring_group_range": [
+      13075,
+      13194
+    ],
+    "ring_note": "lead evidence: the last 120 ring groups (13075-13194) were never evaluated live and are a stationary centred plate with 40 markers in all three cameras; this script did not re-detect them",
+    "decisions_with_speed": 975,
+    "per_raw_frame_measurement": "unavailable in the manifest: pose/motion fields exist per decision, not per 10 Hz raw frame; this script does not fabricate them",
+    "raw_recording": {
+      "path": "raw.e1r",
+      "bytes": 51977409627,
+      "full_recording_verified": "lead evidence: the 52 GB raw recording is verified and a memory-bounded streaming decode exists",
+      "right_corner_scan": "open: the raw corpus is being scanned and may recover right-corner frames that are not in the 297 accepted views; this script did not decode it"
+    },
+    "consequence": "raw-frame measurement could add dwell observations and sharpen the interval count.  The raw-corpus scan may also recover right-corner frames not present in the 297 accepted views, so the D4 verdict is conditional on that scan; it does not change the accepted-view counts."
+  }
+}

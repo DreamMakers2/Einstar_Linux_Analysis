@@ -1847,7 +1847,7 @@ class SessionRecorder:
             return "unknown"
         if prev_pose is None:
             return "first-frame"
-        if any("moving" in r for r in q.reasons):
+        if any(("moving" in r or "motion blur" in r) for r in q.reasons):
             return "moving"
         return "stationary"
 

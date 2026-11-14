@@ -764,8 +764,24 @@ def covariance(prob: _Problem, x: np.ndarray, f: np.ndarray,
     smax = float(sv[0]) if len(sv) else 0.0
     rank = int(np.sum(sv > max(smax * rcond, 1e-15))) if len(sv) else 0
     cond = float(smax / sv[rank - 1]) if rank else float("inf")
+    # The raw condition number mixes px, mm, rad and distortion coefficients.
+    # The column-normalised one is unit-free and is what an absolute threshold
+    # may be compared against (tools.wizard.observability reports that one).
+    try:
+        col = np.linalg.norm(J, axis=0)
+        good = col > 0
+        if good.any():
+            s_s = np.linalg.svd(J[:, good] / col[good], compute_uv=False)
+            keep_s = s_s > max(float(s_s[0]) * rcond, 1e-15)
+            cond_scaled = float(s_s[0] / s_s[keep_s][-1]) if keep_s.any() else float("inf")
+            rank_scaled = int(keep_s.sum())
+        else:
+            cond_scaled, rank_scaled = float("inf"), 0
+    except np.linalg.LinAlgError:                 # pragma: no cover - defensive
+        cond_scaled, rank_scaled = float("inf"), 0
     info = {"n_residuals": int(m), "n_free": int(n), "rank": rank,
             "condition": cond, "sigma_px": float(sigma),
+            "condition_scaled": cond_scaled, "rank_scaled": rank_scaled,
             "underdetermined": bool(m <= n), "robust": bool(robust),
             "rcond": float(rcond)}
     if m <= n:
@@ -800,27 +816,28 @@ def covariance(prob: _Problem, x: np.ndarray, f: np.ndarray,
             info["estimator"] = "gauss_newton"
         info["rank_kept"] = int(keep.sum())
         # Marginal information of the rig after eliminating the board poses.
-        # Compute the Schur complement from the (weighted) Jacobian, with the
-        # pseudoinverse taken at the *singular-value* scale of Jv.  Taking it
-        # from Hvv=Jv^T Jv with an H-scale rcond silently drops observable
-        # directions and made inv(C_rr) disagree with the Schur complement.
+        #
+        # It must be the inverse of the rig block of the *published* covariance,
+        # i.e. the uncertainty the gate actually reports.  The Schur complement
+        # of the Gauss-Newton information A is not that: A carries no residual
+        # scale, so inverting it returns the covariance for unit-variance
+        # residuals and overstates every sigma by 1/sigma_px (measured ~3x on
+        # the 297-view session, where sigma_px = 0.35).  The old code also took
+        # the pose pseudo-inverse with an H-scale rcond (1e-12 on eigenvalues =
+        # s^2), dropping directions the covariance keeps at s/smax > 1e-10.
         fm = np.asarray(prob.free_mask, bool)
         n_rig_free = int(fm[:NRIG].sum())
-        Jw_all = J * np.sqrt(w)[:, None] if (robust and f_scale > 0) else J
-        Jr = Jw_all[:, :n_rig_free]
-        Jv = Jw_all[:, n_rig_free:]
-        if Jv.shape[1]:
-            Uv, Sv, Vtv = np.linalg.svd(Jv, full_matrices=False)
-            keepv = Sv > max(Sv[0] * rcond, 1e-15)
-            Hvv_inv = (Vtv[keepv].T / (Sv[keepv] ** 2)) @ Vtv[keepv]
-            A_rr = Jr.T @ Jr
-            A_rv = Jr.T @ Jv
-            schur = A_rr - A_rv @ Hvv_inv @ A_rv.T
-        else:
-            schur = Jr.T @ Jr
         marg = np.zeros((NRIG, NRIG))
         rig_free = np.where(fm[:NRIG])[0]
-        marg[np.ix_(rig_free, rig_free)] = schur
+        C_rr = cov[:n_rig_free, :n_rig_free]
+        if n_rig_free:
+            w_r, V_r = np.linalg.eigh(0.5 * (C_rr + C_rr.T))
+            keep_r = w_r > max(float(w_r.max()) * 1e-12, 0.0)
+            if keep_r.all():
+                marg_rr = (V_r / w_r) @ V_r.T
+            else:
+                marg_rr = (V_r[:, keep_r] / w_r[keep_r]) @ V_r[:, keep_r].T
+            marg[np.ix_(rig_free, rig_free)] = 0.5 * (marg_rr + marg_rr.T)
         info["marginal_information"] = marg
     except np.linalg.LinAlgError as exc:
         if return_info:

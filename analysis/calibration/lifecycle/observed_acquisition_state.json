@@ -1,0 +1,328 @@
+{
+ "acquisition": {
+  "child": {
+   "exit_code": -9,
+   "exit_signal": "SIGKILL",
+   "exited_at_s": 1794590544.7551503,
+   "lock_live": false,
+   "orphans": [],
+   "pid": 111056,
+   "running": false,
+   "started": true,
+   "started_at_s": null
+  },
+  "conflicts": [
+   "capture.stderr.log reports the process-safety cleanup deadline was exceeded and the child was SIGKILLed",
+   "the .e1r trailer is present but frames_manifest.json is absent/invalid; recording finalization is incomplete"
+  ],
+  "device": {
+   "cleanup_attempted": true,
+   "cleanup_verified": true,
+   "hardware_verified": true,
+   "illuminator_verified": true,
+   "laser_percent": 0,
+   "reasons": [],
+   "simulated": false,
+   "trigger_counts": {
+    "mono": 0,
+    "rgb": 0
+   },
+   "trigger_period_us": 100000,
+   "trigger_verified": true
+  },
+  "evidence_notes": [
+   "device cleanup readback published: trigger {'mono': 0, 'rgb': 0}, illuminator 0 %",
+   "recording trailer present (CRC-valid): 1266761 transfers, 51926738976 bytes; full transfer digest not recomputed by the parent",
+   "capture child exit -9 (SIGKILL)"
+  ],
+  "orphans": [],
+  "reasons": [
+   "state is 'stopping', expected 'stopped'",
+   "final status is 'stopping', not 'stopped'",
+   "recording finalization is unverified: <recorded-session>/frames/frames_manifest.json is missing or invalid"
+  ],
+  "recording": {
+   "bytes": 51977409627,
+   "finalized": false,
+   "groups_written": 13195,
+   "manifest": {
+    "bytes": 0,
+    "error": "not present",
+    "path": "<recorded-session>/frames/frames_manifest.json",
+    "present": false,
+    "valid": false
+   },
+   "needs_finalization": true,
+   "path": "<recorded-session>/raw.e1r",
+   "reasons": [
+    "final status is 'stopping', not 'stopped'",
+    "recording finalization is unverified: <recorded-session>/frames/frames_manifest.json is missing or invalid"
+   ],
+   "status_state": "stopping",
+   "trailer": {
+    "crc_valid": true,
+    "digest_verified": false,
+    "file_bytes": 51977409627,
+    "note": "CRC-valid trailer record present; transfer digest/count matching requires the C++ verifier",
+    "path": "<recorded-session>/raw.e1r",
+    "present": true,
+    "record_type": 3,
+    "trailer_bytes": 51926738976,
+    "trailer_digest": 2411183461415716298,
+    "trailer_transfers": 1266761
+   },
+   "trailer_bytes_match": true
+  },
+  "safe": false,
+  "schema": "einstar.acquisition-state/1",
+  "session_dir": "<recorded-session>",
+  "state": "stopping_unverified",
+  "state_label": "stopped \u2014 UNVERIFIED",
+  "status": {
+   "age_s": 0.05094718933105469,
+   "available": true,
+   "bytes_written": 51884851200,
+   "cleanup_attempted": true,
+   "cleanup_verified": true,
+   "fps": 9.806106068207422,
+   "groups_written": 13195,
+   "laser_percent": 0,
+   "path": "<recorded-session>/status.json",
+   "state": "stopping",
+   "stop_reason": "control:stop",
+   "trigger_counts": {
+    "mono": 0,
+    "rgb": 0
+   }
+  },
+  "stop": {
+   "age_s": 1.6689300537109375e-06,
+   "at_s": 1794590544.7551486,
+   "attempts": 1,
+   "escalated_sigint": false,
+   "reason": "control:stop",
+   "requested": true
+  },
+  "terminal": true,
+  "updated_at_s": 1794590544.7551503,
+  "verified": false,
+  "watchdog": {
+   "cleanup_unverified_warning": true,
+   "deadline_exceeded": true,
+   "last_lines": [
+    "warning: volatile settings change rejected: volatile settings: gain camera 0: device status 3 for camera/0x27",
+    "process safety: cleanup deadline exceeded; illuminator state UNVERIFIED; forcing SIGKILL"
+   ],
+   "stderr_path": "<recorded-session>/capture.stderr.log"
+  }
+ },
+ "verdict": {
+  "acquisition": {
+   "child": {
+    "exit_code": -9,
+    "exit_signal": "SIGKILL",
+    "exited_at_s": 1794590544.7551503,
+    "lock_live": false,
+    "orphans": [],
+    "pid": 111056,
+    "running": false,
+    "started": true,
+    "started_at_s": null
+   },
+   "conflicts": [
+    "capture.stderr.log reports the process-safety cleanup deadline was exceeded and the child was SIGKILLed",
+    "the .e1r trailer is present but frames_manifest.json is absent/invalid; recording finalization is incomplete"
+   ],
+   "device": {
+    "cleanup_attempted": true,
+    "cleanup_verified": true,
+    "hardware_verified": true,
+    "illuminator_verified": true,
+    "laser_percent": 0,
+    "reasons": [],
+    "simulated": false,
+    "source": "<recorded-session>/status.json",
+    "trigger_counts": {
+     "mono": 0,
+     "rgb": 0
+    },
+    "trigger_period_us": 100000,
+    "trigger_verified": true
+   },
+   "evidence_notes": [
+    "device cleanup readback published: trigger {'mono': 0, 'rgb': 0}, illuminator 0 %",
+    "recording trailer present (CRC-valid): 1266761 transfers, 51926738976 bytes; full transfer digest not recomputed by the parent",
+    "capture child exit -9 (SIGKILL)"
+   ],
+   "orphans": [],
+   "reasons": [
+    "state is 'stopping', expected 'stopped'",
+    "final status is 'stopping', not 'stopped'",
+    "recording finalization is unverified: <recorded-session>/frames/frames_manifest.json is missing or invalid"
+   ],
+   "recording": {
+    "bytes": 51977409627,
+    "finalized": false,
+    "groups_written": 13195,
+    "manifest": {
+     "bytes": 0,
+     "error": "not present",
+     "path": "<recorded-session>/frames/frames_manifest.json",
+     "present": false,
+     "valid": false
+    },
+    "needs_finalization": true,
+    "path": "<recorded-session>/raw.e1r",
+    "reasons": [
+     "final status is 'stopping', not 'stopped'",
+     "recording finalization is unverified: <recorded-session>/frames/frames_manifest.json is missing or invalid"
+    ],
+    "status_state": "stopping",
+    "trailer": {
+     "crc_valid": true,
+     "digest_verified": false,
+     "file_bytes": 51977409627,
+     "note": "CRC-valid trailer record present; transfer digest/count matching requires the C++ verifier",
+     "path": "<recorded-session>/raw.e1r",
+     "present": true,
+     "record_type": 3,
+     "trailer_bytes": 51926738976,
+     "trailer_digest": 2411183461415716298,
+     "trailer_transfers": 1266761
+    },
+    "trailer_bytes_match": true
+   },
+   "safe": false,
+   "schema": "einstar.acquisition-state/1",
+   "session_dir": "<recorded-session>",
+   "state": "stopping_unverified",
+   "state_label": "stopped \u2014 UNVERIFIED",
+   "status": {
+    "age_s": 0.05997729301452637,
+    "available": true,
+    "bytes_written": 51884851200,
+    "cleanup_attempted": true,
+    "cleanup_verified": true,
+    "fps": 9.806106068207422,
+    "groups_written": 13195,
+    "laser_percent": 0,
+    "path": "<recorded-session>/status.json",
+    "state": "stopping",
+    "stop_reason": "control:stop",
+    "trigger_counts": {
+     "mono": 0,
+     "rgb": 0
+    }
+   },
+   "stop": {
+    "age_s": 0.009149312973022461,
+    "at_s": 1794590544.7551486,
+    "attempts": 1,
+    "escalated_sigint": false,
+    "reason": "control:stop",
+    "requested": true
+   },
+   "terminal": true,
+   "updated_at_s": 1794590544.764298,
+   "verified": false,
+   "watchdog": {
+    "cleanup_unverified_warning": true,
+    "deadline_exceeded": true,
+    "last_lines": [
+     "warning: volatile settings change rejected: volatile settings: gain camera 0: device status 3 for camera/0x27",
+     "process safety: cleanup deadline exceeded; illuminator state UNVERIFIED; forcing SIGKILL"
+    ],
+    "stderr_path": "<recorded-session>/capture.stderr.log"
+   }
+  },
+  "acquisition_state": "stopping_unverified",
+  "commands": [],
+  "conflicts": [
+   "capture.stderr.log reports the process-safety cleanup deadline was exceeded and the child was SIGKILLed",
+   "the .e1r trailer is present but frames_manifest.json is absent/invalid; recording finalization is incomplete"
+  ],
+  "escalated_sigint": false,
+  "exit_code": -9,
+  "exit_signal": "SIGKILL",
+  "laser_percent": 0,
+  "note": "",
+  "ok": false,
+  "process_running": false,
+  "reasons": [
+   "state is 'stopping', expected 'stopped'",
+   "final status is 'stopping', not 'stopped'",
+   "recording finalization is unverified: <recorded-session>/frames/frames_manifest.json is missing or invalid"
+  ],
+  "recording": {
+   "bytes": 51977409627,
+   "finalized": false,
+   "groups_written": 13195,
+   "manifest": {
+    "bytes": 0,
+    "error": "not present",
+    "path": "<recorded-session>/frames/frames_manifest.json",
+    "present": false,
+    "valid": false
+   },
+   "needs_finalization": true,
+   "path": "<recorded-session>/raw.e1r",
+   "reasons": [
+    "final status is 'stopping', not 'stopped'",
+    "recording finalization is unverified: <recorded-session>/frames/frames_manifest.json is missing or invalid"
+   ],
+   "status_state": "stopping",
+   "trailer": {
+    "crc_valid": true,
+    "digest_verified": false,
+    "file_bytes": 51977409627,
+    "note": "CRC-valid trailer record present; transfer digest/count matching requires the C++ verifier",
+    "path": "<recorded-session>/raw.e1r",
+    "present": true,
+    "record_type": 3,
+    "trailer_bytes": 51926738976,
+    "trailer_digest": 2411183461415716298,
+    "trailer_transfers": 1266761
+   },
+   "trailer_bytes_match": true
+  },
+  "recording_finalized": false,
+  "safe": false,
+  "safe_off": {},
+  "simulated": false,
+  "state": "stopping",
+  "states": [
+   {
+    "at_s": 1794590544.768592,
+    "groups_written": 13195,
+    "laser_percent": 0,
+    "state": "stopping",
+    "stop_reason": "control:stop",
+    "trigger_counts": {
+     "mono": 0,
+     "rgb": 0
+    }
+   }
+  ],
+  "status_path": "<recorded-session>/status.json",
+  "stop_reason": "control:stop",
+  "trailer": {
+   "crc_valid": true,
+   "digest_verified": false,
+   "file_bytes": 51977409627,
+   "note": "CRC-valid trailer record present; transfer digest/count matching requires the C++ verifier",
+   "path": "<recorded-session>/raw.e1r",
+   "present": true,
+   "record_type": 3,
+   "trailer_bytes": 51926738976,
+   "trailer_digest": 2411183461415716298,
+   "trailer_transfers": 1266761
+  },
+  "trigger_counts": {
+   "mono": 0,
+   "rgb": 0
+  },
+  "trigger_on": null,
+  "trigger_period_us": 100000,
+  "verified": false
+ }
+}

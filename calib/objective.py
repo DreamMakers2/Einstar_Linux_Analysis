@@ -227,21 +227,61 @@ def objective_from_cov(cov: np.ndarray, kind: str = "A",
     raise ValueError(f"unknown task objective {kind!r}")
 
 
+def gn_marginal_information(result: CalibrationResult) -> np.ndarray:
+    """Marginal (pose-eliminated) Gauss-Newton information of the rig.
+
+    Design must use the *Fisher* information ``A = J^T W J``, not the published
+    covariance: the inference covariance is the robust sandwich
+    ``A^-1 B A^-1``, which is deliberately conservative and made a single view
+    appear to remove tens of percent of the variance.
+
+    ``result.marginal_information`` used to be this Schur complement, but it is
+    now the inverse of the rig block of the *published* covariance, so the gate
+    and ``param_std`` report one estimator (see
+    ``docs/calibration/observability_model_selection.md`` §2).  Design therefore
+    derives its own Schur complement from the stored normal matrix
+    ``result.information``, exactly as the shipped code did.
+    """
+    out = np.zeros((NRIG, NRIG))
+    H = getattr(result, "information", None)
+    free = free_rig_mask(result)
+    idx = np.where(free)[0]
+    if H is None or not len(idx):
+        marg = getattr(result, "marginal_information", None)
+        if marg is None:
+            return out
+        out[np.ix_(idx, idx)] = np.asarray(marg, float)[np.ix_(idx, idx)]
+        return out
+    H = np.asarray(H, float)
+    fm = np.asarray(result.info.get("free_mask", np.ones(H.shape[0], bool)), bool)
+    rig = np.where(fm[:NRIG])[0]
+    view = np.where(fm[NRIG:])[0] + NRIG
+    Hrr = H[np.ix_(rig, rig)]
+    if len(view):
+        Hrv = H[np.ix_(rig, view)]
+        Hvv = H[np.ix_(view, view)]
+        schur = Hrr - Hrv @ np.linalg.pinv(Hvv, rcond=1e-12) @ Hrv.T
+    else:
+        schur = Hrr
+    out[np.ix_(rig, rig)] = 0.5 * (schur + schur.T)
+    return out
+
+
 def rig_covariance_gn(result: CalibrationResult) -> np.ndarray:
     """Gauss-Newton (Fisher) marginal rig covariance in mm/px units.
 
-    ``sigma^2 * inv(marginal_information)`` on the free rig block.  This is the
-    covariance implied by the Fisher information used for experimental design;
-    the robust sandwich in :mod:`calib.calibrate` is a *conservative inference*
-    covariance and is deliberately not used for design (mixing the two made a
-    single view appear to remove tens of percent of the variance).
+    ``sigma^2 * inv(gn_marginal_information)`` on the free rig block.  This is
+    the covariance implied by the Fisher information used for experimental
+    design; the robust sandwich in :mod:`calib.calibrate` is a *conservative
+    inference* covariance and is deliberately not used for design (mixing the
+    two made a single view appear to remove tens of percent of the variance).
     """
     free = free_rig_mask(result)
     idx = np.where(free)[0]
     out = np.zeros((NRIG, NRIG))
-    marg = getattr(result, "marginal_information", None)
-    if marg is None:
-        return rig_covariance(result)
+    marg = gn_marginal_information(result)
+    if not len(idx):
+        return out
     sig2 = _observation_variance(result)
     sub = np.array(marg, copy=True)[np.ix_(idx, idx)]
     out[np.ix_(idx, idx)] = sig2 * _inv_spd(sub)
@@ -486,8 +526,10 @@ def score_candidate(result: CalibrationResult, cand: ViewCandidate,
     # A = J^T W J of the accepted views; dividing by the same sigma^2 used for
     # the candidate gives a consistent information budget.
     sig2 = _observation_variance(result, sigma_px)
-    marg = getattr(result, "marginal_information", None)
-    if marg is not None:
+    # Fisher information (design), not the inverse of the published sandwich
+    # covariance: see gn_marginal_information().
+    marg = gn_marginal_information(result)
+    if np.any(marg):
         H0 = np.array(marg, copy=True)[np.ix_(idx, idx)] / sig2
     else:
         H0 = _inv_spd(C[np.ix_(idx, idx)])

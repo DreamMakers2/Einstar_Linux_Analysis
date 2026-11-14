@@ -1,0 +1,64 @@
+{
+  "schema": "einstar-offline-byte-identity/2",
+  "stage1_selected_groups": 1200,
+  "overlap_groups_with_live_ring": 3,
+  "files_compared": 9,
+  "mismatches": 0,
+  "all_identical": true,
+  "pairs": [
+    {
+      "file": "frame_013120_cam0.pgm",
+      "stage_sha256": "009452ee06c6d8b9cf21db4ab812f86eb8ad6aa980e7bd2485cc5dfae6b290e3",
+      "live_sha256": "009452ee06c6d8b9cf21db4ab812f86eb8ad6aa980e7bd2485cc5dfae6b290e3",
+      "identical": true
+    },
+    {
+      "file": "frame_013120_cam1.pgm",
+      "stage_sha256": "b8a681c32b24a78bc5ba81b090fd742714a1c6ecbf66dea5ab86d9962107b9ca",
+      "live_sha256": "b8a681c32b24a78bc5ba81b090fd742714a1c6ecbf66dea5ab86d9962107b9ca",
+      "identical": true
+    },
+    {
+      "file": "frame_013120_cam2.pgm",
+      "stage_sha256": "04b8d1fac681427e0784c14cf35ef9eb86c1724c7d195ead67d2f65b1b326727",
+      "live_sha256": "04b8d1fac681427e0784c14cf35ef9eb86c1724c7d195ead67d2f65b1b326727",
+      "identical": true
+    },
+    {
+      "file": "frame_013141_cam0.pgm",
+      "stage_sha256": "41b4ca45f1137dc7d99e2f8a36e77a9575373b6f3ccdba294b68db049f5a8ff3",
+      "live_sha256": "41b4ca45f1137dc7d99e2f8a36e77a9575373b6f3ccdba294b68db049f5a8ff3",
+      "identical": true
+    },
+    {
+      "file": "frame_013141_cam1.pgm",
+      "stage_sha256": "f2296d6716e7fba08c379d59141efef3567cbce82f4d15860e55bdaec137f8fd",
+      "live_sha256": "f2296d6716e7fba08c379d59141efef3567cbce82f4d15860e55bdaec137f8fd",
+      "identical": true
+    },
+    {
+      "file": "frame_013141_cam2.pgm",
+      "stage_sha256": "5ff1e3d048e39592e1460ae835ddf2eb6b048c7e04b1e17be9850ebf90428374",
+      "live_sha256": "5ff1e3d048e39592e1460ae835ddf2eb6b048c7e04b1e17be9850ebf90428374",
+      "identical": true
+    },
+    {
+      "file": "frame_013149_cam0.pgm",
+      "stage_sha256": "4ec5ead9c85d08b23963b11c72a67f2f23787ff62b6438f6e1f8c94fffaa6060",
+      "live_sha256": "4ec5ead9c85d08b23963b11c72a67f2f23787ff62b6438f6e1f8c94fffaa6060",
+      "identical": true
+    },
+    {
+      "file": "frame_013149_cam1.pgm",
+      "stage_sha256": "cb130bf389fbd14cc5ef698f35f5278f5775b2597bbc44361f078444392c1a78",
+      "live_sha256": "cb130bf389fbd14cc5ef698f35f5278f5775b2597bbc44361f078444392c1a78",
+      "identical": true
+    },
+    {
+      "file": "frame_013149_cam2.pgm",
+      "stage_sha256": "8a47638abb3ec78d047f019897bc1c181f106c733dfbff09b32054991b3d8605",
+      "live_sha256": "8a47638abb3ec78d047f019897bc1c181f106c733dfbff09b32054991b3d8605",
+      "identical": true
+    }
+  ]
+}

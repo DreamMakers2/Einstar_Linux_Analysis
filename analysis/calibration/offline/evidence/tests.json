@@ -1,0 +1,45 @@
+{
+  "schema": "einstar-offline-test-results/1",
+  "driver_ctest": {
+    "command": "cd build/driver && ctest --output-on-failure",
+    "tests": 14,
+    "passed": 14,
+    "failed": 0,
+    "wall_seconds": 34.6,
+    "new_test": {
+      "name": "test_stream_recording",
+      "cases": 8,
+      "checks": 281,
+      "covers": [
+        "stream reader validation + trailer match",
+        "partial destinations (1/7/4096 bytes)",
+        "zero-length/non-Ok statuses",
+        "corruption: bad CRC, truncation, wrong trailer digest/counts, missing trailer, trailing bytes, bad magic/header CRC",
+        "last_host_time_ns just-delivered semantics",
+        "streaming replay == capture bytes, start-group/selection ids, skipped counts, refuse-before-write",
+        "paced vs fast pipe bytes identical",
+        "trailer-only finalisation: declared evidence, 16 GiB sparse bounded check, missing/truncated/bad-CRC trailer",
+        "capture_simulated manifest full vs trailer evidence"
+      ]
+    },
+    "existing_suites": [
+      "test_replay_frames (6 cases)",
+      "test_capture_session (14 cases)",
+      "test_stress",
+      "test_record_replay",
+      "test_pipeline",
+      "test_transport_sim"
+    ]
+  },
+  "python_tests": {
+    "command": ".venv/bin/python -m pytest tests/test_offline_features.py -q",
+    "tests": 6,
+    "passed": 6,
+    "covers": [
+      "guidance-compatible ROI quality metrics",
+      "pose degenerate/NaN/cv2.error safety",
+      "process_group detector exception/non-finite safety + temp cleanup",
+      "corner report cell counting"
+    ]
+  }
+}

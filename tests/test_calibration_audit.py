@@ -42,11 +42,18 @@ def test_rig_covariance_is_marginal_not_conditional():
     assert np.all(np.diag(marginal)[focal] > 2.0 * np.diag(conditional)[focal])
     # and the marginal is exactly the top-left block, not a Schur complement
     assert np.allclose(marginal, rr)
-    # information/Schur consistency: inv(C_rr) = marginal information
-    sig = res.info["covariance"]["sigma_px"]
-    inv = np.linalg.solve(rr[np.ix_(idx, idx)], np.eye(len(idx))) * sig ** 2
+    # Information consistency: the marginal information is the inverse of the
+    # rig block of the published covariance.  The mu^2 factor is deliberately
+    # absent: multiplying by sigma_px**2 was the published bug (the Schur
+    # complement of the Gauss-Newton information carries no residual scale, so
+    # inverting it returned the covariance for unit-variance residuals and
+    # overstated every sigma by 1/sigma_px).
+    inv = np.linalg.solve(rr[np.ix_(idx, idx)], np.eye(len(idx)))
     M = res.marginal_information[np.ix_(idx, idx)]
     assert np.allclose(M, inv, rtol=1e-6, atol=1e-6 * np.max(np.abs(M)))
+    sd = np.sqrt(np.diag(rr))[idx]
+    sd_info = np.sqrt(np.diag(np.linalg.inv(M)))
+    assert np.allclose(sd_info, sd, rtol=1e-6)
 
 
 def test_rescaled_uses_full_jacobian():
@@ -142,3 +149,100 @@ def test_ccf_consistency_guard_rejects_bad_translation():
                       tau_translation_mm=2.0)
     assert bad["ok"] is False
     assert bad["delta_translation_mm"] > 15.0
+
+
+# ---------------------------------------------------------------------------
+# observability gate: sigma provenance and the held-out refit (2026-11-13)
+# ---------------------------------------------------------------------------
+
+def test_gate_sigma_is_the_published_covariance_sigma():
+    """The gate must report the same 1-sigma the estimator publishes.
+
+    ``marginal_sigmas`` inverts ``result.marginal_information``; that matrix is
+    now the inverse of the rig block of the *published* covariance, so the gate
+    and ``param_std`` cannot drift apart.  The old Schur complement of the
+    Gauss-Newton information had no residual scale at all and overstated every
+    sigma by 1/sigma_px (measured 3.7x on the 297-view session).
+    """
+    from tools.wizard import observability
+
+    sc, res = _fit()
+    gate = observability.observability_gate(res, None, target="standard")
+    ref = res.param_std()
+    free = [n for n in gate["free_names"] if not n.startswith("view")]
+    assert free
+    for name in free:
+        assert abs(gate["sigmas"][name] - ref[name]) <= 1e-4 * max(abs(ref[name]), 1e-12)
+    # distractor: a held parameter must not appear as a free one
+    assert not any(name.endswith(".k3") for name in free)
+
+
+def test_model_sensitivity_refit_converges():
+    """The held-out comparison must be between two *fitted* models.
+
+    The shipped implementation used SciPy TRF with a finite-difference
+    Jacobian and ``max_nfev=400``; at ~1460 free parameters it stopped before
+    completing one Jacobian, so both models were the initial guess and the
+    reported improvement was an artefact.
+    """
+    from tools.wizard import observability
+
+    sc = make_scene(12, noise_px=0.2, outlier_frac=0.0, seed=19)
+    res = calibrate(sc.observations, sc.pitch_mm, None, free_kc=False,
+                    max_nfev=400)
+    rep = observability.model_sensitivity_analysis(sc.observations, res,
+                                                   pitch=sc.pitch_mm)
+    assert rep["ok"] is True, rep
+    assert rep["refit_converged"] is True, rep
+    assert np.isfinite(rep["relative_improvement"])
+    assert rep["heldout_rms_fixed_kc_px"] > 0
+    gate = observability.observability_gate(res, None, target="standard",
+                                            model_sensitivity=rep)
+    sub = gate["gates"]["model_sensitivity"]
+    # this result holds the factory distortion, so it passes only when freeing
+    # it is *not* worth it (the gate judges the candidate's policy, both ways)
+    assert sub["distortion_free"] is False
+    assert sub["pass"] is (not bool(rep["worth_freeing"]))
+
+
+@pytest.mark.parametrize("free_kc,worth,expect_pass", [
+    (False, False, True),    # holds the factory distortion, freeing is not worth it
+    (False, True, False),    # holds it although the evidence says free it
+    (True, False, False),    # frees it although the evidence says hold it
+    (True, True, True),      # frees it and the evidence supports that
+])
+def test_model_sensitivity_gate_follows_the_candidate_policy(free_kc, worth,
+                                                             expect_pass):
+    """The gate asks whether *this* candidate's distortion policy is supported.
+
+    The shipped gate equated "worth freeing" with "pass", so a candidate that
+    correctly held the factory distortion could never pass once the held-out
+    analysis returned its (negative) answer.  Both directions must be checked.
+    """
+    from tools.wizard import observability
+
+    sc = make_scene(8, noise_px=0.15, outlier_frac=0.0, seed=23)
+    res = calibrate(sc.observations, sc.pitch_mm, None, free_kc=free_kc,
+                    max_nfev=300)
+    ms = {"ok": True, "refit_converged": True, "worth_freeing": worth,
+          "relative_improvement": 0.20 if worth else 0.01,
+          "heldout_rms_free_kc_px": 0.30, "heldout_rms_fixed_kc_px": 0.31}
+    gate = observability.observability_gate(res, None, target="standard",
+                                            model_sensitivity=ms)
+    sub = gate["gates"]["model_sensitivity"]
+    assert sub["distortion_free"] is bool(free_kc)
+    assert sub["pass"] is expect_pass
+    assert ("model_sensitivity" in gate["blocking_gates"]) is (not expect_pass)
+
+
+def test_model_sensitivity_gate_fails_when_the_refit_did_not_converge():
+    from tools.wizard import observability
+
+    sc = make_scene(8, noise_px=0.15, outlier_frac=0.0, seed=24)
+    res = calibrate(sc.observations, sc.pitch_mm, None, free_kc=False,
+                    max_nfev=300)
+    ms = {"ok": False, "reason": "refit did not converge", "worth_freeing": False}
+    gate = observability.observability_gate(res, None, target="standard",
+                                            model_sensitivity=ms)
+    assert gate["gates"]["model_sensitivity"]["pass"] is False
+    assert "model_sensitivity" in gate["blocking_gates"]

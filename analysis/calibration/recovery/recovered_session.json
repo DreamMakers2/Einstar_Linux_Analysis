@@ -1,0 +1,69 @@
+{
+ "session_dir": "<repo>/analysis/calibration/recovery/session_recovered",
+ "views": 903,
+ "accepted": 301,
+ "corners": [
+  {
+   "group": 89,
+   "view_id": 297,
+   "cell": "top-right",
+   "markers": {
+    "left": 35,
+    "right": 32,
+    "tex": 35
+   },
+   "pose_t": [
+    113.25102680679056,
+    -67.16616602482623,
+    330.668937713611
+   ]
+  },
+  {
+   "group": 5682,
+   "view_id": 298,
+   "cell": "top-right",
+   "markers": {
+    "left": 36,
+    "right": 34,
+    "tex": 40
+   },
+   "pose_t": [
+    101.54454786433294,
+    -121.00600286651442,
+    455.248471017484
+   ]
+  },
+  {
+   "group": 4019,
+   "view_id": 299,
+   "cell": "bottom-right",
+   "markers": {
+    "left": 38,
+    "right": 37,
+    "tex": 39
+   },
+   "pose_t": [
+    94.7306186776775,
+    59.70727979623124,
+    384.00690942125607
+   ]
+  },
+  {
+   "group": 6241,
+   "view_id": 300,
+   "cell": "bottom-right",
+   "markers": {
+    "left": 40,
+    "right": 40,
+    "tex": 40
+   },
+   "pose_t": [
+    105.3698890090522,
+    105.49299065390352,
+    479.63623504662837
+   ]
+  }
+ ],
+ "stationarity_rows": 11620,
+ "factory_sha256": "8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4"
+}

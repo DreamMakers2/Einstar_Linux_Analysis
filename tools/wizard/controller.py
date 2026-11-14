@@ -35,6 +35,7 @@ source=None, capture=None, ring_keep=64)``
 """
 from __future__ import annotations
 
+from collections import deque
 import copy
 from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
@@ -91,6 +92,12 @@ REASON_CATEGORIES = (
 def classify_reason(reason: str) -> str:
     """Map a free-form reason string to a stable category token."""
     text = str(reason).lower()
+    # extension (missing-view capture) rejection tokens: a hand that is not
+    # still is a motion event, a hold at an already-covered pose is redundant
+    if text in ("hold_pending", "hold_unstable"):
+        return "motion"
+    if text == "not_needed_dwell_only":
+        return "redundant"
     if any(k in text for k in ("incomplete", "missing camera", "missing tex")):
         return "incomplete"
     if any(k in text for k in ("mirrored marker", "ambiguous", "assignment",
@@ -215,6 +222,266 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, float):
         return value if math.isfinite(value) else None
     return value
+
+
+def _json_bytes(payload: Any) -> bytes:
+    """Serialize a large snapshot without the O(views) ``_jsonable`` walk.
+
+    ``manifest.json`` and ``session.json`` reached 3.4 MB / 3.5 MB in the
+    52 GB session and the recursive numpy conversion cost ~280 ms per write on
+    top of JSON encoding.  The payloads are already built from plain Python
+    values; ``json.dumps(default=...)`` converts any stray numpy scalar.  A
+    non-finite float or an exotic object falls back to the fully sanitizing
+    conversion, so the output is always valid JSON with no NaN/Infinity.
+    """
+    try:
+        text = json.dumps(payload, separators=(",", ":"),
+                          default=types._json_default, allow_nan=False)
+    except (TypeError, ValueError):
+        text = json.dumps(_jsonable(payload), separators=(",", ":"),
+                          default=types._json_default, allow_nan=False)
+    return (text + "\n").encode("utf-8")
+
+
+def _write_json_fast(path: Path, payload: Any) -> str:
+    """Atomic compact JSON write; returns the SHA-256 of the written bytes."""
+    data = _json_bytes(payload)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, path)
+    return hashlib.sha256(data).hexdigest()
+
+
+class _ProgressAdvisor:
+    """Operator progress / stagnation / unreachable-pose evidence.
+
+    Coverage thresholds are never lowered here.  The advisor watches *change*:
+    accepted views, satisfied dimensions, newly visited image corners/regions
+    and the guidance target that is being asked for.  It produces three
+    operator-facing facts:
+
+    * ``stalled`` — accepted views are accumulating without any new dimension,
+      corner or region over a window;
+    * ``stop_recommended`` — the stall is large enough that continuing to
+      record has negligible expected benefit; stopping keeps the raw recording
+      and the session status;
+    * ``unreachable`` — the same guidance target has been requested for many
+      samples/seconds without progress, so the operator is told the pose
+      *appears* physically unreachable (a heuristic, never a physical proof).
+    """
+
+    WINDOW_S = 120.0
+    STALL_S = 120.0
+    STALL_VIEWS = 60
+    STOP_S = 180.0
+    STOP_VIEWS = 90
+    UNREACHABLE_S = 75.0
+    UNREACHABLE_SAMPLES = 30
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self, *, now: float | None = None) -> None:
+        now = time.monotonic() if now is None else float(now)
+        self.started_at = now
+        self.last_progress_at = now
+        self.accepted_at_progress = 0
+        self.accepted = 0
+        self.ready = False
+        self.satisfied_dims: frozenset = frozenset()
+        self.labels: frozenset = frozenset()
+        self.labels_are_satisfied = False
+        self.corners: frozenset = frozenset()
+        self.regions: frozenset = frozenset()
+        self.progress_events: list = []
+        self.samples: deque = deque(maxlen=4096)
+        self._last_observe = None
+        self.target_key = None
+        self.target_label = ""
+        self.target_since = now
+        self.target_samples = 0
+        self.target_instruction = ""
+
+    # -- measurement tracking -------------------------------------------
+    @staticmethod
+    def _d4(coverage: Mapping[str, Any]) -> tuple[dict, list]:
+        dims = coverage.get("dimensions") or {}
+        d4 = dims.get("image_regions") or {}
+        measured = d4.get("measured") or {}
+        corners = measured.get("corners") or {}
+        regions = measured.get("region_counts") or []
+        return dict(corners), list(regions)
+
+    def observe(self, coverage: Mapping[str, Any], readiness: Mapping[str, Any],
+                *, now: float | None = None) -> list:
+        now = time.monotonic() if now is None else float(now)
+        accepted = int(readiness.get("n_views")
+                       or coverage.get("n_views") or 0)
+        self.accepted = accepted
+        self.ready = bool(readiness.get("ready"))
+        dims = coverage.get("dimensions") or {}
+        satisfied_dims = frozenset(
+            str(k) for k, v in dims.items() if isinstance(v, Mapping)
+            and v.get("satisfied"))
+        # ``readiness["satisfied"]`` is a list in the coverage module's
+        # verdict and an integer count in the controller's GUI projection.
+        # Accept both shapes: compare satisfied labels when a list is present,
+        # otherwise compare the shrinking ``unsatisfied`` label set.
+        raw_satisfied = readiness.get("satisfied")
+        if isinstance(raw_satisfied, (list, tuple, set, frozenset)):
+            labels = frozenset(str(x) for x in raw_satisfied)
+            labels_are_satisfied = True
+        else:
+            labels = frozenset(
+                str(x) for x in (readiness.get("unsatisfied") or []))
+            labels_are_satisfied = False
+        corners, region_counts = self._d4(coverage)
+        corner_hits = frozenset(
+            str(k) for k, v in corners.items()
+            if isinstance(v, (int, float)) and v > 0)
+        regions = frozenset(i for i, count in enumerate(region_counts)
+                            if isinstance(count, (int, float)) and count > 0)
+        events: list[str] = []
+        if self._last_observe is not None:
+            for key in sorted(satisfied_dims - self.satisfied_dims):
+                events.append(f"dimension {key} satisfied")
+            if labels_are_satisfied:
+                newly_satisfied = labels - self.labels
+            else:
+                newly_satisfied = self.labels - labels
+            for label in sorted(newly_satisfied):
+                events.append(f"check {label} satisfied")
+            for corner in sorted(corner_hits - self.corners):
+                events.append(f"image corner {corner} visited")
+            for region in sorted(regions - self.regions):
+                events.append(f"image region {region} visited")
+        self.satisfied_dims = satisfied_dims
+        self.labels = labels
+        self.labels_are_satisfied = labels_are_satisfied
+        self.corners = corner_hits
+        self.regions = regions
+        self._last_observe = now
+        if events:
+            self.last_progress_at = now
+            self.accepted_at_progress = accepted
+            self.progress_events.extend(events)
+            del self.progress_events[:-16]
+            # any progress means the current guidance is working
+            self.target_samples = 0
+            self.target_since = now
+        self.samples.append((now, accepted, len(satisfied_dims),
+                             len(labels), len(corner_hits),
+                             len(regions)))
+        while self.samples and now - self.samples[0][0] > 2 * self.WINDOW_S:
+            self.samples.popleft()
+        return events
+
+    def observe_guidance(self, guidance: Mapping[str, Any], *,
+                         now: float | None = None) -> None:
+        now = time.monotonic() if now is None else float(now)
+        target = guidance.get("target") or {}
+        priority = str(guidance.get("priority") or "pose")
+        mode = str(target.get("mode") or "")
+        if mode in ("done",) or priority == "none":
+            self.target_key = None
+            self.target_label = ""
+            self.target_instruction = ""
+            self.target_samples = 0
+            self.target_since = now
+            return
+        key = (
+            priority,
+            target.get("region"),
+            (None if target.get("distance_mm") is None
+             else round(float(target["distance_mm"]) / 10.0)),
+            tuple(None if v is None else round(float(v))
+                  for v in (target.get("tilt_deg") or [None, None])),
+            (None if target.get("roll_deg") is None
+             else round(float(target["roll_deg"]))),
+        )
+        if key != self.target_key:
+            self.target_key = key
+            self.target_label = str(
+                target.get("region") or target.get("label") or priority)
+            self.target_since = now
+            self.target_samples = 0
+            self.target_instruction = str(guidance.get("instruction") or "")
+        self.target_samples += 1
+
+    # -- verdict --------------------------------------------------------
+    def status(self, *, now: float | None = None,
+               groups_written: int | None = None) -> dict:
+        now = time.monotonic() if now is None else float(now)
+        since = max(0.0, now - self.last_progress_at)
+        accepted_since = max(0, self.accepted - self.accepted_at_progress)
+        window_start = now - self.WINDOW_S
+        base = next((s for s in self.samples if s[0] >= window_start),
+                    self.samples[0] if self.samples else None)
+        accepted_delta = 0 if base is None else max(0, self.accepted - base[1])
+        dims_delta = 0 if base is None else max(0, len(self.satisfied_dims)
+                                                - base[2])
+        corners_delta = 0 if base is None else max(0, len(self.corners) - base[4])
+        stalled = bool(not self.ready and self.accepted >= 25
+                       and (since >= self.STALL_S
+                            or accepted_since >= self.STALL_VIEWS))
+        stop_recommended = bool(
+            not self.ready and self.accepted >= 60 and stalled
+            and (since >= self.STOP_S or accepted_since >= self.STOP_VIEWS))
+        target_age = (0.0 if self.target_key is None
+                      else max(0.0, now - self.target_since))
+        unreachable = bool(
+            not self.ready and self.target_key is not None
+            and self.target_samples >= self.UNREACHABLE_SAMPLES
+            and target_age >= self.UNREACHABLE_S
+            and since >= min(self.UNREACHABLE_S, self.STALL_S))
+        unreachable_message = ""
+        if unreachable:
+            label = self.target_label.replace("_", " ")
+            unreachable_message = (
+                f"The {label} viewpoint appears physically unreachable from "
+                f"this setup: guidance asked for it {self.target_samples} times "
+                f"over {target_age:.0f} s with no new coverage. Reposition the "
+                "scanner or plate stand; if it still cannot be reached, stop "
+                "recording and analyse the views offline.")
+        stop_message = ""
+        if stop_recommended:
+            stop_message = (
+                f"No new coverage in {since:.0f} s after "
+                f"{accepted_since} additional accepted views "
+                f"({self.accepted} total). Marginal benefit is negligible: "
+                "stop recording and analyse the session offline. The raw "
+                "recording and status are preserved"
+                + (f" ({groups_written} groups recorded)" if groups_written
+                   else "") + ".")
+        return {
+            "schema": "einstar.progress-advisor/1",
+            "accepted": int(self.accepted),
+            "groups_recorded": (None if groups_written is None
+                                else int(groups_written)),
+            "satisfied_dimensions": len(self.satisfied_dims),
+            "visited_corners": sorted(self.corners),
+            "visited_regions": sorted(self.regions),
+            "window_s": float(self.WINDOW_S),
+            "window_accepted_delta": int(accepted_delta),
+            "window_dimension_delta": int(dims_delta),
+            "window_corner_delta": int(corners_delta),
+            "seconds_since_progress": round(float(since), 1),
+            "accepted_since_progress": int(accepted_since),
+            "last_progress_at_s": float(self.last_progress_at),
+            "last_progress_events": list(self.progress_events[-6:]),
+            "stalled": stalled,
+            "stop_recommended": stop_recommended,
+            "stop_message": stop_message,
+            "target": {
+                "key": None if self.target_key is None else repr(self.target_key),
+                "label": self.target_label,
+                "samples": int(self.target_samples),
+                "age_s": round(float(target_age), 1),
+            },
+            "unreachable": unreachable,
+            "unreachable_message": unreachable_message,
+        }
 
 
 def _pose_rt(pose: tuple[np.ndarray, np.ndarray] | None) -> dict | None:
@@ -490,7 +757,22 @@ class WizardController:
         #: crash loses at most this much progress
         self.autosave_interval_s = 2.0
         self._last_autosave_s = 0.0
+        #: debounced large-snapshot persistence.  decisions.jsonl is still
+        #: appended per decision (cheap); manifest/session are flushed on an
+        #: accepted view, on state transitions and at most every
+        #: ``autosave_interval_s`` for reject-only traffic.  This is the crash
+        #: boundary: at most one interval of reject counters is replayed.
+        self._last_persist_s = 0.0
+        self._persist_dirty = False
+        self._persist_stats = {"writes": 0, "seconds": 0.0, "throttled": 0}
+        self._manifest_digest_cache: tuple | None = None
+        self._session_extras: dict | None = None
         self._views: list[dict] = []
+        #: every ingested observation with its short-term motion metrics
+        #: (accepted, rejected, vetoed and incomplete groups).  D7 stationarity
+        #: is a property of the stream; the accepted set is sparse and biased
+        #: towards motion because duplicate dwell frames are rejected.
+        self._stationarity_observations: list[dict] = []
         self._decisions: list[dict] = []
         self._last_decision: dict | None = None
         self._last_quality: dict | None = None
@@ -506,6 +788,11 @@ class WizardController:
         self._observability_key: tuple | None = None
         self._guidance_cache: dict | None = None
         self._guidance_key: tuple | None = None
+        self._guidance_generated_at: float | None = None
+        self._guidance_accepted = 0
+        self._guidance_view_id: int | None = None
+        self._progress = _ProgressAdvisor()
+        self._final_acquisition: dict | None = None
         self._finish_result = None
         #: background session digest for candidate provenance; started at the
         #: beginning of finish so the multi-GB raw hash overlaps validation
@@ -513,6 +800,9 @@ class WizardController:
         self._candidate_hash_pool = None
         self._session_io_info: dict | None = None
         self._lifecycle: str | None = None
+        #: missing-view extension state (``begin_extension``); ``None`` for a
+        #: normal capture session.  Never set by the ordinary ingest path.
+        self.extension: dict | None = None
 
     # ------------------------------------------------------------------
     # paths / small accessors
@@ -597,9 +887,16 @@ class WizardController:
             self.state = "recording"
             self.error = None
             self._link_recording()
+            self._progress.reset()
+            self._stationarity_observations = []
+            self._last_persist_s = 0.0
+            self._persist_dirty = True
+            self._manifest_digest_cache = None
+            self._session_extras = None
             self._write_session_json()
             self._refresh_derived(force=True)
             self._write_manifest()
+            self._last_persist_s = time.monotonic()
             self._publish()
             return self._begin_result(created=True)
 
@@ -1101,6 +1398,13 @@ class WizardController:
                                 colour_bgr=bgr)
         if self.state in ("done", "finishing"):
             raise RuntimeError(f"session is {self.state}; cannot ingest")
+        if self.extension is not None:
+            # Missing-view completion: only a completed stationary hold is
+            # evidence.  The base session's geometry is already in the state;
+            # this branch never calls session.ingest (which would re-solve and
+            # could accept a duplicate as a new solver view).
+            with self._lock:
+                return self._extension_ingest(group)
         with self._lock:
             record: dict[str, Any] = {
                 "group": int(group.index), "device_group": group.device_group,
@@ -1167,8 +1471,7 @@ class WizardController:
             else:
                 self._record_reject(group, decision, record, stage)
             self._refresh_derived()
-            self._write_manifest()
-            self._write_session_json()
+            self._persist_progress(accepted=bool(decision.accepted))
             self._publish()
             return decision
 
@@ -1205,14 +1508,14 @@ class WizardController:
                        "assignment_ok": self._last_assignment_ok,
                        "status": decision.status})
         self._append_decision(record)
-        self._autosave_if_due()
+        self._record_stationarity_observation(
+            group, quality, accepted=False)
         self._last_decision = {
             "accepted": False, "reasons": [reason], "predicted_gain": None,
             "view_id": None, "quality": quality, "status": decision.status,
         }
         self._refresh_derived()
-        self._write_manifest()
-        self._write_session_json()
+        self._persist_progress()
         self._publish()
         return decision
 
@@ -1330,6 +1633,8 @@ class WizardController:
             "status": self._status_summary(),
         })
         self._append_decision(record)
+        self._record_stationarity_observation(
+            group, decision.quality, accepted=True, view_id=view_id)
         self._last_decision = {
             "accepted": True, "reasons": [], "predicted_gain": summary.get("predicted_gain"),
             "view_id": view_id, "quality": decision.quality,
@@ -1355,12 +1660,56 @@ class WizardController:
             "status": self._status_summary(),
         })
         self._append_decision(record)
+        self._record_stationarity_observation(
+            group, decision.quality, accepted=False)
         self._last_decision = {
             "accepted": False, "reasons": list(decision.reasons),
             "predicted_gain": decision.predicted_gain, "view_id": None,
             "quality": decision.quality, "status": decision.status,
         }
         self._prune_ring()
+
+    def _record_stationarity_observation(self, group, quality, *,
+                                         accepted: bool,
+                                         view_id: int | None = None) -> None:
+        """Append one ingested observation with its short-term motion metrics.
+
+        D7 needs the *stream*, not the accepted subset: duplicate dwell frames
+        are rejected as redundant, so the accepted views alone can never prove
+        stationarity.  Rejected and vetoed frames are included whenever the
+        quality evaluation produced motion metrics.
+        """
+        metrics = {}
+        if isinstance(quality, Mapping):
+            raw = quality.get("metrics")
+            if isinstance(raw, Mapping):
+                metrics = dict(raw)
+        observation = {
+            "timestamp": float(group.timestamp_s),
+            "group": int(group.index),
+            "device_group": getattr(group, "device_group", None),
+            "view_id": (None if view_id is None else int(view_id)),
+            "accepted": bool(accepted),
+            "quality": {"passed": (bool(quality.get("passed"))
+                                   if isinstance(quality, Mapping)
+                                   and quality.get("passed") is not None
+                                   else None),
+                        "metrics": metrics},
+        }
+        if not self._source_continuity():
+            # A still collection has no consecutive cadence, so the motion
+            # gate is disabled by contract; every collected still is an
+            # explicit dwell observation rather than a missing measurement.
+            # ``stationarity_still`` tells the coverage layer that each still
+            # is its own deliberate stationary pose: requiring two consecutive
+            # samples, which is right for a 10 Hz live stream, would wrongly
+            # merge/discard synthetic and vendor stills.
+            observation["stationary"] = True
+            observation["stationarity_still"] = True
+        self._stationarity_observations.append(observation)
+        # bound only pathological sessions; 13k observations are ~4 MB
+        if len(self._stationarity_observations) > 100_000:
+            del self._stationarity_observations[:50_000]
 
     def _status_summary(self) -> dict:
         return {
@@ -1370,13 +1719,46 @@ class WizardController:
             "n_solves": int(getattr(self.session, "_solves", 0)),
         }
 
+    def _persist_progress(self, *, accepted: bool = False,
+                          force: bool = False) -> bool:
+        """Debounced manifest/session persistence.
+
+        A decision used to rewrite both multi-megabyte snapshots (and re-read
+        the old session.json and re-hash the manifest) every time.  At 297
+        accepted views that was measured at ~0.5 s per decision, so the writer
+        -- not detection -- was dictating the decision rate.  Accepted views
+        are still durable immediately; reject-only traffic is flushed every
+        ``autosave_interval_s`` (configurable, including 0 in tests).  Every
+        lifecycle transition and :meth:`flush_progress` forces a write, so a
+        crash loses at most one reject batch of counters.
+        """
+        now = time.monotonic()
+        interval = max(0.0, float(self.autosave_interval_s))
+        due = bool(force or accepted or self._last_persist_s == 0.0
+                   or (now - self._last_persist_s) >= interval)
+        if not due:
+            self._persist_dirty = True
+            self._persist_stats["throttled"] += 1
+            return False
+        started = time.perf_counter()
+        try:
+            self._write_manifest()
+            self._write_session_json()
+        finally:
+            self._last_persist_s = time.monotonic()
+            self._last_autosave_s = now
+            self._persist_dirty = False
+            self._persist_stats["writes"] += 1
+            self._persist_stats["seconds"] += time.perf_counter() - started
+        return True
+
+    def flush_progress(self) -> bool:
+        """Force the debounced snapshots to disk (stop/close/finish boundary)."""
+        return self._persist_progress(force=True)
+
     def _autosave_if_due(self) -> None:
-        """Persist the resumable state every ``autosave_interval_s``."""
-        now = __import__("time").monotonic()
-        if self._last_autosave_s and now - self._last_autosave_s < self.autosave_interval_s:
-            return
-        self._last_autosave_s = now
-        self._write_session_json()
+        """Backward-compatible alias for the debounced persistence path."""
+        self._persist_progress()
 
     def _append_decision(self, record: dict) -> None:
         self._decisions.append(record)
@@ -1397,6 +1779,9 @@ class WizardController:
         self._readiness_cache = readiness
         self._refresh_observability(force=force)
         self._refresh_guidance(force=force)
+        self._progress.observe(coverage, readiness)
+        if self._guidance_cache:
+            self._progress.observe_guidance(self._guidance_cache)
 
     def _refresh_observability(self, force: bool = False,
                                full: bool = False) -> None:
@@ -1414,16 +1799,20 @@ class WizardController:
             return
         self._guidance_key = key
         self._guidance_cache = self._guidance()
+        self._guidance_generated_at = time.time()
+        self._guidance_accepted = len(self.session.accepted)
+        self._guidance_view_id = (
+            self._views[-1].get("view_id") if self._views else None)
 
     # -- coverage --------------------------------------------------------
     def measure_coverage(self) -> dict:
         """Measure the §6 dimensions from the accepted views.
 
         Uses ``tools.wizard.coverage`` (agent B) when available; otherwise the
-        local fallback below computes the same eight dimensions.  The GUI-facing
-        keys are stable: distance_bands, tilt_two_axes, roll_sectors,
-        image_regions, stereo_overlap, colour_participation, quality,
-        stationarity.
+        local fallback below computes the same eight dimensions.  The
+        stationarity observation stream (accepted/rejected/vetoed groups with
+        short-term motion metrics) is passed so D7 measures the stream rather
+        than the sparse accepted subset.
         """
         module = _optional("coverage")
         measure = getattr(module, "measure", None) if module else None
@@ -1434,7 +1823,24 @@ class WizardController:
                 if spec_cls is not None and not isinstance(spec, spec_cls):
                     spec = None
                 views = [dict(v) for v in self._views]
-                measurement = measure(views, spec)
+                observations = list(self._stationarity_observations)
+                if not self._source_continuity():
+                    # Still collections have no acquisition cadence: each
+                    # still is an independent stationary observation, not a
+                    # 10 Hz run of one dwell.  Space the D7 interval stream so
+                    # the coverage module counts stills as separate episodes;
+                    # the recorded timestamps remain untouched in
+                    # decisions.jsonl/manifest.json.
+                    observations = [
+                        dict(row, timestamp=float(index) * 2.0)
+                        for index, row in enumerate(observations)]
+                try:
+                    measurement = measure(
+                        views, spec,
+                        stationarity_observations=observations)
+                except TypeError:
+                    # older coverage module: no stream argument
+                    measurement = measure(views, spec)
                 if isinstance(measurement, dict) and measurement.get("D1"):
                     self._measurement = measurement
                     readiness = getattr(module, "readiness", None)
@@ -1466,11 +1872,21 @@ class WizardController:
 
     def _coverage_snapshot(self, measurement: Mapping[str, Any], *,
                            ready: bool) -> dict:
-        dims: dict[str, dict] = {}
-        for dim_id, key in self.COVERAGE_KEYS:
-            source = measurement.get(dim_id) or {}
-            dims[key] = {
-                "id": dim_id, "label": source.get("label", key),
+        """GUI projection of the coverage measurement: exactly eight slots.
+
+        D1-D8 map to the eight legacy keys.  D7 (stationarity / quality) is one
+        slot that carries its two *separately honest* sub-checks; the previous
+        projection emitted D7 twice (``quality`` and ``stationarity``) and
+        silently dropped D8, which is why the window showed 5/8 while the
+        measurement actually had six satisfied dimensions.
+        """
+        checks = measurement.get("checks") or {}
+
+        def _sub(name: str, parent: str = "D7") -> dict:
+            source = checks.get(name) or {}
+            return {
+                "id": f"{parent}.{name}", "parent_id": parent,
+                "label": source.get("label", name),
                 "required": _jsonable(source.get("required")),
                 "measured": _jsonable(source.get("measured")),
                 "satisfied": bool(source.get("satisfied")),
@@ -1478,23 +1894,60 @@ class WizardController:
                 "hint": source.get("hint", ""),
                 "detail": _jsonable(source.get("detail")),
             }
-        # D7 is "stationarity / quality"; expose the stationarity half under
-        # its own key so the GUI contract keeps both names.
-        check = ((measurement.get("checks") or {}).get("stationarity") or {})
-        dims["stationarity"] = {
-            "id": "D7", "label": "stationarity",
-            "required": _jsonable(check.get("required")),
-            "measured": _jsonable(check.get("measured")),
-            "satisfied": bool(check.get("satisfied")),
-            "deficit": _jsonable(check.get("deficit")),
-            "hint": check.get("hint", ""), "detail": {},
-        }
+
+        nodes: dict[str, dict] = {}
+        if measurement.get("D1"):
+            mapping = (
+                ("D1", "distance_bands"), ("D2", "tilt_two_axes"),
+                ("D3", "roll_sectors"), ("D4", "image_regions"),
+                ("D5", "stereo_overlap"), ("D6", "colour_participation"),
+                ("D7", "quality"), ("D8", "scale_artefact"),
+            )
+            for dim_id, key in mapping:
+                source = measurement.get(dim_id) or {}
+                node = {
+                    "id": dim_id, "label": source.get("label", key),
+                    "required": _jsonable(source.get("required")),
+                    "measured": _jsonable(source.get("measured")),
+                    "satisfied": bool(source.get("satisfied")),
+                    "deficit": _jsonable(source.get("deficit")),
+                    "hint": source.get("hint", ""),
+                    "detail": _jsonable(source.get("detail")),
+                    "checks": list(source.get("checks") or []),
+                }
+                if dim_id == "D7":
+                    node["label"] = "stationarity / quality"
+                    node["subchecks"] = {
+                        "quality": _sub("quality"),
+                        "stationarity": _sub("stationarity"),
+                    }
+                    node["stationarity_status"] = str(
+                        ((source.get("measured") or {}).get("stationarity_status")
+                         if isinstance(source.get("measured"), Mapping) else "")
+                        or "")
+                nodes[key] = node
+        else:
+            # local fallback shape (keys are already GUI names)
+            for key in ("distance_bands", "tilt_two_axes", "roll_sectors",
+                        "image_regions", "stereo_overlap",
+                        "colour_participation", "quality", "stationarity"):
+                source = measurement.get(key) or {}
+                nodes[key] = {
+                    "id": str(source.get("id") or key),
+                    "label": source.get("label", key),
+                    "required": _jsonable(source.get("required")),
+                    "measured": _jsonable(source.get("measured")),
+                    "satisfied": bool(source.get("satisfied")),
+                    "deficit": _jsonable(source.get("deficit")),
+                    "hint": source.get("hint", ""),
+                    "detail": _jsonable(source.get("detail")),
+                }
         ordering = ("distance_bands", "tilt_two_axes", "roll_sectors",
                     "image_regions", "stereo_overlap", "colour_participation",
-                    "quality", "stationarity")
-        ordered = {key: dims[key] for key in ordering if key in dims}
+                    "quality", "scale_artefact")
+        ordered = {key: nodes[key] for key in ordering if key in nodes}
         satisfied = sum(1 for d in ordered.values() if d["satisfied"])
-        scale = measurement.get("D8") or {}
+        d8 = ordered.get("scale_artefact") or measurement.get("D8") or {}
         return {
             "ready": bool(ready),
             "satisfied": int(satisfied),
@@ -1504,7 +1957,9 @@ class WizardController:
             "views": self._coverage_views(),
             "engine": "tools.wizard.coverage",
             "n_views": int(measurement.get("n_views") or 0),
-            "scale_artefact": _jsonable(scale),
+            "scale_artefact": _jsonable(d8),
+            "stationarity_status": ((ordered.get("quality") or {})
+                                    .get("stationarity_status", "")),
             "pose_stats": _jsonable(measurement.get("pose_stats")),
             "stability": _jsonable(measurement.get("stability")),
         }
@@ -1552,9 +2007,12 @@ class WizardController:
         return {
             "ready": bool(verdict.get("ready")),
             "missing": [str(x) for x in (verdict.get("unsatisfied") or [])],
+            "unsatisfied": [str(x) for x in
+                            (verdict.get("unsatisfied") or [])],
             "reason": str(verdict.get("summary") or ""),
             "satisfied": int(satisfied),
             "total": int(max(total, 1)),
+            "n_views": int(measurement.get("n_views") or 0),
             "unsatisfied_dimensions": list(
                 verdict.get("unsatisfied_dimensions") or []),
         }
@@ -1775,6 +2233,7 @@ class WizardController:
         satisfied = sum(1 for d in dims.values() if d["satisfied"])
         return {"ready": satisfied == len(dims), "satisfied": int(satisfied),
                 "total": len(dims), "dimensions": dims,
+                "n_views": len(views),
                 "engine": "tools.wizard.controller (fallback)"}
 
     def _readiness_from(self, coverage: Mapping[str, Any]) -> dict:
@@ -1789,8 +2248,8 @@ class WizardController:
             "image_regions": "image regions",
             "stereo_overlap": "stereo overlap",
             "colour_participation": "colour participation",
-            "quality": "image quality",
-            "stationarity": "stationarity",
+            "quality": "stationarity / quality",
+            "scale_artefact": "scale artefact",
         }
         missing, reasons = [], []
         for key, dim in dims.items():
@@ -2002,6 +2461,12 @@ class WizardController:
 
     # -- guidance --------------------------------------------------------
     def _guidance(self) -> dict:
+        # Extension mode: the plan's current pose is the only thing the
+        # operator should be asked for (dwell holds at distinct poses).
+        if self.extension is not None:
+            planned = self._extension_guidance()
+            if planned is not None:
+                return planned
         # Coverage guidance (agent B) is the operator-facing authority: it
         # knows the unsatisfied dimensions and the pose family that unlocks
         # them.  Information-gain guidance from the session is the fallback.
@@ -2148,7 +2613,7 @@ class WizardController:
                     self.capture.pause()
                 except Exception as exc:
                     self.error = f"pause failed: {exc}"
-            self._write_session_json()
+            self._persist_progress(force=True)
             self._publish()
 
     def unpause(self) -> None:
@@ -2167,38 +2632,85 @@ class WizardController:
                     self.capture.resume()
                 except Exception as exc:
                     self.error = f"resume failed: {exc}"
-            self._write_session_json()
+            self._persist_progress(force=True)
             self._publish()
 
     # ------------------------------------------------------------------
     # finish / cancel
     # ------------------------------------------------------------------
+    def stop_capture(self, reason: str = "stop requested") -> dict:
+        """First-class acquisition stop: child exit + readback + finalization.
+
+        This is the only place the controller terminates the capture child.
+        ``cancel()``, ``finish()``, GUI close and worker shutdown all route
+        here, so a reader/UI stop can never leave the scanner streaming (the
+        52 GB regression: ``cancel()`` returned while the capture child kept
+        recording for another 180 s).  Returns the authoritative acquisition
+        evidence and never raises.
+        """
+        cap = self.capture
+        if cap is None:
+            return {"attempted": False, "verified": True, "safe": True,
+                    "state": "not_applicable",
+                    "reasons": [], "acquisition": None}
+        result: dict = {}
+        try:
+            stopper = getattr(cap, "stop_and_verify", None)
+            if callable(stopper):
+                result = dict(stopper(reason=reason) or {})
+            elif getattr(cap, "running", False):
+                result = dict(cap.stop(reason=reason) or {})
+            verdict = (cap.check_safe_final_state()
+                       if hasattr(cap, "check_safe_final_state") else {})
+            acquisition = (verdict.get("acquisition")
+                           or (cap.acquisition_state()
+                               if hasattr(cap, "acquisition_state") else {}))
+            result.update({
+                "attempted": True,
+                "verified": bool(verdict.get("verified",
+                                             result.get("verified", False))),
+                "safe": bool(verdict.get("safe", result.get("safe", False))),
+                "ok": bool(verdict.get("ok", result.get("ok", False))),
+                "state": (acquisition or {}).get("state"),
+                "reasons": list(verdict.get("reasons")
+                                or result.get("reasons") or []),
+                "conflicts": list(verdict.get("conflicts") or []),
+                "acquisition": acquisition,
+                "recording_finalized": bool(verdict.get(
+                    "recording_finalized", False)),
+                "safe_off": dict(verdict.get("safe_off") or {}),
+            })
+            self._final_acquisition = dict(acquisition or {})
+            if not result["verified"]:
+                self.error = (
+                    "capture stopped without a verified safe state: "
+                    + ", ".join(str(r) for r in result["reasons"] or ["unknown"]))
+            return result
+        except Exception as exc:
+            self.error = (f"capture stop failed: {type(exc).__name__}: {exc}")
+            return {"attempted": True, "verified": False, "safe": False,
+                    "ok": False, "state": "failed",
+                    "reasons": [self.error], "acquisition": None}
+
     def _stop_capture_for_finish(self) -> bool:
         """Stop the writer before provenance hashing or validation.
 
         The raw recording must be immutable while its digest is computed and
-        while the candidate's provenance is assembled.  Previously the capture
-        child only stopped later during window shutdown, so the 5.6 GB raw file
-        could still grow while a precomputed digest was accepted.
+        while the candidate's provenance is assembled.  A finish is only
+        allowed after the *verified* stop contract: child exit, device readback
+        and recording finalization.
         """
-        cap = self.capture
-        if cap is None:
+        if self.capture is None:
             return True
-        try:
-            if getattr(cap, "running", False):
-                cap.stop(reason="final calibration")
-            verdict = cap.check_safe_final_state() if hasattr(
-                cap, "check_safe_final_state") else {"ok": True}
-            if not bool(verdict.get("ok", False)):
+        verdict = self.stop_capture(reason="final calibration")
+        if not bool(verdict.get("verified")):
+            if not self.error:
                 self.error = ("capture did not reach a verified stopped state: "
                               + ", ".join(str(r) for r in
                                           (verdict.get("reasons") or [])
                                           or ["unknown"]))
-                return False
-            return True
-        except Exception as exc:
-            self.error = f"capture stop before finish failed: {type(exc).__name__}: {exc}"
             return False
+        return True
 
     def finish(self) -> dict:
         """Final solve, candidate profile + validation report; never activates."""
@@ -2334,18 +2846,42 @@ class WizardController:
             self._finish_result = result
             return copy.deepcopy(result)
 
-    def cancel(self) -> dict:
-        """Keep all recorded data, produce no profile, state ``cancelled``."""
+    def cancel(self, *, reason: str = "operator stop") -> dict:
+        """Stop the scanner, keep all recorded data, produce no profile.
+
+        The state is ``cancelled`` only when the capture stop is verified
+        (child exit + trigger/illuminator readback + recording finalization).
+        Otherwise it is ``cancelled_unverified`` and ``error`` names the exact
+        missing evidence; the raw recording and session files are kept in
+        either case.  This used to set ``cancelled`` while the capture child
+        kept streaming, which is exactly how "SOURCE ENDED" coexisted with a
+        running scanner at 9.8 fps and laser 100 %.
+        """
         with self._lock:
-            self.state = "cancelled"
+            verdict = self.stop_capture(reason=reason)
+            verified = verdict.get("verified")
+            self._final_acquisition = dict(verdict.get("acquisition") or {})
+            if verified is False:
+                self.state = "cancelled_unverified"
+            elif verified is None and self.capture is None:
+                self.state = "cancelled"
+            else:
+                self.state = "cancelled"
+            if self.state == "cancelled":
+                self.error = None
             self.finished_wall = time.time()
-            self._write_session_json()
+            self._persist_progress(force=True)
             self._publish()
-            return {"ok": True, "state": self.state,
+            return {"ok": self.state == "cancelled",
+                    "state": self.state,
                     "session_dir": str(self.paths.root),
                     "accepted": len(self.session.accepted),
                     "rejected": len(self.session.rejected),
-                    "candidate_produced": self.candidate_path.is_file()}
+                    "candidate_produced": self.candidate_path.is_file(),
+                    "capture": verdict,
+                    "acquisition": dict(verdict.get("acquisition") or {}),
+                    "safe": bool(verdict.get("safe", False)),
+                    "reasons": list(verdict.get("reasons") or [])}
 
     # -- candidate -------------------------------------------------------
     def _candidate_profile(self, result: Any) -> dict:
@@ -2818,8 +3354,14 @@ class WizardController:
     # ------------------------------------------------------------------
     def _write_session_json(self) -> None:
         try:
-            previous = types.read_json(self.paths.session_json, default=None)
-            previous = previous if isinstance(previous, dict) else {}
+            if self._session_extras is None:
+                previous = types.read_json(self.paths.session_json, default=None)
+                previous = previous if isinstance(previous, dict) else {}
+                self._session_extras = {
+                    key: previous[key] for key in
+                    ("created_utc", "spec", "config_sha256", "history")
+                    if key in previous}
+            previous = self._session_extras
             payload = {
                 "schema": SESSION_SCHEMA,
                 "state": self.state,
@@ -2864,7 +3406,7 @@ class WizardController:
                     payload[key] = previous[key]
             if isinstance(previous.get("history"), list):
                 payload["history"] = previous["history"][-80:]
-            types.atomic_write_json(self.paths.session_json, _jsonable(payload))
+            _write_json_fast(self.paths.session_json, payload)
         except OSError as exc:
             self.error = f"cannot write session.json: {exc}"
 
@@ -2897,6 +3439,37 @@ class WizardController:
                              "n_markers": dict(a.n_markers or {}),
                              "label": str(a.label or ""),
                              "quality": dict(a.quality or {})})
+        # Acquisition-quality evidence must survive a resume; otherwise a
+        # resumed session silently loses D7 (the old 297-view session already
+        # had to reconstruct it from decisions.jsonl).  Store only the compact
+        # motion fields, not the whole quality record.
+        stationarity = []
+        for row in self._stationarity_observations:
+            metrics = ((row.get("quality") or {}).get("metrics") or {})
+            compact = {
+                "timestamp": row.get("timestamp"),
+                "group": row.get("group"),
+                "view_id": row.get("view_id"),
+                "stationaration_stationary": None,
+                "stationary": row.get("stationary"),
+                "stationarity_speed_mm_s": metrics.get("speed_mm_s"),
+                "stationarity_rate_deg_s": metrics.get("rate_deg_s"),
+                "stationarity_window_s": metrics.get("dt_s"),
+                "motion_blur_px": metrics.get("motion_blur_px"),
+            }
+            if (compact["stationarity_rate_deg_s"] is None
+                    and metrics.get("motion_deg") is not None
+                    and compact["stationarity_window_s"]):
+                compact["stationarity_rate_deg_s"] = (
+                    float(metrics["motion_deg"])
+                    / float(compact["stationarity_window_s"]))
+            if (compact["stationarity_speed_mm_s"] is None
+                    and metrics.get("motion_mm") is not None
+                    and compact["stationarity_window_s"]):
+                compact["stationarity_speed_mm_s"] = (
+                    float(metrics["motion_mm"])
+                    / float(compact["stationarity_window_s"]))
+            stationarity.append(compact)
         return {
             "schema": "einstar.wizard.resume/1",
             "state": self.state,
@@ -2905,6 +3478,7 @@ class WizardController:
             "next_view": int(self.session._next_view),
             "views": views,
             "accepted": accepted,
+            "stationarity_observations": stationarity,
             "counters": {"decisions": len(self._decisions),
                          "rejected": len(self.session.rejected),
                          "n_materialised": int(self._n_materialised)},
@@ -2951,6 +3525,65 @@ class WizardController:
         session._next_view = int(block.get("next_view") or
                                  (max((a.view_id for a in session.accepted),
                                       default=-1) + 1))
+        # Rebuild the coverage view records and the acquisition-quality stream.
+        # Before this fix a resumed session lost both: measure_coverage() saw
+        # an empty _views list, so a resumed 297-view session reported no
+        # coverage at all, and D7's dwell evidence disappeared.  The resume
+        # block already stores every camera's (label, pixel) rows; grouping
+        # them by view reconstructs image_points (D4), shared markers (D5) and
+        # the per-view quality/metadata.  A block written by this version also
+        # carries the raw stationarity observations explicitly.
+        uv_by_view: dict[int, dict[str, list[list[float]]]] = {}
+        label_by_view: dict[int, dict[str, set]] = {}
+        for entry in block.get("views") or []:
+            try:
+                view_id = int(entry["view"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            cam = str(entry.get("camera"))
+            rows = []
+            labels = set()
+            for row in entry.get("uv") or []:
+                try:
+                    labels.add((float(row[0]), float(row[1])))
+                    rows.append([float(row[2]), float(row[3])])
+                except (IndexError, TypeError, ValueError):
+                    continue
+            uv_by_view.setdefault(view_id, {})[cam] = rows
+            label_by_view.setdefault(view_id, {})[cam] = labels
+        self._views = []
+        for acc in session.accepted:
+            vid = int(acc.view_id)
+            pts = uv_by_view.get(vid, {})
+            labels = label_by_view.get(vid, {})
+            shared = (len(labels.get("left", set()) & labels.get("right", set()))
+                      if "left" in labels and "right" in labels else 0)
+            summary = _pose_summary(acc.pose) or {}
+            self._views.append({
+                "view_id": vid,
+                "group": None,
+                "materialised": None,
+                "pose": {"R": [float(x) for x in np.asarray(acc.pose[0], float).ravel()],
+                         "t": [float(x) for x in np.asarray(acc.pose[1], float).ravel()]},
+                "image_points": {cam: rows for cam, rows in pts.items()},
+                "timestamp": float(acc.timestamp) if acc.timestamp is not None else None,
+                "stationary": None,
+                "distance_mm": summary.get("distance_mm"),
+                "tilt_deg": summary.get("tilt_deg"),
+                "yaw_deg": summary.get("yaw_deg"),
+                "roll_deg": summary.get("roll_deg"),
+                "predicted_gain": float(acc.predicted_gain or 0.0),
+                "n_markers": dict(acc.n_markers or {}),
+                "quality": dict(acc.quality or {}),
+                "quality_passed": bool((acc.quality or {}).get("passed", True)),
+                "shared_markers_ir": int(shared),
+                "assignment_ok": True,
+                "solved": False,
+                "bootstrap_seed": vid == 0,
+            })
+        self._stationarity_observations = [
+            dict(row) for row in (block.get("stationarity_observations") or [])
+            if isinstance(row, Mapping)]
         # restore the *rejected count* without inventing history: a resumed
         # session must not pretend to remember decisions it never saw
         session.rejected = [{"resumed": True, "reasons": ["before resume"]}
@@ -2981,6 +3614,626 @@ class WizardController:
                 "views": len(session.obs), "next_view": session._next_view,
                 "solved": solved}
 
+    # ------------------------------------------------------------------
+    # capture missing views (extension session)
+    # ------------------------------------------------------------------
+    def begin_extension(self, base_session_dir: str | Path) -> dict:
+        """Start a NEW session that captures only the missing dwell views.
+
+        The base session is opened **read-only**: its accepted views, solver
+        observations and stationarity stream are restored into this new
+        session's state, the corrected coverage is measured, and the minimal
+        pose plan is stored.  No new capture of the base poses is performed
+        (nothing is re-detected or re-solved); this controller only ever adds
+        dwell evidence, and ``finish()`` still refuses an activatable candidate
+        while the plan is unsatisfied.
+
+        ``base_session_dir`` is the operator's recorded session (or the
+        recovered-session evidence directory that adds raw corner views from
+        the same recording).  The new directory must be different from it.
+        """
+        with self._lock:
+            if self.state not in ("idle", "cancelled", "error"):
+                return {"ok": False,
+                        "reason": f"cannot begin an extension from state "
+                                  f"{self.state!r}"}
+            try:
+                base = Path(base_session_dir).expanduser().resolve()
+            except (OSError, RuntimeError) as exc:
+                return {"ok": False, "reason": f"bad base path: {exc}"}
+            try:
+                same = base == self.paths.root.expanduser().resolve()
+            except (OSError, RuntimeError):
+                same = False
+            if same:
+                return {"ok": False,
+                        "reason": "the extension session must be a new "
+                                  "directory; the base session is read-only"}
+            try:
+                root_exists = self.paths.root.exists()
+                root_used = (root_exists
+                             and any(self.paths.root.iterdir()))
+            except OSError:
+                root_used = False
+            if root_used:
+                return {"ok": False,
+                        "reason": f"extension session directory is not empty: "
+                                  f"{self.paths.root}; refusing to overwrite it"}
+            from calib import missing_views as _missing
+            try:
+                evidence = _missing.load_base_evidence(base)
+            except Exception as exc:
+                self.error = (f"cannot load base evidence: "
+                              f"{type(exc).__name__}: {exc}")
+                return {"ok": False, "reason": self.error}
+            if (evidence.factory_sha256 and self.factory_sha256
+                    and evidence.factory_sha256 != self.factory_sha256):
+                return {"ok": False,
+                        "reason": "the base session was recorded with a "
+                                  "different factory profile "
+                                  f"({evidence.factory_sha256[:16]}… vs "
+                                  f"{self.factory_sha256[:16]}…); refusing to "
+                                  "mix sessions"}
+
+            # the new directory gets its own manifest/config exactly like any
+            # other session; the base directory is never touched
+            self.begin()
+            try:
+                self._restore_extension_base(evidence)
+                self._continuous_override = True
+                self.continuous = True
+                self.controller.continuous = True
+                measurement = self.measure_coverage()
+                plan = _missing.plan(self._measurement or measurement,
+                                     evidence, self.coverage_spec)
+                config = _missing.HoldConfig(
+                    hold_s=float((plan["poses"][0].get("hold_s")
+                                  if plan.get("poses") else 1.0) or 1.0),
+                    max_speed_mm_s=float(_spec_get(
+                        self.coverage_spec, "stationary_speed_mm_s", 3.0)),
+                    max_rate_deg_s=float(_spec_get(
+                        self.coverage_spec, "stationary_rate_deg_s", 1.5)))
+                store = _missing.ExtensionStore.create(
+                    self.paths.root / "extension",
+                    base_session_dir=evidence.session_dir,
+                    base_digests=evidence,
+                    factory_digest=self.factory_sha256,
+                    pitch_mm=self.pitch_mm,
+                    spec=self._coverage_spec_dict(),
+                    base_state=evidence.state)
+                base_keys = set()
+                for view in evidence.views:
+                    signature = _missing.pose_signature(
+                        view.get("pose"), self.coverage_spec, view)
+                    key = _missing._signature_key(signature)
+                    if key is not None:
+                        base_keys.add(key)
+            except Exception as exc:
+                self.error = (f"extension setup failed: "
+                              f"{type(exc).__name__}: {exc}")
+                self.state = "error"
+                return {"ok": False, "reason": self.error}
+            self.extension = {
+                "base_session_dir": str(evidence.session_dir),
+                "base_summary": evidence.as_json(),
+                "store": store,
+                "tracker": _missing.HoldTracker(config),
+                "plan": plan,
+                "base_keys": base_keys,
+                "dwell_keys": set(base_keys),
+                "accepted_holds": [],
+                "duplicate_holds": 0,
+                "rows": [],
+                "created_utc": datetime.now(timezone.utc).isoformat(
+                    timespec="seconds"),
+            }
+            self.state = "recording"
+            self._refresh_derived(force=True)
+            self._write_session_json()
+            self._write_manifest()
+            self._publish()
+            return {"ok": True, "created": True,
+                    "session_dir": str(self.paths.root),
+                    "base_session_dir": str(evidence.session_dir),
+                    "extension": self.extension_status()}
+
+    def _restore_extension_base(self, evidence: Any) -> None:
+        """Restore the base session state without solving or re-detecting."""
+        from calib.calibrate import Observation
+        from calib.session import AcceptedView
+        session = self.session
+        session.obs = []
+        for entry in evidence.observation_rows:
+            uv = {}
+            for row in entry.get("uv") or []:
+                try:
+                    uv[(float(row[0]), float(row[1]))] = np.asarray(
+                        row[2:4], float)
+                except (IndexError, TypeError, ValueError):
+                    continue
+            session.obs.append(Observation(str(entry.get("camera")),
+                                           int(entry.get("view")), uv))
+        session.accepted = []
+        for entry in evidence.accepted:
+            try:
+                pose = (np.asarray(entry["R"], float).reshape(3, 3),
+                        np.asarray(entry["t"], float).reshape(3))
+            except (KeyError, TypeError, ValueError):
+                continue
+            session.accepted.append(AcceptedView(
+                int(entry["view_id"]), pose,
+                float(entry.get("timestamp") or 0.0),
+                dict(entry.get("quality") or {}),
+                float(entry.get("predicted_gain") or 0.0),
+                entry.get("holdout_rms_px"),
+                dict(entry.get("n_markers") or {}),
+                str(entry.get("label") or "")))
+        accepted_ids = [int(view.view_id) for view in session.accepted]
+        session._next_view = int((max(accepted_ids) if accepted_ids else -1)
+                                 + 1)
+        session.result = None
+        session._task_cache = {}
+        session.last_pose = evidence.last_pose()
+        session.last_timestamp = None
+        rejected = int((evidence.counters or {}).get("rejected") or 0)
+        session.rejected = ([{"resumed": True, "reasons": ["before extension"]}]
+                            * rejected)
+        self._views = [dict(view) for view in evidence.views]
+        self._stationarity_observations = [
+            dict(row) for row in evidence.stationarity_observations]
+        self._n_materialised = int(
+            (evidence.counters or {}).get("n_materialised") or 0)
+        self._decisions = []
+        self._reason_counts = {}
+        self._accepted = 0
+        self._rejected = 0
+        self._seeds = 0
+        self._last_pose = evidence.last_pose()
+        self._last_quality = None
+        self._last_detections = {key: [] for key in CAMERAS}
+        self._last_decision = None
+        self._measurement = None
+        self._readiness_external = None
+
+    def _extension_pose(self, grids: Mapping[str, Any]) -> tuple | None:
+        """Board pose from the left-camera PnP (the calibration camera)."""
+        grid = grids.get("left") if isinstance(grids, Mapping) else None
+        if grid is None:
+            return None
+        detections = getattr(grid, "uv", None) or getattr(grid, "points", None)
+        if not detections or len(detections) < 8:
+            return None
+        try:
+            from calib import geometry, plate
+            points = plate.board_points_mm(self.pitch_mm)
+            index = {(float(u), float(v)): i
+                     for i, (u, v) in enumerate(plate.lattice_uv())}
+            keys = [key for key in detections if key in index]
+            if len(keys) < 8:
+                return None
+            camera = self.cameras["left"]
+            pose = geometry.solve_pnp(
+                points[[index[key] for key in keys]],
+                np.asarray([detections[key] for key in keys], np.float32),
+                np.asarray(camera.K, float), np.asarray(camera.kc, float))
+        except Exception:
+            return None
+        if pose is None:
+            return None
+        return np.asarray(pose.R, float), np.asarray(pose.t, float)
+
+    def _extension_observation(self, group, quality, status, *,
+                               timestamp: float) -> dict:
+        """One measured stationarity row per ingested extension group.
+
+        The row starts as ``stationary=False`` and is flipped only when it
+        belongs to an accepted hold window, so a hand that pauses but never
+        completes a qualified hold cannot manufacture a D7 interval.
+        """
+        metrics: dict[str, Any] = {}
+        passed = None
+        if isinstance(quality, Mapping):
+            metrics = dict(quality.get("metrics") or {})
+            passed = quality.get("passed")
+        metrics.update({
+            "dt_s": status.dt_s,
+            "speed_mm_s": status.speed_mm_s,
+            "rate_deg_s": status.rate_deg_s,
+            "stationarity_speed_mm_s": status.speed_mm_s,
+            "stationarity_rate_deg_s": status.rate_deg_s,
+            "stationarity_window_s": status.dt_s,
+        })
+        return {
+            "timestamp": float(timestamp),
+            "group": int(group.index),
+            "view_id": None,
+            "accepted": False,
+            "extension": True,
+            "quality": {"passed": (bool(passed) if passed is not None else None),
+                        "metrics": metrics},
+            "stationary": False,
+            "stationarity_speed_mm_s": status.speed_mm_s,
+            "stationarity_rate_deg_s": status.rate_deg_s,
+            "stationarity_window_s": status.dt_s,
+        }
+
+    def _extension_match_target(self, pose: Any, observed: Mapping[str, Any]) -> dict | None:
+        from calib import missing_views as _missing
+        signature = _missing.pose_signature(pose, self.coverage_spec, observed)
+        key = _missing._signature_key(signature)
+        for entry in (self.extension or {}).get("plan", {}).get("poses") or []:
+            if self._extension_target_key(entry.get("target")) == key:
+                target = dict(entry.get("target") or {})
+                target["plan_index"] = entry.get("index")
+                return _jsonable(target)
+        return None
+
+    @staticmethod
+    def _extension_target_key(target: Any) -> tuple | None:
+        if not isinstance(target, Mapping):
+            return None
+        quadrant = str(target.get("tilt_quadrant") or "")
+        if len(quadrant) != 4 or quadrant[1] != "x" or quadrant[3] != "y":
+            return None
+        cell = target.get("image_cell")
+        if not isinstance(cell, (list, tuple)) or len(cell) != 2:
+            return None
+        return (target.get("band_index"),
+                (1 if quadrant[0] == "+" else -1,
+                 1 if quadrant[2] == "+" else -1),
+                target.get("roll_sector"), (int(cell[0]), int(cell[1])))
+
+    def _extension_accept(self, group, record, stage, pose, quality, status,
+                          info, timestamp: float) -> Any | None:
+        """Store one completed hold as dwell evidence.  ``None`` = duplicate."""
+        from calib import missing_views as _missing
+        from calib.session import Decision
+        ext = self.extension
+        hold = dict(status.hold or {})
+        if not hold:
+            return None
+        observed = {"image_points": self._last_detections}
+        signature = _missing.pose_signature(hold.get("pose"),
+                                            self.coverage_spec, observed)
+        key = _missing._signature_key(signature)
+        if key is None:
+            return None
+        if key in ext["dwell_keys"]:
+            ext["duplicate_holds"] = int(ext.get("duplicate_holds", 0)) + 1
+            return None
+        view_id = int(self.session._next_view)
+        self.session._next_view = view_id + 1
+        target = self._extension_match_target(hold.get("pose"), observed)
+        hold.update({
+            "view_id": view_id,
+            "group": int(group.index),
+            "device_group": group.device_group,
+            "quality": quality,
+            "n_markers": dict(info.get("markers") or {}),
+            "shared_markers_ir": int(info.get("shared_markers_ir") or 0),
+            "assignment_ok": bool(info.get("assignment_ok", True)),
+            "image_points": _jsonable(self._last_detections),
+            "target": target,
+            "observed_cell": (None if signature is None
+                              else signature.get("cell")),
+            "frame_digest": record.get("digest"),
+            "extension_note": record.get("extension_note"),
+        })
+        # a changed base digest raises here (ExtensionStore refuses it); the
+        # caller turns that into the session's error state
+        stored = ext["store"].append_hold(hold)
+        # flip the measured rows that belong to the accepted hold window
+        tracker_config = ext["tracker"].config
+        max_speed = float(tracker_config.max_speed_mm_s)
+        max_rate = float(tracker_config.max_rate_deg_s)
+        started = float(hold.get("started_ts") or 0.0)
+        for row in ext["rows"]:
+            try:
+                if float(row.get("timestamp") or 0.0) + 1e-9 < started:
+                    continue
+            except (TypeError, ValueError):
+                continue
+            speed = row.get("stationarity_speed_mm_s")
+            rate = row.get("stationarity_rate_deg_s")
+            still = ((speed is None or float(speed) <= max_speed)
+                     and (rate is None or float(rate) <= max_rate))
+            if not still:
+                continue
+            row["stationary"] = True
+            row["accepted"] = True
+            row["hold_id"] = stored.get("hold_id")
+            if row.get("view_id") is None:
+                row["view_id"] = view_id
+        hold_pose = hold.get("pose") or {}
+        summary = _pose_summary((
+            np.asarray(hold_pose.get("R"), float),
+            np.asarray(hold_pose.get("t"), float))) or {}
+        view = {
+            "view_id": view_id,
+            "group": int(group.index),
+            "device_group": group.device_group,
+            "materialised": (stage.name if stage is not None else None),
+            "pose": hold_pose,
+            "image_points": _jsonable(self._last_detections),
+            "timestamp": float(timestamp),
+            "stationary": True,
+            "distance_mm": summary.get("distance_mm"),
+            "tilt_deg": summary.get("tilt_deg"),
+            "yaw_deg": summary.get("yaw_deg"),
+            "roll_deg": summary.get("roll_deg"),
+            "predicted_gain": 0.0,
+            "holdout_rms_px": None,
+            "n_markers": dict(info.get("markers") or {}),
+            "quality": quality,
+            "quality_passed": bool((quality or {}).get("passed")),
+            "shared_markers_ir": int(info.get("shared_markers_ir") or 0),
+            "assignment": _jsonable(info.get("assignment")),
+            "assignment_ok": bool(info.get("assignment_ok", True)),
+            "digest": record.get("digest"),
+            "solved": False,
+            "bootstrap_seed": False,
+            "dwell": True,
+            "extension": True,
+            "hold_id": stored.get("hold_id"),
+            "hold_duration_s": hold.get("duration_s"),
+            "hold_mean_speed_mm_s": hold.get("mean_speed_mm_s"),
+            "hold_mean_rate_deg_s": hold.get("mean_rate_deg_s"),
+            "extension_note": record.get("extension_note"),
+            "target": target,
+        }
+        self._views.append(view)
+        ext["accepted_holds"].append(stored)
+        ext["dwell_keys"].add(key)
+        self._accepted += 1
+        decision = Decision(True, [], quality, None, view_id, False,
+                            self._status_summary())
+        record.update({
+            "accepted": True, "reasons": [], "predicted_gain": None,
+            "view_id": view_id, "solved": False, "quality": quality,
+            "markers": dict(info.get("markers") or {}),
+            "shared_markers_ir": int(info.get("shared_markers_ir") or 0),
+            "assignment_ok": bool(info.get("assignment_ok", True)),
+            "status": decision.status, "extension": True,
+            "hold_id": stored.get("hold_id"),
+        })
+        self._append_decision(record)
+        self._last_quality = quality
+        self._last_decision = {
+            "accepted": True, "reasons": [], "predicted_gain": None,
+            "view_id": view_id, "quality": quality, "status": decision.status,
+        }
+        self._refresh_derived(force=True)
+        self._persist_progress(accepted=True)
+        self._publish()
+        return decision
+
+    def _extension_reject(self, group, record, reason: str, quality,
+                          status) -> Any:
+        from calib.session import Decision
+        detail = None
+        if reason == "hold_pending" and status.rejected:
+            detail = status.rejected.get("detail")
+        elif reason == "not_needed_dwell_only" and status.state == "ACCEPTED":
+            detail = "this hold duplicates a pose the session already has"
+        entry = {"timestamp": float(group.timestamp_s), "reasons": [reason],
+                 "quality": quality, "extension": True}
+        if detail:
+            entry["detail"] = str(detail)
+        self.session.rejected.append(entry)
+        decision = Decision(False, [reason], quality, None, None, False,
+                            self._status_summary())
+        self._rejected += 1
+        self._bump_reason(reason)
+        record.update({
+            "accepted": False, "reasons": [reason], "predicted_gain": None,
+            "view_id": None, "solved": False, "quality": quality,
+            "markers": dict(self._last_markers),
+            "shared_markers_ir": int(self._last_shared),
+            "assignment_ok": bool(self._last_assignment_ok),
+            "status": decision.status, "extension": True,
+        })
+        if detail:
+            record["extension_detail"] = str(detail)
+        self._append_decision(record)
+        self._last_quality = quality
+        self._last_decision = {
+            "accepted": False, "reasons": [reason], "predicted_gain": None,
+            "view_id": None, "quality": quality, "status": decision.status,
+        }
+        # Coverage is not re-measured on every rejected hold sample: at 301
+        # base views that is ~0.2 s, which would dominate the 10 Hz loop.  The
+        # measurement is refreshed when a hold is accepted and on demand.
+        self._publish()
+        return decision
+
+    def _extension_ingest(self, group: types.FrameGroup) -> Any:
+        """Dwell-only ingest path used while ``self.extension`` is active."""
+        from calib.session import Decision, FrameSet
+        if self.extension is None:
+            raise RuntimeError("not an extension session")
+        record: dict[str, Any] = {
+            "group": int(group.index), "device_group": group.device_group,
+            "source": group.source, "label": group.label,
+            "timestamp_s": float(group.timestamp_s),
+            "digest": group.digest(), "extension": True,
+        }
+        images = {key: np.asarray(group.images[key])
+                  for key in CAMERAS if key in group.images}
+        record["cameras"] = sorted(images)
+        if not group.complete or set(images) != set(CAMERAS):
+            missing = [key for key in CAMERAS if key not in images]
+            reason = ("incomplete group: missing "
+                      + (", ".join(missing) if missing else "cameras"))
+            return self._veto(group, images, reason, record, Decision, FrameSet)
+        stage = self._materialise(group)
+        if stage is None:
+            return self._veto(group, images,
+                              "io: cannot materialise the frame triplets",
+                              record, Decision, FrameSet)
+        self._n_materialised += 1
+        try:
+            grids, raw = self._detect(images)
+            reason, info = self._pre_checks(images, grids, raw)
+        except Exception as exc:
+            return self._veto(group, images,
+                              f"controller error during detection: "
+                              f"{type(exc).__name__}: {exc}", record,
+                              Decision, FrameSet)
+        self._last_markers = dict(info["markers"])
+        self._last_shared = int(info["shared_markers_ir"])
+        self._last_assignment_ok = bool(info.get("assignment_ok", True))
+        info = dict(info)
+        info["assignment_ok"] = self._last_assignment_ok
+        self._last_detections = self._detections(raw)
+        if reason is not None:
+            # Colour participation is D6 over the base session, not a property
+            # a dwell frame must satisfy: at a corner pose the colour sensor can
+            # lose the plate while both IR cameras see it perfectly.  The base
+            # session already satisfies D6, and dwell views are excluded from
+            # D6, so a colour-only veto would discard valid D7 evidence.
+            colour_only = (reason.startswith("tex:")
+                           or "colour" in reason.lower())
+            if not colour_only:
+                return self._veto(group, images, reason, record, Decision,
+                                  FrameSet, obs_grids=grids, raw=raw,
+                                  extras={**info, "veto": "controller"})
+            record["extension_note"] = reason
+        pose = self._extension_pose(grids)
+        if pose is None:
+            return self._veto(group, images,
+                              "extension: no board pose from the left camera",
+                              record, Decision, FrameSet, obs_grids=grids,
+                              raw=raw, extras={**info, "veto": "controller"})
+        self._last_pose = pose
+        quality = self._veto_quality(images, grids)
+        if not bool(quality.get("passed", True)):
+            reasons = ", ".join(str(item) for item in
+                                (quality.get("reasons") or [])[:3])
+            return self._veto(
+                group, images,
+                f"extension: frame quality failed ({reasons or 'unknown'})",
+                record, Decision, FrameSet, obs_grids=grids, raw=raw,
+                extras={**info, "veto": "controller"})
+        timestamp = float(group.timestamp_s)
+        status = self.extension["tracker"].update(timestamp, pose[0], pose[1])
+        observation = self._extension_observation(group, quality, status,
+                                                  timestamp=timestamp)
+        self._stationarity_observations.append(observation)
+        self.extension["rows"].append(observation)
+        if status.state == "ACCEPTED" and status.hold:
+            from calib import missing_views as _missing
+            try:
+                decision = self._extension_accept(group, record, stage, pose,
+                                                  quality, status, info,
+                                                  timestamp)
+            except _missing.BaseSessionChanged as exc:
+                # the base recording is no longer the evidence this extension
+                # was created for: stop instead of mixing two sessions
+                self.error = f"base session changed during the extension: {exc}"
+                self.state = "error"
+                self._write_session_json()
+                self._publish()
+                return Decision(False, [self.error], quality, None, None,
+                                False, self._status_summary())
+            if decision is not None:
+                return decision
+            return self._extension_reject(
+                group, record, "not_needed_dwell_only", quality, status)
+        if status.rejected and status.rejected.get("reason") == "hold_unstable":
+            return self._extension_reject(group, record, "hold_unstable",
+                                          quality, status)
+        if status.state == "HOLDING" or status.reason == "holding" or (
+                status.rejected
+                and status.rejected.get("reason") == "hold_too_short"):
+            return self._extension_reject(group, record, "hold_pending",
+                                          quality, status)
+        return self._extension_reject(group, record, "not_needed_dwell_only",
+                                      quality, status)
+
+    def extension_status(self) -> dict:
+        """Plan, current target, live hold progress and accepted holds.
+
+        Cheap (cached measurement only) so the GUI can poll it at 10 Hz.
+        """
+        ext = self.extension
+        if not ext:
+            return {"active": False, "activation": {"activated": False}}
+        from calib import missing_views as _missing
+        tracker = ext["tracker"]
+        status = tracker.status()
+        measurement = self._measurement or {}
+        stationarity = ((measurement.get("checks") or {})
+                        .get("stationarity") or {})
+        measured = stationarity.get("measured") or {}
+        intervals = int(measured.get("n_stationary_intervals") or 0)
+        required = int(_spec_get(self.coverage_spec, "min_stationary_views", 6))
+        plan = ext.get("plan") or {"poses": []}
+        accepted = list(ext.get("accepted_holds") or [])
+        matched = {self._extension_target_key(hold.get("target"))
+                   for hold in accepted}
+        current = None
+        for entry in plan.get("poses") or []:
+            if self._extension_target_key(entry.get("target")) not in matched:
+                current = entry
+                break
+        coverage = self._coverage_cache or {}
+        readiness = self._readiness_cache or {}
+        store = ext.get("store")
+        return {
+            "active": True,
+            "state": self.state,
+            "created_utc": ext.get("created_utc"),
+            "base_session_dir": ext.get("base_session_dir"),
+            "extension_dir": (str(store.root) if store is not None else None),
+            "plan": _jsonable(plan),
+            "current_target": _jsonable(current),
+            "hold": status.as_dict(),
+            "accepted_holds": [
+                {"hold_id": hold.get("hold_id"),
+                 "view_id": hold.get("view_id"),
+                 "duration_s": hold.get("duration_s"),
+                 "mean_speed_mm_s": hold.get("mean_speed_mm_s"),
+                 "mean_rate_deg_s": hold.get("mean_rate_deg_s"),
+                 "n_samples": hold.get("n_samples"),
+                 "target": hold.get("target"),
+                 "observed_cell": hold.get("observed_cell")}
+                for hold in accepted],
+            "n_accepted_holds": len(accepted),
+            "n_duplicate_holds": int(ext.get("duplicate_holds", 0)),
+            "required_dwell": required,
+            "recorded_intervals": intervals,
+            "remaining_dwell": max(0, required - intervals),
+            "satisfied": int(coverage.get("satisfied", 0)),
+            "total": int(coverage.get("total", 8)),
+            "ready": bool(readiness.get("ready", False)),
+            "missing": list(readiness.get("missing") or []),
+            "activation": _missing.activation_gate(),
+        }
+
+    def _extension_guidance(self) -> dict | None:
+        """The plan's current pose, in the GUI's guidance shape."""
+        status = self.extension_status()
+        target = status.get("current_target")
+        if not target:
+            return None
+        machine = target.get("target") or {}
+        instruction = str(target.get("instruction")
+                          or target.get("description") or "hold still")
+        return {
+            "instruction": instruction,
+            "detail": str(target.get("reason") or ""),
+            "priority": "stability",
+            "target": {
+                "distance_mm": machine.get("distance_mm"),
+                "tilt_deg": [machine.get("tilt_x_deg"),
+                             machine.get("tilt_y_deg")],
+                "roll_deg": machine.get("roll_deg"),
+                "region": machine.get("image_cell_name"),
+                "label": "dwell",
+                "mode": "dwell",
+            },
+        }
+
     def _left_intrinsics_dict(self) -> dict | None:
         """Left IR intrinsics for the 3-D preview (calibration happens on it)."""
         try:
@@ -2991,12 +4244,21 @@ class WizardController:
             return None
 
     def _manifest_sha256(self) -> str | None:
+        path = self.paths.manifest_json
         try:
-            if self.paths.manifest_json.is_file():
-                return _sha256_file(self.paths.manifest_json)
+            stat = path.stat()
         except OSError:
-            pass
-        return None
+            return None
+        cache = self._manifest_digest_cache
+        key = (stat.st_mtime_ns, stat.st_size)
+        if cache is not None and cache[0] == key:
+            return cache[1]
+        try:
+            digest = _sha256_file(path)
+        except OSError:
+            return None
+        self._manifest_digest_cache = (key, digest)
+        return digest
 
     def _redundant_count(self) -> int:
         return sum(self._reason_counts.get(k, 0)
@@ -3043,8 +4305,11 @@ class WizardController:
 
     def _write_manifest(self) -> None:
         try:
-            types.atomic_write_json(self.paths.manifest_json,
-                                    _jsonable(self._manifest_payload()))
+            digest = _write_json_fast(self.paths.manifest_json,
+                                      self._manifest_payload())
+            stat = self.paths.manifest_json.stat()
+            self._manifest_digest_cache = ((stat.st_mtime_ns, stat.st_size),
+                                           digest)
         except OSError as exc:
             self.error = f"cannot write manifest.json: {exc}"
 
@@ -3236,6 +4501,30 @@ class WizardController:
             "readiness": {"ready": False, "missing": [], "reason": ""},
         }
 
+    def _effective_session_state(self) -> tuple[str, str | None]:
+        """Never report a terminal session state over a live scanner.
+
+        A reader/worker stop is not a capture stop.  If the authoritative
+        acquisition still owns a running child, a ``cancelled``/``done``
+        controller state is downgraded to ``error`` with the reason attached.
+        """
+        state = self.state
+        if state not in ("cancelled", "done", "error") or self.capture is None:
+            return state, None
+        try:
+            acq = (self.capture.acquisition_state()
+                   if hasattr(self.capture, "acquisition_state") else {})
+        except Exception:
+            return state, None
+        child_running = bool((acq.get("child") or {}).get("running"))
+        acq_state = str(acq.get("state") or "")
+        if child_running or acq_state in ("running", "starting", "paused",
+                                          "stopping"):
+            reason = (f"session state {state!r} is not terminal: the capture "
+                      f"process is still {acq_state or 'running'}")
+            return "error", reason
+        return state, None
+
     def _source_dict(self) -> dict:
         info = self.source_info
         return {
@@ -3258,8 +4547,26 @@ class WizardController:
                 status = self.capture.status()
             except Exception:
                 status = {}
+            acquisition: dict = {}
+            try:
+                state_fn = getattr(self.capture, "acquisition_state", None)
+                if callable(state_fn):
+                    acquisition = dict(state_fn() or {})
+            except Exception as exc:
+                acquisition = {"state": "failed", "verified": False,
+                               "safe": False, "terminal": True,
+                               "reasons": [f"acquisition state unavailable: "
+                                           f"{type(exc).__name__}: {exc}"]}
             base.update({
+                # ``state`` is the raw status-file value, kept for
+                # compatibility.  ``authoritative_state``/``acquisition`` are
+                # the only values the UI may present as the scanner state.
                 "state": status.get("state", "unknown"),
+                "authoritative_state": acquisition.get("state", "unknown"),
+                "verified": bool(acquisition.get("verified")),
+                "safe": bool(acquisition.get("safe")),
+                "terminal": bool(acquisition.get("terminal")),
+                "acquisition": acquisition,
                 "fps": status.get("fps") or 0.0,
                 "groups_written": status.get("groups_written", 0),
                 "drops": status.get("drops", 0),
@@ -3275,14 +4582,29 @@ class WizardController:
                 "gain": status.get("gain"),
                 "laser_percent": status.get("laser_percent"),
                 "trigger_period_us": status.get("trigger_period_us"),
+                "trigger_counts": status.get("trigger_counts"),
                 "frames_completed": status.get("frames_completed"),
                 "frames_dropped": status.get("frames_dropped"),
                 "transfer_timeouts": status.get("transfer_timeouts"),
+                "cleanup_attempted": status.get("cleanup_attempted"),
                 "cleanup_verified": status.get("cleanup_verified"),
             })
         else:
             base["disk_free_gb"] = self._disk_free_gb()
             base["groups_on_disk"] = self._ring_group_count()
+            base["authoritative_state"] = "not_applicable"
+            base["acquisition"] = {
+                "schema": "einstar.acquisition-state/1",
+                "state": "not_applicable",
+                "state_label": "not applicable (no capture process)",
+                "terminal": True,
+                "verified": None,
+                "safe": None,
+                "reasons": [],
+                "conflicts": [],
+                "evidence_notes": ["replay/synthetic source: no scanner "
+                                   "process is owned by this session"],
+            }
         return base
 
     def _disk_free_gb(self) -> float | None:
@@ -3308,6 +4630,12 @@ class WizardController:
                                   "dimensions": {}})
         readiness = copy.deepcopy(self._readiness_cache or
                                   {"ready": False, "missing": [], "reason": ""})
+        capture = self._capture_dict()
+        progress = self._progress_snapshot(capture)
+        guidance = self._guidance_snapshot(progress)
+        readiness["progress"] = progress
+        readiness["stop_recommended"] = bool(progress.get("stop_recommended"))
+        readiness["unreachable"] = bool(progress.get("unreachable"))
         snapshot = {
             "state": self.state,
             "error": self.error,
@@ -3337,20 +4665,98 @@ class WizardController:
             "shared_markers_ir": int(self._last_shared),
             "assignment_ok": bool(self._last_assignment_ok),
             "quality": _quality_summary(self._last_quality),
-            "capture": self._capture_dict(),
+            "capture": capture,
             "coverage": coverage,
             "observability": copy.deepcopy(self._observability_cache or {}),
-            "guidance": copy.deepcopy(self._guidance_cache or
-                                      {"instruction": "move to a new pose",
-                                       "detail": "", "priority": "pose",
-                                       "target": {}}),
+            "guidance": guidance,
             "readiness": readiness,
+            "performance": {
+                "decisions": len(self._decisions),
+                "accepted": len(self._views),
+                "persist": dict(self._persist_stats),
+                "persist_interval_s": float(self.autosave_interval_s),
+            },
         }
+        if self.extension is not None:
+            snapshot["extension"] = self.extension_status()
         with self._snap_lock:
             self._published = _jsonable(snapshot)
 
+    def _progress_snapshot(self, capture: Mapping[str, Any],
+                           *, now: float | None = None) -> dict:
+        """Progress/stagnation facts refreshed on every snapshot (not cached)."""
+        groups = capture.get("groups_written")
+        progress = self._progress.status(
+            now=now, groups_written=(None if groups is None else int(groups)))
+        coverage = self._coverage_cache or {}
+        dims = coverage.get("dimensions") or {}
+        missing_dims = [
+            {"key": key, "label": str((node or {}).get("label") or key),
+             "hint": str((node or {}).get("hint") or "")}
+            for key, node in dims.items()
+            if isinstance(node, Mapping) and not node.get("satisfied")]
+        d4 = dims.get("image_regions") or {}
+        measured = d4.get("measured") or {}
+        corners = measured.get("corners") or {}
+        missing_corners = [
+            str(name) for name, count in corners.items()
+            if isinstance(count, (int, float)) and count < 1]
+        regions = measured.get("region_counts") or []
+        missing_regions = [
+            int(index) for index, count in enumerate(regions)
+            if isinstance(count, (int, float)) and count == 0]
+        progress["missing_dimensions"] = missing_dims
+        progress["missing_corners"] = missing_corners
+        progress["missing_image_regions"] = missing_regions
+        progress["ready"] = bool((self._readiness_cache or {}).get("ready"))
+        progress["missing"] = list((self._readiness_cache or {}).get("missing")
+                                   or [])
+        if missing_corners:
+            progress["remaining_information"] = (
+                "missing image corners: " + ", ".join(
+                    c.replace("_", " ") for c in missing_corners))
+        elif missing_dims:
+            progress["remaining_information"] = (
+                "missing dimensions: " + ", ".join(
+                    d["label"] for d in missing_dims[:3]))
+        else:
+            progress["remaining_information"] = ""
+        return progress
+
+    def _guidance_snapshot(self, progress: Mapping[str, Any],
+                           *, now: float | None = None) -> dict:
+        """Guidance cache + freshness/measurement identity + progress facts."""
+        now = time.time() if now is None else float(now)
+        guidance = copy.deepcopy(
+            self._guidance_cache
+            or {"instruction": "Waiting for the first accepted view",
+                "detail": "", "priority": "none", "target": {}})
+        generated = self._guidance_generated_at
+        age = None if generated is None else max(0.0, now - generated)
+        coverage = self._coverage_cache or {}
+        guidance.update({
+            "generated_at_s": generated,
+            "age_s": (None if age is None else round(float(age), 3)),
+            "current": (None if age is None else bool(age <= 2.0)),
+            "based_on_accepted": int(self._guidance_accepted),
+            "based_on_view_id": self._guidance_view_id,
+            "measurement_views": int(coverage.get("n_views") or 0),
+            "progress": dict(progress),
+        })
+        return guidance
+
     def close(self) -> None:
-        """Release the detector pools (the window calls this on close)."""
+        """Stop any live capture, flush evidence, then release the pools."""
+        if self.capture is not None and getattr(self.capture, "running", False):
+            try:
+                self.stop_capture(reason="controller closed")
+            except Exception:
+                pass
+        try:
+            self.flush_progress()
+            self._publish()
+        except Exception:
+            pass
         pool = getattr(self, "_detect_executor", None)
         if pool is not None:
             pool.shutdown(wait=False)
@@ -3375,9 +4781,26 @@ class WizardController:
         with self._snap_lock:
             snapshot = copy.deepcopy(self._published)
         snapshot["session"]["elapsed_s"] = float(self.elapsed_s)
-        snapshot["state"] = self.state
-        snapshot["error"] = self.error
-        snapshot["capture"] = self._capture_dict()
+        effective_state, state_error = self._effective_session_state()
+        snapshot["state"] = effective_state
+        snapshot["error"] = self.error or state_error
+        capture = self._capture_dict()
+        snapshot["capture"] = capture
+        try:
+            progress = self._progress_snapshot(capture)
+            snapshot["guidance"] = self._guidance_snapshot(progress)
+            readiness = snapshot.get("readiness")
+            if isinstance(readiness, dict):
+                readiness["progress"] = progress
+                readiness["stop_recommended"] = bool(
+                    progress.get("stop_recommended"))
+                readiness["unreachable"] = bool(progress.get("unreachable"))
+        except Exception as exc:
+            snapshot["guidance"] = dict(
+                snapshot.get("guidance") or {},
+                progress={"error": f"{type(exc).__name__}: {exc}"})
+        snapshot.setdefault("performance", {})["persist"] = dict(
+            self._persist_stats)
         return snapshot
 
 

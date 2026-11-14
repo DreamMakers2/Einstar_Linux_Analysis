@@ -86,7 +86,7 @@ from .geometry import project, rodrigues, rvec_from_R
 __all__ = [
     "CAMERAS", "NRIG", "Problem", "make_problem", "solve_joint",
     "backend_report", "solve_engine", "reconstruct_point", "reconstruction_error", "point_sigma",
-    "LOSSES", "NATIVE_BINARY",
+    "full_free_mask", "LOSSES", "NATIVE_BINARY",
 ]
 
 # --------------------------------------------------------------------------
@@ -128,6 +128,29 @@ def _kc_mask(free_kc) -> np.ndarray:
     if arr.shape != (5,):
         raise ValueError("free_kc sequence must have length 5")
     return arr.astype(bool)
+
+
+def full_free_mask(problem: "Problem", *, free_kc=True,
+                   free_intrinsics: bool = True,
+                   fix_left_intrinsics: bool = False,
+                   held: Sequence[str] = ()) -> np.ndarray:
+    """Free mask over the packed vector, expressed with parameter *names*.
+
+    Model selection has to ask questions the keyword knobs cannot express
+    ("hold the principal point but free k1", "free only fx"), so the mask is
+    built here from ``problem.names`` (``left.fx`` .. ``tex.tz``, then
+    ``view0.rx`` ..).  ``held`` lists the parameters to hold at their current
+    value; every other parameter allowed by the keyword knobs stays free.
+    """
+    mask = problem.free_mask(free_kc, free_intrinsics, fix_left_intrinsics)
+    index = {str(n): i for i, n in enumerate(problem.names)}
+    for name in held:
+        key = str(name)
+        if key not in index:
+            raise ValueError(f"unknown parameter {key!r}; names look like "
+                             f"'left.fx' or 'right.tz'")
+        mask[index[key]] = False
+    return mask
 
 
 # --------------------------------------------------------------------------
@@ -284,25 +307,60 @@ class Problem:
         return self
 
     def start(self, free_kc=True, free_intrinsics: bool = True,
-              fix_left_intrinsics: bool = False) -> np.ndarray:
+              fix_left_intrinsics: bool = False,
+              free=None) -> np.ndarray:
         """The engine's own initial guess (OpenCV intrinsics + PnP rig/poses).
 
         Cached per distortion-model choice, because that choice changes whether
         OpenCV estimates the distortion coefficients during initialisation.
+
+        ``free`` is the explicit mask of :meth:`free_mask`.  A parameter that is
+        *held* must also start at the caller's value: OpenCV's initialisation
+        estimates the whole intrinsic block whenever ``free_intrinsics`` is
+        True, so a held principal point would otherwise keep the OpenCV value
+        and the "held" model would silently publish a different (unoptimised)
+        principal point than the one the caller asked to hold.  This makes
+        "held" mean "fixed at ``init_cameras``" for the intrinsic block.
         """
-        key = bool(np.any(_kc_mask(free_kc)))
+        mask = None if free is None else np.asarray(free, bool).ravel()
+        key = (bool(np.any(_kc_mask(free_kc))),
+               None if mask is None else mask.tobytes())
         if self.x0 is not None and getattr(self, "_x0_key", None) == key:
             return self.x0.copy()
         cams0 = engine._initial_intrinsics(self.observations, self.init_cameras,
-                                          self.obj, key)
+                                          self.obj, key[0])
         views0, extr0 = engine._initial_poses(self.observations, cams0, self.obj)
-        self.x0 = _pack_initial(cams0, extr0, views0, self.packer)
+        x = _pack_initial(cams0, extr0, views0, self.packer)
+        if mask is not None:
+            for i, c in enumerate(CAMERAS):
+                base = 9 * i
+                if not mask[base:base + 9].all():
+                    ref = self.init_cameras[c].as_vec()
+                    for j in range(9):
+                        if not mask[base + j]:
+                            x[base + j] = float(ref[j])
+        self.x0 = x
         self._x0_key = key
         return self.x0.copy()
 
     # -- parameter masks -------------------------------------------------
     def free_mask(self, free_kc=True, free_intrinsics: bool = True,
-                  fix_left_intrinsics: bool = False) -> np.ndarray:
+                  fix_left_intrinsics: bool = False,
+                  free=None) -> np.ndarray:
+        """Boolean mask of the estimated parameters.
+
+        ``free`` overrides everything else with an explicit mask over the full
+        packed vector.  That is what model selection needs: the keyword knobs
+        only express "all four intrinsics free/fixed" and "all/none of the
+        distortion coefficients", whereas deciding whether, e.g., only ``fx``
+        or only the principal point may float requires a per-parameter answer.
+        """
+        if free is not None:
+            m = np.asarray(free, bool).ravel()
+            if m.size != self.packer.n:
+                raise ValueError(f"explicit free mask must have length "
+                                 f"{self.packer.n}, got {m.size}")
+            return m.copy()
         mask = np.ones(self.packer.n, bool)
         kc = _kc_mask(free_kc)
         for i, c in enumerate(CAMERAS):
@@ -591,6 +649,22 @@ def covariance_from_jacobian(J: np.ndarray, r: np.ndarray, free_idx: np.ndarray,
         "rcond": float(rcond),
         "n_prior_rows": int(0 if prior_pos is None else len(prior_pos)),
     }
+    # The raw condition number mixes px, mm, rad and distortion coefficients, so
+    # it has no absolute meaning.  The column-normalised one is unit-free: it is
+    # the condition number of the *correlation* form of J^T J and is the only
+    # number an absolute threshold may be compared against.
+    try:
+        col = np.linalg.norm(Jaug, axis=0)
+        good = col > 0
+        if good.any():
+            Js = Jaug[:, good] / col[good]
+            s_s = np.linalg.svd(Js, compute_uv=False)
+            keep_s = s_s > max(float(s_s[0]) * rcond, 1e-15)
+            info["condition_scaled"] = (float(s_s[0] / s_s[keep_s][-1])
+                                        if keep_s.any() else float("inf"))
+            info["rank_scaled"] = int(keep_s.sum())
+    except np.linalg.LinAlgError:                 # pragma: no cover - defensive
+        info["condition_scaled"] = float("inf")
     if estimator == "sandwich" and robust not in ("none", "linear"):
         Jwr = J * psi_r[:, None]
         B = Jwr.T @ Jwr
@@ -625,17 +699,28 @@ def covariance_from_jacobian(J: np.ndarray, r: np.ndarray, free_idx: np.ndarray,
     marginal = np.zeros((NRIG, NRIG))
     rig_free = free_idx[free_idx < NRIG]
     if n_rig:
-        if n_rig < nf:
-            Arr = A_free[:n_rig, :n_rig]
-            Arv = A_free[:n_rig, n_rig:]
-            Avv = A_free[n_rig:, n_rig:]
-            try:
-                schur = Arr - Arv @ np.linalg.pinv(Avv, rcond=1e-12) @ Arv.T
-            except np.linalg.LinAlgError:
-                schur = Arr
+        # The marginal (pose-eliminated) rig information must be the inverse of
+        # the rig block of the *published* covariance, so that the gate's sigma
+        # and param_std describe the same estimator.  The old Schur complement
+        # A_rr - A_rv pinv(A_vv) A_rv^T differed twice: pinv() used rcond=1e-12
+        # on the squared spectrum (dropping pose directions the covariance
+        # keeps), and it inverted the Gauss-Newton information, which has no
+        # residual scale.
+        # The published covariance is the sandwich A^-1 B A^-1, so the rig
+        # block of *that* matrix -- not of A^-1 -- is the uncertainty the gate
+        # must invert: inv(A^-1)_rr would carry no residual scale at all (it is
+        # the covariance for unit-variance residuals) and overstated every
+        # sigma by 1/sigma_px, i.e. ~3x on this data.
+        C_rr = cov[:n_rig, :n_rig]
+        w_r, V_r = np.linalg.eigh(0.5 * (C_rr + C_rr.T))
+        keep_r = w_r > max(float(w_r.max()) * 1e-12, 0.0) if w_r.size else w_r > 0
+        if keep_r.all():
+            marg_rr = (V_r / w_r) @ V_r.T
         else:
-            schur = A_free[:n_rig, :n_rig]
-        marginal[np.ix_(rig_free, rig_free)] = 0.5 * (schur + schur.T)
+            # an unobservable rig direction: zero information there, so its
+            # marginal sigma is infinite (never a small number).
+            marg_rr = (V_r[:, keep_r] / w_r[keep_r]) @ V_r[:, keep_r].T
+        marginal[np.ix_(rig_free, rig_free)] = 0.5 * (marg_rr + marg_rr.T)
     info["information"] = information
     info["marginal_information"] = marginal
     return full, info
@@ -1172,6 +1257,7 @@ def solve_joint(problem: Problem | Sequence[Observation],
                 free_kc=True,
                 free_intrinsics: bool = True,
                 fix_left_intrinsics: bool = False,
+                free=None,
                 jac: str = "analytic",
                 covariance: bool = True,
                 covariance_estimator: str = "sandwich",
@@ -1205,6 +1291,9 @@ def solve_joint(problem: Problem | Sequence[Observation],
         Which distortion coefficients are estimated.
     free_intrinsics, fix_left_intrinsics : bool
         Hold ``fx,fy,cx,cy`` (all cameras / only the left gauge camera).
+    free : array-like of bool or None
+        Explicit mask over the packed vector; overrides the keyword knobs.
+        Use :func:`full_free_mask` to build one by parameter name.
     jac : {"analytic", "fd"}
         Jacobian used by the SciPy backend only.
     covariance : bool
@@ -1238,9 +1327,11 @@ def solve_joint(problem: Problem | Sequence[Observation],
     fallback_reason = None
     native_meta = None
 
-    x_start = problem.start(free_kc, free_intrinsics, fix_left_intrinsics) \
+    x_start = problem.start(free_kc, free_intrinsics, fix_left_intrinsics,
+                            free=free) \
         if x0 is None else np.asarray(x0, float).copy()
-    mask = problem.free_mask(free_kc, free_intrinsics, fix_left_intrinsics)
+    mask = problem.free_mask(free_kc, free_intrinsics, fix_left_intrinsics,
+                             free=free)
     free_idx = np.where(mask)[0]
     prior_pos, prior_mean, prior_sigma = _prior_spec(problem, priors, x_start,
                                                      free_idx)

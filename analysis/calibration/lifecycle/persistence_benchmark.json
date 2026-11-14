@@ -1,0 +1,17 @@
+{
+ "accepted_views_observed": 297,
+ "decisions_observed": 2004,
+ "estimated_new_write_seconds_session": 56.6,
+ "estimated_old_write_seconds_session": 677.8,
+ "method": "297 fabricated view records matching the observed manifest shape (40 points x 3 cameras); median of 3 runs; same host/venv. Old path = _jsonable() + indent=1 atomic write; new path = compact json + cached manifest digest + no recursive conversion.",
+ "new_manifest_bytes": 1054499,
+ "new_manifest_ms": 21.3,
+ "new_session_ms": 43.0,
+ "new_session_ms_note": "measured with 297 synthetic resume observations in session.obs",
+ "note": "Accepted views force a durable write; reject-only traffic is flushed at most every autosave_interval_s (2 s default).",
+ "old_manifest_bytes": 3139422,
+ "old_manifest_ms": 169.4,
+ "old_session_ms_approx": 168.9,
+ "reject_flush_note": "Reject-only decisions flush every autosave_interval_s=2 s: ~583 writes x 64 ms = 37 s of the 56.6 s.",
+ "schema": "einstar.lifecycle.persistence_benchmark/1"
+}
