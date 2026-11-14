@@ -13,6 +13,7 @@ instead of the detector's cadence.
 from __future__ import annotations
 
 import math
+import os
 import sys
 import time
 from pathlib import Path
@@ -625,10 +626,14 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         self._ready = False
         self._auto_exposure_enabled = bool(auto_exposure)
         self._async_decisions = async_decisions
-        self._auto_exposure = exposure_mod.AutoExposure()
+        self._auto_exposure = exposure_mod.AutoExposure(min_interval_s=0.75)
         self._last_ir_image = None
         self._last_rgb_image = None
-        self._last_exposure_eval = 0.0
+        self._ir_roi = exposure_mod.RoiHold()
+        self._rgb_roi = exposure_mod.RoiHold()
+        self._exposure_run_id = f"{int(time.time())}-{os.getpid()}"
+        self._exposure_baseline_done = False
+        self._exposure_mismatch_seen = 0
         self._exposure_log_path = None
         self._ui_error = None
         self._display_state: str | None = None
@@ -1068,7 +1073,13 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._fail(f"could not start acquisition: {type(exc).__name__}: {exc}")
             return
         try:
-            self.controller.begin()
+            begun = self.controller.begin() or {}
+            previous = begun.get("previous_session")
+            if previous:
+                # A reused session directory is isolated, not silently mixed;
+                # tell the operator where the old attempt went.
+                self._event("previous session moved to "
+                            + str(previous.get("directory")))
         except Exception as exc:
             # The source may already be running (live capture is started on
             # this thread before begin()).  A failed begin must not leave the
@@ -1082,6 +1093,12 @@ class ModernMainWindow(QtWidgets.QMainWindow):
             self._fail(f"could not start: {type(exc).__name__}: {exc}")
             return
         self._started_at = time.time()
+        self._auto_exposure.reset()
+        self._ir_roi.reset()
+        self._rgb_roi.reset()
+        self._exposure_baseline_done = False
+        self._exposure_mismatch_seen = 0
+        self._exposure_run_id = f"{int(self._started_at)}-{os.getpid()}"
         self._ui_error = None
         self._display_state = None
         self._source_ended = False
@@ -1577,14 +1594,18 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         """Adjust volatile exposure/gain/illumination on measured frame stats.
 
         Only live sessions with a capture supervisor participate.  The advisor
-        freezes after each accepted view, so a calibration observation is never
-        taken while exposure is moving; saturation overrides that freeze.
+        freezes after each accepted view and during a stationary hold, so a
+        calibration observation is never taken while exposure is moving; hard
+        clipping overrides that freeze.  Brightness is metered on the detected
+        plate bbox (with a bounded stale fallback); full-frame metering is only
+        used for gross clipping protection, never to raise a dark background.
         """
         if not self._auto_exposure_enabled:
             return
         source = self.source
         capture = getattr(source, "capture", None)
-        if __import__("os").environ.get("EINSTAR_EXPOSURE_DEBUG") == "1":
+        dbg = os.environ.get("EINSTAR_EXPOSURE_DEBUG") == "1"
+        if dbg:
             print("exposure: kind", (snap.get("source") or {}).get("kind"),
                   "source", type(source).__name__, "capture", type(capture).__name__,
                   flush=True)
@@ -1593,59 +1614,91 @@ class ModernMainWindow(QtWidgets.QMainWindow):
         if capture is None or not hasattr(capture, "set_volatile"):
             return
         if snap.get("state") != "recording":
-            if __import__("os").environ.get("EINSTAR_EXPOSURE_DEBUG") == "1":
+            if dbg:
                 print("exposure: state", snap.get("state"), flush=True)
             return
         now = time.monotonic()
-        if now - self._last_exposure_eval < 0.75:
-            return
-        self._last_exposure_eval = now
-        import os as _os
-        _dbg = _os.environ.get("EINSTAR_EXPOSURE_DEBUG") == "1"
         cap = snap.get("capture") or {}
         try:
             exp = cap.get("exposure_us") or []
             gain = cap.get("gain") or []
             laser = cap.get("laser_percent")
-            if _dbg:
-                print("exposure: cap", cap, flush=True)
             if len(exp) < 3 or len(gain) < 3 or laser is None:
                 return
             current = exposure_mod.ExposureSettings(
                 {i: int(exp[i]) for i in range(3)},
                 {i: int(gain[i]) for i in range(3)}, int(laser))
+            # A previous run may have left the control file at a pinned
+            # setting (the capture child applies an existing file at start).
+            # Re-establish the configured baseline once per recording run, so
+            # "far away" always has headroom instead of inheriting max gain.
+            if not self._exposure_baseline_done:
+                self._exposure_baseline_done = True
+                baseline = self._exposure_baseline(capture)
+                if (baseline is not None
+                        and baseline != current.as_capture_args()):
+                    try:
+                        record = capture.set_volatile(
+                            exposure_us=baseline["exposure_us"],
+                            gain=baseline["gain"],
+                            laser_percent=baseline["laser_percent"],
+                            source="auto_exposure_baseline")
+                        self._write_exposure_entry({
+                            "run": self._exposure_run_id,
+                            "session_started_s": float(self._started_at or 0.0),
+                            "at_s": time.time(),
+                            "reason": "reset to configured baseline",
+                            "changes": {"baseline": baseline},
+                            "requested": baseline,
+                            "readback_before": current.as_capture_args(),
+                            "write": record,
+                            "stats": None,
+                            "at_limits": [],
+                            "mismatch": None,
+                            "source": "auto_exposure_baseline",
+                        })
+                        self._event("auto exposure: reset to the configured "
+                                    "baseline")
+                    except Exception as exc:
+                        self._event("auto exposure baseline skipped: "
+                                    f"{type(exc).__name__}: {exc}")
+                    return
+            ir_points = list((snap.get("detections") or {}).get("left") or [])
+            ir_box, ir_meter, ir_pts = self._ir_roi.box(ir_points, now)
             ir_stats = None
             if self._last_ir_image is not None:
-                full = exposure_mod.FrameStats.from_image(self._last_ir_image)
-                box = self._plate_bbox(snap, "left")
-                if box is not None:
-                    roi = exposure_mod.FrameStats.from_image(
-                        self._last_ir_image, bbox=box)
-                    # Plate brightness from the ROI; clipping/p99 from the
-                    # full sensor so bright markers do not fake saturation.
-                    ir_stats = exposure_mod.FrameStats(
-                        mean=roi.mean, p99=full.p99,
-                        saturation=full.saturation, contrast=roi.contrast)
+                if ir_box is None:
+                    ir_stats = exposure_mod.FrameStats.from_image(
+                        self._last_ir_image)
+                    ir_stats.metering = "frame"
                 else:
-                    ir_stats = full
+                    ir_stats = exposure_mod.FrameStats.from_image(
+                        self._last_ir_image, bbox=ir_box, exclude=ir_pts)
+                    ir_stats.metering = ir_meter
+            rgb_points = list((snap.get("detections") or {}).get("tex") or [])
+            rgb_box, rgb_meter, rgb_pts = self._rgb_roi.box(rgb_points, now)
             rgb_stats = None
             if self._last_rgb_image is not None:
-                full_rgb = exposure_mod.FrameStats.from_image(self._last_rgb_image)
-                box = self._plate_bbox(snap, "tex")
-                if box is not None:
-                    roi = exposure_mod.FrameStats.from_image(
-                        self._last_rgb_image, bbox=box)
-                    rgb_stats = exposure_mod.FrameStats(
-                        mean=roi.mean, p99=full_rgb.p99,
-                        saturation=full_rgb.saturation, contrast=roi.contrast)
+                if rgb_box is None:
+                    rgb_stats = exposure_mod.FrameStats.from_image(
+                        self._last_rgb_image)
+                    rgb_stats.metering = "frame"
                 else:
-                    rgb_stats = full_rgb
+                    rgb_stats = exposure_mod.FrameStats.from_image(
+                        self._last_rgb_image, bbox=rgb_box, exclude=rgb_pts)
+                    rgb_stats.metering = rgb_meter
+            decision = snap.get("last_decision") or {}
+            metrics = ((decision.get("quality") or {}).get("metrics") or {})
+            stationary = bool(metrics.get("stationary"))
             advice = self._auto_exposure.observe(
-                ir=ir_stats, rgb=rgb_stats, current=current, now=now)
-            if _dbg:
+                ir=ir_stats, rgb=rgb_stats, current=current, now=now,
+                stationary=stationary)
+            if dbg:
                 print(f"exposure: ir={ir_stats} rgb={rgb_stats} "
-                      f"current={current} advice={advice.reason} changed={advice.changed}",
+                      f"current={current} advice={advice.reason} "
+                      f"changed={advice.changed} limits={advice.at_limits}",
                       flush=True)
+            self._exposure_mismatch_seen = self._report_exposure_mismatch()
             if not advice.changed or advice.settings is None:
                 return
             record = capture.set_volatile(
@@ -1653,38 +1706,80 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                 gain=advice.settings.gain,
                 laser_percent=advice.settings.laser_percent,
                 source="auto_exposure")
-            self._log_exposure(advice, record)
+            self._log_exposure(advice, record, current)
             self._event("auto exposure: " + advice.reason)
         except Exception as exc:
             self._event(f"auto exposure skipped: {type(exc).__name__}: {exc}")
 
     @staticmethod
-    def _plate_bbox(snap: dict, camera: str):
-        pts = (snap.get("detections") or {}).get(camera) or []
-        if len(pts) < 4:
+    def _exposure_baseline(capture) -> dict | None:
+        """Configured volatile baseline (never hard-coded here)."""
+        config = getattr(capture, "config", None)
+        if config is None:
             return None
         try:
-            import numpy as _np
-            arr = _np.asarray(pts, float).reshape(-1, 2)
-            x0, y0 = arr.min(axis=0)
-            x1, y1 = arr.max(axis=0)
-            pad = 0.15 * max(x1 - x0, y1 - y0, 20.0)
-            return (float(x0 - pad), float(y0 - pad),
-                    float(x1 + pad), float(y1 + pad))
-        except Exception:
+            exp = {int(k): int(v) for k, v in dict(config.exposure_us).items()}
+            gain = {int(k): int(v) for k, v in dict(config.gain).items()}
+            laser = int(config.laser_percent)
+        except (AttributeError, TypeError, ValueError):
             return None
+        if len(exp) < 3 or len(gain) < 3:
+            return None
+        return {"exposure_us": exp, "gain": gain, "laser_percent": laser}
 
-    def _log_exposure(self, advice, record: dict) -> None:
+    def _report_exposure_mismatch(self) -> int:
+        """Surface (once per occurrence) a request the device did not apply."""
+        status = self._auto_exposure.status()
+        count = int(status.get("mismatch_count", 0) or 0)
+        if count > self._exposure_mismatch_seen:
+            mismatch = status.get("mismatch") or {}
+            self._exposure_mismatch_seen = count
+            self._event("auto exposure readback mismatch: requested "
+                        f"{mismatch.get('requested')} read back "
+                        f"{mismatch.get('readback')}")
+        return count
+
+    def _log_exposure(self, advice, record: dict, current) -> None:
+        self._write_exposure_entry({
+            "run": self._exposure_run_id,
+            "session_started_s": float(self._started_at or 0.0),
+            "at_s": time.time(),
+            "reason": advice.reason,
+            "changes": advice.changes,
+            "requested": (advice.settings.as_capture_args()
+                          if advice.settings is not None else None),
+            "readback_before": current.as_capture_args(),
+            "write": record,
+            "stats": advice.stats,
+            "at_limits": list(advice.at_limits),
+            "mismatch": advice.mismatch,
+            "source": "auto_exposure",
+        })
+        self._write_exposure_status()
+
+    def _write_exposure_entry(self, entry: dict) -> None:
         try:
             import json
             root = Path(self.controller.paths.root)
             self._exposure_log_path = root / "exposure.jsonl"
-            entry = {"at_s": time.time(), "reason": advice.reason,
-                     "changes": advice.changes,
-                     "settings": advice.settings.as_capture_args() if advice.settings else None,
-                     "source": "auto_exposure"}
             with self._exposure_log_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(entry, sort_keys=True) + "\n")
+                fh.write(json.dumps(entry, sort_keys=True, default=str) + "\n")
+        except Exception:
+            pass
+
+    def _write_exposure_status(self) -> None:
+        """Small machine-readable status for diagnostics (not the log)."""
+        try:
+            import json
+            root = Path(self.controller.paths.root)
+            payload = {
+                "run": self._exposure_run_id,
+                "at_s": time.time(),
+                "auto_exposure": self._auto_exposure.status(),
+            }
+            (root / "exposure-status.json").write_text(
+                json.dumps(payload, indent=1, sort_keys=True, default=str) + "\n",
+                encoding="utf-8")
         except Exception:
             pass
 
@@ -1747,7 +1842,11 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                                           camera.get("cx", 640.0),
                                           camera.get("cy", 512.0))
             pose = snap.get("pose_rt")
-            if pose:
+            age = snap.get("pose_age_s")
+            fresh = (pose is not None and
+                     (age is None or float(age) <= 0.75))
+            self.plate.set_tracking(bool(fresh))
+            if pose and fresh:
                 self.plate.set_pose(pose.get("R"), pose.get("t"))
             last = snap.get("last_pose") or {}
             bits = []
@@ -1924,6 +2023,7 @@ class ModernMainWindow(QtWidgets.QMainWindow):
                           else {}) or {}).get("verdict", {}).get("reasons") or []),
                 },
                 "auto_exposure": self._auto_exposure.history,
+                "auto_exposure_status": self._auto_exposure.status(),
             }
             (root / "ui_metrics.json").write_text(
                 json.dumps(data, indent=1, sort_keys=True) + "\n",

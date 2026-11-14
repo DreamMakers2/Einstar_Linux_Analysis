@@ -4,9 +4,45 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **601 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **651 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
+
+---
+
+## 0c. fresh-01: the latest failed physical session (2026-11-14)
+
+Read-only reconstruction: [`analysis/calibration/fresh01/REPORT.md`](../analysis/calibration/fresh01/REPORT.md).
+The session directory was **reused**, so it holds two/three attempts at once.
+
+| finding | number | source |
+|---|---|---|
+| accepted views | 162 total, **70 from the previous attempt**, 92 from this one | view journal clocks |
+| duplicated group ids in `decisions.jsonl` | 117 | same |
+| decisions actually made | 866 of 4513 groups seen (1.81/s); 3647 superseded | `ui_metrics.json` |
+| decision latency | p50 239 ms, p95 1225 ms, max 15369 ms | same |
+| measured rig solve | 0.19 s @8, 1.75 s @25, 2.68 s @40, 6.47 s @60, 12.40 s @84 | real observations |
+| real high-roll views never decided | group 4631 roll 303.8° (26/34/34 markers, focus 28 vs p50 746), 4627 roll 317.3° (15/30/29, focus 24) | last 120 frames + decisions |
+| stationarity | 0 dwell intervals from 2 stationary observations | progress snapshot |
+| auto exposure | 93 entries, 29 no-op `rgb_gain 300`, RGB pinned 58/60, 17 IR reversals | `exposure.jsonl`, audit |
+| **fixes** | session/frame-dir quarantine; async rig solve; monotonic live timestamps; windowed dwell over every decision incl. vetoes; pose-following guidance; UI roll = coverage roll; auto-exposure no-op/hysteresis/metering | tests below |
+
+New tests: `test_session_hygiene.py`, `test_async_solve.py`, `test_dwell.py`,
+`test_roll_sectors.py`, `test_real_view_source.py`, `test_wizard_worker_budget.py`.
+Performance evidence: `analysis/calibration/performance/`.
+Exposure audit: `analysis/calibration/auto_exposure/AUDIT.md`.
+
+| after-fix measurement | value | source |
+|---|---:|---|
+| decision p50 / max on 24 real tail frames | **228 / 867 ms** (was 655 / 1601) | live replay |
+| views accepted from those 24 frames | **11** (was 0) | same |
+| partial camera detection p50 | **30 ms** (was 218) | partial report |
+| mirrored labellings, 240 real cameras | **0** (was 41) | same |
+| solve @16 views, one BLAS thread | **0.58 s** (was 13.36 s) | performance report |
+| solves in a 162-view session | **10** (was 33) | schedule simulation |
+| dwell intervals, 7 real holds | **7** (was 0) | rehearsal |
+| real-image GUI rehearsal | **37 accepted, 8/8 READY, validated candidate** | hybrid fresh-01 + 3 EXStar real sector-3 views |
+| display: snapshot / plate render p50 | **0.61 / 0.57 ms** | `display_latency.json` |
 
 ---
 

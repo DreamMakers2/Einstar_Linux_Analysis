@@ -54,11 +54,23 @@ class PlatePreview(QtWidgets.QFrame):
         self._K = np.array([[1150.0, 0.0, 640.0], [0.0, 1150.0, 512.0],
                             [0.0, 0.0, 1.0]])
         self._have_pose = False
+        self._target_R = np.eye(3)
+        self._target_t = np.array([0.0, 0.0, 400.0])
+        #: a pose that has just arrived is tracked; the window marks it False
+        #: when no recent decision exists
+        self._tracking = True
         self.mode = "scanner"          # scanner | orbit
         self.azimuth_deg = 25.0
         self.elevation_deg = 18.0
         self._drag = None
         self._status = "waiting for a pose"
+        # A decision arrives at ~5-10 Hz; the plate is a rigid body, so a
+        # short critically-damped interpolation makes the preview smooth
+        # without inventing a pose: it always converges to the last measured
+        # one and never extrapolates past it.
+        self._anim = QtCore.QTimer(self)
+        self._anim.setInterval(16)
+        self._anim.timeout.connect(self._animate)
 
     # -- data ------------------------------------------------------------
     def set_intrinsics(self, fx: float, fy: float, cx: float, cy: float) -> None:
@@ -68,11 +80,63 @@ class PlatePreview(QtWidgets.QFrame):
 
     def set_pose(self, R, t) -> None:
         try:
-            self._R = np.asarray(R, float).reshape(3, 3)
-            self._t = np.asarray(t, float).reshape(3)
+            target_R = np.asarray(R, float).reshape(3, 3)
+            target_t = np.asarray(t, float).reshape(3)
         except Exception:
             return
-        self._have_pose = True
+        self._target_R = target_R
+        self._target_t = target_t
+        self._tracking = True
+        if not self._have_pose:
+            # first acquisition: show it immediately, do not sweep in from the
+            # placeholder pose
+            self._R = target_R.copy()
+            self._t = target_t.copy()
+            self._have_pose = True
+            self.update()
+            return
+        if not self.isVisible():
+            # Offscreen use (snapshot tests, image export) is deterministic:
+            # no interpolation timer will ever fire.
+            self._R = target_R.copy()
+            self._t = target_t.copy()
+            self.update()
+            return
+        if not self._anim.isActive():
+            self._anim.start()
+
+    def set_tracking(self, tracked: bool) -> None:
+        """Truthful visual state: no pose means no confident plate."""
+        tracked = bool(tracked)
+        if tracked == self._tracking:
+            return
+        self._tracking = tracked
+        self.update()
+
+    def _animate(self) -> None:
+        if not self._have_pose:
+            self._anim.stop()
+            return
+        alpha = 0.45
+        dR = self._target_R - self._R
+        if float(np.abs(dR).max()) < 1e-4:
+            self._R = self._target_R.copy()
+        else:
+            # orthonormalise the interpolated rotation (cheap 3x3 SVD)
+            guess = self._R + alpha * dR
+            u, _, vt = np.linalg.svd(guess)
+            self._R = u @ vt
+        dt = self._target_t - self._t
+        if float(np.abs(dt).max()) < 0.05:
+            self._t = self._target_t.copy()
+        else:
+            self._t = self._t + alpha * dt
+        converged = (float(np.abs(self._target_R - self._R).max()) < 1e-4
+                     and float(np.abs(self._target_t - self._t).max()) < 0.05)
+        if converged:
+            self._R = self._target_R.copy()
+            self._t = self._target_t.copy()
+            self._anim.stop()
         self.update()
 
     def set_status(self, text: str) -> None:
@@ -81,6 +145,7 @@ class PlatePreview(QtWidgets.QFrame):
             self.update()
 
     def clear(self) -> None:
+        self._anim.stop()
         self._have_pose = False
         self.update()
 
@@ -191,6 +256,12 @@ class PlatePreview(QtWidgets.QFrame):
         p.end()
 
     def render_image(self, width: int, height: int) -> QtGui.QImage:
+        # An offscreen render is a deterministic still: show the newest pose
+        # rather than a mid-interpolation frame.
+        if self._have_pose:
+            self._R = self._target_R.copy()
+            self._t = self._target_t.copy()
+            self._anim.stop()
         img = QtGui.QImage(int(width), int(height),
                            QtGui.QImage.Format.Format_RGB32)
         img.fill(QtGui.QColor("#0b0e12"))
@@ -200,6 +271,9 @@ class PlatePreview(QtWidgets.QFrame):
         return img
 
     def _paint(self, p: QtGui.QPainter, rect: QtCore.QRectF) -> None:
+        self._paint_board(p, rect)
+
+    def _paint_board(self, p: QtGui.QPainter, rect: QtCore.QRectF) -> None:
         p.setPen(QtGui.QColor(theme.MUTED))
         f = p.font(); f.setPointSize(9); p.setFont(f)
         p.drawText(QtCore.QRectF(rect.left() + 6, rect.top() + 2,
@@ -212,6 +286,10 @@ class PlatePreview(QtWidgets.QFrame):
             p.drawText(rect, QtCore.Qt.AlignmentFlag.AlignCenter,
                        "waiting for the plate…")
             return
+        if not self._tracking:
+            # No recent measurement: keep the geometry on screen for context
+            # but say so, rather than presenting a stale pose as current.
+            p.setOpacity(0.35)
         raw, scale = self._project(rect)
         if scale is None:
             p.setPen(QtGui.QColor(theme.WARN))
@@ -266,6 +344,11 @@ class PlatePreview(QtWidgets.QFrame):
             p.drawLine(QtCore.QPointF(*centre), QtCore.QPointF(*tip))
             p.setPen(QtGui.QColor(colour))
             p.drawText(QtCore.QPointF(tip[0] + 3, tip[1] - 3), label)
+        if not self._tracking:
+            p.setOpacity(1.0)
+            p.setPen(QtGui.QColor(theme.WARN))
+            p.drawText(rect, QtCore.Qt.AlignmentFlag.AlignCenter,
+                       "plate not tracked — bring it into view")
         p.setPen(QtGui.QColor(theme.MUTED))
         p.drawText(QtCore.QRectF(rect.left() + 6, rect.bottom() - 18,
                                  rect.width() - 12, 16),

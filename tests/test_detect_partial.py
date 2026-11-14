@@ -136,3 +136,115 @@ def test_controller_prefers_the_canonical_labelling(rig):
     assert chosen is not None
     us = {round(float(k[0])) for k in chosen.points}
     assert min(us) == 0 and max(us) == 7
+
+
+# ---------------------------------------------------------------------------
+# identity safety: chirality decides, counts never do
+# ---------------------------------------------------------------------------
+
+def _reference(rig):
+    """Verified 40-marker labelling of the unmasked render (ground truth)."""
+    img = _frame(rig, mask_chiral=False)
+    obs = detect.detect_grid_auto(img)
+    assert obs is not None and obs.n_lattice == 40 and obs.identity_ok
+    return img, dict(obs.points)
+
+
+def _pitch(points) -> float:
+    P = np.array(list(points.values()), float)
+    d = np.linalg.norm(P[:, None, :] - P[None, :, :], axis=2)
+    np.fill_diagonal(d, 1e9)
+    return float(np.median(d.min(1)))
+
+
+def _label_errors(result, truth) -> tuple[int, int]:
+    """(correct, wrong) labels of a partial result against the truth pixels."""
+    obs = result.observation
+    assert obs is not None, result.reason
+    ref = np.array(list(truth.values()), float)
+    ref_uv = np.array(list(truth.keys()), float)
+    right = wrong = 0
+    for (u, v), pix in obs.points.items():
+        j = int(np.argmin(np.linalg.norm(ref - np.asarray(pix, float), axis=1)))
+        if np.linalg.norm(ref[j] - np.asarray(pix, float)) > 2.5:
+            continue
+        if abs(ref_uv[j][0] - u) < 0.01 and abs(ref_uv[j][1] - v) < 0.01:
+            right += 1
+        else:
+            wrong += 1
+    return right, wrong
+
+
+def test_partial_never_returns_a_mirrored_labelling(rig):
+    """A mirror-image frame has no front-facing labelling: det>0 or nothing."""
+    img, _ = _reference(rig)
+    mirrored = np.ascontiguousarray(img[:, ::-1])
+    result = detect_partial.detect_grid_partial(mirrored)
+    if result.observation is not None:
+        det = float(np.linalg.det(np.asarray(result.observation.homography, float)))
+        assert det > 0, "a mirrored labelling must never be selected"
+        assert not result.observation.identity_ok, (
+            "the witness cannot verify a mirrored plate layout: "
+            f"score={result.witness_score}/{result.witness_visible}")
+
+
+def test_truncated_rows_are_disambiguated_by_chirality(rig):
+    """Rows v=3,4 out of frame: both v-signs explain the same blobs.
+
+    This is the coin flip that produced the "mirrored marker geometry"
+    rejections on real frames.  ``det(H) > 0`` must decide it, so the labels
+    have to be the canonical ones, not merely self-consistent.
+    """
+    img, truth = _reference(rig)
+    pitch = _pitch(truth)
+    row2 = [truth[(float(u), 2.0)] for u in range(8)]
+    ycut = int(min(p[1] for p in row2) + 0.45 * pitch)
+    cropped = np.ascontiguousarray(img[:ycut, :])
+    result = detect_partial.detect_grid_partial(cropped)
+    assert result.observation is not None, result.reason
+    assert float(np.linalg.det(np.asarray(result.observation.homography, float))) > 0
+    right, wrong = _label_errors(result, truth)
+    assert wrong == 0, f"{wrong} wrong labels out of {right + wrong}"
+    assert right >= 15
+    assert {round(float(k[1])) for k in result.observation.points} <= {0.0, 1.0, 2.0}
+
+
+def test_one_big_marker_out_of_frame_uses_pair_and_chiral_witness(rig):
+    """A column clipped away removes (2,1): the pair + chiral marker must label it."""
+    img, truth = _reference(rig)
+    pitch = _pitch(truth)
+    x22 = truth[(2.0, 1.0)][0]
+    x41 = truth[(4.0, 1.0)][0]
+    xcut = int(round(0.5 * (x22 + x41) + 0.15 * pitch))
+    cropped = np.ascontiguousarray(img[:, xcut:])
+    result = detect_partial.detect_grid_partial(cropped)
+    assert result.observation is not None, result.reason
+    obs = result.observation
+    assert float(np.linalg.det(np.asarray(obs.homography, float))) > 0
+    assert obs.identity_ok, (f"witness {result.witness_score}/{result.witness_visible} "
+                             f"({result.reason})")
+    # coordinates shift by the crop
+    shifted = {k: np.asarray(v, float) - np.array([xcut, 0.0]) for k, v in truth.items()}
+    right, wrong = _label_errors(result, shifted)
+    assert wrong == 0 and right >= 12
+
+
+def test_verified_partial_observation_stops_the_sweep(rig):
+    """A verified partial view is accepted on the first pass (performance rule).
+
+    The last two columns are out of frame, so the plate is partial but all four
+    orientation markers are still visible: the first polarity/threshold pass is
+    already verified with more than ``VERIFIED_EARLY_MIN`` markers, which is the
+    evidence-based reason to stop instead of paying six passes.
+    """
+    img, truth = _reference(rig)
+    pitch = _pitch(truth)
+    col6 = [truth[(6.0, float(v))] for v in range(5)]
+    xcut = int(min(p[0] for p in col6) - 0.45 * pitch)
+    cropped = np.ascontiguousarray(img[:, :xcut])
+    out = detect.detect_grid_auto(cropped, early_lattice=40, early_rms=0.5)
+    assert out is not None and out.identity_ok
+    assert out.n_lattice >= detect.VERIFIED_EARLY_MIN
+    exhaustive = detect.detect_grid_auto(cropped)
+    assert exhaustive is not None and exhaustive.identity_ok
+    assert exhaustive.n_lattice >= out.n_lattice

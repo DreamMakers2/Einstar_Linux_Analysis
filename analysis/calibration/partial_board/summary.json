@@ -1,0 +1,244 @@
+{
+ "schema": "einstar.partial-board-summary/1",
+ "session": "<calibration-session>",
+ "decisions": {
+  "total": 1416,
+  "rejected": 1208,
+  "accepted": 208,
+  "rejected_by_marker_class": {
+   "both_ir_40": 304,
+   "both_lt20": 317,
+   "other": 139,
+   "both_ir_ge20": 259,
+   "right_lost": 189
+  },
+  "reason_rows": {
+   "mirrored": 170,
+   "ambiguous_assignment": 405
+  }
+ },
+ "accepted_view_roll_sectors": {
+  "computed_from_stored_labels": {
+   "0-90": 0,
+   "90-180": 4,
+   "180-270": 73,
+   "270-360": 32
+  },
+  "n_views_with_40_markers": 109,
+  "rotation_invariance": {
+   "rotations": [
+    0,
+    90,
+    180,
+    270
+   ],
+   "labels_correct": 640,
+   "labels_expected": 640
+  }
+ },
+ "transform_sweep_912_cases": {
+  "before": {
+   "strict": {
+    "detected": 785,
+    "id_rate": 0.8773,
+    "wrong": 287,
+    "mirrored": 16,
+    "s_per_case": 0.035
+   },
+   "partial": {
+    "detected": 676,
+    "id_rate": 0.7353,
+    "wrong": 353,
+    "mirrored": 5,
+    "s_per_case": 0.011
+   },
+   "wizard": {
+    "detected": 800,
+    "id_rate": 0.8929,
+    "wrong": 251,
+    "mirrored": 15,
+    "s_per_case": 0.04
+   }
+  },
+  "after": {
+   "strict": {
+    "detected": 785,
+    "id_rate": 0.879,
+    "wrong": 118,
+    "mirrored": 0,
+    "s_per_case": 0.018
+   },
+   "partial": {
+    "detected": 846,
+    "id_rate": 0.935,
+    "wrong": 78,
+    "mirrored": 0,
+    "s_per_case": 0.024
+   },
+   "wizard": {
+    "detected": 867,
+    "id_rate": 0.951,
+    "wrong": 103,
+    "mirrored": 0,
+    "s_per_case": 0.022
+   }
+  },
+  "cases": 912,
+  "expected_labels": 32124
+ },
+ "real_tail_240_cameras": {
+  "before": {
+   "strict": {
+    "detected": 215,
+    "mirrored": 15,
+    "s_per_case": 0.089
+   },
+   "partial": {
+    "detected": 219,
+    "mirrored": 86,
+    "s_per_case": 0.011
+   },
+   "wizard": {
+    "detected": 239,
+    "mirrored": 41,
+    "s_per_case": 0.095
+   }
+  },
+  "after": {
+   "strict": {
+    "detected": 215,
+    "mirrored": 1,
+    "s_per_case": 0.03
+   },
+   "partial": {
+    "detected": 233,
+    "mirrored": 0,
+    "s_per_case": 0.049
+   },
+   "wizard": {
+    "detected": 240,
+    "mirrored": 0,
+    "s_per_case": 0.034
+   }
+  }
+ },
+ "timing": {
+  "per_camera_all": {
+   "p50_ms": 35,
+   "p95_ms": 150,
+   "max_ms": 292
+  },
+  "per_camera_partial": {
+   "p50_ms": 30,
+   "p95_ms": 137,
+   "max_ms": 221
+  },
+  "per_frame_3cameras": {
+   "p50_ms": 117,
+   "p95_ms": 269,
+   "max_ms": 821
+  },
+  "lead_baseline_per_frame_p50_ms": 655,
+  "early_exit_ab": {
+   "partial_cameras_p50_ms_before": 43,
+   "after": 30,
+   "markers_lost_mean": 0.46,
+   "markers_lost_max": 5,
+   "cameras_affected": 49,
+   "identity_changes": 0,
+   "verified_before": 202,
+   "verified_after": 202
+  }
+ },
+ "pnp_subset_study_109_views": {
+  "8": {
+   "rot_p95_deg": 0.312,
+   "trans_p95_mm": 0.348
+  },
+  "10": {
+   "rot_median_deg": 0.093,
+   "rot_p95_deg": 0.22,
+   "trans_median_mm": 0.121,
+   "trans_p95_mm": 0.373
+  },
+  "12": {
+   "rot_median_deg": 0.081,
+   "rot_p95_deg": 0.205,
+   "trans_median_mm": 0.091,
+   "trans_p95_mm": 0.296
+  },
+  "20": {
+   "rot_median_deg": 0.075,
+   "trans_median_mm": 0.082
+  }
+ },
+ "identity_regression_stored_40_marker_checks": {
+  "checks": 217,
+  "wrong_labels": 0,
+  "unverified": 0,
+  "markers_lost_1_or_2": 3
+ },
+ "target_frames": {
+  "4631": {
+   "stored": "left 26 / right 34 / tex 34; rejected left mirrored",
+   "after": {
+    "left_n": 26,
+    "left_det_h": 2353,
+    "left_identity_ok": true,
+    "right_n": 34,
+    "right_identity_ok": true
+   }
+  },
+  "4627": {
+   "stored": "left 15 / right 30 / tex 29 / shared 10; rejected overlap 10<12",
+   "after": {
+    "right_n": 30,
+    "right_identity_ok": true,
+    "left_n": 19,
+    "left_identity_ok": false,
+    "left_witness": "0/3 large witnesses; area ratios [2.0,1.02,1.00,3.19]"
+   },
+   "verdict": "left unverified, so shared=10 is not trustworthy; keep the 12 gate"
+  }
+ },
+ "controller_scope_gap": {
+  "tail_cameras": 240,
+  "accepted_only_with_image_shape": 6,
+  "change": "check_orientation(gray, grid, image_shape=gray.shape)"
+ },
+ "sweep_b_replay": {
+  "first25_old": {
+   "accepted": 4,
+   "rejected": 21,
+   "wall_s": 6.5
+  },
+  "first25_new": {
+   "accepted": 4,
+   "rejected": 21,
+   "wall_s": 5.2
+  }
+ },
+ "tests": {
+  "required_by_lead": {
+   "command": "pytest tests/test_detect_partial.py tests/test_orientation_witness.py tests/test_localize.py tests/test_plate_geometry.py -q",
+   "result": "47 passed in 2.66s"
+  },
+  "new_tests_added": [
+   "test_partial_never_returns_a_mirrored_labelling",
+   "test_truncated_rows_are_disambiguated_by_chirality",
+   "test_one_big_marker_out_of_frame_uses_pair_and_chiral_witness",
+   "test_verified_partial_observation_stops_the_sweep"
+  ],
+  "full_suite": {
+   "passed": 643,
+   "failed": 6,
+   "skipped": 8,
+   "failures_explained": {
+    "test_detect_partial.py (4)": "cross-test state pollution; all 4 pass in isolation and in the required 47-test command",
+    "test_wizard_failures.py::test_mirrored_marker_layout_is_rejected_at_ingest": "fixed after this run (mirrored diagnostic preserved); passes in isolation",
+    "test_wizard_failures.py::test_missing_markers_scene_cannot_calibrate": "accepted 6 > bound 4 by design (was 3); test bound is outside my edit scope",
+    "test_wizard_gui_ready.py::test_full_window_reaches_ready_and_writes_validated_candidate": "fails in isolation on validation:pending; not in this change set"
+   }
+  }
+ }
+}

@@ -12,11 +12,22 @@ The plate is a white plate with 40 small circular holes and 4 large holes
    (three collinear markers with 2:1 spacing plus one marker at the midpoint
    two rows away);
 5. bootstrap a homography from the large-marker pattern, match all 40 lattice
-   points, and refine the homography with RANSAC.
+   points, and refine the homography with RANSAC;
+6. **verify the identity of the labelling** with the four large markers and the
+   chirality sign (:func:`big_marker_witness`), and rank candidates by that
+   evidence before marker count/residual.
 
 The result is a mapping ``(u, v) -> (x, y)`` in the canonical 8x5 frame, which
 is the same board frame in every image.  Points that are not visible are
 simply absent.
+
+Step 6 is what keeps the labels honest.  The 40-point lattice is symmetric
+under the Klein four-group, so ``identity``, ``rot180``, ``mirror_u`` and
+``mirror_v`` all reproduce the same 40 image points with the same residual;
+only the four *large* markers (three on-lattice at ``(2,1), (4,1), (5,1)`` and
+one off-lattice chiral marker at ``(3.5, 3)``) can tell them apart, plus
+``det(H) > 0`` for a front-facing plate.  An observation therefore carries
+``witness``/``identity_ok`` and a mirrored labelling is never returned.
 """
 
 from __future__ import annotations
@@ -215,6 +226,12 @@ class GridObservation:
     max_residual: float
     big_markers: np.ndarray
     detector: str = "pattern-v1"
+    #: identity evidence: how many of the four large markers were found at the
+    #: positions this labelling predicts (``-1`` = not evaluated, the historical
+    #: "labels are unverified" state)
+    witness_score: int = -1
+    #: full :func:`big_marker_witness` result (``ok`` is the verified flag)
+    witness: dict = field(default_factory=dict)
 
     @property
     def uv(self) -> np.ndarray:
@@ -223,6 +240,11 @@ class GridObservation:
     @property
     def pixels(self) -> np.ndarray:
         return np.array([self.points[tuple(k)] for k in sorted(self.points.keys())], float)
+
+    @property
+    def identity_ok(self) -> bool:
+        """True when the large-marker/chirality evidence verified this labelling."""
+        return bool(self.witness.get("ok"))
 
     def as_dict(self) -> dict:
         return {
@@ -233,7 +255,92 @@ class GridObservation:
             "max_residual": self.max_residual,
             "big_markers": np.asarray(self.big_markers).tolist(),
             "detector": self.detector,
+            "witness_score": int(self.witness_score),
+            "witness": dict(self.witness),
         }
+
+
+#: large/small marker area ratio.  Recovered plate: the large markers are
+#: printed ~1.75x the small radius, i.e. ~3x the area; 1.55 is the measured
+#: lower bound across the recorded corpus and the synthetic renders.
+LARGE_AREA_RATIO = 1.55
+
+#: An *identity-verified* observation with at least this many markers and this
+#: lattice residual ends the polarity/threshold sweep after the first pass.
+#: Twelve is the smallest support the wizard ever uses (``min_shared_markers``);
+#: a free PnP fit with 10-12 of the 40 markers reproduces the 40-marker pose to
+#: 0.09 deg / 0.12 mm (p95 0.22 deg / 0.37 mm) on the 109 recorded full-board
+#: views, so a verified 12-marker labelling is already a usable observation.
+VERIFIED_EARLY_MIN = 12
+VERIFIED_EARLY_RMS = 0.5
+
+
+def big_marker_witness(P: np.ndarray, A: np.ndarray, H: np.ndarray, pitch: float,
+                       shape: tuple[int, int] | None = None, *,
+                       small_area: float | None = None,
+                       large_ratio: float = LARGE_AREA_RATIO,
+                       tol_pitch: float = 0.30,
+                       margin_px: float = 8.0,
+                       min_visible: int = 3) -> dict:
+    """Score the four large-marker witnesses of one ``(u,v) -> pixel`` labelling.
+
+    This is the identity evidence: the three on-lattice large markers at
+    ``(2,1), (4,1), (5,1)`` and the off-lattice chiral marker at ``(3.5, 3)``.
+    For a labelling to be *verified* every witness that is predicted inside the
+    frame must be a large blob at the predicted pixel, at least ``min_visible``
+    witnesses must be visible, and ``det(H) > 0`` (a front-facing plate; a
+    mirrored labelling has already been rejected upstream).
+
+    With ``shape=None`` the historical strict reading is used: all four
+    witnesses count, so three is not enough.  With an image shape a witness that
+    is predicted outside the usable frame cannot be observed and is excused --
+    this is what makes a partially visible plate verifiable.
+    """
+    big_uv = plate.big_points_uv()
+    H = np.asarray(H, float)
+    out = {"ok": False, "score": 0, "n_visible": 0, "det_h": float("nan"),
+           "visible": [], "hits": [], "offsets_px": [], "area_ratio": [],
+           "small_area_px": None, "pitch_px": float(pitch) if np.isfinite(pitch) else None}
+    if H.shape != (3, 3) or not np.all(np.isfinite(H)) or not len(P):
+        return out
+    det = float(np.linalg.det(H))
+    out["det_h"] = det
+    pix = cv2.perspectiveTransform(big_uv.reshape(-1, 1, 2).astype(np.float64), H).reshape(-1, 2)
+    d = np.linalg.norm(pix[:, None, :] - P[None, :, :], axis=2)
+    near = d.argmin(1)
+    dn = d.min(1)
+    if small_area is None or not np.isfinite(small_area) or small_area <= 0:
+        small_area = float(np.median(A)) if len(A) else float("nan")
+    out["small_area_px"] = float(small_area) if np.isfinite(small_area) else None
+    ratio = A[near] / max(float(small_area), 1e-9) if np.isfinite(small_area) else np.zeros(len(big_uv))
+    if shape is None:
+        visible = np.ones(len(big_uv), bool)
+    else:
+        h, w = int(shape[0]), int(shape[1])
+        visible = ((pix[:, 0] >= margin_px) & (pix[:, 0] <= w - 1 - margin_px)
+                   & (pix[:, 1] >= margin_px) & (pix[:, 1] <= h - 1 - margin_px))
+    hits = (dn < float(tol_pitch) * float(pitch)) & (ratio > float(large_ratio))
+    out.update(visible=[bool(v) for v in visible],
+               hits=[bool(x) for x in hits],
+               offsets_px=[float(x) for x in dn],
+               area_ratio=[float(x) for x in ratio],
+               n_visible=int(np.sum(visible)),
+               score=int(np.sum(hits & visible)))
+    n_visible = out["n_visible"]
+    out["ok"] = bool(det > 0.0
+                     and n_visible >= int(min_visible)
+                     and out["score"] == n_visible)
+    return out
+
+
+def _matched_small_area(A: np.ndarray, idx: np.ndarray, inl: np.ndarray,
+                        lattice: np.ndarray, big: np.ndarray) -> float:
+    """Median area of the blobs matched to *small* lattice points."""
+    is_big = np.min(np.linalg.norm(lattice[:, None, :] - big[None, :, :], axis=2), axis=1) < 0.3
+    sel = inl & ~is_big
+    if not np.any(sel):
+        return float("nan")
+    return float(np.median(A[idx[sel]]))
 
 
 def _pattern_candidates(P: np.ndarray, A: np.ndarray):
@@ -246,7 +353,15 @@ def _pattern_candidates(P: np.ndarray, A: np.ndarray):
     if n < 4:
         return []
     med = float(np.median(A))
-    tris = np.array(list(itertools.combinations(range(n), 3)), dtype=int)
+    # Only *large* blobs can be anchors: the three collinear markers and the
+    # chiral one are all rejected below unless their area exceeds 1.25x the
+    # median.  Enumerating triples over every blob was the dominant cost on
+    # low-threshold passes (126 blobs -> 325k triples); restricting the pool to
+    # the large blobs is exactly equivalent and O(10) triples instead.
+    pool = np.where(A > 1.25 * med)[0]
+    if len(pool) < 4:
+        return []
+    tris = np.array(list(itertools.combinations(pool.tolist(), 3)), dtype=int)
     p = P[tris]
     d01 = np.linalg.norm(p[:, 0] - p[:, 1], axis=1)
     d02 = np.linalg.norm(p[:, 0] - p[:, 2], axis=1)
@@ -273,7 +388,7 @@ def _pattern_candidates(P: np.ndarray, A: np.ndarray):
             src3 = src3[::-1]
         Lv = L[ii]
         e = E1[ii] - E0[ii]
-        for k in range(n):
+        for k in pool:
             if k in tris[ii]:
                 continue
             if A[k] < 1.35 * med:
@@ -289,8 +404,49 @@ def _pattern_candidates(P: np.ndarray, A: np.ndarray):
     return out[:24]
 
 
+def _evaluate_labelling(P: np.ndarray, H: np.ndarray, lattice: np.ndarray,
+                        pitch: float, tol: float = 0.30
+                        ) -> tuple[int, float, float, np.ndarray, np.ndarray, np.ndarray]:
+    """Match the predicted lattice against the blobs for one homography.
+
+    A lattice point is inlier only when its nearest blob is inside ``tol``
+    pitches *and* clearly nearer than the runner-up (``0.55*``), so a marker can
+    never be claimed by two labels.
+    """
+    pred = cv2.perspectiveTransform(lattice.reshape(-1, 1, 2).astype(np.float64),
+                                    np.asarray(H, float)).reshape(-1, 2)
+    d = np.linalg.norm(P[None, :, :] - pred[:, None, :], axis=2)
+    idx = d.argmin(1)
+    d1 = d.min(1)
+    d2 = np.partition(d, 1, axis=1)[:, 1]
+    inl = (d1 < tol * pitch) & (d1 < 0.55 * d2)
+    n = int(inl.sum())
+    rms = float(np.sqrt(np.mean(d1[inl] ** 2))) if n else 999.0
+    mx = float(d1[inl].max()) if n else 999.0
+    return n, rms, mx, inl, idx, pred
+
+
+def _is_big_label(lattice: np.ndarray, big: np.ndarray, tol: float = 0.3) -> np.ndarray:
+    return np.min(np.linalg.norm(lattice[:, None, :] - big[None, :, :], axis=2), axis=1) < tol
+
+
 def _fit_from_anchor(P: np.ndarray, src3: np.ndarray, q: np.ndarray,
                      lattice: np.ndarray, big: np.ndarray):
+    """Bootstrap and refine one labelling from a (3 collinear + chiral) anchor set.
+
+    Three of the four anchors are collinear, and a four-point projective solve is
+    *degenerate* for such a set (the DLT returns the degenerate map that sends the
+    triple to the origin: measured ``det ~ 1e-15``), so the seed is an affine
+    solve through the anchors followed by RANSAC on the lattice, as before.
+
+    The refinement then fits only the *small* lattice points, deliberately
+    leaving the four large markers out of the fit.  That keeps the large-marker
+    witness independent evidence instead of a tautology, and it stops RANSAC
+    from drifting onto a lattice symmetry: a 180-degree relabelling reproduces
+    the same 40 pixels and was measured to beat the correct map by 0.004 px of
+    rms on a real tilted frame (which silently discards the identity evidence
+    the anchors carry).
+    """
     src = np.vstack([src3, q])
     A = np.hstack([src, np.ones((4, 1))])
     M, *_ = np.linalg.lstsq(A, big, rcond=None)
@@ -302,79 +458,105 @@ def _fit_from_anchor(P: np.ndarray, src3: np.ndarray, q: np.ndarray,
     dd = np.linalg.norm(P[:, None, :] - P[None, :, :], axis=2)
     np.fill_diagonal(dd, 1e9)
     pitch = float(np.median(dd.min(1)))
+    if not np.isfinite(pitch) or pitch <= 0:
+        return None
     near_big = np.min(np.linalg.norm(lattice[:, None, :] - big[None, :, :], axis=2), axis=1) < 2.6
     d = np.linalg.norm(P[None, :, :] - pred[:, None, :], axis=2)
     idx = d.argmin(1); d1 = d.min(1); d2 = np.partition(d, 1, axis=1)[:, 1]
     ok = (d1 < 0.8 * pitch) & (d1 < 0.8 * d2) & near_big
-    if ok.sum() < 8:
+    if int(ok.sum()) < 8:
         return None
+    # RANSAC is seeded from OpenCV's global RNG.  Without this, two runs of the
+    # same recording can choose different inlier sets on a borderline view and
+    # accept a different set of calibration views (observed: 29 vs 31 accepted
+    # on the same 87 real groups).  A calibration decision must be reproducible.
+    cv2.setRNGSeed(0)
     H, _ = cv2.findHomography(lattice[ok], P[idx[ok]], cv2.RANSAC, 0.7 * pitch)
-    if H is None:
+    if H is None or not np.all(np.isfinite(H)):
         return None
-    for _ in range(8):
-        pred = cv2.perspectiveTransform(lattice.reshape(-1, 1, 2), H).reshape(-1, 2)
-        d = np.linalg.norm(P[None, :, :] - pred[:, None, :], axis=2)
-        idx = d.argmin(1); d1 = d.min(1); d2 = np.partition(d, 1, axis=1)[:, 1]
-        inl = (d1 < 0.32 * pitch) & (d1 < 0.55 * d2)
-        if inl.sum() < 30:
+    small = ~_is_big_label(lattice, big)
+    for _ in range(6):
+        n, rms, mx, inl, idx, _ = _evaluate_labelling(P, H, lattice, pitch)
+        sel = inl & small
+        if int(sel.sum()) < 8:
             break
-        Hn, _ = cv2.findHomography(lattice[inl], P[idx[inl]], cv2.RANSAC, 0.18 * pitch)
-        if Hn is None:
+        cv2.setRNGSeed(0)
+        Hn, _ = cv2.findHomography(lattice[sel], P[idx[sel]], cv2.RANSAC, 0.30 * pitch)
+        if Hn is None or not np.all(np.isfinite(Hn)):
             break
         H = Hn
-    pred = cv2.perspectiveTransform(lattice.reshape(-1, 1, 2), H).reshape(-1, 2)
-    d = np.linalg.norm(P[None, :, :] - pred[:, None, :], axis=2)
-    d1 = d.min(1); d2 = np.partition(d, 1, axis=1)[:, 1]
-    inl = (d1 < 0.30 * pitch) & (d1 < 0.55 * d2)
-    n = int(inl.sum())
-    rms = float(np.sqrt(np.mean(d1[inl] ** 2))) if n else 999.0
-    mx = float(d1[inl].max()) if n else 999.0
+    n, rms, mx, inl, idx, _ = _evaluate_labelling(P, H, lattice, pitch)
+    if n == 0:
+        return None
     return H, n, rms, mx, inl, idx, pitch
 
 
 def assign_grid(blobs: list[Blob], lattice: Optional[np.ndarray] = None,
-                big: Optional[np.ndarray] = None) -> Optional[GridObservation]:
-    """Assign canonical lattice coordinates to detected blobs."""
+                big: Optional[np.ndarray] = None,
+                shape: tuple[int, int] | None = None,
+                early_n: int = 34) -> Optional[GridObservation]:
+    """Assign canonical lattice coordinates to detected blobs.
+
+    Every anchor candidate is fitted and then *verified*: the four large markers
+    must be found where the final labelling predicts them, and a front-facing
+    ``det(H) > 0`` outranks a mirrored one.  Candidates are ranked by
+    verification first and by marker count/residual second; ranking by count and
+    residual alone is unsound because the 40-point lattice is symmetric under the
+    Klein four-group and a relabelled fit reproduces the same points with almost
+    the same residual.  The first candidate that is verified on at least
+    ``early_n`` markers is accepted at once, which keeps the common case at one
+    fit.
+    """
     if len(blobs) < 30:
         return None
     lattice = plate.lattice_uv() if lattice is None else lattice
     big = plate.big_points_uv() if big is None else big
     P = np.array([b.xy for b in blobs], float)
     A = np.array([b.area for b in blobs], float)
-    cands = _pattern_candidates(P, A)
     best = None
-    for _, src3, q in cands:
+    for _, src3, q in _pattern_candidates(P, A):
         r = _fit_from_anchor(P, src3, q, lattice, big)
         if r is None:
             continue
         H, n, rms, mx, inl, idx, pitch = r
-        key = (n, -rms)
+        small = _matched_small_area(A, idx, inl, lattice, big)
+        w = big_marker_witness(P, A, H, pitch, shape,
+                               small_area=small if np.isfinite(small) else None)
+        # front-facing first: a mirrored labelling is still *returned* (the
+        # orientation witness reports it as mirrored_geometry, which is a
+        # diagnostic the operator sees), but it can never outrank a
+        # front-facing one -- and the live path refuses to carry it forward.
+        key = (int(w["det_h"] > 0), int(w["ok"]), int(w["score"]), n, -rms)
         if best is None or key > best[0]:
-            best = (key, H, n, rms, mx, inl, idx)
+            best = (key, H, n, rms, mx, inl, idx, pitch, w)
+        if w["ok"] and n >= int(early_n):
+            break
     if best is None:
         return None
-    _, H, n, rms, mx, inl, idx = best
+    _, H, n, rms, mx, inl, idx, pitch, w = best
     pts = {}
     for k in np.where(inl)[0]:
         u, v = lattice[k]
         x, y = P[idx[k]]
         pts[(float(u), float(v))] = np.array([x, y])
-    bm = np.array([src for src in []])  # big markers are the anchors; keep empty
-    return GridObservation(pts, H, n, rms, mx, bm)
+    # pixel readout of the four canonical large-marker positions (diagnostics
+    # only; the homography is what defines them)
+    bm = cv2.perspectiveTransform(big.reshape(-1, 1, 2).astype(np.float64),
+                                  np.asarray(H, float)).reshape(-1, 2)
+    return GridObservation(pts, H, n, rms, mx, bm, witness_score=int(w["score"]),
+                           witness=dict(w))
 
 
 def detect_grid(gray: np.ndarray, invert: bool = False,
                 percentile: float = 99.0,
                 refine_mode: str = "centroid",
                 threshold: int | None = None,
-                offset: tuple[float, float] = (0.0, 0.0)) -> Optional[GridObservation]:
+                offset: tuple[float, float] = (0.0, 0.0),
+                shape: tuple[int, int] | None = None) -> Optional[GridObservation]:
     blobs = detect_blobs(gray, invert=invert, percentile=percentile,
                          refine_mode=refine_mode, threshold=threshold,
                          offset=offset)
-    obs = assign_grid(blobs)
-    if obs is not None:
-        return obs
-    return None
+    return assign_grid(blobs, shape=shape if shape is not None else gray.shape)
 
 
 def detect_grid_auto(gray: np.ndarray,
@@ -410,20 +592,30 @@ def detect_grid_auto(gray: np.ndarray,
             thr = thresholds[(invert, float(pct))]
             obs = detect_grid(work, invert=invert, percentile=pct,
                               refine_mode=refine_mode, threshold=thr,
-                              offset=offset)
-            if (first and obs is not None and early_lattice is not None
-                    and early_rms is not None
-                    and obs.n_lattice >= int(early_lattice)
-                    and obs.rms <= float(early_rms)):
-                # the first combination already found every lattice marker with
-                # a residual far below the acceptance limit; the remaining
-                # combinations change nothing measurable (measured: same marker
-                # count, rms within 0.004 px on the recorded sweep)
-                return obs
+                              offset=offset, shape=full.shape)
+            if first and obs is not None and obs.identity_ok:
+                # Two early exits, both gated on a *verified* identity (without
+                # that gate the exit froze a 180-degree relabelling that a later
+                # threshold would have corrected):
+                #  1. the caller's full-lattice rule (all markers, tiny residual);
+                #  2. a verified partial observation with the smallest support
+                #     the wizard uses and a residual far below the acceptance
+                #     limit -- otherwise every clipped view paid all six
+                #     polarity/threshold passes (measured p50 655 ms/frame on the
+                #     real tail frames).
+                full_board = (early_lattice is not None and early_rms is not None
+                              and obs.n_lattice >= int(early_lattice)
+                              and obs.rms <= float(early_rms))
+                partial_ok = (obs.n_lattice >= VERIFIED_EARLY_MIN
+                              and obs.rms <= max(VERIFIED_EARLY_RMS,
+                                                 float(early_rms) if early_rms else 0.0))
+                if full_board or partial_ok:
+                    return obs
             first = False
             if obs is None:
                 continue
-            key = (obs.n_lattice, -obs.rms)
+            # verified identity first, then the witness count, then support
+            key = (int(obs.identity_ok), int(obs.witness_score), obs.n_lattice, -obs.rms)
             if best is None or key > best[0]:
                 best = (key, obs)
     return None if best is None else best[1]

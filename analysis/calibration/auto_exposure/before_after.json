@@ -1,0 +1,557 @@
+{
+ "current": {
+  "baseline_writes": 1,
+  "changes": 7,
+  "final_gain": [
+   105,
+   180
+  ],
+  "final_ir_us": 1405,
+  "final_plate_dn": 74.3,
+  "final_rgb_us": 4687,
+  "ir_reversals": 1,
+  "noop_writes": 0,
+  "out_of_band_s": 28.5,
+  "rgb_pinned_s": 0.0,
+  "saturated_s": 0.0,
+  "started_from_pinned_state": true,
+  "timeline": [
+   {
+    "changes": {
+     "ir_exposure_us": 1500
+    },
+    "d": 431.4,
+    "reason": "IR dark (p50 60)",
+    "t": 21.8
+   },
+   {
+    "changes": {
+     "rgb_exposure_us": 6250
+    },
+    "d": 470.4,
+    "reason": "RGB dark (p50 51)",
+    "t": 27.8
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1875
+    },
+    "d": 485.0,
+    "reason": "IR dark (p50 60)",
+    "t": 30.0
+   },
+   {
+    "changes": {
+     "rgb_exposure_us": 7812
+    },
+    "d": 524.0,
+    "reason": "RGB dark (p50 51)",
+    "t": 36.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 2343
+    },
+    "d": 538.6,
+    "reason": "IR dark (p50 60)",
+    "t": 38.2
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1405
+    },
+    "d": 371.8,
+    "reason": "IR clipping (sat 0.000, p95 253)",
+    "t": 70.5
+   },
+   {
+    "changes": {
+     "rgb_exposure_us": 4687
+    },
+    "d": 320.0,
+    "reason": "RGB clipping (sat 0.000, p95 255)",
+    "t": 75.0
+   }
+  ],
+  "writes": 8
+ },
+ "legacy": {
+  "baseline_writes": 0,
+  "changes": 51,
+  "final_gain": [
+   105,
+   300
+  ],
+  "final_ir_us": 1483,
+  "final_plate_dn": 78.5,
+  "final_rgb_us": 10236,
+  "ir_reversals": 31,
+  "noop_writes": 0,
+  "out_of_band_s": 34.5,
+  "rgb_pinned_s": 15.0,
+  "saturated_s": 0.0,
+  "started_from_pinned_state": false,
+  "timeline": [
+   {
+    "changes": {
+     "ir_exposure_us": 1870,
+     "rgb_exposure_us": 16000
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.023 / p99 255",
+    "t": 4.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1496,
+     "rgb_exposure_us": 12800
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.017 / p99 255",
+    "t": 7.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1196,
+     "rgb_exposure_us": 10240
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 12.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1495
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 63)",
+    "t": 15.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1868,
+     "rgb_exposure_us": 12800
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 18.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1494,
+     "rgb_exposure_us": 10240
+    },
+    "d": 426.5,
+    "reason": "IR saturation 0.016 / p99 255",
+    "t": 21.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1867,
+     "rgb_exposure_us": 12800
+    },
+    "d": 455.8,
+    "reason": "IR dark (p50 25)",
+    "t": 25.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1493
+    },
+    "d": 475.2,
+    "reason": "IR saturation 0.010 / p99 255",
+    "t": 28.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1866
+    },
+    "d": 494.8,
+    "reason": "IR dark (p50 57)",
+    "t": 31.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 2332
+    },
+    "d": 533.8,
+    "reason": "IR dark (p50 61)",
+    "t": 37.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 2915,
+     "rgb_exposure_us": 16000
+    },
+    "d": 550.0,
+    "reason": "IR dark (p50 25)",
+    "t": 42.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 2332
+    },
+    "d": 550.0,
+    "reason": "IR saturation 0.013 / p99 255",
+    "t": 45.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 2915,
+     "rgb_exposure_us": 20000
+    },
+    "d": 550.0,
+    "reason": "IR dark (p50 25)",
+    "t": 49.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 2332
+    },
+    "d": 550.0,
+    "reason": "IR saturation 0.013 / p99 255",
+    "t": 52.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1865,
+     "rgb_exposure_us": 16000
+    },
+    "d": 492.5,
+    "reason": "IR saturation 0.013 / p99 255",
+    "t": 60.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1492,
+     "rgb_exposure_us": 12800
+    },
+    "d": 458.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 63.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1865,
+     "rgb_exposure_us": 16000
+    },
+    "d": 423.5,
+    "reason": "IR dark (p50 25)",
+    "t": 66.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1492,
+     "rgb_exposure_us": 12800
+    },
+    "d": 389.0,
+    "reason": "IR saturation 0.021 / p99 255",
+    "t": 69.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1865,
+     "rgb_exposure_us": 16000
+    },
+    "d": 337.2,
+    "reason": "IR dark (p50 25)",
+    "t": 73.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1492,
+     "rgb_exposure_us": 12800
+    },
+    "d": 320.0,
+    "reason": "IR saturation 0.050 / p99 255",
+    "t": 76.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1193,
+     "rgb_exposure_us": 10240
+    },
+    "d": 320.0,
+    "reason": "IR saturation 0.041 / p99 255",
+    "t": 79.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 954,
+     "rgb_exposure_us": 8192
+    },
+    "d": 320.0,
+    "reason": "IR saturation 0.035 / p99 255",
+    "t": 84.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 763,
+     "rgb_exposure_us": 6553
+    },
+    "d": 320.0,
+    "reason": "IR saturation 0.029 / p99 255",
+    "t": 87.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 953,
+     "rgb_exposure_us": 8191
+    },
+    "d": 320.0,
+    "reason": "IR dark (p50 25)",
+    "t": 90.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 762,
+     "rgb_exposure_us": 6552
+    },
+    "d": 335.0,
+    "reason": "IR saturation 0.027 / p99 255",
+    "t": 93.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 952
+    },
+    "d": 350.0,
+    "reason": "IR dark (p50 25)",
+    "t": 96.0
+   },
+   {
+    "changes": {
+     "rgb_exposure_us": 8190
+    },
+    "d": 357.5,
+    "reason": "within target",
+    "t": 97.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1190
+    },
+    "d": 380.0,
+    "reason": "IR dark (p50 62)",
+    "t": 102.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1487
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 63)",
+    "t": 111.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1858,
+     "rgb_exposure_us": 10237
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 114.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1486
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.017 / p99 255",
+    "t": 117.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1857,
+     "rgb_exposure_us": 12796
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 121.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1485,
+     "rgb_exposure_us": 10236
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.017 / p99 255",
+    "t": 124.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1188
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 127.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1485
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 63)",
+    "t": 130.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1188
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 133.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1485
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 136.5
+   },
+   {
+    "changes": {
+     "rgb_exposure_us": 12795
+    },
+    "d": 420.0,
+    "reason": "within target",
+    "t": 138.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1188,
+     "rgb_exposure_us": 10236
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 141.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1485
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 144.0
+   },
+   {
+    "changes": {
+     "rgb_exposure_us": 12795
+    },
+    "d": 420.0,
+    "reason": "within target",
+    "t": 145.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1188,
+     "rgb_exposure_us": 10236
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 148.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1485
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 63)",
+    "t": 151.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1188
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 156.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1485
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 63)",
+    "t": 159.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1856,
+     "rgb_exposure_us": 12795
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 162.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1484,
+     "rgb_exposure_us": 10236
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.017 / p99 255",
+    "t": 165.0
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1855,
+     "rgb_exposure_us": 12795
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 25)",
+    "t": 169.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1484,
+     "rgb_exposure_us": 10236
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.017 / p99 255",
+    "t": 172.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1187
+    },
+    "d": 420.0,
+    "reason": "IR saturation 0.012 / p99 255",
+    "t": 175.5
+   },
+   {
+    "changes": {
+     "ir_exposure_us": 1483
+    },
+    "d": 420.0,
+    "reason": "IR dark (p50 63)",
+    "t": 178.5
+   }
+  ],
+  "writes": 51
+ },
+ "mode": "synthetic closed loop, 180 s, 320-550 mm sweep",
+ "pinned_current": {
+  "evaluations": 40,
+  "final_rgb": [
+   20000,
+   300
+  ],
+  "limit_reports": 0,
+  "noop_fields": 0,
+  "noop_writes": 0,
+  "writes": 0
+ },
+ "pinned_legacy": {
+  "evaluations": 40,
+  "final_rgb": [
+   20000,
+   300
+  ],
+  "limit_reports": 0,
+  "noop_fields": 19,
+  "noop_writes": 1,
+  "writes": 18
+ }
+}

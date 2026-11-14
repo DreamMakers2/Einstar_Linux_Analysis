@@ -1,0 +1,114 @@
+{
+ "schema": "einstar.fresh01.analysis/1",
+ "session_dir_created_local": "2026-11-14 05:42:34 +0100",
+ "session_json_created_utc": "2026-11-14T04:47:40+00:00",
+ "directory_reused": true,
+ "capture": {
+  "groups_written": 4659,
+  "duration_s": 516.9,
+  "fps": 9.77,
+  "transfer_timeouts": 320,
+  "frames_written": 13977,
+  "incomplete_groups": 1
+ },
+ "decisions": {
+  "rows": 1416,
+  "groups_seen": 4513,
+  "decided": 866,
+  "superseded_recorded_only": 3647,
+  "decision_hz": 1.81,
+  "p50_ms": 239.4,
+  "p95_ms": 1225.3,
+  "max_ms": 15368.9,
+  "max_group_decided": 4509,
+  "duplicate_group_ids": 117
+ },
+ "attempts": {
+  "view_clock_monotonic": 70,
+  "view_clock_epoch": 92,
+  "distinct_timestamp_domains": 2,
+  "device_group_in_views": [
+   1813,
+   4,
+   12
+  ]
+ },
+ "accepted": {
+  "total": 162,
+  "stale_previous_attempt": 70,
+  "this_attempt": 92,
+  "roll_bins_all": [
+   38,
+   113,
+   11,
+   0
+  ],
+  "roll_bins_this_attempt": [
+   28,
+   64,
+   0,
+   0
+  ],
+  "roll_range_this_attempt": [
+   44.19,
+   171.82
+  ]
+ },
+ "rejection_categories": {
+  "no markers": 428,
+  "ambiguous assignment": 405,
+  "redundant": 206,
+  "big-marker witness": 187,
+  "no pose": 176,
+  "mirrored assignment": 170,
+  "stereo overlap": 97,
+  "saturation": 62
+ },
+ "solver": {
+  "measured_s": {
+   "8": 0.19,
+   "16": 1.46,
+   "25": 1.75,
+   "40": 2.68,
+   "60": 6.47,
+   "84": 12.4
+  }
+ },
+ "high_roll_frames_never_decided": [
+  {
+   "group": 4627,
+   "roll_deg": 317.3,
+   "markers": {
+    "left": 15,
+    "right": 30,
+    "tex": 29
+   }
+  },
+  {
+   "group": 4631,
+   "roll_deg": 303.8,
+   "markers": {
+    "left": 26,
+    "right": 34,
+    "tex": 34
+   }
+  }
+ ],
+ "stationarity": {
+  "dwell_intervals": 0,
+  "stationary_observations": 2,
+  "accepted_pose_speed_p50_mm_s": 33.9,
+  "note": "accepted views are 1.2 s apart by design; D7 needs the stream"
+ },
+ "roll_convention": {
+  "view_84_stored_summary_roll_deg": -46.93,
+  "view_84_coverage_roll_deg": 44.34
+ },
+ "exposure": {
+  "changes": 93,
+  "final_ir_us": 2325,
+  "final_rgb_us": 20000,
+  "final_rgb_gain": 300,
+  "saturation_rejections": 62
+ }
+}

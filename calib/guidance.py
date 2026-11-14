@@ -267,24 +267,33 @@ def evaluate_frame(images: dict[str, np.ndarray],
             speed = d / dt
             rate_deg_s = ang / dt
             exposure_s = float(q.get("exposure_s", 0.0012) or 0.0012)
-            blur_mm = speed * exposure_s
-            # Projected blur: f * blur / depth (small-angle approximation).
-            f_px = 1150.0
-            depth_mm = max(50.0, float(abs(pose[1][2])))
-            blur_px = f_px * blur_mm / depth_mm
             metrics["speed_mm_s"] = speed
             metrics["stationarity_speed_mm_s"] = speed
             metrics["stationarity_rate_deg_s"] = rate_deg_s
             metrics["stationarity_window_s"] = dt
             metrics["exposure_s"] = exposure_s
-            metrics["motion_blur_mm"] = blur_mm
-            metrics["motion_blur_px"] = blur_px
             # This is a *measured* acquisition-quality observation, not an
             # acceptance verdict: D7 counts these over every ingested frame.
             metrics["stationary"] = bool(speed <= float(q["max_motion_mm"])
                                          and rate_deg_s <= float(q["max_motion_deg"]))
-            if blur_mm > float(q["max_motion_blur_mm"]) or \
-                    blur_px > float(q["max_motion_blur_px"]):
+            blur_mm = speed * exposure_s
+            # Projected blur: f * blur / depth (small-angle approximation).
+            f_px = 1150.0
+            depth_mm = max(50.0, float(abs(pose[1][2])))
+            blur_px = f_px * blur_mm / depth_mm
+            metrics["motion_blur_mm"] = blur_mm
+            metrics["motion_blur_px"] = blur_px
+            # The metric is always reported, but it *rejects* only for samples
+            # that are genuinely adjacent to the stream cadence.  Across a
+            # sparse decision gap (0.3-1.5 s), a fast inter-frame displacement
+            # is not evidence that the 1.2 ms exposure was blurred: a
+            # deliberate still taken after a quick reposition was rejected 28
+            # times on the real curated replay, exactly when the operator
+            # needed a new coverage sector.  Sharpness itself is still gated by
+            # focus and contrast on the image.
+            if (dt <= float(q["max_adjacent_pair_dt_s"])
+                    and (blur_mm > float(q["max_motion_blur_mm"])
+                         or blur_px > float(q["max_motion_blur_px"]))):
                 reasons.append(
                     f"motion blur ({blur_mm:.2f} mm / {blur_px:.2f} px at "
                     f"{speed:.0f} mm/s and {exposure_s * 1e3:.1f} ms exposure)")

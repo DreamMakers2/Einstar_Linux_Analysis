@@ -1,0 +1,176 @@
+{
+ "schema": "einstar.wizard.bench-pipeline/1",
+ "created_utc": "2026-11-14T05:51:13Z",
+ "argv": [
+  "--mode",
+  "live",
+  "--detect",
+  "processes",
+  "--groups",
+  "120",
+  "--pace-hz",
+  "9.77",
+  "--out",
+  "/tmp/bench_live.json"
+ ],
+ "host": {
+  "cpu_count": 32,
+  "python": "3.14.9",
+  "blas_threads": "default",
+  "omp_threads": "default",
+  "loadavg": [
+   53.74755859375,
+   96.7822265625,
+   78.7529296875
+  ]
+ },
+ "source": "<calibration-session>/frames",
+ "factory": "<private-inputs>/einstar-profiles/factory-e10.json",
+ "result": {
+  "mode": "live",
+  "detect": "processes",
+  "pace_hz": 9.77,
+  "groups": 120,
+  "accepted": 5,
+  "wall_s": 12.391,
+  "offered_hz": 9.684,
+  "decisions": 37,
+  "decision_hz": 2.986,
+  "dropped": 83,
+  "drop_ratio": 0.6917,
+  "worker_metrics": {
+   "preview": {
+    "count": 120,
+    "hz": 9.767488714213147,
+    "p50_ms": 102.13910099992063,
+    "p95_ms": 118.14745400079119,
+    "max_ms": 137.4837600014871
+   },
+   "decision": {
+    "count": 37,
+    "hz": 3.036842449757621,
+    "p50_ms": 208.38742299929436,
+    "p95_ms": 976.2575669992657,
+    "max_ms": 1231.2041459990724
+   },
+   "decision_lag": {
+    "count": 37,
+    "p50_ms": 152.21412599930773,
+    "p95_ms": 963.0990949990519,
+    "max_ms": 1157.2276259994396
+   },
+   "decision_duration": {
+    "count": 37,
+    "mean_ms": 281.548,
+    "p50_ms": 152.193,
+    "p95_ms": 963.071,
+    "p99_ms": 1157.209,
+    "max_ms": 1157.209
+   },
+   "decision_thread": {
+    "busy_fraction": 0.8412,
+    "busy_seconds": 10.417,
+    "wall_seconds": 12.384,
+    "refused_busy": 83,
+    "refused_stopping": 0,
+    "dropped_on_stop": 0,
+    "max_queue_depth": 1
+   },
+   "overload": {
+    "overloaded": true,
+    "busy_fraction": 0.8412,
+    "decisions_over_period": 35,
+    "refused_submissions": 83,
+    "sustainable_hz": 3.552,
+    "offer_hz": 9.77,
+    "period_ms": 102.354,
+    "mean_decision_ms": 281.548,
+    "p95_decision_ms": 963.071
+   },
+   "newest_frame_policy": {
+    "queue_depth": 1,
+    "pending": false,
+    "drop_when_busy": true,
+    "drop_when_paused": true,
+    "drop_when_stopping": true,
+    "groups_seen": 120,
+    "decided": 37,
+    "dropped": 83,
+    "dropped_fraction": 0.6917,
+    "recorded_only": 83,
+    "superseded": 83,
+    "dropped_paused": 0,
+    "dropped_stopping": 0
+   },
+   "groups_seen": 120,
+   "preview_total": 120,
+   "decision_total": 37,
+   "superseded": 83,
+   "recorded_only": 83,
+   "dropped_paused": 0,
+   "dropped_stopping": 0,
+   "overload_events": 0,
+   "preview_during_decision": 114,
+   "preview_gap_max_ms": 137.484,
+   "offer_period_ms": 102.354,
+   "async_decisions": true
+  },
+  "worker_errors": [],
+  "finished": {
+   "acquisition": {
+    "acquisition": {
+     "reasons": [],
+     "safe": null,
+     "state": "not_applicable",
+     "terminal": true,
+     "verified": null
+    },
+    "ok": false,
+    "reasons": [],
+    "safe": null,
+    "state": "not_applicable",
+    "terminal": true,
+    "verified": null
+   },
+   "capture_conflicts": [],
+   "capture_reasons": [],
+   "capture_state": "not_applicable",
+   "complete": true,
+   "groups_ingested": 37,
+   "reader_alive": false,
+   "runner_alive": false,
+   "safe": false,
+   "source_final_verdict": null,
+   "stop_requested": true,
+   "verified": false
+  },
+  "children_cpu_s": 29.389,
+  "decision_stage": {
+   "decision": {
+    "count": 37,
+    "total_ms": 10412.389,
+    "mean_ms": 281.416,
+    "p50_ms": 152.133,
+    "p90_ms": 802.874,
+    "p95_ms": 949.275,
+    "p99_ms": 1156.954,
+    "max_ms": 1156.954
+   }
+  },
+  "newest_frame_policy": {
+   "queue_depth": 1,
+   "pending": false,
+   "drop_when_busy": true,
+   "drop_when_paused": true,
+   "drop_when_stopping": true,
+   "groups_seen": 120,
+   "decided": 37,
+   "dropped": 83,
+   "dropped_fraction": 0.6917,
+   "recorded_only": 83,
+   "superseded": 83,
+   "dropped_paused": 0,
+   "dropped_stopping": 0
+  }
+ }
+}

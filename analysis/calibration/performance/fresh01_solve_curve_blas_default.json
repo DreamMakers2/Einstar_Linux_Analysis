@@ -1,0 +1,85 @@
+{
+ "schema": "einstar.wizard.bench-pipeline/1",
+ "created_utc": "2026-11-14T05:49:48Z",
+ "argv": [
+  "--mode",
+  "solve-curve",
+  "--views",
+  "16,40,84",
+  "--repeats",
+  "3",
+  "--out",
+  "/tmp/curve_blas_default.json"
+ ],
+ "host": {
+  "cpu_count": 32,
+  "python": "3.14.9",
+  "blas_threads": "default",
+  "omp_threads": "default",
+  "loadavg": [
+   127.56787109375,
+   119.6572265625,
+   83.73583984375
+  ]
+ },
+ "source": "<calibration-session>/frames",
+ "factory": "<private-inputs>/einstar-profiles/factory-e10.json",
+ "result": {
+  "mode": "solve-curve",
+  "session_json": "<calibration-session>/session.json",
+  "pitch_mm": 28.0,
+  "curve": [
+   {
+    "views": 16,
+    "observations": 48,
+    "free_kc": true,
+    "best_s": 13.3576,
+    "mean_s": 17.6464,
+    "cpu_best_s": 252.4616,
+    "cpu_mean_s": 300.6744,
+    "samples_s": [
+     13.3576,
+     19.8714,
+     19.7101
+    ],
+    "residual_rms_px": 0.6429
+   },
+   {
+    "views": 40,
+    "observations": 120,
+    "free_kc": true,
+    "best_s": 40.0839,
+    "mean_s": 72.2247,
+    "cpu_best_s": 662.8437,
+    "cpu_mean_s": 940.9309,
+    "samples_s": [
+     99.1252,
+     77.465,
+     40.0839
+    ],
+    "residual_rms_px": 0.6888
+   },
+   {
+    "views": 84,
+    "observations": 252,
+    "free_kc": true,
+    "best_s": 75.8476,
+    "mean_s": 130.9601,
+    "cpu_best_s": 1604.5152,
+    "cpu_mean_s": 2254.5201,
+    "samples_s": [
+     146.1069,
+     75.8476,
+     170.9256
+    ],
+    "residual_rms_px": 0.7414
+   }
+  ],
+  "policy": {
+   "solve_every": 3,
+   "kc_views": 8,
+   "robust_loss": "huber",
+   "f_scale": 0.8
+  }
+ }
+}

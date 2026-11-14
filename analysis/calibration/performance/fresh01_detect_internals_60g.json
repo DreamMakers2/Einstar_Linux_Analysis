@@ -1,0 +1,111 @@
+{
+ "schema": "einstar.wizard.bench-pipeline/1",
+ "created_utc": "2026-11-14T05:54:21Z",
+ "argv": [
+  "--mode",
+  "detect",
+  "--groups",
+  "60",
+  "--out",
+  "/tmp/bench_detect60.json"
+ ],
+ "host": {
+  "cpu_count": 32,
+  "python": "3.14.9",
+  "blas_threads": "default",
+  "omp_threads": "default",
+  "loadavg": [
+   21.91748046875,
+   59.79736328125,
+   67.48779296875
+  ]
+ },
+ "source": "<calibration-session>/frames",
+ "factory": "<private-inputs>/einstar-profiles/factory-e10.json",
+ "result": {
+  "mode": "detect",
+  "groups": 60,
+  "cameras": [
+   "left",
+   "right",
+   "tex"
+  ],
+  "frames_available": 120,
+  "full": {
+   "count": 180,
+   "total_ms": 4460.429,
+   "mean_ms": 24.78,
+   "p50_ms": 22.021,
+   "p90_ms": 49.761,
+   "p95_ms": 63.071,
+   "p99_ms": 77.713,
+   "max_ms": 103.432
+  },
+  "roi": {
+   "count": 175,
+   "total_ms": 2990.811,
+   "mean_ms": 17.09,
+   "p50_ms": 13.589,
+   "p90_ms": 37.747,
+   "p95_ms": 48.662,
+   "p99_ms": 68.835,
+   "max_ms": 88.986
+  },
+  "partial": {
+   "count": 180,
+   "total_ms": 553.318,
+   "mean_ms": 3.074,
+   "p50_ms": 0.025,
+   "p90_ms": 12.686,
+   "p95_ms": 14.856,
+   "p99_ms": 35.931,
+   "max_ms": 90.73
+  },
+  "per_camera_p50_ms": {
+   "left": 28.911,
+   "right": 17.691,
+   "tex": 18.373
+  },
+  "per_camera_mean_ms": {
+   "left": 38.743,
+   "right": 19.688,
+   "tex": 15.91
+  },
+  "passes": {
+   "histogram": {
+    "1": 41,
+    "6": 139
+   },
+   "mean_passes": 4.861,
+   "early_exit_fraction": 0.2278
+  },
+  "roi_outcomes": {
+   "ok": 45,
+   "rejected_clipped": 24,
+   "rejected_short": 70,
+   "none": 36
+  },
+  "roi_retry_cost_ms": {
+   "wasted_mean": 17.09,
+   "wasted_total_s": 2.991,
+   "fallback_rate": 0.7429
+  },
+  "payload": {
+   "full_bytes_per_group": 3932160,
+   "crop_bytes_per_group": 498231,
+   "crop_ratio": 0.37
+  },
+  "ipc": {
+   "payload_bytes_per_group": 3932160,
+   "images_per_group": 3,
+   "repeats": 20,
+   "round_trip_p50_ms": 3.284,
+   "round_trip_p95_ms": 4.024,
+   "frame_wh": [
+    1280,
+    1024
+   ],
+   "crop_bytes_hint": 983040
+  }
+ }
+}

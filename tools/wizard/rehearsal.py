@@ -32,6 +32,12 @@ from __future__ import annotations
 import os
 import sys
 
+# See gui/app.py: one BLAS thread keeps the small calibration solve fast and
+# predictable; the detector workers inherit it.
+for _var in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+             "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0])) if sys.argv and sys.argv[0] else ""
 sys.path[:] = [entry for entry in sys.path
                if entry not in ("", ".", _SCRIPT_DIR, "tools/wizard")
@@ -256,6 +262,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="print the machine-readable summary as the last line")
     p.add_argument("--quiet", action="store_true",
                    help="only print accepted decisions and the summary")
+    p.add_argument("--async-solve", action="store_true",
+                   help="run the periodic rig solve off the decision thread "
+                        "(what live acquisition always does)")
     return p
 
 
@@ -311,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:
     ctl = controller.WizardController(
         factory_profile=factory, session_dir=session_dir, mode=args.mode,
         pitch_mm=args.pitch_mm, goal=args.goal, source=info,
-        ring_keep=args.ring_keep)
+        ring_keep=args.ring_keep, async_solve=bool(args.async_solve))
     begun = ctl.begin()
     print(f"  factory sha256: {begun.get('factory_sha256')}")
     print("-" * 78)

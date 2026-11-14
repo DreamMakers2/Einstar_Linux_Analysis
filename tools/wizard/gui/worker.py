@@ -23,44 +23,106 @@ class DecisionRunner(QtCore.QThread):
     groups/s).  The queue holds at most one pending group - a calibration frame
     that is two frames stale is useless, and a longer queue would only delay the
     guidance.
+
+    The runner is also the measurement point for the decision thread: it records
+    how long every decision took, how long the group waited before it started,
+    how much wall time it was busy, and how many submissions it had to refuse.
+    Those are the numbers that separate "the decision thread is the bottleneck"
+    from "the reader is slow" (see :meth:`SessionWorker.metrics`).
     """
 
     decision = QtCore.Signal(dict)
     error = QtCore.Signal(str)
     busy = False
+    #: keep this many durations/lags; a 10 Hz session runs for hours
+    HISTORY = 512
 
     def __init__(self, controller, parent=None):
         super().__init__(parent)
         self.controller = controller
         self._lock = threading.Lock()
+        self._cond = threading.Condition(self._lock)   # the same lock, with a wakeup
         self._pending = None
         self._stop = threading.Event()
-        self._wake = threading.Event()
+        self._submitted_at: float | None = None
+        #: measurement (all times in milliseconds unless named ``*_s``)
+        self.durations_ms: list[float] = []
+        self.lags_ms: list[float] = []
+        self.completed = 0
+        self.refused = 0            # submit refused: the runner was busy
+        self.refused_stopping = 0   # submit refused: a stop was requested
+        self.dropped_on_stop = 0    # a pending group discarded by request_stop
+        self.busy_seconds = 0.0
+        self.last_decision_ms: float | None = None
+        self.last_lag_ms: float | None = None
+        self.running_since: float | None = None
 
+    # -- submission ----------------------------------------------------
     def submit(self, group) -> bool:
-        """Hand a group to the runner; False when it is already busy."""
-        with self._lock:
+        """Hand a group to the runner; False when it cannot be decided now.
+
+        A submission is refused while a decision is in flight (newest-frame
+        policy: the older group is only recorded) and once a stop has been
+        requested (starting work that the session is about to abandon wastes the
+        one resource the decision thread has).
+        """
+        with self._cond:
+            if self._stop.is_set():
+                self.refused_stopping += 1
+                return False
             if self.busy:
+                self.refused += 1
                 return False
             self.busy = True
             self._pending = group
-        self._wake.set()
+            self._submitted_at = time.monotonic()
+            self._cond.notify_all()
         return True
 
-    def request_stop(self) -> None:
-        self._stop.set()
-        self._wake.set()
+    def request_stop(self, *, drain: bool = True) -> None:
+        """Ask the runner to exit.
 
+        ``drain=True`` keeps the current behaviour: a group that was already
+        submitted is still decided (the session must not lose its last accepted
+        view).  ``drain=False`` discards it and is counted, which is what a
+        user-visible stop wants - the frame is already in the raw recording and
+        waiting up to 15 s for a solve buys nothing.
+        """
+        self._stop.set()
+        with self._cond:
+            if not drain and self._pending is not None:
+                self._pending = None
+                self._submitted_at = None
+                self.busy = False
+                self.dropped_on_stop += 1
+            self._cond.notify_all()
+
+    @property
+    def pending(self) -> bool:
+        with self._cond:
+            return self._pending is not None
+
+    @property
+    def stopping(self) -> bool:
+        return self._stop.is_set()
+
+    # -- loop ----------------------------------------------------------
     def run(self) -> None:  # noqa: D401
         while True:
-            with self._lock:
+            with self._cond:
                 group, self._pending = self._pending, None
+                submitted_at, self._submitted_at = self._submitted_at, None
+                if group is None and not self._stop.is_set():
+                    # a condition wait instead of the old 50 ms poll: the runner
+                    # now wakes the moment a group arrives or a stop is asked
+                    # for, so neither the first decision nor the shutdown is
+                    # delayed by a polling interval
+                    self._cond.wait(0.05)
+                    continue
             if group is None:
-                if self._stop.is_set():
-                    break
-                self._wake.wait(0.05)
-                self._wake.clear()
-                continue
+                break
+            started = time.monotonic()
+            self.running_since = started
             try:
                 decision = self.controller.ingest(group)
                 payload = (decision.as_dict() if hasattr(decision, "as_dict")
@@ -69,8 +131,43 @@ class DecisionRunner(QtCore.QThread):
             except Exception as exc:  # pragma: no cover - surfaced to the UI
                 self.error.emit(f"{type(exc).__name__}: {exc}")
             finally:
-                with self._lock:
+                finished = time.monotonic()
+                duration_ms = (finished - started) * 1000.0
+                self.busy_seconds += finished - started
+                self.last_decision_ms = duration_ms
+                self.last_lag_ms = (None if submitted_at is None
+                                    else (finished - submitted_at) * 1000.0)
+                self.durations_ms.append(duration_ms)
+                if self.last_lag_ms is not None:
+                    self.lags_ms.append(self.last_lag_ms)
+                del self.durations_ms[:-self.HISTORY]
+                del self.lags_ms[:-self.HISTORY]
+                self.completed += 1
+                self.running_since = None
+                with self._cond:
                     self.busy = False
+                    self._cond.notify_all()
+
+    def stats(self) -> dict:
+        """Bounded measurement of the decision thread itself."""
+        with self._cond:
+            busy = bool(self.busy) or self._pending is not None
+            waiting = self._pending is not None
+        return {
+            "completed": int(self.completed),
+            "refused_busy": int(self.refused),
+            "refused_stopping": int(self.refused_stopping),
+            "dropped_on_stop": int(self.dropped_on_stop),
+            "busy_seconds": round(self.busy_seconds, 3),
+            "busy": busy,
+            "pending": waiting,
+            "last_decision_ms": (None if self.last_decision_ms is None
+                                 else round(self.last_decision_ms, 3)),
+            "last_lag_ms": (None if self.last_lag_ms is None
+                            else round(self.last_lag_ms, 3)),
+            "durations_ms": list(self.durations_ms),
+            "lags_ms": list(self.lags_ms),
+        }
 
 
 class FinishWorker(QtCore.QThread):
@@ -175,13 +272,37 @@ class SessionWorker(QtCore.QThread):
         self.superseded = 0
         self._decision_lags: list[float] = []
         self._submit_at: float | None = None
+        #: newest-frame policy accounting, made explicit so a 3,647/4,513 gap
+        #: is a number in the evidence file instead of an unexplained loss
+        self.dropped_paused = 0
+        self.dropped_stopping = 0
+        self.overload_events = 0
+        self._durations: list[float] = []
+        #: previews published while a decision was in flight.  This is the proof
+        #: that the preview path never waits for the decision thread: it counts
+        #: the frames that were displayed *during* a decision.
+        self.preview_during_decision = 0
+        self._preview_gap_max_ms = 0.0
+        self._preview_last_at: float | None = None
+        self._wall_started = time.monotonic()
+        self._prompt_stop = False
+        self._last_runner_stats: dict | None = None
         self.end_acquisition: dict = {}
         self.end_info: dict = {}
 
     # -- control -------------------------------------------------------
-    def request_stop(self) -> None:
+    def request_stop(self, *, prompt: bool = False) -> None:
+        """Stop the worker.
+
+        ``prompt=True`` also drops the frame that is still pending (it is in the
+        raw recording, and the operator pressed stop); a decision that is
+        already running is always allowed to finish.  The default keeps the
+        documented behaviour: one already-submitted frame is still decided, so a
+        session never loses the view it had just committed to.
+        """
         self._stop.set()
         self._pause.clear()
+        self._prompt_stop = bool(prompt)
 
     def request_pause(self) -> None:
         self._pause.set()
@@ -203,10 +324,21 @@ class SessionWorker(QtCore.QThread):
         self.decision_count += 1
         self.decision_total += 1
         self._decision_times.append(now)
-        if self._submit_at is not None:
-            self._decision_lags.append((now - self._submit_at) * 1000.0)
-            del self._decision_lags[:-2000]
+        # The lag belongs to the submission that produced this decision.  It is
+        # read from the runner, which owns the timestamp under its own lock: the
+        # previous version stored it on the consumer side, where a submit that
+        # happened while the signal was still queued overwrote it, so 26 lags of
+        # the fresh-01 session were lost and the rest understated.
+        lag_ms = None
+        runner = getattr(self, "runner", None)
+        if runner is not None and getattr(runner, "last_lag_ms", None) is not None:
+            lag_ms = float(runner.last_lag_ms)
+        elif self._submit_at is not None:
+            lag_ms = (now - self._submit_at) * 1000.0
             self._submit_at = None
+        if lag_ms is not None:
+            self._decision_lags.append(lag_ms)
+            del self._decision_lags[:-2000]
         if len(self._decision_times) > 2000:
             del self._decision_times[:1000]
         with self._lock:
@@ -239,15 +371,146 @@ class SessionWorker(QtCore.QThread):
                "p95_ms": (lags[min(len(lags) - 1, int(0.95 * len(lags)))]
                           if lags else None),
                "max_ms": (lags[-1] if lags else None)}
+        duration = self._duration_summary()
+        wall = max(1e-9, time.monotonic() - self._wall_started)
+        runner_stats = self._runner_stats()
+        period = (1.0 / self.pace_hz) if self.pace_hz > 0 else None
+        busy_s = float(runner_stats.get("busy_seconds") or 0.0)
         return {"preview": summary(self._preview_times),
                 "decision": summary(self._decision_times),
                 "decision_lag": lag,
+                "decision_duration": duration,
+                "decision_thread": {
+                    "busy_fraction": round(min(1.0, busy_s / wall), 4),
+                    "busy_seconds": round(busy_s, 3),
+                    "wall_seconds": round(wall, 3),
+                    "refused_busy": int(runner_stats.get("refused_busy") or 0),
+                    "refused_stopping": int(runner_stats.get(
+                        "refused_stopping") or 0),
+                    "dropped_on_stop": int(runner_stats.get("dropped_on_stop") or 0),
+                    # one decision at a time is the whole policy: the queue is
+                    # never deeper than the group in the runner's hand
+                    "max_queue_depth": 1,
+                },
+                "overload": self.overload_report(),
+                "newest_frame_policy": self.newest_frame_policy(),
                 "groups_seen": int(self.groups_seen),
                 "preview_total": int(self.preview_total),
                 "decision_total": int(self.decision_total),
                 "superseded": int(self.superseded),
                 "recorded_only": int(self.recorded_only),
+                "dropped_paused": int(self.dropped_paused),
+                "dropped_stopping": int(self.dropped_stopping),
+                "overload_events": int(self.overload_events),
+                "preview_during_decision": int(self.preview_during_decision),
+                "preview_gap_max_ms": (round(self._preview_gap_max_ms, 3)
+                                       if self._preview_gap_max_ms else None),
+                "offer_period_ms": (None if period is None
+                                    else round(period * 1000.0, 3)),
                 "async_decisions": bool(self.async_decisions)}
+
+    # -- explicit newest-frame policy ----------------------------------
+    def newest_frame_policy(self) -> dict:
+        """What this worker does with a group it cannot decide right now.
+
+        The policy is *stated* here so the operator's evidence file explains the
+        gap between ``groups_seen`` and ``decision_total`` instead of leaving it
+        to be inferred: exactly one group is pending; a group that arrives while
+        a decision is in flight is recorded only (never queued); a group that
+        arrives while the session is paused or stopping is not decided either.
+        """
+        decided = int(self.decision_total)
+        seen = int(self.groups_seen)
+        return {
+            "queue_depth": 1,
+            "pending": bool(getattr(self, "runner", None) is not None
+                            and self.runner.pending),
+            "drop_when_busy": True,
+            "drop_when_paused": True,
+            "drop_when_stopping": True,
+            "groups_seen": seen,
+            "decided": decided,
+            "dropped": max(0, seen - decided),
+            "dropped_fraction": (round(max(0, seen - decided) / seen, 4)
+                                 if seen else None),
+            "recorded_only": int(self.recorded_only),
+            "superseded": int(self.superseded),
+            "dropped_paused": int(self.dropped_paused),
+            "dropped_stopping": int(self.dropped_stopping),
+        }
+
+    def overload_report(self) -> dict:
+        """Is the decision thread the bottleneck, and by how much?
+
+        ``overloaded`` is a measurement, not an opinion: it is true when the
+        decision thread's busy fraction is high, or when a decision took longer
+        than the stream period (so at least one group had to be dropped), or when
+        submissions were refused.  ``sustainable_hz`` is 1/mean decision time -
+        the decision rate this hardware can hold with this workload.
+        """
+        duration = self._duration_summary()
+        mean_ms = duration.get("mean_ms")
+        period = (1.0 / self.pace_hz) if self.pace_hz > 0 else None
+        refused = int(self.superseded)
+        over_period = 0
+        if period and mean_ms is not None:
+            limit = period * 1000.0
+            over_period = sum(1 for value in self._runner_durations()
+                              if value > limit)
+        busy = None
+        stats = self._runner_stats()
+        if stats:
+            wall = max(1e-9, time.monotonic() - self._wall_started)
+            busy = round(min(1.0, float(stats.get("busy_seconds") or 0.0) / wall), 4)
+        return {
+            "overloaded": bool((busy is not None and busy >= 0.85)
+                               or over_period > 0 or refused > 0),
+            "busy_fraction": busy,
+            "decisions_over_period": int(over_period),
+            "refused_submissions": refused,
+            "sustainable_hz": (round(1000.0 / mean_ms, 3)
+                               if mean_ms else None),
+            "offer_hz": (round(self.pace_hz, 3) if self.pace_hz else None),
+            "period_ms": (None if period is None else round(period * 1000.0, 3)),
+            "mean_decision_ms": mean_ms,
+            "p95_decision_ms": duration.get("p95_ms"),
+        }
+
+    def _runner_stats(self) -> dict:
+        """The decision thread's own counters.
+
+        The runner is cleared when the session ends, so its last measurement is
+        snapshotted: the evidence file is written *after* shutdown, and losing
+        the durations there would hide exactly the stall it is meant to explain.
+        """
+        runner = getattr(self, "runner", None)
+        if runner is not None and hasattr(runner, "stats"):
+            stats = runner.stats()
+            self._last_runner_stats = stats
+            return stats
+        return dict(getattr(self, "_last_runner_stats", None) or {})
+
+    def _runner_durations(self) -> list[float]:
+        values = list(self._runner_stats().get("durations_ms") or [])
+        if values:
+            return values
+        return list(getattr(self, "_durations", ()))
+
+    def _duration_summary(self) -> dict:
+        """How long a decision takes (not how far apart decisions are)."""
+        values = sorted(self._runner_durations())
+        if not values:
+            return {"count": 0, "mean_ms": None, "p50_ms": None, "p95_ms": None,
+                    "p99_ms": None, "max_ms": None}
+        n = len(values)
+        return {
+            "count": n,
+            "mean_ms": round(sum(values) / n, 3),
+            "p50_ms": round(values[n // 2], 3),
+            "p95_ms": round(values[min(n - 1, int(0.95 * n))], 3),
+            "p99_ms": round(values[min(n - 1, int(0.99 * n))], 3),
+            "max_ms": round(values[-1], 3),
+        }
 
     # -- loop ----------------------------------------------------------
     def run(self) -> None:  # noqa: D401
@@ -269,11 +532,26 @@ class SessionWorker(QtCore.QThread):
             "source": group.source,
             "decision": None,
         }
+        now = time.monotonic()
+        if self._preview_last_at is not None:
+            gap_ms = (now - self._preview_last_at) * 1000.0
+            if gap_ms > self._preview_gap_max_ms:
+                self._preview_gap_max_ms = gap_ms
+            if self.pace_hz > 0 and gap_ms > (1000.0 / self.pace_hz) * 1.5:
+                # the display missed more than 1.5 offer periods: an overload
+                # event that is visible to the operator, not a silent drop
+                self.overload_events += 1
+        self._preview_last_at = now
+        # A preview published while a decision is running is the measurable
+        # statement that the display path does not wait for the decision thread.
+        runner = getattr(self, "runner", None)
+        if runner is not None and getattr(runner, "busy", False):
+            self.preview_during_decision += 1
         with self._lock:
             self._latest = payload_preview
         self.preview_count += 1
         self.preview_total += 1
-        self._preview_times.append(time.monotonic())
+        self._preview_times.append(now)
         if len(self._preview_times) > 2000:
             del self._preview_times[:1000]
         self.preview.emit(payload_preview)
@@ -352,10 +630,22 @@ class SessionWorker(QtCore.QThread):
                         break
                     continue
                 if self.runner is not None:
+                    if self._pause.is_set():
+                        # Pause means "stop spending the decision thread", not
+                        # just "stop reading": the group that was already queued
+                        # when the operator pressed pause stays undecided and is
+                        # counted, so a paused session cannot keep solving.
+                        self.controller.record_only(group)
+                        self.recorded_only += 1
+                        self.dropped_paused += 1
+                        continue
                     if not self.runner.submit(group):
                         self.controller.record_only(group)
                         self.recorded_only += 1
-                        self.superseded += 1
+                        if self.runner.stopping:
+                            self.dropped_stopping += 1
+                        else:
+                            self.superseded += 1
                     else:
                         self._submit_at = time.monotonic()
                         self._last_decision_at = self._submit_at
@@ -389,12 +679,15 @@ class SessionWorker(QtCore.QThread):
                                 "session completion is not claimed")
             runner_alive = False
             if self.runner is not None:
-                self.runner.request_stop()
+                # end of stream drains one already-submitted frame; a prompt
+                # stop drops the pending one so the window can close at once
+                self.runner.request_stop(drain=not self._prompt_stop)
                 if not self.runner.wait(30000):
                     runner_alive = True
                     self.error.emit("decision worker did not stop; "
                                     "session completion is not claimed")
                 else:
+                    self._last_runner_stats = self.runner.stats()
                     self.runner = None
             acquisition = self._finalize_source()
             self.finished_ok.emit(self._end_info(
@@ -541,6 +834,10 @@ class SessionWorker(QtCore.QThread):
                     if not self.runner.submit(group):
                         self.controller.record_only(group)
                         self.recorded_only += 1
+                        if self.runner.stopping:
+                            self.dropped_stopping += 1
+                        else:
+                            self.superseded += 1
                     else:
                         self._last_decision_at = time.monotonic()
                     self._count += 1
@@ -551,6 +848,8 @@ class SessionWorker(QtCore.QThread):
                 started = time.monotonic()
                 decision = self.controller.ingest(group)
                 self._last_ingest_s = time.monotonic() - started
+                self._durations.append(self._last_ingest_s * 1000.0)
+                del self._durations[:-512]
                 self._last_decision_at = time.monotonic()
                 payload = (decision.as_dict() if hasattr(decision, "as_dict")
                            else dict(decision))
@@ -565,14 +864,21 @@ class SessionWorker(QtCore.QThread):
         except Exception as exc:  # pragma: no cover - surface to the UI
             self.error.emit(f"{type(exc).__name__}: {exc}")
         finally:
+            runner_alive = False
             if self.runner is not None:
-                self.runner.request_stop()
-                self.runner.wait(15000)
-                self.runner = None
+                self.runner.request_stop(drain=not self._prompt_stop)
+                if not self.runner.wait(15000):
+                    # never report completion while the decision thread is alive
+                    runner_alive = True
+                    self.error.emit("decision worker did not stop; "
+                                    "session completion is not claimed")
+                else:
+                    self._last_runner_stats = self.runner.stats()
+                    self.runner = None
             acquisition = self._finalize_source()
             self.finished_ok.emit(self._end_info(
                 groups_ingested=self._count, reader_alive=False,
-                runner_alive=False, complete=not self._stop.is_set()
+                runner_alive=runner_alive, complete=not self._stop.is_set()
                 or bool(acquisition.get("verified", True)),
                 acquisition=acquisition))
 

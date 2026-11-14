@@ -56,7 +56,16 @@ MODES = {
         "stop_min_delta_sigma_mm": 0.005, "stop_min_recent_gain": 0.003,
         "stop_min_recent_sigma_mm": 0.005,
         "free_kc": True, "robust_loss": "huber", "f_scale": 0.8,
-        "solve_every": 1, "quality": {"min_markers": 28, "max_saturation_frac": 0.01},
+        # A partial board with 12 verified markers still pins a pose to
+        # ~0.2 deg / 0.3 mm p95 (measured on 109 real 40-marker views, see
+        # analysis/calibration/partial_board/summary.json), and a 1 % saturation
+        # limit rejected frames whose only clipped pixels were the
+        # retro-reflective markers themselves (43 field rejections).  High mode
+        # keeps its stricter solve/validation policy but no longer bans valid
+        # geometry at the door.
+        "solve_every": 1,
+        "quality": {"min_markers": 16, "min_stereo_markers": 16,
+                    "max_saturation_frac": 0.02},
     },
 }
 
@@ -165,6 +174,8 @@ class CalibrationSession:
         self._solves = 0
         self.solve_seconds = 0.0
         self._last_result: Optional[CalibrationResult] = None
+        #: accepted-view count at the last installed solve (schedule state)
+        self._last_solve_n: int = 0
         self._task_cache: dict = {}
         self.last_solve_error: Optional[str] = None
         self._task_history: list[float] = []
@@ -222,7 +233,8 @@ class CalibrationSession:
                 "tex": self.result.extrinsics["tex"]}
 
     # -- main entry ---------------------------------------------------------
-    def ingest(self, frames: FrameSet, grids: Optional[dict] = None) -> Decision:
+    def ingest(self, frames: FrameSet, grids: Optional[dict] = None,
+               *, solve: bool = True) -> Decision:
         if grids is None:
             t0 = __import__("time").time()
             grids = self._detect(frames)
@@ -285,7 +297,7 @@ class CalibrationSession:
             frames.timestamp, q.as_dict(), float(gain or 0.0), holdout,
             q.n_markers, frames.label))
         self.last_pose, self.last_timestamp = q.pose, frames.timestamp
-        solved = self._maybe_solve()
+        solved = self._maybe_solve() if solve else False
         return Decision(True, [], q.as_dict(), gain, vid, solved, self.status())
 
     def _bootstrap_decision(self, q: guidance.FrameQuality) -> dict:
@@ -433,47 +445,111 @@ class CalibrationSession:
         return float(np.sqrt(np.mean(np.sum((pred - pts2) ** 2, axis=1))))
 
     # -- solving ------------------------------------------------------------
-    def _maybe_solve(self) -> bool:
+    def solve_due(self) -> bool:
+        """Whether the current accepted count calls for a rig solve.
+
+        The old rule was ``n % solve_every == 0`` with ``solve_every``
+        recomputed from the *pre-append* count, which in a 162-view session
+        produced **33** solves (5, 6, 9, 12, 14, 16, ...), not the intended
+        ~12.  A solve costs 0.3-5 s and is only needed when the calibration
+        has fallen behind; geometric growth (at least 1.5x more views than the
+        last solve) keeps the guidance fresh at ~11 solves.
+        """
         n = len(self.accepted)
-        every = int(self.policy.get("solve_every", 1))
         if n == 0:
             return False
-        # a 1- or 2-view problem cannot identify intrinsics; wait for the
-        # bootstrap minimum before the first solve
-        if self.result is None and n < max(3, int(self.policy["bootstrap_views"])):
-            return False
-        if n % every != 0 and n != int(self.policy["bootstrap_views"]):
-            return False
-        kc_mode = self.policy["free_kc"]
-        free_kc = kc_mode if n >= int(self.policy["kc_views"]) else False
-        t0 = __import__("time").time()
+        bootstrap = max(3, int(self.policy["bootstrap_views"]))
+        if self.result is None:
+            # the first solve is the bootstrap one, exactly at the minimum
+            return n >= bootstrap
+        last = int(getattr(self, "_last_solve_n", 0) or 0)
+        if last <= 0:
+            return True
+        every = max(1, int(self.policy.get("solve_every", 1)))
+        # 1.5x growth, but never closer than the mode's spacing
+        return (n - last) >= max(every, max(2, last // 2))
+
+    def mark_solved(self, n_views: int) -> None:
+        """Record that a solve covering ``n_views`` accepted views landed."""
+        self._last_solve_n = int(n_views)
+
+    def solve_observations(self, obs, cameras, *, n_views: int,
+                           policy: Optional[dict] = None):
+        """Solve an immutable snapshot; does not touch session state.
+
+        Split from :meth:`_install_result` so a background solver can do the
+        expensive work without holding the controller's decision lock (and
+        therefore without freezing tracking, guidance or persistence).
+        """
+        policy = self.policy if policy is None else policy
+        free_kc = (policy["free_kc"] if n_views >= int(policy["kc_views"])
+                   else False)
         try:
-            res = self.solve_fn(self.obs, self.pitch_mm, self.cameras, free_kc,
-                                self.policy["robust_loss"], self.policy["f_scale"])
+            return self.solve_fn(obs, self.pitch_mm, cameras, free_kc,
+                                 policy["robust_loss"], policy["f_scale"])
         except TypeError:
-            res = calibrate(self.obs, self.pitch_mm, self.cameras,
-                            free_kc=free_kc, robust_loss=self.policy["robust_loss"],
-                            f_scale=self.policy["f_scale"], free_intrinsics=True)
-        except Exception as exc:  # keep the session alive and explain
-            self.last_solve_error = f"{type(exc).__name__}: {exc}"
-            return False
-        self.solve_seconds += __import__("time").time() - t0
-        self._solves += 1
+            return calibrate(obs, self.pitch_mm, cameras, free_kc=free_kc,
+                             robust_loss=policy["robust_loss"],
+                             f_scale=policy["f_scale"], free_intrinsics=True)
+
+    def install_result(self, res) -> None:
+        """Install a solved result and refresh the derived task metrics."""
         prev = self.result
         self.result = res
         self._last_result = prev
         self.cameras = dict(res.cameras)
         self._task_cache = {}
         try:
-            rep = objective.evaluate_task(res, "A", self.points, cache=self._task_cache)
+            rep = objective.evaluate_task(res, "A", self.points,
+                                          cache=self._task_cache)
             self._task_history.append(float(rep.value))
             self._sigma_history.append(float(np.median(rep.sigma_mm)))
         except Exception:
             pass
+
+    def _maybe_solve(self) -> bool:
+        n = len(self.accepted)
+        if not self.solve_due():
+            return False
+        t0 = __import__("time").time()
+        try:
+            res = self.solve_observations(list(self.obs), dict(self.cameras),
+                                          n_views=n)
+        except Exception as exc:  # keep the session alive and explain
+            self.last_solve_error = f"{type(exc).__name__}: {exc}"
+            return False
+        self.solve_seconds += __import__("time").time() - t0
+        self._solves += 1
+        self.install_result(res)
+        self.mark_solved(n)
         return True
 
-    def solve_now(self) -> bool:
-        return self._maybe_solve()
+    def solve_now(self, *, force: bool = False) -> bool:
+        """Solve now; ``force`` ignores the incremental schedule.
+
+        ``finish()`` needs a result that covers *every* accepted view before it
+        decides which parameters to free and what to report as observable.  A
+        schedule-stale result can make a colour-distortion parameter look
+        observable (or the reverse), which is how a validated candidate ended
+        up 'pending' on tex.k2/k3.
+        """
+        if not force:
+            return self._maybe_solve()
+        n = len(self.accepted)
+        if n == 0:
+            return False
+        t0 = __import__("time").time()
+        try:
+            res = self.solve_observations(list(self.obs), dict(self.cameras),
+                                          n_views=n)
+        except Exception as exc:
+            self.last_solve_error = f"{type(exc).__name__}: {exc}"
+            return False
+        self.solve_seconds += __import__("time").time() - t0
+        self._solves += 1
+        self.install_result(res)
+        self.mark_solved(n)
+        return True
 
     # -- guidance -----------------------------------------------------------
     def recommend(self, top: int = 3, effort_weight: float = 0.05) -> dict:

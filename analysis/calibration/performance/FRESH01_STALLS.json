@@ -1,0 +1,1403 @@
+{
+ "schema": "einstar.wizard.fresh01-stalls/1",
+ "created_utc": "2026-11-14T05:51:37Z",
+ "subject": {
+  "session": "<calibration-session>",
+  "frames_replayed": "<calibration-session>/frames (frame_004539..004658, 120 groups, read-only)",
+  "field_metrics_source": "ui_metrics.json + session.json of that session",
+  "field": {
+   "capture_hz": 9.77,
+   "groups_captured": 4659,
+   "capture_s": 516.9,
+   "groups_seen": 4513,
+   "decisions": 866,
+   "decision_hz": 1.81,
+   "recorded_only": 3647,
+   "superseded": 3647,
+   "drop_ratio": 0.808,
+   "decision_gap_p50_ms": 239.4,
+   "decision_gap_p95_ms": 1225.3,
+   "decision_gap_max_ms": 15368.9,
+   "decision_lag_p50_ms": 189.7,
+   "decision_lag_p95_ms": 1155.2,
+   "decision_lag_max_ms": 12691.0,
+   "preview_hz": 9.69,
+   "preview_p50_ms": 110.5,
+   "preview_max_ms": 376.0,
+   "accepted_views": 162,
+   "persist_writes": 222,
+   "persist_throttled": 646,
+   "persist_seconds": 7.46
+  }
+ },
+ "method": {
+  "harness": "tools/wizard/bench_pipeline.py",
+  "modes": [
+   "sync (inline controller.ingest, stage timers attached from outside)",
+   "detect (per-camera detection internals)",
+   "live (real SessionWorker)",
+   "solve-curve (real solver on the recorded observations)"
+  ],
+  "host": {
+   "cpu_count": 32,
+   "python": "3.14.9",
+   "note": "shared machine; other agents were benchmarking at the same time, load average 27-128 during these runs. Wall-clock numbers are therefore inflated and run-to-run noisy; every conclusion below rests on a within-run share, a paired A/B, or a CPU-seconds comparison, which the load does not scale."
+  },
+  "caveat": "the replayed frames are the tail of the session (4539-4658), so the replay reaches only 14 accepted views; the 162-view session cost is computed from the solve policy plus the measured solve curve."
+ },
+ "stage_breakdown_processes": {
+  "groups": 120,
+  "accepted": 14,
+  "solves": 5,
+  "wall_s": 48.711,
+  "decision": {
+   "count": 120,
+   "total_s": 46.99,
+   "mean_ms": 391.589,
+   "p50_ms": 312.279,
+   "p95_ms": 930.478,
+   "p99_ms": 1486.116,
+   "max_ms": 2018.813,
+   "hz": 2.554,
+   "cpu_ms_p50": 2078.106,
+   "cpu_ms_p95": 8057.696
+  },
+  "detect": {
+   "count": 120,
+   "total_ms": 30056.525,
+   "mean_ms": 250.471,
+   "p50_ms": 226.222,
+   "p95_ms": 445.522,
+   "p99_ms": 1107.835,
+   "max_ms": 1212.093
+  },
+  "session_ingest": {
+   "count": 73,
+   "total_ms": 12027.296,
+   "mean_ms": 164.757,
+   "p50_ms": 61.118,
+   "p95_ms": 512.474,
+   "p99_ms": 1122.819,
+   "max_ms": 1596.476
+  },
+  "session_solve": {
+   "count": 5,
+   "total_ms": 2875.24,
+   "mean_ms": 575.048,
+   "p50_ms": 510.507,
+   "p95_ms": 1170.355,
+   "p99_ms": 1170.355,
+   "max_ms": 1170.355
+  },
+  "session_refine": {
+   "count": 14,
+   "total_ms": 4677.649,
+   "mean_ms": 334.118,
+   "p50_ms": 331.901,
+   "p95_ms": 366.013,
+   "p99_ms": 374.737,
+   "max_ms": 374.737
+  },
+  "pre_checks": {
+   "count": 120,
+   "total_ms": 2326.87,
+   "mean_ms": 19.391,
+   "p50_ms": 20.386,
+   "p95_ms": 27.239,
+   "p99_ms": 33.132,
+   "max_ms": 37.69
+  },
+  "accept_store": {
+   "count": 14,
+   "total_ms": 1070.997,
+   "mean_ms": 76.5,
+   "p50_ms": 75.508,
+   "p95_ms": 89.971,
+   "p99_ms": 108.598,
+   "max_ms": 108.598
+  },
+  "derived": {
+   "count": 120,
+   "total_ms": 465.705,
+   "mean_ms": 3.881,
+   "p50_ms": 3.131,
+   "p95_ms": 11.006,
+   "p99_ms": 12.587,
+   "max_ms": 14.038
+  },
+  "derived_coverage": {
+   "count": 120,
+   "total_ms": 345.358,
+   "mean_ms": 2.878,
+   "p50_ms": 2.792,
+   "p95_ms": 5.221,
+   "p99_ms": 7.994,
+   "max_ms": 8.032
+  },
+  "publish": {
+   "count": 121,
+   "total_ms": 369.512,
+   "mean_ms": 3.054,
+   "p50_ms": 2.482,
+   "p95_ms": 5.759,
+   "p99_ms": 6.287,
+   "max_ms": 9.041
+  },
+  "persist": {
+   "count": 121,
+   "total_ms": 112.805,
+   "mean_ms": 0.932,
+   "p50_ms": 0.002,
+   "p95_ms": 4.94,
+   "p99_ms": 7.757,
+   "max_ms": 7.954
+  },
+  "veto": {
+   "count": 47,
+   "total_ms": 462.604,
+   "mean_ms": 9.843,
+   "p50_ms": 9.17,
+   "p95_ms": 15.816,
+   "p99_ms": 17.464,
+   "max_ms": 17.464
+  },
+  "decomposition": {
+   "root_total_ms": 46989.817,
+   "children": {
+    "detect": {
+     "total_ms": 30056.525,
+     "share": 0.6396,
+     "count": 120
+    },
+    "session_ingest": {
+     "total_ms": 12027.296,
+     "share": 0.256,
+     "count": 73
+    },
+    "pre_checks": {
+     "total_ms": 2326.87,
+     "share": 0.0495,
+     "count": 120
+    },
+    "accept_store": {
+     "total_ms": 1070.997,
+     "share": 0.0228,
+     "count": 14
+    },
+    "derived": {
+     "total_ms": 465.705,
+     "share": 0.0099,
+     "count": 120
+    },
+    "veto": {
+     "total_ms": 462.604,
+     "share": 0.0098,
+     "count": 47
+    },
+    "publish": {
+     "total_ms": 369.512,
+     "share": 0.0079,
+     "count": 121
+    },
+    "persist": {
+     "total_ms": 112.805,
+     "share": 0.0024,
+     "count": 121
+    },
+    "reject": {
+     "total_ms": 19.665,
+     "share": 0.0004,
+     "count": 59
+    },
+    "append_decision": {
+     "total_ms": 15.159,
+     "share": 0.0003,
+     "count": 120
+    }
+   },
+   "accounted_ms": 46927.138,
+   "unaccounted_ms": 62.679,
+   "unaccounted_share": 0.0013
+  },
+  "detect_internals": {
+   "detect_total_ms": 30056.525,
+   "grid_auto_ms": 0.0,
+   "partial_ms": 0.0,
+   "grid_auto_calls": 0,
+   "partial_calls": 0,
+   "overlap_ratio": 0.0
+  },
+  "decode": {
+   "count": 120,
+   "mean_ms": 14.251,
+   "p50_ms": 13.675,
+   "p95_ms": 19.34,
+   "total_s": 1.71
+  },
+  "process_cpu_over_wall": 7.615,
+  "children_cpu_s": 105.377,
+  "roi_stats": {
+   "roi": 81,
+   "full": 279,
+   "fallback": 272
+  },
+  "reasons": {
+   "assignment": 41,
+   "blur": 40,
+   "markers": 8,
+   "redundant": 26
+  },
+  "persist_stats": {
+   "writes": 29,
+   "seconds": 0.11255056399841123,
+   "throttled": 92
+  }
+ },
+ "stage_breakdown_threads": {
+  "groups": 120,
+  "accepted": 14,
+  "solves": 5,
+  "wall_s": 67.235,
+  "decision": {
+   "count": 120,
+   "total_s": 65.537,
+   "mean_ms": 546.148,
+   "p50_ms": 456.283,
+   "p95_ms": 1054.6,
+   "p99_ms": 4323.038,
+   "max_ms": 5143.276,
+   "hz": 1.831,
+   "cpu_ms_p50": 3851.896,
+   "cpu_ms_p95": 9891.954
+  },
+  "detect": {
+   "count": 120,
+   "total_ms": 39079.773,
+   "mean_ms": 325.665,
+   "p50_ms": 273.581,
+   "p95_ms": 706.09,
+   "p99_ms": 1436.812,
+   "max_ms": 1474.775
+  },
+  "session_ingest": {
+   "count": 73,
+   "total_ms": 21393.36,
+   "mean_ms": 293.06,
+   "p50_ms": 144.682,
+   "p95_ms": 544.696,
+   "p99_ms": 3895.611,
+   "max_ms": 4529.572
+  },
+  "session_solve": {
+   "count": 5,
+   "total_ms": 8069.989,
+   "mean_ms": 1613.998,
+   "p50_ms": 421.11,
+   "p95_ms": 3989.601,
+   "p99_ms": 3989.601,
+   "max_ms": 3989.601
+  },
+  "session_refine": {
+   "count": 14,
+   "total_ms": 4928.067,
+   "mean_ms": 352.005,
+   "p50_ms": 342.415,
+   "p95_ms": 402.47,
+   "p99_ms": 438.477,
+   "max_ms": 438.477
+  },
+  "pre_checks": {
+   "count": 120,
+   "total_ms": 2333.478,
+   "mean_ms": 19.446,
+   "p50_ms": 20.757,
+   "p95_ms": 25.15,
+   "p99_ms": 28.831,
+   "max_ms": 28.848
+  },
+  "accept_store": {
+   "count": 14,
+   "total_ms": 1154.491,
+   "mean_ms": 82.464,
+   "p50_ms": 79.264,
+   "p95_ms": 103.803,
+   "p99_ms": 112.685,
+   "max_ms": 112.685
+  },
+  "derived": {
+   "count": 120,
+   "total_ms": 482.373,
+   "mean_ms": 4.02,
+   "p50_ms": 3.272,
+   "p95_ms": 11.57,
+   "p99_ms": 16.018,
+   "max_ms": 21.642
+  },
+  "derived_coverage": {
+   "count": 120,
+   "total_ms": 354.085,
+   "mean_ms": 2.951,
+   "p50_ms": 2.911,
+   "p95_ms": 5.105,
+   "p99_ms": 6.353,
+   "max_ms": 21.493
+  },
+  "publish": {
+   "count": 121,
+   "total_ms": 381.929,
+   "mean_ms": 3.156,
+   "p50_ms": 2.888,
+   "p95_ms": 5.634,
+   "p99_ms": 8.419,
+   "max_ms": 10.97
+  },
+  "persist": {
+   "count": 121,
+   "total_ms": 145.662,
+   "mean_ms": 1.204,
+   "p50_ms": 0.002,
+   "p95_ms": 7.913,
+   "p99_ms": 8.704,
+   "max_ms": 9.123
+  },
+  "veto": {
+   "count": 47,
+   "total_ms": 494.821,
+   "mean_ms": 10.528,
+   "p50_ms": 8.633,
+   "p95_ms": 16.81,
+   "p99_ms": 48.688,
+   "max_ms": 48.688
+  },
+  "decomposition": {
+   "root_total_ms": 65536.755,
+   "children": {
+    "detect": {
+     "total_ms": 39079.773,
+     "share": 0.5963,
+     "count": 120
+    },
+    "session_ingest": {
+     "total_ms": 21393.36,
+     "share": 0.3264,
+     "count": 73
+    },
+    "pre_checks": {
+     "total_ms": 2333.478,
+     "share": 0.0356,
+     "count": 120
+    },
+    "accept_store": {
+     "total_ms": 1154.491,
+     "share": 0.0176,
+     "count": 14
+    },
+    "veto": {
+     "total_ms": 494.821,
+     "share": 0.0076,
+     "count": 47
+    },
+    "derived": {
+     "total_ms": 482.373,
+     "share": 0.0074,
+     "count": 120
+    },
+    "publish": {
+     "total_ms": 381.929,
+     "share": 0.0058,
+     "count": 121
+    },
+    "persist": {
+     "total_ms": 145.662,
+     "share": 0.0022,
+     "count": 121
+    },
+    "reject": {
+     "total_ms": 19.769,
+     "share": 0.0003,
+     "count": 59
+    },
+    "append_decision": {
+     "total_ms": 13.368,
+     "share": 0.0002,
+     "count": 120
+    }
+   },
+   "accounted_ms": 65499.024,
+   "unaccounted_ms": 37.731,
+   "unaccounted_share": 0.0006
+  },
+  "detect_internals": {
+   "detect_total_ms": 39079.773,
+   "grid_auto_ms": 73130.472,
+   "partial_ms": 5658.994,
+   "grid_auto_calls": 632,
+   "partial_calls": 98,
+   "overlap_ratio": 2.016
+  },
+  "decode": {
+   "count": 120,
+   "mean_ms": 14.042,
+   "p50_ms": 12.916,
+   "p95_ms": 23.555,
+   "total_s": 1.685
+  },
+  "process_cpu_over_wall": 10.609,
+  "children_cpu_s": 0.0,
+  "roi_stats": {
+   "roi": 81,
+   "full": 279,
+   "fallback": 272
+  },
+  "reasons": {
+   "assignment": 41,
+   "blur": 40,
+   "markers": 8,
+   "redundant": 26
+  },
+  "persist_stats": {
+   "writes": 32,
+   "seconds": 0.14542335300211562,
+   "throttled": 89
+  }
+ },
+ "ab_no_roi": {
+  "groups": 120,
+  "accepted": 14,
+  "solves": 5,
+  "wall_s": 53.085,
+  "decision": {
+   "count": 120,
+   "total_s": 51.286,
+   "mean_ms": 427.391,
+   "p50_ms": 349.778,
+   "p95_ms": 864.358,
+   "p99_ms": 4389.35,
+   "max_ms": 4742.074,
+   "hz": 2.34,
+   "cpu_ms_p50": 2577.373,
+   "cpu_ms_p95": 9292.982
+  },
+  "detect": {
+   "count": 120,
+   "total_ms": 25398.748,
+   "mean_ms": 211.656,
+   "p50_ms": 201.16,
+   "p95_ms": 432.614,
+   "p99_ms": 1273.628,
+   "max_ms": 1273.801
+  },
+  "session_ingest": {
+   "count": 73,
+   "total_ms": 20865.341,
+   "mean_ms": 285.827,
+   "p50_ms": 124.792,
+   "p95_ms": 550.669,
+   "p99_ms": 4126.371,
+   "max_ms": 4425.871
+  },
+  "session_solve": {
+   "count": 5,
+   "total_ms": 8490.735,
+   "mean_ms": 1698.147,
+   "p50_ms": 607.17,
+   "p95_ms": 3969.083,
+   "p99_ms": 3969.083,
+   "max_ms": 3969.083
+  },
+  "session_refine": {
+   "count": 14,
+   "total_ms": 4707.002,
+   "mean_ms": 336.214,
+   "p50_ms": 331.396,
+   "p95_ms": 390.564,
+   "p99_ms": 406.447,
+   "max_ms": 406.447
+  },
+  "pre_checks": {
+   "count": 120,
+   "total_ms": 2395.635,
+   "mean_ms": 19.964,
+   "p50_ms": 20.737,
+   "p95_ms": 25.614,
+   "p99_ms": 33.463,
+   "max_ms": 63.291
+  },
+  "accept_store": {
+   "count": 14,
+   "total_ms": 1062.178,
+   "mean_ms": 75.87,
+   "p50_ms": 77.127,
+   "p95_ms": 90.975,
+   "p99_ms": 109.188,
+   "max_ms": 109.188
+  },
+  "derived": {
+   "count": 120,
+   "total_ms": 485.936,
+   "mean_ms": 4.049,
+   "p50_ms": 3.381,
+   "p95_ms": 9.92,
+   "p99_ms": 12.226,
+   "max_ms": 13.27
+  },
+  "derived_coverage": {
+   "count": 120,
+   "total_ms": 370.248,
+   "mean_ms": 3.085,
+   "p50_ms": 2.952,
+   "p95_ms": 6.563,
+   "p99_ms": 9.626,
+   "max_ms": 13.167
+  },
+  "publish": {
+   "count": 121,
+   "total_ms": 388.276,
+   "mean_ms": 3.209,
+   "p50_ms": 3.293,
+   "p95_ms": 5.769,
+   "p99_ms": 7.453,
+   "max_ms": 10.454
+  },
+  "persist": {
+   "count": 121,
+   "total_ms": 128.566,
+   "mean_ms": 1.063,
+   "p50_ms": 0.002,
+   "p95_ms": 6.714,
+   "p99_ms": 8.735,
+   "max_ms": 13.272
+  },
+  "veto": {
+   "count": 47,
+   "total_ms": 461.72,
+   "mean_ms": 9.824,
+   "p50_ms": 9.427,
+   "p95_ms": 15.977,
+   "p99_ms": 17.369,
+   "max_ms": 17.369
+  },
+  "decomposition": {
+   "root_total_ms": 51285.957,
+   "children": {
+    "detect": {
+     "total_ms": 25398.748,
+     "share": 0.4952,
+     "count": 120
+    },
+    "session_ingest": {
+     "total_ms": 20865.341,
+     "share": 0.4068,
+     "count": 73
+    },
+    "pre_checks": {
+     "total_ms": 2395.635,
+     "share": 0.0467,
+     "count": 120
+    },
+    "accept_store": {
+     "total_ms": 1062.178,
+     "share": 0.0207,
+     "count": 14
+    },
+    "derived": {
+     "total_ms": 485.936,
+     "share": 0.0095,
+     "count": 120
+    },
+    "veto": {
+     "total_ms": 461.72,
+     "share": 0.009,
+     "count": 47
+    },
+    "publish": {
+     "total_ms": 388.276,
+     "share": 0.0076,
+     "count": 121
+    },
+    "persist": {
+     "total_ms": 128.566,
+     "share": 0.0025,
+     "count": 121
+    },
+    "reject": {
+     "total_ms": 23.477,
+     "share": 0.0005,
+     "count": 59
+    },
+    "append_decision": {
+     "total_ms": 13.585,
+     "share": 0.0003,
+     "count": 120
+    }
+   },
+   "accounted_ms": 51223.462,
+   "unaccounted_ms": 62.495,
+   "unaccounted_share": 0.0012
+  },
+  "detect_internals": {
+   "detect_total_ms": 25398.748,
+   "grid_auto_ms": 0.0,
+   "partial_ms": 0.0,
+   "grid_auto_calls": 0,
+   "partial_calls": 0,
+   "overlap_ratio": 0.0
+  },
+  "decode": {
+   "count": 120,
+   "mean_ms": 14.871,
+   "p50_ms": 14.102,
+   "p95_ms": 21.646,
+   "total_s": 1.785
+  },
+  "process_cpu_over_wall": 11.281,
+  "children_cpu_s": 83.871,
+  "roi_stats": {
+   "roi": 0,
+   "full": 360,
+   "fallback": 0
+  },
+  "reasons": {
+   "assignment": 41,
+   "blur": 40,
+   "markers": 8,
+   "redundant": 26
+  },
+  "persist_stats": {
+   "writes": 28,
+   "seconds": 0.12832725799853506,
+   "throttled": 93
+  }
+ },
+ "ab_no_solve": {
+  "groups": 120,
+  "accepted": 5,
+  "solves": 0,
+  "wall_s": 36.116,
+  "decision": {
+   "count": 120,
+   "total_s": 34.727,
+   "mean_ms": 289.397,
+   "p50_ms": 242.34,
+   "p95_ms": 587.536,
+   "p99_ms": 1198.381,
+   "max_ms": 1339.107,
+   "hz": 3.455,
+   "cpu_ms_p50": 100.942,
+   "cpu_ms_p95": 127.272
+  },
+  "detect": {
+   "count": 120,
+   "total_ms": 29045.626,
+   "mean_ms": 242.047,
+   "p50_ms": 206.802,
+   "p95_ms": 482.391,
+   "p99_ms": 1177.401,
+   "max_ms": 1325.2
+  },
+  "session_ingest": {
+   "count": 73,
+   "total_ms": 2050.146,
+   "mean_ms": 28.084,
+   "p50_ms": 9.155,
+   "p95_ms": 275.806,
+   "p99_ms": 306.284,
+   "max_ms": 316.745
+  },
+  "session_solve": null,
+  "session_refine": {
+   "count": 5,
+   "total_ms": 1435.477,
+   "mean_ms": 287.095,
+   "p50_ms": 280.634,
+   "p95_ms": 308.608,
+   "p99_ms": 308.608,
+   "max_ms": 308.608
+  },
+  "pre_checks": {
+   "count": 120,
+   "total_ms": 2300.084,
+   "mean_ms": 19.167,
+   "p50_ms": 19.992,
+   "p95_ms": 25.728,
+   "p99_ms": 29.897,
+   "max_ms": 35.424
+  },
+  "accept_store": {
+   "count": 5,
+   "total_ms": 311.247,
+   "mean_ms": 62.249,
+   "p50_ms": 61.386,
+   "p95_ms": 66.126,
+   "p99_ms": 66.126,
+   "max_ms": 66.126
+  },
+  "derived": {
+   "count": 120,
+   "total_ms": 242.761,
+   "mean_ms": 2.023,
+   "p50_ms": 1.901,
+   "p95_ms": 3.212,
+   "p99_ms": 11.984,
+   "max_ms": 12.838
+  },
+  "derived_coverage": {
+   "count": 120,
+   "total_ms": 193.851,
+   "mean_ms": 1.615,
+   "p50_ms": 1.785,
+   "p95_ms": 2.558,
+   "p99_ms": 3.144,
+   "max_ms": 3.751
+  },
+  "publish": {
+   "count": 121,
+   "total_ms": 207.395,
+   "mean_ms": 1.714,
+   "p50_ms": 1.813,
+   "p95_ms": 2.432,
+   "p99_ms": 3.216,
+   "max_ms": 3.669
+  },
+  "persist": {
+   "count": 121,
+   "total_ms": 35.594,
+   "mean_ms": 0.294,
+   "p50_ms": 0.002,
+   "p95_ms": 2.066,
+   "p99_ms": 2.472,
+   "max_ms": 3.167
+  },
+  "veto": {
+   "count": 47,
+   "total_ms": 427.279,
+   "mean_ms": 9.091,
+   "p50_ms": 8.46,
+   "p95_ms": 12.813,
+   "p99_ms": 17.363,
+   "max_ms": 17.363
+  },
+  "decomposition": {
+   "root_total_ms": 34727.007,
+   "children": {
+    "detect": {
+     "total_ms": 29045.626,
+     "share": 0.8364,
+     "count": 120
+    },
+    "pre_checks": {
+     "total_ms": 2300.084,
+     "share": 0.0662,
+     "count": 120
+    },
+    "session_ingest": {
+     "total_ms": 2050.146,
+     "share": 0.059,
+     "count": 73
+    },
+    "veto": {
+     "total_ms": 427.279,
+     "share": 0.0123,
+     "count": 47
+    },
+    "accept_store": {
+     "total_ms": 311.247,
+     "share": 0.009,
+     "count": 5
+    },
+    "derived": {
+     "total_ms": 242.761,
+     "share": 0.007,
+     "count": 120
+    },
+    "publish": {
+     "total_ms": 207.395,
+     "share": 0.006,
+     "count": 121
+    },
+    "persist": {
+     "total_ms": 35.594,
+     "share": 0.001,
+     "count": 121
+    },
+    "reject": {
+     "total_ms": 21.262,
+     "share": 0.0006,
+     "count": 68
+    },
+    "append_decision": {
+     "total_ms": 13.338,
+     "share": 0.0004,
+     "count": 120
+    }
+   },
+   "accounted_ms": 34654.732,
+   "unaccounted_ms": 72.275,
+   "unaccounted_share": 0.0021
+  },
+  "detect_internals": {
+   "detect_total_ms": 29045.626,
+   "grid_auto_ms": 0.0,
+   "partial_ms": 0.0,
+   "grid_auto_calls": 0,
+   "partial_calls": 0,
+   "overlap_ratio": 0.0
+  },
+  "decode": {
+   "count": 120,
+   "mean_ms": 11.482,
+   "p50_ms": 11.203,
+   "p95_ms": 13.921,
+   "total_s": 1.378
+  },
+  "process_cpu_over_wall": 0.446,
+  "children_cpu_s": 106.974,
+  "roi_stats": {
+   "roi": 81,
+   "full": 279,
+   "fallback": 272
+  },
+  "reasons": {
+   "assignment": 41,
+   "blur": 38,
+   "markers": 8,
+   "other": 37
+  },
+  "persist_stats": {
+   "writes": 20,
+   "seconds": 0.03539118399930885,
+   "throttled": 101
+  }
+ },
+ "detect_internals": {
+  "mode": "detect",
+  "groups": 12,
+  "cameras": [
+   "left",
+   "right",
+   "tex"
+  ],
+  "frames_available": 120,
+  "full": {
+   "count": 36,
+   "total_ms": 1596.771,
+   "mean_ms": 44.355,
+   "p50_ms": 37.107,
+   "p90_ms": 88.815,
+   "p95_ms": 94.452,
+   "p99_ms": 119.244,
+   "max_ms": 119.244
+  },
+  "roi": {
+   "count": 31,
+   "total_ms": 1014.873,
+   "mean_ms": 32.738,
+   "p50_ms": 27.521,
+   "p90_ms": 73.878,
+   "p95_ms": 81.606,
+   "p99_ms": 91.851,
+   "max_ms": 91.851
+  },
+  "partial": {
+   "count": 36,
+   "total_ms": 157.441,
+   "mean_ms": 4.373,
+   "p50_ms": 4.524,
+   "p90_ms": 9.903,
+   "p95_ms": 10.331,
+   "p99_ms": 24.062,
+   "max_ms": 24.062
+  },
+  "per_camera_p50_ms": {
+   "left": 82.495,
+   "right": 22.702,
+   "tex": 36.328
+  },
+  "per_camera_mean_ms": {
+   "left": 72.493,
+   "right": 24.158,
+   "tex": 36.414
+  },
+  "passes": {
+   "histogram": {
+    "6": 36
+   },
+   "mean_passes": 6.0,
+   "early_exit_fraction": 0.0
+  },
+  "roi_outcomes": {
+   "ok": 0,
+   "rejected_clipped": 2,
+   "rejected_short": 13,
+   "none": 16
+  },
+  "roi_retry_cost_ms": {
+   "wasted_mean": 32.738,
+   "wasted_total_s": 1.015,
+   "fallback_rate": 1.0
+  },
+  "payload": {
+   "full_bytes_per_group": 3932160,
+   "crop_bytes_per_group": 429780,
+   "crop_ratio": 0.282
+  },
+  "ipc": {
+   "payload_bytes_per_group": 3932160,
+   "images_per_group": 3,
+   "repeats": 20,
+   "round_trip_p50_ms": 2.553,
+   "round_trip_p95_ms": 3.173,
+   "frame_wh": [
+    1280,
+    1024
+   ],
+   "crop_bytes_hint": 983040
+  }
+ },
+ "solver": {
+  "blas_default": {
+   "curve": {
+    "16": 13.3576,
+    "40": 40.0839,
+    "84": 75.8476
+   },
+   "cpu_s": {
+    "16": 252.4616,
+    "40": 662.8437,
+    "84": 1604.5152
+   },
+   "loadavg": [
+    127.56787109375,
+    119.6572265625,
+    83.73583984375
+   ]
+  },
+  "blas_1": {
+   "curve": {
+    "16": 0.5752,
+    "40": 1.2566,
+    "84": 8.746
+   },
+   "cpu_s": {
+    "16": 0.6679,
+    "40": 1.4539,
+    "84": 8.8703
+   },
+   "loadavg": [
+    69.05126953125,
+    105.35546875,
+    80.60009765625
+   ]
+  },
+  "ratio_wall_16_40_84": [
+   23.2,
+   31.9,
+   8.7
+  ],
+  "ratio_cpu_16_40_84": [
+   378.0,
+   455.9,
+   180.9
+  ],
+  "confirmation_n16": {
+   "default": {
+    "wall_s": 5.816,
+    "cpu_s": 155.218,
+    "cpu_over_wall": 26.7,
+    "threads": 125,
+    "residual_rms": 0.6428608536744468
+   },
+   "blas_1": {
+    "wall_s": 0.604,
+    "cpu_s": 0.7,
+    "cpu_over_wall": 1.2,
+    "threads": 32,
+    "residual_rms": 0.6428608536736348
+   }
+  },
+  "session_budget": {
+   "field_measured_curve": {
+    "curve_s": {
+     "8": 0.19,
+     "16": 1.46,
+     "25": 1.75,
+     "40": 2.68,
+     "60": 6.47,
+     "84": 12.4
+    },
+    "solves": 33,
+    "schedule": [
+     5,
+     6,
+     9,
+     12,
+     14,
+     16,
+     18,
+     20,
+     22,
+     24,
+     26,
+     28,
+     30,
+     32,
+     34,
+     36,
+     39,
+     42,
+     45,
+     48,
+     52,
+     56,
+     60,
+     65,
+     70,
+     78,
+     84,
+     91,
+     104,
+     117,
+     130,
+     143,
+     156
+    ],
+    "solve_total_s": 226.9,
+    "share_of_session": 0.439,
+    "per_solve_s": {
+     "p50": 2.62,
+     "max": 30.19
+    },
+    "mean_non_solve_decision_ms": 348.1
+   },
+   "replay_blas1": {
+    "curve_s": {
+     "16": 0.5752,
+     "40": 1.2566,
+     "84": 8.746
+    },
+    "solves": 33,
+    "schedule": [
+     5,
+     6,
+     9,
+     12,
+     14,
+     16,
+     18,
+     20,
+     22,
+     24,
+     26,
+     28,
+     30,
+     32,
+     34,
+     36,
+     39,
+     42,
+     45,
+     48,
+     52,
+     56,
+     60,
+     65,
+     70,
+     78,
+     84,
+     91,
+     104,
+     117,
+     130,
+     143,
+     156
+    ],
+    "solve_total_s": 153.0,
+    "share_of_session": 0.296,
+    "per_solve_s": {
+     "p50": 1.23,
+     "max": 21.0
+    },
+    "mean_non_solve_decision_ms": 436.9,
+    "solve_total_cpu_s": 157.1
+   },
+   "replay_blas_default": {
+    "curve_s": {
+     "16": 13.3576,
+     "40": 40.0839,
+     "84": 75.8476
+    },
+    "solves": 33,
+    "schedule": [
+     5,
+     6,
+     9,
+     12,
+     14,
+     16,
+     18,
+     20,
+     22,
+     24,
+     26,
+     28,
+     30,
+     32,
+     34,
+     36,
+     39,
+     42,
+     45,
+     48,
+     52,
+     56,
+     60,
+     65,
+     70,
+     78,
+     84,
+     91,
+     104,
+     117,
+     130,
+     143,
+     156
+    ],
+    "solve_total_s": 1586.3,
+    "share_of_session": 3.069,
+    "per_solve_s": {
+     "p50": 38.97,
+     "max": 134.37
+    },
+    "mean_non_solve_decision_ms": -1283.8,
+    "solve_total_cpu_s": 32174.1
+   }
+  },
+  "one_solve_per_bucket": {
+   "solves": 14,
+   "at_n": [
+    5,
+    12,
+    24,
+    36,
+    48,
+    60,
+    72,
+    84,
+    96,
+    108,
+    120,
+    132,
+    144,
+    156
+   ],
+   "solve_total_s_field_curve": 174.3,
+   "saving_s": 52.6
+  }
+ },
+ "live_replay": {
+  "groups": 120,
+  "wall_s": 12.391,
+  "offered_hz": 9.684,
+  "decisions": 37,
+  "decision_hz": 2.986,
+  "dropped": 83,
+  "drop_ratio": 0.6917,
+  "preview": {
+   "count": 120,
+   "hz": 9.767488714213147,
+   "p50_ms": 102.13910099992063,
+   "p95_ms": 118.14745400079119,
+   "max_ms": 137.4837600014871
+  },
+  "decision": {
+   "count": 37,
+   "hz": 3.036842449757621,
+   "p50_ms": 208.38742299929436,
+   "p95_ms": 976.2575669992657,
+   "max_ms": 1231.2041459990724
+  },
+  "decision_duration": {
+   "count": 37,
+   "mean_ms": 281.548,
+   "p50_ms": 152.193,
+   "p95_ms": 963.071,
+   "p99_ms": 1157.209,
+   "max_ms": 1157.209
+  },
+  "decision_lag": {
+   "count": 37,
+   "p50_ms": 152.21412599930773,
+   "p95_ms": 963.0990949990519,
+   "max_ms": 1157.2276259994396
+  },
+  "decision_thread": {
+   "busy_fraction": 0.8412,
+   "busy_seconds": 10.417,
+   "wall_seconds": 12.384,
+   "refused_busy": 83,
+   "refused_stopping": 0,
+   "dropped_on_stop": 0,
+   "max_queue_depth": 1
+  },
+  "overload": {
+   "overloaded": true,
+   "busy_fraction": 0.8412,
+   "decisions_over_period": 35,
+   "refused_submissions": 83,
+   "sustainable_hz": 3.552,
+   "offer_hz": 9.77,
+   "period_ms": 102.354,
+   "mean_decision_ms": 281.548,
+   "p95_decision_ms": 963.071
+  },
+  "newest_frame_policy": {
+   "queue_depth": 1,
+   "pending": false,
+   "drop_when_busy": true,
+   "drop_when_paused": true,
+   "drop_when_stopping": true,
+   "groups_seen": 120,
+   "decided": 37,
+   "dropped": 83,
+   "dropped_fraction": 0.6917,
+   "recorded_only": 83,
+   "superseded": 83,
+   "dropped_paused": 0,
+   "dropped_stopping": 0
+  },
+  "preview_during_decision": 114,
+  "preview_gap_max_ms": 137.484,
+  "children_cpu_s": 29.389
+ },
+ "evidence_files": [
+  "fresh01_detect_internals.json",
+  "fresh01_detect_internals_12g_current_tree.json",
+  "fresh01_detect_internals_60g.json",
+  "fresh01_live_replay.json",
+  "fresh01_solve_curve_blas1.json",
+  "fresh01_solve_curve_blas_default.json",
+  "fresh01_sync_processes.json",
+  "fresh01_sync_processes_no_roi.json",
+  "fresh01_sync_processes_no_solve.json",
+  "fresh01_sync_threads.json"
+ ],
+ "detect_internals_60g": {
+  "groups": 60,
+  "passes": {
+   "histogram": {
+    "1": 41,
+    "6": 139
+   },
+   "mean_passes": 4.861,
+   "early_exit_fraction": 0.2278
+  },
+  "full": {
+   "count": 180,
+   "total_ms": 4460.429,
+   "mean_ms": 24.78,
+   "p50_ms": 22.021,
+   "p90_ms": 49.761,
+   "p95_ms": 63.071,
+   "p99_ms": 77.713,
+   "max_ms": 103.432
+  },
+  "per_camera_mean_ms": {
+   "left": 38.743,
+   "right": 19.688,
+   "tex": 15.91
+  },
+  "per_camera_p50_ms": {
+   "left": 28.911,
+   "right": 17.691,
+   "tex": 18.373
+  },
+  "roi_outcomes": {
+   "ok": 45,
+   "rejected_clipped": 24,
+   "rejected_short": 70,
+   "none": 36
+  },
+  "roi_retry_cost_ms": {
+   "wasted_mean": 17.09,
+   "wasted_total_s": 2.991,
+   "fallback_rate": 0.7429
+  },
+  "partial": {
+   "count": 180,
+   "total_ms": 553.318,
+   "mean_ms": 3.074,
+   "p50_ms": 0.025,
+   "p90_ms": 12.686,
+   "p95_ms": 14.856,
+   "p99_ms": 35.931,
+   "max_ms": 90.73
+  },
+  "ipc": {
+   "payload_bytes_per_group": 3932160,
+   "images_per_group": 3,
+   "repeats": 20,
+   "round_trip_p50_ms": 3.284,
+   "round_trip_p95_ms": 4.024,
+   "frame_wh": [
+    1280,
+    1024
+   ],
+   "crop_bytes_hint": 983040
+  },
+  "payload": {
+   "full_bytes_per_group": 3932160,
+   "crop_bytes_per_group": 498231,
+   "crop_ratio": 0.37
+  },
+  "loadavg": [
+   21.91748046875,
+   59.79736328125,
+   67.48779296875
+  ]
+ },
+ "host_note": "shared host, load average 22-128 during these runs; absolute wall numbers are upper bounds, shares and paired A/Bs are not affected",
+ "detect_same_frames_load_effect": {
+  "note": "same 12 frames, same code path, re-measured after the host load dropped: the early-exit rule still never fires on these frames, so the 1.97x difference is purely host load and calibrates every absolute ms in this file",
+  "at_load_27": {
+   "mean_ms": 44.355,
+   "p50_ms": 37.107,
+   "passes": 6.0,
+   "early_exit": 0.0
+  },
+  "at_load_7_5": {
+   "mean_ms": 22.517,
+   "p50_ms": 20.163,
+   "passes": 6.0,
+   "early_exit": 0.0,
+   "roi_fallback_rate": 1.0
+  },
+  "loadavg": [
+   7.57470703125,
+   43.12451171875,
+   60.59423828125
+  ]
+ },
+ "code_state": {
+  "measured_against_git": "e682118",
+  "working_tree": "dirty: coordinator/other agents were editing controller.py, calib/session.py, calib/detect.py, tools/wizard/detection.py and tools/wizard/gui/app.py throughout these measurements",
+  "the_field_condition_runs": [
+   "sync/processes",
+   "sync/threads",
+   "no_roi",
+   "no_solve",
+   "live_replay",
+   "solve_curve"
+  ],
+  "landed_after_those_runs": {
+   "tools/wizard/gui/app.py 06:52:47": "pins OPENBLAS/OMP/MKL/NUMEXPR/VECLIB to 1 thread (rec 1)",
+   "calib/detect.py + tools/wizard/detection.py 06:53:11": "verified-partial early exit in detect_grid_auto (rec 5)",
+   "tools/wizard/controller.py + calib/session.py": "solve_due()/solve_observations() split and --async-solve (rec 2, partially)"
+  },
+  "still_open": [
+   "solve cadence arithmetic (rec 3: 33 solves instead of 14)",
+   "ROI retry net-negative, -15.5% detection if removed (rec 6)",
+   "refine + view store still per-accepted-view on the decision thread (rec 4)",
+   "decision cadence is still 'whenever idle' (rec 7)"
+  ]
+ }
+}

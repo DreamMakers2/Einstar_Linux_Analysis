@@ -1,0 +1,110 @@
+{
+ "schema": "einstar.wizard.bench-pipeline/1",
+ "created_utc": "2026-11-14T05:56:11Z",
+ "argv": [
+  "--mode",
+  "detect",
+  "--groups",
+  "12",
+  "--out",
+  "/tmp/bench_detect12_new.json"
+ ],
+ "host": {
+  "cpu_count": 32,
+  "python": "3.14.9",
+  "blas_threads": "default",
+  "omp_threads": "default",
+  "loadavg": [
+   7.57470703125,
+   43.12451171875,
+   60.59423828125
+  ]
+ },
+ "source": "<calibration-session>/frames",
+ "factory": "<private-inputs>/einstar-profiles/factory-e10.json",
+ "result": {
+  "mode": "detect",
+  "groups": 12,
+  "cameras": [
+   "left",
+   "right",
+   "tex"
+  ],
+  "frames_available": 120,
+  "full": {
+   "count": 36,
+   "total_ms": 810.612,
+   "mean_ms": 22.517,
+   "p50_ms": 20.163,
+   "p90_ms": 34.837,
+   "p95_ms": 38.227,
+   "p99_ms": 51.224,
+   "max_ms": 51.224
+  },
+  "roi": {
+   "count": 31,
+   "total_ms": 410.963,
+   "mean_ms": 13.257,
+   "p50_ms": 10.983,
+   "p90_ms": 23.419,
+   "p95_ms": 26.182,
+   "p99_ms": 28.329,
+   "max_ms": 28.329
+  },
+  "partial": {
+   "count": 36,
+   "total_ms": 298.856,
+   "mean_ms": 8.302,
+   "p50_ms": 5.23,
+   "p90_ms": 19.623,
+   "p95_ms": 21.533,
+   "p99_ms": 50.818,
+   "max_ms": 50.818
+  },
+  "per_camera_p50_ms": {
+   "left": 27.879,
+   "right": 17.66,
+   "tex": 18.93
+  },
+  "per_camera_mean_ms": {
+   "left": 29.719,
+   "right": 18.012,
+   "tex": 19.82
+  },
+  "passes": {
+   "histogram": {
+    "6": 36
+   },
+   "mean_passes": 6.0,
+   "early_exit_fraction": 0.0
+  },
+  "roi_outcomes": {
+   "ok": 0,
+   "rejected_clipped": 2,
+   "rejected_short": 13,
+   "none": 16
+  },
+  "roi_retry_cost_ms": {
+   "wasted_mean": 13.257,
+   "wasted_total_s": 0.411,
+   "fallback_rate": 1.0
+  },
+  "payload": {
+   "full_bytes_per_group": 3932160,
+   "crop_bytes_per_group": 449667,
+   "crop_ratio": 0.295
+  },
+  "ipc": {
+   "payload_bytes_per_group": 3932160,
+   "images_per_group": 3,
+   "repeats": 20,
+   "round_trip_p50_ms": 3.188,
+   "round_trip_p95_ms": 3.993,
+   "frame_wh": [
+    1280,
+    1024
+   ],
+   "crop_bytes_hint": 983040
+  }
+ }
+}

@@ -1,0 +1,350 @@
+{
+ "schema": "einstar.wizard.bench-pipeline/1",
+ "created_utc": "2026-11-14T05:29:13Z",
+ "argv": [
+  "--mode",
+  "sync",
+  "--detect",
+  "processes",
+  "--groups",
+  "120",
+  "--experiment",
+  "no-solve",
+  "--out",
+  "/tmp/bench_proc_nosolve.json"
+ ],
+ "host": {
+  "cpu_count": 32,
+  "python": "3.14.9",
+  "blas_threads": "default",
+  "omp_threads": "default"
+ },
+ "source": "<calibration-session>/frames",
+ "factory": "<private-inputs>/einstar-profiles/factory-e10.json",
+ "result": {
+  "mode": "sync",
+  "detect": "processes",
+  "experiments": [
+   "no-solve"
+  ],
+  "session_dir": "/tmp/bench-pipeline-g0h8ij30/session",
+  "frames": "<calibration-session>/frames",
+  "start": 0,
+  "groups": 120,
+  "accepted": 5,
+  "rejected": 115,
+  "solves": 0,
+  "wall_s": 36.116,
+  "process_cpu_s": 16.091,
+  "process_cpu_over_wall": 0.446,
+  "children_cpu_s": 106.974,
+  "decision": {
+   "count": 120,
+   "total_s": 34.727,
+   "mean_ms": 289.397,
+   "p50_ms": 242.34,
+   "p95_ms": 587.536,
+   "p99_ms": 1198.381,
+   "max_ms": 1339.107,
+   "hz": 3.455,
+   "cpu_ms_p50": 100.942,
+   "cpu_ms_p95": 127.272
+  },
+  "decode": {
+   "count": 120,
+   "mean_ms": 11.482,
+   "p50_ms": 11.203,
+   "p95_ms": 13.921,
+   "total_s": 1.378
+  },
+  "stages": {
+   "detect": {
+    "count": 120,
+    "total_ms": 29045.626,
+    "mean_ms": 242.047,
+    "p50_ms": 206.802,
+    "p90_ms": 393.554,
+    "p95_ms": 482.391,
+    "p99_ms": 1177.401,
+    "max_ms": 1325.2
+   },
+   "pre_checks": {
+    "count": 120,
+    "total_ms": 2300.084,
+    "mean_ms": 19.167,
+    "p50_ms": 19.992,
+    "p90_ms": 24.696,
+    "p95_ms": 25.728,
+    "p99_ms": 29.897,
+    "max_ms": 35.424
+   },
+   "session.quality_pose": {
+    "count": 120,
+    "total_ms": 853.543,
+    "mean_ms": 7.113,
+    "p50_ms": 6.436,
+    "p90_ms": 9.747,
+    "p95_ms": 10.506,
+    "p99_ms": 11.726,
+    "max_ms": 12.252
+   },
+   "append_decision": {
+    "count": 120,
+    "total_ms": 13.338,
+    "mean_ms": 0.111,
+    "p50_ms": 0.104,
+    "p90_ms": 0.126,
+    "p95_ms": 0.142,
+    "p99_ms": 0.173,
+    "max_ms": 0.803
+   },
+   "derived.coverage": {
+    "count": 120,
+    "total_ms": 193.851,
+    "mean_ms": 1.615,
+    "p50_ms": 1.785,
+    "p90_ms": 2.245,
+    "p95_ms": 2.558,
+    "p99_ms": 3.144,
+    "max_ms": 3.751
+   },
+   "derived.observability": {
+    "count": 120,
+    "total_ms": 0.302,
+    "mean_ms": 0.003,
+    "p50_ms": 0.002,
+    "p90_ms": 0.003,
+    "p95_ms": 0.004,
+    "p99_ms": 0.005,
+    "max_ms": 0.005
+   },
+   "derived.guidance": {
+    "count": 120,
+    "total_ms": 42.241,
+    "mean_ms": 0.352,
+    "p50_ms": 0.001,
+    "p90_ms": 0.001,
+    "p95_ms": 0.002,
+    "p99_ms": 10.463,
+    "max_ms": 11.62
+   },
+   "derived": {
+    "count": 120,
+    "total_ms": 242.761,
+    "mean_ms": 2.023,
+    "p50_ms": 1.901,
+    "p90_ms": 2.555,
+    "p95_ms": 3.212,
+    "p99_ms": 11.984,
+    "max_ms": 12.838
+   },
+   "persist": {
+    "count": 121,
+    "total_ms": 35.594,
+    "mean_ms": 0.294,
+    "p50_ms": 0.002,
+    "p90_ms": 1.823,
+    "p95_ms": 2.066,
+    "p99_ms": 2.472,
+    "max_ms": 3.167
+   },
+   "publish": {
+    "count": 121,
+    "total_ms": 207.395,
+    "mean_ms": 1.714,
+    "p50_ms": 1.813,
+    "p90_ms": 2.227,
+    "p95_ms": 2.432,
+    "p99_ms": 3.216,
+    "max_ms": 3.669
+   },
+   "veto": {
+    "count": 47,
+    "total_ms": 427.279,
+    "mean_ms": 9.091,
+    "p50_ms": 8.46,
+    "p90_ms": 11.217,
+    "p95_ms": 12.813,
+    "p99_ms": 17.363,
+    "max_ms": 17.363
+   },
+   "decision": {
+    "count": 120,
+    "total_ms": 34727.007,
+    "mean_ms": 289.392,
+    "p50_ms": 242.335,
+    "p90_ms": 460.661,
+    "p95_ms": 587.532,
+    "p99_ms": 1198.377,
+    "max_ms": 1339.104
+   },
+   "persist.manifest": {
+    "count": 20,
+    "total_ms": 19.878,
+    "mean_ms": 0.994,
+    "p50_ms": 1.093,
+    "p90_ms": 1.438,
+    "p95_ms": 1.501,
+    "p99_ms": 1.775,
+    "max_ms": 1.775
+   },
+   "persist.session_json": {
+    "count": 20,
+    "total_ms": 15.435,
+    "mean_ms": 0.772,
+    "p50_ms": 0.87,
+    "p90_ms": 1.032,
+    "p95_ms": 1.086,
+    "p99_ms": 1.384,
+    "max_ms": 1.384
+   },
+   "session.refine": {
+    "count": 5,
+    "total_ms": 1435.477,
+    "mean_ms": 287.095,
+    "p50_ms": 280.634,
+    "p90_ms": 308.608,
+    "p95_ms": 308.608,
+    "p99_ms": 308.608,
+    "max_ms": 308.608
+   },
+   "session_ingest": {
+    "count": 73,
+    "total_ms": 2050.146,
+    "mean_ms": 28.084,
+    "p50_ms": 9.155,
+    "p90_ms": 11.744,
+    "p95_ms": 275.806,
+    "p99_ms": 306.284,
+    "max_ms": 316.745
+   },
+   "accept_store": {
+    "count": 5,
+    "total_ms": 311.247,
+    "mean_ms": 62.249,
+    "p50_ms": 61.386,
+    "p90_ms": 66.126,
+    "p95_ms": 66.126,
+    "p99_ms": 66.126,
+    "max_ms": 66.126
+   },
+   "reject": {
+    "count": 68,
+    "total_ms": 21.262,
+    "mean_ms": 0.313,
+    "p50_ms": 0.297,
+    "p90_ms": 0.326,
+    "p95_ms": 0.344,
+    "p99_ms": 0.373,
+    "max_ms": 1.184
+   }
+  },
+  "exclusive_ms": {
+   "accept_store": 311.247,
+   "append_decision": 13.338,
+   "decision": 29117.903,
+   "derived": 6.366,
+   "derived.coverage": 193.851,
+   "derived.guidance": 42.241,
+   "derived.observability": 0.302,
+   "detect": 29045.626,
+   "persist": 0.28,
+   "persist.manifest": 19.878,
+   "persist.session_json": 15.435,
+   "pre_checks": 2300.084,
+   "publish": 207.395,
+   "reject": 21.262,
+   "session.quality_pose": 853.543,
+   "session.refine": 1435.477,
+   "session_ingest": 0.0,
+   "veto": 427.279
+  },
+  "decomposition": {
+   "root_total_ms": 34727.007,
+   "children": {
+    "detect": {
+     "total_ms": 29045.626,
+     "share": 0.8364,
+     "count": 120
+    },
+    "pre_checks": {
+     "total_ms": 2300.084,
+     "share": 0.0662,
+     "count": 120
+    },
+    "session_ingest": {
+     "total_ms": 2050.146,
+     "share": 0.059,
+     "count": 73
+    },
+    "veto": {
+     "total_ms": 427.279,
+     "share": 0.0123,
+     "count": 47
+    },
+    "accept_store": {
+     "total_ms": 311.247,
+     "share": 0.009,
+     "count": 5
+    },
+    "derived": {
+     "total_ms": 242.761,
+     "share": 0.007,
+     "count": 120
+    },
+    "publish": {
+     "total_ms": 207.395,
+     "share": 0.006,
+     "count": 121
+    },
+    "persist": {
+     "total_ms": 35.594,
+     "share": 0.001,
+     "count": 121
+    },
+    "reject": {
+     "total_ms": 21.262,
+     "share": 0.0006,
+     "count": 68
+    },
+    "append_decision": {
+     "total_ms": 13.338,
+     "share": 0.0004,
+     "count": 120
+    }
+   },
+   "accounted_ms": 34654.732,
+   "unaccounted_ms": 72.275,
+   "unaccounted_share": 0.0021
+  },
+  "detect_internals": {
+   "detect_total_ms": 29045.626,
+   "grid_auto_ms": 0.0,
+   "partial_ms": 0.0,
+   "grid_auto_calls": 0,
+   "partial_calls": 0,
+   "overlap_ratio": 0.0
+  },
+  "missing_stages": [],
+  "coverage": {
+   "accepted_views": 5,
+   "roi_stats": {
+    "roi": 81,
+    "full": 279,
+    "fallback": 272
+   },
+   "detect_error": null,
+   "persist": {
+    "writes": 20,
+    "seconds": 0.03539118399930885,
+    "throttled": 101
+   },
+   "reasons": {
+    "assignment": 41,
+    "blur": 38,
+    "markers": 8,
+    "other": 37
+   }
+  }
+ }
+}

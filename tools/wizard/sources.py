@@ -46,7 +46,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from typing import Any, Iterable, Iterator, Mapping, Sequence
+from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence
 
 import numpy as np
 
@@ -279,6 +279,21 @@ def _group_images(files: Mapping[int, Path], *, lazy_colour: bool = False
         "tex": types.grey_from_bgr(bgr),
     }
     return images, bgr
+
+
+def live_group_timestamp(*, clock: Callable[[], float] | None = None) -> float:
+    """The single timestamp domain for live frame groups.
+
+    Live groups used the capture manifest's ``host_time_ns`` with a wall-clock
+    fallback when the manifest had no entry for the group yet.  In the real
+    fresh-01 session the manifest was from a previous attempt for part of the
+    run and did not contain the newest ids for the rest, so one session mixed
+    uptime and epoch stamps and jumped by 1.79e9 s.  Every dwell, velocity and
+    stationarity measurement downstream was meaningless.  Arrival time is
+    monotonic by definition and is exactly the quantity the motion gate needs.
+    """
+    now = time.monotonic if clock is None else clock
+    return float(now())
 
 
 def _make_group(*, index: int, file_index: int, device_group: int | None,
@@ -792,8 +807,15 @@ class LiveSource:
                     continue  # still being written; retry next poll
                 images, bgr = parsed
                 self._seen.add(gid)
-                ns = self._manifest.host_time_ns.get(gid)
-                ts = (ns / 1e9) if ns is not None else time.time()
+                # One monotonic clock for live groups.  The manifest is
+                # written by the capture child and may be absent, stale or
+                # mid-rewrite while frames arrive; mixing its uptime stamps
+                # with a wall-clock fallback produced a 1.79e9 s jump inside
+                # one real session (fresh-01 view 70), which made every dwell
+                # and velocity measurement meaningless.  Arrival time is the
+                # quantity the motion gate actually needs and is always
+                # monotonic.
+                ts = live_group_timestamp()
                 group = _make_group(
                     index=self._next_index, file_index=gid,
                     device_group=self._manifest.device_group.get(gid),
@@ -848,7 +870,7 @@ class LiveSource:
                     yield _make_group(
                         index=self._next_index, file_index=gid,
                         device_group=self._manifest.device_group.get(gid),
-                        timestamp_s=self._manifest.host_time_ns.get(gid, 0) / 1e9,
+                        timestamp_s=live_group_timestamp(),
                         images=images, colour_bgr=bgr,
                         source=types.SOURCE_LIVE, continuous=True)
                     self._next_index += 1

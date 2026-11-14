@@ -1,0 +1,389 @@
+{
+ "schema": "einstar.wizard.bench-pipeline/1",
+ "created_utc": "2026-11-14T05:26:18Z",
+ "argv": [
+  "--mode",
+  "sync",
+  "--detect",
+  "threads",
+  "--groups",
+  "120",
+  "--out",
+  "/tmp/bench_sync_threads_noprof.json"
+ ],
+ "host": {
+  "cpu_count": 32,
+  "python": "3.14.9",
+  "blas_threads": "default",
+  "omp_threads": "default"
+ },
+ "source": "<calibration-session>/frames",
+ "factory": "<private-inputs>/einstar-profiles/factory-e10.json",
+ "result": {
+  "mode": "sync",
+  "detect": "threads",
+  "session_dir": "/tmp/bench-pipeline-rlek6w9y/session",
+  "frames": "<calibration-session>/frames",
+  "start": 0,
+  "groups": 120,
+  "accepted": 14,
+  "rejected": 106,
+  "solves": 5,
+  "wall_s": 67.235,
+  "process_cpu_s": 713.295,
+  "process_cpu_over_wall": 10.609,
+  "children_cpu_s": 0.0,
+  "decision": {
+   "count": 120,
+   "total_s": 65.537,
+   "mean_ms": 546.148,
+   "p50_ms": 456.283,
+   "p95_ms": 1054.6,
+   "p99_ms": 4323.038,
+   "max_ms": 5143.276,
+   "hz": 1.831,
+   "cpu_ms_p50": 3851.896,
+   "cpu_ms_p95": 9891.954
+  },
+  "decode": {
+   "count": 120,
+   "mean_ms": 14.042,
+   "p50_ms": 12.916,
+   "p95_ms": 23.555,
+   "total_s": 1.685
+  },
+  "stages": {
+   "detect.grid_auto": {
+    "count": 632,
+    "total_ms": 73130.472,
+    "mean_ms": 115.713,
+    "p50_ms": 87.478,
+    "p90_ms": 242.561,
+    "p95_ms": 285.535,
+    "p99_ms": 463.111,
+    "max_ms": 952.621
+   },
+   "detect.partial": {
+    "count": 98,
+    "total_ms": 5658.994,
+    "mean_ms": 57.745,
+    "p50_ms": 9.572,
+    "p90_ms": 133.063,
+    "p95_ms": 202.175,
+    "p99_ms": 880.374,
+    "max_ms": 909.265
+   },
+   "detect": {
+    "count": 120,
+    "total_ms": 39079.773,
+    "mean_ms": 325.665,
+    "p50_ms": 273.581,
+    "p90_ms": 524.942,
+    "p95_ms": 706.09,
+    "p99_ms": 1436.812,
+    "max_ms": 1474.775
+   },
+   "pre_checks": {
+    "count": 120,
+    "total_ms": 2333.478,
+    "mean_ms": 19.446,
+    "p50_ms": 20.757,
+    "p90_ms": 24.256,
+    "p95_ms": 25.15,
+    "p99_ms": 28.831,
+    "max_ms": 28.848
+   },
+   "session.quality_pose": {
+    "count": 120,
+    "total_ms": 879.78,
+    "mean_ms": 7.332,
+    "p50_ms": 6.638,
+    "p90_ms": 10.273,
+    "p95_ms": 10.798,
+    "p99_ms": 11.546,
+    "max_ms": 11.908
+   },
+   "append_decision": {
+    "count": 120,
+    "total_ms": 13.368,
+    "mean_ms": 0.111,
+    "p50_ms": 0.111,
+    "p90_ms": 0.138,
+    "p95_ms": 0.15,
+    "p99_ms": 0.157,
+    "max_ms": 0.161
+   },
+   "derived.coverage": {
+    "count": 120,
+    "total_ms": 354.085,
+    "mean_ms": 2.951,
+    "p50_ms": 2.911,
+    "p90_ms": 5.005,
+    "p95_ms": 5.105,
+    "p99_ms": 6.353,
+    "max_ms": 21.493
+   },
+   "derived.observability": {
+    "count": 120,
+    "total_ms": 17.705,
+    "mean_ms": 0.148,
+    "p50_ms": 0.003,
+    "p90_ms": 0.005,
+    "p95_ms": 1.294,
+    "p99_ms": 1.981,
+    "max_ms": 2.028
+   },
+   "derived.guidance": {
+    "count": 120,
+    "total_ms": 102.698,
+    "mean_ms": 0.856,
+    "p50_ms": 0.001,
+    "p90_ms": 5.34,
+    "p95_ms": 6.357,
+    "p99_ms": 10.795,
+    "max_ms": 11.725
+   },
+   "derived": {
+    "count": 120,
+    "total_ms": 482.373,
+    "mean_ms": 4.02,
+    "p50_ms": 3.272,
+    "p90_ms": 8.519,
+    "p95_ms": 11.57,
+    "p99_ms": 16.018,
+    "max_ms": 21.642
+   },
+   "persist": {
+    "count": 121,
+    "total_ms": 145.662,
+    "mean_ms": 1.204,
+    "p50_ms": 0.002,
+    "p90_ms": 4.953,
+    "p95_ms": 7.913,
+    "p99_ms": 8.704,
+    "max_ms": 9.123
+   },
+   "publish": {
+    "count": 121,
+    "total_ms": 381.929,
+    "mean_ms": 3.156,
+    "p50_ms": 2.888,
+    "p90_ms": 5.529,
+    "p95_ms": 5.634,
+    "p99_ms": 8.419,
+    "max_ms": 10.97
+   },
+   "veto": {
+    "count": 47,
+    "total_ms": 494.821,
+    "mean_ms": 10.528,
+    "p50_ms": 8.633,
+    "p90_ms": 13.805,
+    "p95_ms": 16.81,
+    "p99_ms": 48.688,
+    "max_ms": 48.688
+   },
+   "decision": {
+    "count": 120,
+    "total_ms": 65536.755,
+    "mean_ms": 546.14,
+    "p50_ms": 456.272,
+    "p90_ms": 834.491,
+    "p95_ms": 1054.596,
+    "p99_ms": 4323.02,
+    "max_ms": 5143.267
+   },
+   "persist.manifest": {
+    "count": 32,
+    "total_ms": 76.725,
+    "mean_ms": 2.398,
+    "p50_ms": 2.327,
+    "p90_ms": 4.454,
+    "p95_ms": 4.464,
+    "p99_ms": 4.868,
+    "max_ms": 4.868
+   },
+   "persist.session_json": {
+    "count": 32,
+    "total_ms": 68.524,
+    "mean_ms": 2.141,
+    "p50_ms": 2.175,
+    "p90_ms": 3.837,
+    "p95_ms": 4.118,
+    "p99_ms": 4.246,
+    "max_ms": 4.246
+   },
+   "session.refine": {
+    "count": 14,
+    "total_ms": 4928.067,
+    "mean_ms": 352.005,
+    "p50_ms": 342.415,
+    "p90_ms": 402.47,
+    "p95_ms": 402.47,
+    "p99_ms": 438.477,
+    "max_ms": 438.477
+   },
+   "session_ingest": {
+    "count": 73,
+    "total_ms": 21393.36,
+    "mean_ms": 293.06,
+    "p50_ms": 144.682,
+    "p90_ms": 459.188,
+    "p95_ms": 544.696,
+    "p99_ms": 3895.611,
+    "max_ms": 4529.572
+   },
+   "accept_store": {
+    "count": 14,
+    "total_ms": 1154.491,
+    "mean_ms": 82.464,
+    "p50_ms": 79.264,
+    "p90_ms": 103.803,
+    "p95_ms": 103.803,
+    "p99_ms": 112.685,
+    "max_ms": 112.685
+   },
+   "session.solve": {
+    "count": 5,
+    "total_ms": 8069.989,
+    "mean_ms": 1613.998,
+    "p50_ms": 421.11,
+    "p90_ms": 3989.601,
+    "p95_ms": 3989.601,
+    "p99_ms": 3989.601,
+    "max_ms": 3989.601
+   },
+   "reject": {
+    "count": 59,
+    "total_ms": 19.769,
+    "mean_ms": 0.335,
+    "p50_ms": 0.311,
+    "p90_ms": 0.398,
+    "p95_ms": 0.422,
+    "p99_ms": 0.779,
+    "max_ms": 0.858
+   },
+   "session.holdout": {
+    "count": 11,
+    "total_ms": 3.357,
+    "mean_ms": 0.305,
+    "p50_ms": 0.273,
+    "p90_ms": 0.304,
+    "p95_ms": 0.639,
+    "p99_ms": 0.639,
+    "max_ms": 0.639
+   }
+  },
+  "exclusive_ms": {
+   "accept_store": 1154.491,
+   "append_decision": 13.368,
+   "decision": 39117.505,
+   "derived": 7.884,
+   "derived.coverage": 354.085,
+   "derived.guidance": 102.698,
+   "derived.observability": 17.705,
+   "detect": 39079.773,
+   "detect.grid_auto": 73130.472,
+   "detect.partial": 5658.994,
+   "persist": 0.413,
+   "persist.manifest": 76.725,
+   "persist.session_json": 68.524,
+   "pre_checks": 2333.478,
+   "publish": 381.929,
+   "reject": 19.769,
+   "session.holdout": 3.357,
+   "session.quality_pose": 879.78,
+   "session.refine": 4928.067,
+   "session.solve": 8069.989,
+   "session_ingest": 7512.167,
+   "veto": 494.821
+  },
+  "decomposition": {
+   "root_total_ms": 65536.755,
+   "children": {
+    "detect": {
+     "total_ms": 39079.773,
+     "share": 0.5963,
+     "count": 120
+    },
+    "session_ingest": {
+     "total_ms": 21393.36,
+     "share": 0.3264,
+     "count": 73
+    },
+    "pre_checks": {
+     "total_ms": 2333.478,
+     "share": 0.0356,
+     "count": 120
+    },
+    "accept_store": {
+     "total_ms": 1154.491,
+     "share": 0.0176,
+     "count": 14
+    },
+    "veto": {
+     "total_ms": 494.821,
+     "share": 0.0076,
+     "count": 47
+    },
+    "derived": {
+     "total_ms": 482.373,
+     "share": 0.0074,
+     "count": 120
+    },
+    "publish": {
+     "total_ms": 381.929,
+     "share": 0.0058,
+     "count": 121
+    },
+    "persist": {
+     "total_ms": 145.662,
+     "share": 0.0022,
+     "count": 121
+    },
+    "reject": {
+     "total_ms": 19.769,
+     "share": 0.0003,
+     "count": 59
+    },
+    "append_decision": {
+     "total_ms": 13.368,
+     "share": 0.0002,
+     "count": 120
+    }
+   },
+   "accounted_ms": 65499.024,
+   "unaccounted_ms": 37.731,
+   "unaccounted_share": 0.0006
+  },
+  "detect_internals": {
+   "detect_total_ms": 39079.773,
+   "grid_auto_ms": 73130.472,
+   "partial_ms": 5658.994,
+   "grid_auto_calls": 632,
+   "partial_calls": 98,
+   "overlap_ratio": 2.016
+  },
+  "missing_stages": [],
+  "coverage": {
+   "accepted_views": 14,
+   "roi_stats": {
+    "roi": 81,
+    "full": 279,
+    "fallback": 272
+   },
+   "detect_error": null,
+   "persist": {
+    "writes": 32,
+    "seconds": 0.14542335300211562,
+    "throttled": 89
+   },
+   "reasons": {
+    "assignment": 41,
+    "blur": 40,
+    "markers": 8,
+    "redundant": 26
+   }
+  }
+ }
+}

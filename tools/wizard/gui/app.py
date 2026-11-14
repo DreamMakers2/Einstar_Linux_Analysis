@@ -18,6 +18,15 @@ from pathlib import Path
 import sys
 import time
 
+# The calibration solver is a small dense problem: OpenBLAS/MKL spawns one
+# thread per core (125 threads were observed) and under any other load that
+# oversubscription made a 16-view solve 23x slower (0.58 s vs 13.4 s).  One
+# BLAS thread is both faster and predictable here, and the detector workers
+# inherit the same setting.  This must run before numpy is imported.
+for _var in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
+             "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
 _HERE = Path(__file__).resolve()
 for _p in (_HERE.parents[2], _HERE.parents[3]):
     if str(_p) not in sys.path:
@@ -26,9 +35,31 @@ for _p in (_HERE.parents[2], _HERE.parents[3]):
 
 def parse(argv=None):
     ap = argparse.ArgumentParser(description="Einstar calibration wizard (Qt6)")
-    ap.add_argument("--source", choices=("live", "replay", "recording", "synthetic", "vendor"),
+    ap.add_argument("--source", choices=("live", "replay", "recording", "synthetic",
+                                         "vendor", "views"),
                     default="replay")
     ap.add_argument("--frames", help="frame directory (replay)")
+    ap.add_argument("--views-dir",
+                    help="recorded session directory (source=views)")
+    ap.add_argument("--select", type=int, default=0,
+                    help="source=views: greedily select this many recorded views")
+    ap.add_argument("--holds", type=int, default=6,
+                    help="source=views: number of real stationary holds")
+    ap.add_argument("--hold-repeats", type=int, default=5,
+                    help="source=views: repeat frames per hold (10 Hz)")
+    ap.add_argument("--extra-frames", default="",
+                    help="source=views: comma-separated raw group ids to append")
+    ap.add_argument("--raw-frames", default="",
+                    help="source=views: frame ring holding --extra-frames")
+    ap.add_argument("--vendor-views", default="",
+                    help="source=views: comma-separated indices from a vendor "
+                         "corpus (real images, same plate/scanner) to append")
+    ap.add_argument("--vendor-dir", default="",
+                    help="source=views: vendor corpus directory")
+    ap.add_argument("--rotated-views", default="",
+                    help="source=views: comma-separated in-plane rotations "
+                         "(degrees) of one real centred view, to exercise a "
+                         "sector the recording never captured sharply")
     ap.add_argument("--recording", help=".e1r raw recording (recording)")
     ap.add_argument("--scene", default="default", help="synthetic scene name")
     ap.add_argument("--views", type=int, default=0,
@@ -65,6 +96,8 @@ def parse(argv=None):
                     help="start recording immediately (default in headless mode)")
     ap.add_argument("--no-auto-exposure", action="store_true",
                     help="keep the configured IR/RGB exposure fixed")
+    ap.add_argument("--async-solve", action="store_true",
+                    help="run periodic rig solves off the decision thread")
     ap.add_argument("--finish", action="store_true",
                     help="headless: run the final solve and build the candidate "
                          "profile instead of cancelling")
@@ -92,9 +125,32 @@ def main(argv=None) -> int:
         if args.noise is not None:
             kw["noise_sigma"] = float(args.noise)
         scene = SyntheticSpec(**kw)
+    principal_points = None
+    if args.source == "views" and Path(args.profile).is_file():
+        try:
+            import json as _json
+            doc = _json.loads(Path(args.profile).read_text())
+            cams = doc.get("cameras") or {}
+            names = {"left": "ir_left", "right": "ir_right", "tex": "color"}
+            principal_points = {
+                key: (float(cams[name]["cx"]), float(cams[name]["cy"]))
+                for key, name in names.items()
+                if isinstance(cams.get(name), dict)
+                and "cx" in cams[name] and "cy" in cams[name]}
+        except Exception:
+            principal_points = None
     source = controller_adapter.open_source(
         args.source, frames=args.frames, recording=args.recording,
-        session_dir=args.session_dir, scene=scene, loop=args.loop)
+        session_dir=args.session_dir, scene=scene, loop=args.loop,
+        views_dir=args.views_dir, select=args.select, holds=args.holds,
+        hold_repeats=args.hold_repeats,
+        extra_frames=[x for x in str(args.extra_frames).split(",") if x.strip()],
+        raw_frames=(args.raw_frames or None),
+        rotated_views=[x for x in str(args.rotated_views).split(",") if x.strip()],
+        principal_points=principal_points,
+        vendor_dir=(args.vendor_dir or None),
+        vendor_indices=[x for x in str(args.vendor_views).split(",")
+                        if x.strip()])
     if args.demo or not controller_adapter.real_controller_available():
         controller = controller_adapter.DemoController(
             factory_profile=args.profile, session_dir=args.session_dir,
@@ -106,7 +162,8 @@ def main(argv=None) -> int:
             source_info=getattr(source, "info", None),
             # the capture process belongs to the live source; without it the
             # controller cannot report fps and the wizard shows a false stall
-            capture=getattr(source, "capture", None))
+            capture=getattr(source, "capture", None),
+            async_solve=(True if args.async_solve else None))
 
     if args.complete_session:
         if not hasattr(controller, "begin_extension"):

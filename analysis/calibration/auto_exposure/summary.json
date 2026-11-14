@@ -1,0 +1,185 @@
+{
+ "before_after_simulation": {
+  "current": {
+   "final_ir_us": 1405,
+   "final_plate_dn": 74.3,
+   "final_rgb_us": 4687,
+   "ir_reversals": 1,
+   "noop_writes": 0,
+   "out_of_band_s": 28.5,
+   "rgb_pinned_s": 0.0,
+   "writes": 8
+  },
+  "label": "synthetic closed loop, 180 s, 320-550 mm sweep, starts from the observed pinned state",
+  "legacy": {
+   "final_ir_us": 1483,
+   "final_plate_dn": 78.5,
+   "final_rgb_us": 10236,
+   "ir_reversals": 31,
+   "noop_writes": 0,
+   "out_of_band_s": 34.5,
+   "rgb_pinned_s": 15.0,
+   "writes": 51
+  },
+  "pinned_state": {
+   "current": {
+    "evaluations": 40,
+    "final_rgb": [
+     20000,
+     300
+    ],
+    "limit_reports": 0,
+    "noop_fields": 0,
+    "noop_writes": 0,
+    "writes": 0
+   },
+   "legacy": {
+    "evaluations": 40,
+    "final_rgb": [
+     20000,
+     300
+    ],
+    "limit_reports": 0,
+    "noop_fields": 19,
+    "noop_writes": 1,
+    "writes": 18
+   }
+  }
+ },
+ "changes": {
+  "analysis/calibration/auto_exposure/AUDIT.md": "this audit",
+  "analysis/calibration/auto_exposure/before_after.json": "simulation output",
+  "analysis/calibration/auto_exposure/summary.json": "machine-readable summary",
+  "tests/test_exposure.py": "26 tests (was 6).",
+  "tools/wizard/exposure.py": "ROI metering with marker masking; hard/soft clipping split; dead band; headroom guard; no-op suppression; limit reporting; readback tracking; status(); stale ROI hold.",
+  "tools/wizard/gui/modern_window.py": "RoiHold wiring; stationary freeze input; one baseline reset per recording; logs requested/applied/readback/stats; writes exposure-status.json; ui_metrics status."
+ },
+ "exposure_log": {
+  "all_noops_are_rgb_gain_300": true,
+  "current_run_span_s": 447.4,
+  "entries_both_ir_and_rgb_changed": 6,
+  "entries_current_run": 60,
+  "entries_previous_run": 33,
+  "entries_total": 93,
+  "ir_direction_reversals": 17,
+  "ir_final_us": 2325,
+  "ir_max_us": 2921,
+  "ir_min_us": 1488,
+  "ir_reversal_band_us": [
+   1488,
+   2921
+  ],
+  "mislabeled_down_reasons": [
+   "IR saturation 0.005 / p99 231",
+   "IR saturation 0.002 / p99 214"
+  ],
+  "noop_entries": 29,
+  "noop_fraction": 0.483,
+  "readback_final_matches_last_request": true,
+  "reason_counts": {
+   "IR dark": 15,
+   "IR saturation": 14,
+   "within target": 31
+  },
+  "rgb_final": [
+   20000,
+   300
+  ],
+  "rgb_pinned_entries": 58,
+  "rgb_values_seen": [
+   [
+    16000,
+    300
+   ],
+   [
+    20000,
+    300
+   ]
+  ]
+ },
+ "quality_saturation": {
+  "decisions_rows_with_saturated_reason_prior_segment": 50,
+  "max_saturation_frac": 0.1227,
+  "median_max_saturation_frac": 0.0108,
+  "near_one_percent_rows": 36,
+  "session_counter_saturation_rejections": 43
+ },
+ "readback": {
+  "capture_stderr": "warning: volatile settings change rejected: volatile settings: gain camera 2: device status 3 for camera/0x27",
+  "control_file": "exposure 0:2325 1:2325 2:20000 / gain 0:105 1:105 2:300 / laser 100",
+  "status_final_exposure_us": [
+   2325,
+   2325,
+   20000
+  ],
+  "status_final_gain": [
+   105,
+   105,
+   300
+  ],
+  "status_final_laser": 0,
+  "sticky_control_file_applied_at_capture_start": true
+ },
+ "real_frame_classification": {
+  "current": {
+   "ir:ok": 28,
+   "ir:up": 7,
+   "rgb:ok": 14,
+   "rgb:up": 21
+  },
+  "disagreements": 4,
+  "legacy": {
+   "ir:ok": 24,
+   "ir:up": 11,
+   "rgb:ok": 14,
+   "rgb:up": 21
+  },
+  "pairs": 70,
+  "sampled_accepted_views": 35
+ },
+ "root_causes": [
+  "RGB gain no-op: the up branch assigned min(max_gain, gain+step) and recorded changes['rgb_gain'] without checking that it moved; at gain 300 every evaluation re-requested 300 (29/60 entries).",
+  "Full-frame fallback: _plate_bbox returned None whenever detection was lost (most rejected decisions), so mean came from the dark background (p50 14-45 in the log) and the loop raised exposure; RGB was driven to 20000 us / gain 300 and pinned for 58/60 entries.",
+  "Saturation measured on the full sensor included the deliberately clipped retro-reflective markers (1 % threshold), so normal marker clipping fought the dark rule with 25 % up / 20 % down steps; 17 IR direction reversals in 447 s.",
+  "Freeze bypass: emergency used full-frame p99>=250 / sat>2 %, true whenever markers were in view, so the accepted-view freeze almost never held.",
+  "Double evaluation gate (GUI 0.75 s + advisor 1.0 s) made the effective evaluation interval ~1.5 s; two-observation confirmation made changes ~3.2 s apart.",
+  "Reasons did not describe the action (RGB-only changes logged 'within target'; mean-high down logged 'saturation'; 2 entries blamed saturation at p99 214/231), and the log stored the request, not the device readback.",
+  "The capture child applies an existing exposure-control.txt at startup, so a new recording inherited the previous run's pinned 2325/20000/300 instead of the configured baseline.",
+  "exposure.jsonl is append-only across runs with no run id: 33/93 entries belong to an earlier capture, so the retained file cannot be read as one session."
+ ],
+ "session": {
+  "accepted": 162,
+  "by_reason": {
+   "assignment": 428,
+   "blur": 22,
+   "colour": 2,
+   "contrast": 1,
+   "markers": 428,
+   "plate": 9,
+   "pose": 92,
+   "redundant": 15,
+   "saturation": 43
+  },
+  "capture_duration_s": 516.680456,
+  "coverage_max_saturation_frac": 0.05,
+  "decisions": 866,
+  "dir": "<calibration-session>",
+  "fps": 9.765,
+  "frames_written": 13977,
+  "groups_written": 4659,
+  "mode": "high",
+  "rejected": 704,
+  "resolution": [
+   1280,
+   1024
+  ],
+  "transfer_timeouts": 320,
+  "trigger_us": 100000
+ },
+ "tests": {
+  "adjacent_gui_modules": "33 passed",
+  "full_suite": "624 passed, 3 failed, 8 skipped (1250 s)",
+  "full_suite_failures_note": "test_wizard_plate3d (2) and test_wizard_moving_replay are unrelated to exposure; plate3d.py has concurrent uncommitted edits by another agent, and moving_replay passed when rerun alone.",
+  "test_exposure_py": "26 passed"
+ }
+}

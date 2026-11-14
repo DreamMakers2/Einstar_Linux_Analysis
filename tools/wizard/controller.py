@@ -506,9 +506,18 @@ def _pose_summary(pose: tuple[np.ndarray, np.ndarray] | None) -> dict | None:
     x_axis = R[:, 0]
     tilt = float(np.degrees(np.arccos(np.clip(abs(n[2]), -1.0, 1.0))))
     yaw = float(np.degrees(np.arctan2(-n[0], -n[2]))) if abs(n[2]) > 1e-12 else 0.0
-    roll = float(np.degrees(np.arctan2(x_axis[1], x_axis[0]))) % 360.0
-    if roll > 180.0:
-        roll -= 360.0
+    # The GUI must display the *same* roll that coverage and the guidance
+    # target evaluate.  A bare image-plane atan2 is foreshortened by tilt and
+    # was sign-flipped relative to coverage (view 84 of fresh-01: -46.9 deg
+    # displayed vs +44.3 deg counted), so the operator could follow an
+    # instruction computed in one convention while the sector count used
+    # another.  Delegate to the one geometric definition.
+    module = _optional("coverage")
+    roll_fn = getattr(module, "roll_deg", None) if module is not None else None
+    if callable(roll_fn):
+        roll = float(roll_fn(R)) % 360.0
+    else:                                            # pragma: no cover - fallback
+        roll = float(np.degrees(np.arctan2(x_axis[1], x_axis[0]))) % 360.0
     return {
         "t_mm": [float(x) for x in t],
         "distance_mm": float(np.linalg.norm(t)),
@@ -643,8 +652,8 @@ class _WizardSession(CalibrationSession):
     #: temporal continuity, so the motion gate must not run on it.
     continuous: bool = True
 
-    def ingest(self, frames, grids=None):
-        result = super().ingest(frames, grids)
+    def ingest(self, frames, grids=None, *, solve: bool = True):
+        result = super().ingest(frames, grids, solve=solve)
         if not self.continuous:
             # The engine compares each view with the previous one to reject a
             # moving plate.  For independent stills (vendor corpus, synthetic
@@ -673,7 +682,8 @@ class WizardController:
                  goal: str = "full", source: types.SourceInfo | None = None,
                  capture: Any | None = None, ring_keep: int = 64,
                  continuous: bool | None = None, seed_k: int | None = None,
-                 storage: str = "production", ram_ring_bytes: int = 0) -> None:
+                 storage: str = "production", ram_ring_bytes: int = 0,
+                 async_solve: bool | None = None) -> None:
         self.profile = _load_profile(factory_profile)
         self.profile_path: Path | None = None
         try:
@@ -720,6 +730,22 @@ class WizardController:
             or os.environ.get("EINSTAR_DETECT_PROCESSES") == "1")
         self._detect_process_pool = None
         self._last_detect_error = None
+        #: Run the periodic multi-view rig solve on its own thread.  Measured
+        #: on the real fresh-01 session, a solve inside the decision path costs
+        #: 2.7 s at 40 views, 6.5 s at 60 and 12.4 s at 84; with ~12 solves per
+        #: session that stalled tracking/guidance for seconds and dropped ~80%
+        #: of the incoming groups.  Live acquisition always uses the worker.
+        self.async_solve = (bool(async_solve) if async_solve is not None
+                            else capture is not None)
+        self._solve_thread: threading.Thread | None = None
+        self._solve_stop = threading.Event()
+        self._solve_wake = threading.Event()
+        self._solve_lock = threading.Lock()   # one solve at a time
+        self._solve_force = False
+        self.solve_stats = {"started": 0, "installed": 0, "discarded": 0,
+                            "errors": 0, "last_s": 0.0, "last_views": 0,
+                            "running": False, "pending": False}
+        self._solve_error: str | None = None
         self.seed_k = (int(seed_k) if seed_k is not None
                        else {"quick": 2, "standard": 3, "high": 3}.get(self.mode, 3))
 
@@ -782,6 +808,9 @@ class WizardController:
         self._persist_stats = {"writes": 0, "seconds": 0.0, "throttled": 0}
         self._manifest_digest_cache: tuple | None = None
         self._session_extras: dict | None = None
+        #: what a reused session directory moved aside on begin() (None when
+        #: this directory was fresh)
+        self._session_quarantine: dict | None = None
         self._views: list[dict] = []
         #: every ingested observation with its short-term motion metrics
         #: (accepted, rejected, vetoed and incomplete groups).  D7 stationarity
@@ -795,6 +824,16 @@ class WizardController:
         self._last_decision: dict | None = None
         self._last_quality: dict | None = None
         self._last_pose: tuple | None = None
+        #: monotonic time of the last decided pose (0-D staleness for the UI)
+        self._last_pose_at: float | None = None
+        #: short history of every decided pose, used to measure dwell over a
+        #: window instead of a single frame pair.  Pairwise speed divides PnP
+        #: jitter by a ~0.1-0.3 s interval, which made a genuinely still plate
+        #: read as tens of mm/s; a least-squares fit over ~0.4 s is stable at
+        #: both 10 Hz and the slower post-fix decision rate.
+        self._pose_track: deque = deque(maxlen=256)
+        #: window used by the dwell estimator (seconds)
+        self.dwell_window_s = 0.45
         self._last_detections: dict[str, list] = {k: [] for k in CAMERAS}
         self._last_markers: dict[str, int] = {k: 0 for k in CAMERAS}
         self._last_shared = 0
@@ -807,6 +846,8 @@ class WizardController:
         self._guidance_cache: dict | None = None
         self._guidance_key: tuple | None = None
         self._guidance_generated_at: float | None = None
+        self._guidance_monotonic: float | None = None
+        self._guidance_solves = 0
         self._guidance_accepted = 0
         self._guidance_view_id: int | None = None
         self._progress = _ProgressAdvisor()
@@ -888,11 +929,189 @@ class WizardController:
     # ------------------------------------------------------------------
     # lifecycle
     # ------------------------------------------------------------------
+    def _quarantine_previous_session(self) -> dict | None:
+        """Move a previous attempt's session files aside before a fresh start.
+
+        The capture supervisor already moves the frame ring and the raw stream
+        (see :meth:`capture.LiveCaptureProcess.archive_previous_output`).  The
+        wizard's own artifacts -- ``session.json``, the view journal, accepted
+        views, decisions and coverage manifests -- must not be appended to by a
+        new attempt: a reused directory would mix two physical sessions in one
+        coverage verdict and one calibration solve.
+
+        Nothing is deleted.  Everything is renamed into ``previous-<utc>/``
+        inside the same directory so the operator can still inspect it, which
+        is also what keeps the 52 GB session-03 recording safe.
+
+        This runs only for a *new* session on this instance: an in-memory
+        session (views, accepted observations) or an already-recording state is
+        never moved, so ``begin()`` stays idempotent and ``resume()`` (which
+        runs before ``begin()``) is unaffected.
+        """
+        if self.state not in ("idle", "cancelled"):
+            return None
+        if self._views or self.session.accepted or self.session.obs:
+            return None
+        root = self.paths.root
+        if not root.is_dir():
+            return None
+        candidates = [
+            self.paths.session_json, self.paths.manifest_json,
+            getattr(self.paths, "decisions_jsonl", root / "decisions.jsonl"),
+            getattr(self.paths, "views_journal", root / "views.jsonl"),
+            root / "storage.json", root / "views", root / "groups",
+            root / "diagnostics", root / "candidate", root / "ring",
+        ]
+        present = [Path(p) for p in candidates if Path(p).exists()]
+        if not present:
+            return None
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        base = root / f"previous-{stamp}"
+        dest = base
+        index = 2
+        while dest.exists():
+            dest = root / f"{base.name}-{index}"
+            index += 1
+        moved: list[dict] = []
+        try:
+            dest.mkdir(parents=True, exist_ok=False)
+        except OSError:
+            return None
+        for path in present:
+            target = dest / path.name
+            try:
+                os.replace(path, target)
+            except OSError:
+                # Never let a stray file abort a calibration start; record it.
+                moved.append({"path": str(path), "moved_to": None,
+                              "error": "cannot move"})
+                continue
+            moved.append({"path": str(path), "moved_to": str(target)})
+        info = {"directory": str(dest), "moved": moved}
+        self._session_quarantine = info
+        return info
+
+    # ------------------------------------------------------------------
+    # background rig solver
+    # ------------------------------------------------------------------
+    def _ensure_solve_worker(self) -> None:
+        if not self.async_solve:
+            return
+        thread = self._solve_thread
+        if thread is not None and thread.is_alive():
+            return
+        self._solve_stop = threading.Event()
+        self._solve_wake = threading.Event()
+        self._solve_thread = threading.Thread(
+            target=self._solve_loop, name="wizard-rig-solve", daemon=True)
+        self._solve_thread.start()
+
+    def _request_solve(self, *, force: bool = False) -> None:
+        """Ask for a rig solve without blocking the decision path."""
+        if not self.async_solve:
+            return
+        if force:
+            self._solve_force = True
+        elif not self.session.solve_due():
+            return
+        self._ensure_solve_worker()
+        self.solve_stats["pending"] = True
+        self._solve_wake.set()
+
+    def _solve_loop(self) -> None:
+        while not self._solve_stop.is_set():
+            self._solve_wake.wait(0.2)
+            self._solve_wake.clear()
+            if self._solve_stop.is_set():
+                break
+            with self._solve_lock:
+                # Snapshot the inputs under the decision lock, then solve with
+                # no lock held: tracking, guidance and persistence keep
+                # running while the optimiser works.
+                with self._lock:
+                    session = self.session
+                    force = bool(self._solve_force)
+                    self._solve_force = False
+                    if not force and not session.solve_due():
+                        self.solve_stats["pending"] = False
+                        continue
+                    obs = list(session.obs)
+                    cameras = dict(session.cameras)
+                    policy = dict(session.policy)
+                    n_views = len(session.accepted)
+                    if not obs:
+                        self.solve_stats["pending"] = False
+                        continue
+                    self.solve_stats["pending"] = False
+                    self.solve_stats["running"] = True
+                    self.solve_stats["started"] += 1
+                started = time.monotonic()
+                try:
+                    result = session.solve_observations(
+                        obs, cameras, n_views=n_views, policy=policy)
+                except Exception as exc:      # keep the live session alive
+                    self._solve_error = f"{type(exc).__name__}: {exc}"
+                    self.solve_stats["errors"] += 1
+                    self.solve_stats["running"] = False
+                    continue
+                elapsed = time.monotonic() - started
+                if self._solve_stop.is_set():
+                    # finish()/cancel() joined the worker with a timeout; a
+                    # result produced after that must never overwrite the final
+                    # calibration.
+                    self.solve_stats["discarded"] += 1
+                    self.solve_stats["running"] = False
+                    break
+                with self._lock:
+                    if self._solve_stop.is_set():
+                        self.solve_stats["discarded"] += 1
+                        self.solve_stats["running"] = False
+                        break
+                    current = len(session.accepted)
+                    if current < n_views:      # cannot happen, but never regress
+                        self.solve_stats["discarded"] += 1
+                        self.solve_stats["running"] = False
+                        continue
+                    # A result from an older snapshot is still a valid solve of
+                    # the observations that existed then.  Install it only when
+                    # it is not older than what is already installed; a newer
+                    # accepted view simply triggers one more solve.
+                    session.solve_seconds += elapsed
+                    session._solves += 1
+                    session.install_result(result)
+                    session.mark_solved(n_views)
+                    self.solve_stats["installed"] += 1
+                    self.solve_stats["last_s"] = float(elapsed)
+                    self.solve_stats["last_views"] = int(n_views)
+                    self.solve_stats["running"] = False
+                    self._solve_error = None
+                    try:
+                        self._refresh_derived(force=True)
+                        self._persist_progress()
+                        self._publish()
+                    except Exception as exc:   # diagnostics must not kill it
+                        self._solve_error = f"derived: {type(exc).__name__}: {exc}"
+                    if len(session.accepted) > n_views and session.solve_due():
+                        self._solve_wake.set()
+
+    def _stop_solve_worker(self) -> None:
+        thread = self._solve_thread
+        self._solve_thread = None
+        if thread is None:
+            return
+        self._solve_stop.set()
+        self._solve_wake.set()
+        if thread.is_alive() and threading.current_thread() is not thread:
+            thread.join(timeout=2.0)
+        self.solve_stats["running"] = False
+        self.solve_stats["pending"] = False
+
     def begin(self) -> dict:
         """Create the session directory and write ``session.json`` (idempotent)."""
         with self._lock:
             if self.state in ("recording", "paused", "finishing", "done"):
                 return self._begin_result(created=False)
+            self._quarantine_previous_session()
             root = self.paths.root
             root.mkdir(parents=True, exist_ok=True)
             self.paths.groups_dir.mkdir(parents=True, exist_ok=True)
@@ -935,6 +1154,8 @@ class WizardController:
             "storage": self.storage_mode,
             "software": dict(self.software),
             "session_io": self._session_io_info,
+            "previous_session": (None if self._session_quarantine is None
+                                 else dict(self._session_quarantine)),
         }
 
     def _make_ram_ring(self) -> Any | None:
@@ -1318,7 +1539,8 @@ class WizardController:
                 module = None
         if module is not None:
             try:
-                check = module.check_orientation(gray, grid)
+                check = module.check_orientation(
+                    gray, grid, image_shape=gray.shape)
                 return check.as_dict()
             except Exception as exc:
                 return {"ok": False, "reason": f"witness_error: {exc}"}
@@ -1560,7 +1782,8 @@ class WizardController:
             seeds_before = int(getattr(self.session, "seed_count", 0))
             was_bootstrap = self.session.result is None
             try:
-                decision = self.session.ingest(frames, grids=grids)
+                decision = self.session.ingest(
+                    frames, grids=grids, solve=not self.async_solve)
             except Exception as exc:
                 return self._veto(group, images,
                                   f"controller error during session.ingest: "
@@ -1575,6 +1798,8 @@ class WizardController:
             if decision.accepted:
                 self._record_accept(group, images, stage, decision, record,
                                     info, raw, seeded=seeded)
+                if self.async_solve:
+                    self._request_solve()
             else:
                 self._record_reject(group, decision, record, stage)
             self._refresh_derived()
@@ -1585,7 +1810,10 @@ class WizardController:
     def _veto(self, group, images, reason, record, Decision, FrameSet,
               obs_grids=None, raw=None, extras=None) -> Any:
         """Reject a frame for a controller-only reason and record it."""
-        quality = self._veto_quality(images, obs_grids)
+        quality = self._veto_quality(images, obs_grids, group)
+        self._track_pose(group.timestamp_s,
+                         getattr(self, "_veto_pose", None))
+        quality = self._augment_stationarity(quality, group.timestamp_s)
         entry = {
             "timestamp": float(group.timestamp_s), "reasons": [reason],
             "quality": quality, "controller_veto": True,
@@ -1627,7 +1855,9 @@ class WizardController:
         return decision
 
     def _veto_quality(self, images: Mapping[str, np.ndarray],
-                      grids: Mapping[str, Any] | None) -> dict:
+                      grids: Mapping[str, Any] | None,
+                      group: Any | None = None) -> dict:
+        self._veto_pose = None
         try:
             from calib import guidance
             # A view where both IR cameras see the plate well but the colour
@@ -1645,8 +1875,19 @@ class WizardController:
             quality = guidance.evaluate_frame(
                 {k: v for k, v in images.items()},
                 {k: v for k, v in (grids or {}).items()},
-                cameras=self.cameras, require_images=True,
+                timestamp=(float(getattr(group, "timestamp_s", 0.0) or 0.0)
+                          if group is not None else 0.0),
+                previous_pose=self.session.last_pose,
+                previous_timestamp=self.session.last_timestamp,
+                cameras=self.cameras,
+                rig=(self.session._rig()
+                     if hasattr(self.session, "_rig") else None),
+                require_images=True,
                 optional_cameras=optional)
+            # A veto can still carry a perfectly good board pose in the camera
+            # that saw the plate; that pose is dwell evidence even though the
+            # frame is not a calibration view.
+            self._veto_pose = getattr(quality, "pose", None)
             return quality.as_dict()
         except Exception as exc:
             return {"passed": False, "reasons": [f"quality unavailable: {exc}"],
@@ -1791,6 +2032,9 @@ class WizardController:
         self._last_shared = int(info["shared_markers_ir"])
         self._last_assignment_ok = bool(info["assignment_ok"])
         self._last_detections = self._detections(raw)
+        self._track_pose(group.timestamp_s, accepted.pose)
+        decision.quality = self._augment_stationarity(
+            decision.quality, group.timestamp_s)
         record.update({
             "accepted": True, "reasons": [], "predicted_gain": summary.get("predicted_gain"),
             "view_id": view_id, "solved": bool(decision.solved),
@@ -1818,6 +2062,9 @@ class WizardController:
         pose = _pose_summary(self.session.last_pose)
         if pose is not None:
             self._last_pose = self.session.last_pose
+        self._track_pose(group.timestamp_s, self.session.last_pose)
+        decision.quality = self._augment_stationarity(
+            decision.quality, group.timestamp_s)
         self._last_quality = decision.quality
         record.update({
             "accepted": False, "reasons": list(decision.reasons),
@@ -1837,6 +2084,74 @@ class WizardController:
             "quality": decision.quality, "status": decision.status,
         }
         self._prune_ring()
+
+    def _track_pose(self, timestamp: float, pose: tuple | None) -> None:
+        """Remember one decided pose for the windowed dwell estimator."""
+        if pose is None:
+            return
+        try:
+            R = np.asarray(pose[0], float).reshape(3, 3)
+            t = np.asarray(pose[1], float).reshape(3)
+        except Exception:
+            return
+        self._pose_track.append((float(timestamp), R, t))
+        self._last_pose_at = time.monotonic()
+        horizon = float(timestamp) - 2.0
+        while self._pose_track and self._pose_track[0][0] < horizon:
+            self._pose_track.popleft()
+
+    def _window_motion(self, timestamp: float) -> dict | None:
+        """Velocity over the trailing dwell window, or None without evidence.
+
+        Returns speed in mm/s and angular speed in deg/s fitted over at least
+        two decided poses inside ``dwell_window_s``.  This is a measurement of
+        the recorded stream, not a prediction: if the plate was not observed
+        there is no value.
+        """
+        try:
+            now = float(timestamp)
+        except (TypeError, ValueError):
+            return None
+        rows = [(t, R, x) for (t, R, x) in self._pose_track
+                if 0.0 <= now - t <= float(self.dwell_window_s)]
+        if len(rows) < 2:
+            return None
+        span = rows[-1][0] - rows[0][0]
+        if span < 0.12:
+            return None
+        times = np.asarray([t for t, _, _ in rows], float)
+        centres = np.asarray([-R.T @ x for _, R, x in rows], float)
+        try:
+            slope = np.polyfit(times - times.mean(), centres, 1)[0]
+            speed = float(np.linalg.norm(slope))
+        except Exception:
+            return None
+        R0 = rows[0][1]
+        R1 = rows[-1][1]
+        ang = float(np.degrees(np.arccos(np.clip(
+            (np.trace(R1 @ R0.T) - 1.0) / 2.0, -1.0, 1.0))))
+        rate = ang / span
+        return {"stationarity_speed_mm_s": speed,
+                "stationarity_rate_deg_s": rate,
+                "stationarity_window_s": float(span),
+                "stationarity_n": int(len(rows)),
+                "stationarity_source": "window",
+                "stationary": bool(speed <= 3.0 and rate <= 1.5)}
+
+    def _augment_stationarity(self, quality: dict | None,
+                              timestamp: float) -> dict | None:
+        """Overlay the windowed dwell estimate on a quality dictionary."""
+        if not isinstance(quality, dict):
+            return quality
+        window = self._window_motion(timestamp)
+        if window is None:
+            return quality
+        metrics = quality.get("metrics")
+        if not isinstance(metrics, dict):
+            metrics = {}
+            quality["metrics"] = metrics
+        metrics.update(window)
+        return quality
 
     def _record_stationarity_observation(self, group, quality, *,
                                          accepted: bool,
@@ -1962,14 +2277,52 @@ class WizardController:
         self._observability_key = key
         self._observability_cache = self._observability(result, full=full)
 
+    def _pose_signature(self) -> tuple | None:
+        """Coarse pose cell: guidance must follow the plate, not only accepts.
+
+        The old key was (accepted, solves), so an instruction computed at one
+        pose stayed on screen while the operator moved; fresh-01 ended with
+        guidance 107 s old.  A 15 mm / 5 deg cell recomputes the instruction
+        while the plate moves and leaves it alone while the pose is unchanged.
+        """
+        pose = self._last_pose
+        if pose is None:
+            return None
+        try:
+            R = np.asarray(pose[0], float).reshape(3, 3)
+            t = np.asarray(pose[1], float).reshape(3)
+            n = R[:, 2]
+            dist = float(np.linalg.norm(t))
+            tx = math.degrees(math.atan2(float(n[0]), abs(float(n[2])) + 1e-12))
+            ty = math.degrees(math.atan2(float(n[1]), abs(float(n[2])) + 1e-12))
+            module = _optional("coverage")
+            roll_fn = getattr(module, "roll_deg", None) if module else None
+            roll = float(roll_fn(R)) if callable(roll_fn) else 0.0
+        except Exception:
+            return None
+        return (round(dist / 15.0), round(tx / 5.0), round(ty / 5.0),
+                round(roll / 10.0))
+
     def _refresh_guidance(self, force: bool = False) -> None:
-        key = (len(self.session.accepted), int(getattr(self.session, "_solves", 0)))
+        signature = self._pose_signature()
+        key = (len(self.session.accepted), int(getattr(self.session, "_solves", 0)),
+               signature)
         if not force and key == self._guidance_key and self._guidance_cache:
+            return
+        now = time.monotonic()
+        if (not force and self._guidance_cache is not None
+                and self._guidance_monotonic is not None
+                and now - self._guidance_monotonic < 0.30
+                and len(self.session.accepted) == self._guidance_accepted
+                and int(getattr(self.session, "_solves", 0)) == self._guidance_solves):
+            # Bound the recompute rate while still following a moving plate.
             return
         self._guidance_key = key
         self._guidance_cache = self._guidance()
         self._guidance_generated_at = time.time()
+        self._guidance_monotonic = now
         self._guidance_accepted = len(self.session.accepted)
+        self._guidance_solves = int(getattr(self.session, "_solves", 0))
         self._guidance_view_id = (
             self._views[-1].get("view_id") if self._views else None)
 
@@ -2883,6 +3236,7 @@ class WizardController:
 
     def finish(self) -> dict:
         """Final solve, candidate profile + validation report; never activates."""
+        self._stop_solve_worker()
         with self._lock:
             if self.state == "done" and self._finish_result is not None:
                 return copy.deepcopy(self._finish_result)
@@ -2900,6 +3254,13 @@ class WizardController:
             factory_before = self.factory_sha256
             self._start_candidate_hashing()
             try:
+                # A schedule-stale incremental result must not decide which
+                # parameters are released: solve the complete accepted set
+                # first, exactly as the final fit will.
+                try:
+                    self.session.solve_now(force=True)
+                except Exception:
+                    pass
                 pruned = self._prune_outliers()
                 release = self._stage_release_decision()
                 self._release_decision = release
@@ -3026,6 +3387,7 @@ class WizardController:
         kept streaming, which is exactly how "SOURCE ENDED" coexisted with a
         running scanner at 9.8 fps and laser 100 %.
         """
+        self._stop_solve_worker()
         with self._lock:
             verdict = self.stop_capture(reason=reason)
             verified = verdict.get("verified")
@@ -3345,20 +3707,17 @@ class WizardController:
             # `session.finish` only solves when there is no result yet, so the
             # model must be refitted here with the held distortion, otherwise
             # the decision would be recorded but never applied.
+            # Refit with the held distortion.  `_maybe_solve` follows the
+            # incremental schedule and can legitimately skip (the final view
+            # count is already the last solve's count), which silently left the
+            # old distortion-free model in place: the 36-view candidate recorded
+            # "held" but still reported tex.k2/k3 as free.  The release decision
+            # is a boundary, so force exactly this solve.
             try:
-                # `_maybe_solve` skips when the accepted count does not divide
-                # `solve_every`, which silently left the old (distortion-free)
-                # model in place: the 36-view run recorded the held decision but
-                # still reported k2/k3 as free.  Force this one solve.
-                saved = self.session.policy.get("solve_every", 1)
-                self.session.policy["solve_every"] = 1
-                try:
-                    solved = self.session.solve_now()
-                finally:
-                    self.session.policy["solve_every"] = saved
-                info["refit"] = bool(solved)
-            except Exception as exc:
-                info["resolve_error"] = f"{type(exc).__name__}: {exc}"
+                solved = self.session.solve_now(force=True)
+            except Exception:
+                solved = False
+            info["refit"] = bool(solved)
             info.update(freed_distortion=False,
                         reason=("holding the factory distortion model: freeing "
                                 f"it changes held-out error by "
@@ -5024,6 +5383,8 @@ class WizardController:
             "last_decision": copy.deepcopy(self._last_decision),
             "last_pose": _pose_summary(self._last_pose),
             "pose_rt": _pose_rt(self._last_pose),
+            "pose_age_s": (None if self._last_pose_at is None else
+                           max(0.0, time.monotonic() - self._last_pose_at)),
             "camera_left": self._left_intrinsics_dict(),
             "detections": copy.deepcopy(self._last_detections),
             "markers": dict(self._last_markers),
@@ -5040,6 +5401,11 @@ class WizardController:
                 "accepted": len(self._views),
                 "persist": dict(self._persist_stats),
                 "persist_interval_s": float(self.autosave_interval_s),
+                "solve": dict(self.solve_stats,
+                              error=self._solve_error,
+                              async_mode=bool(self.async_solve)),
+                "detect": dict(getattr(self, "_roi_stats", {}) or {}),
+                "detect_error": getattr(self, "_last_detect_error", None),
             },
         }
         if self._ram_ring is not None:

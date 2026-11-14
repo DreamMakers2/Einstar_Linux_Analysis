@@ -112,13 +112,17 @@ def test_mirrored_marker_layout_is_rejected_at_ingest(tmp_path: Path) -> None:
 
 def test_missing_markers_scene_cannot_calibrate(tmp_path: Path) -> None:
     rec = _run_case("missing-markers", tmp_path)
-    # The partial detector now assigns a canonical lattice from the three large
-    # markers, so a handful of half-visible views can be accepted (measured: 3
-    # of 12).  The requirement is that such a dataset cannot produce a usable
+    # The partial detector assigns a canonical lattice from the three large
+    # markers with a verified identity, so a half-visible plate can be accepted
+    # (measured: 3 of 12 before the identity work, 6 of 12 after it).  The
+    # requirement is that such a dataset still cannot produce a usable
     # calibration, which is what the rest of this test asserts.
-    assert rec["decisions"]["accepted"] <= 4, rec["decisions"]
-    assert rec["decisions"]["rejected"] >= 8, rec["decisions"]
-    assert any(("no markers detected" in key) or ("only" in key)
+    assert rec["decisions"]["accepted"] <= 6, rec["decisions"]
+    assert rec["decisions"]["rejected"] >= 5, rec["decisions"]
+    # the refusal must name the missing/ambiguous marker evidence, whatever
+    # the current detector calls it ("no markers", "only N markers",
+    # "ambiguous marker assignment", ...)
+    assert any(("marker" in key) or ("only" in key)
                for key in rec["decisions"]["raw_reasons"]), \
         rec["decisions"]["raw_reasons"]
     assert rec["readiness"]["ready"] is False

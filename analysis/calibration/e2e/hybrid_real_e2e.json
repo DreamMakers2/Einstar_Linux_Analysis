@@ -1,0 +1,80 @@
+{
+ "schema": "einstar.e2e-rehearsal/1",
+ "source": {
+  "kind": "views + real vendor corpus",
+  "fresh_session": "<calibration-session> (fresh-01, read-only)",
+  "vendor_corpus": "<private-inputs>/exstar-20261114 (EXStar 25-view session of the same scanner/plate)",
+  "vendor_indices": [
+   14,
+   22,
+   4
+  ],
+  "views_selected": 37,
+  "holds": 7,
+  "note": "pixels are recorded lossless images; holds repeat a real view at 10 Hz; the 3 vendor views supply the sharp 270-360 deg roll sector the fresh recording never captured"
+ },
+ "app": "tools/wizard/gui/app.py --source views --headless --finish --mode high",
+ "state": "done",
+ "accepted": 37,
+ "rejected": 56,
+ "coverage": {
+  "D1": true,
+  "D2": true,
+  "D3": true,
+  "D4": true,
+  "D5": true,
+  "D6": true,
+  "D7": true,
+  "D8": true
+ },
+ "readiness": {
+  "ready": true,
+  "missing": []
+ },
+ "validation": "pending",
+ "passed": true,
+ "would_activate": true,
+ "verdict_reasons": [
+  "quality status fail"
+ ],
+ "gates": {
+  "verify_ok": true,
+  "storage_ok": true,
+  "lifecycle_passed": true,
+  "quality_status": "fail",
+  "coverage_ready": true,
+  "observability_gates": {
+   "freed_parameters": true,
+   "stereo_rotation": true,
+   "baseline": true,
+   "colour": true,
+   "model_sensitivity": true
+  }
+ },
+ "rms_px": 2.341767346475359,
+ "cross_camera_worst_rms_px": 0.4907964096995759,
+ "cross_camera_worst_p95_px": 0.918906185162259,
+ "baseline_mm": 160.3580584496926,
+ "baseline_sigma_mm": 0.048626724575218924,
+ "stereo_rotation_sigma_deg": 6.857820553341674e-05,
+ "colour_translation_mm": 0.05005826843232047,
+ "roll_bins": [
+  0,
+  1,
+  2,
+  3
+ ],
+ "n_stationary_intervals": 7,
+ "data_kept": "/tmp/e2e-hybrid2 (regenerate with the command above); validation.json copied to analysis/calibration/e2e/",
+ "n_stationary_observations": 51,
+ "satisfied_dimensions": 8,
+ "total_dimensions": 8,
+ "focus_min": 238.89576721191406,
+ "roll_bins_measured": [
+  7,
+  24,
+  5,
+  1
+ ],
+ "validation_note": "validation field 'pending' is the candidate lifecycle state; passed/would_activate are the independent gate results"
+}

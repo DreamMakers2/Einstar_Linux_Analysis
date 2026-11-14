@@ -294,7 +294,12 @@ class _LocalReplaySource:
 
 def open_source(kind: str, *, frames: str | None = None, recording: str | None = None,
                 session_dir: str | None = None, scene: str | None = None,
-                pace_hz: float = 0.0, loop: bool = False):
+                pace_hz: float = 0.0, loop: bool = False,
+                views_dir: str | None = None, select: int = 0,
+                holds: int = 6, hold_repeats: int = 5,
+                extra_frames=(), raw_frames: str | None = None,
+                rotated_views=(), principal_points=None,
+                vendor_dir=None, vendor_indices=()):
     """Build a frame source for the GUI (real sources when available)."""
     try:
         from wizard import sources
@@ -315,6 +320,21 @@ def open_source(kind: str, *, frames: str | None = None, recording: str | None =
         # the live feed and the decision path use the same pixels; the old lazy
         # path left the colour tile one decision behind.
         return sources.ReplayDirSource(frames, loop=loop, lazy_colour=False)
+    if kind == "views":
+        # Real recorded accepted views replayed as a live-cadence stream.  The
+        # pixels are the stored lossless PNGs; only the timing and the chosen
+        # subset are synthetic (see wizard/real_view_source.py).
+        from wizard.real_view_source import RealViewSource
+        return RealViewSource(
+            views_dir or frames, select=int(select), holds=int(holds),
+            hold_repeats=int(hold_repeats),
+            extra_frames=tuple(int(x) for x in extra_frames if str(x).strip()),
+            frames_dir=raw_frames,
+            rotated_views=tuple(float(x) for x in rotated_views
+                                if str(x).strip()),
+            principal_points=principal_points, vendor_dir=vendor_dir,
+            vendor_indices=tuple(int(x) for x in vendor_indices
+                                 if str(x).strip()))
     if kind == "recording":
         return sources.RecordingSource(recording)
     if kind == "synthetic":

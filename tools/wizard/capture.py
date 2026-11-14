@@ -746,6 +746,8 @@ class LiveCaptureProcess:
         self.stop_reason: str | None = None
         self.escalated_sigint = False
         self.stale_lock_removed: dict | None = None
+        #: what a reused session directory moved aside on the last start()
+        self.previous_output: dict | None = None
         self._token = f"{os.getpid()}-{time.time_ns()}"
         self._stdout_path = self.config.session_dir / "capture.stdout.log"
         self._stderr_path = self.config.session_dir / "capture.stderr.log"
@@ -989,6 +991,117 @@ class LiveCaptureProcess:
         self._heartbeat_stop = None
         self._heartbeat_thread = None
 
+    # -- previous-run isolation -----------------------------------------
+    def _previous_path(self, path: Path) -> Path:
+        """A sibling that does not exist yet, stamped with the current UTC."""
+        stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+        base = path.with_name(f"{path.name}.previous-{stamp}")
+        candidate = base
+        index = 2
+        while candidate.exists():
+            candidate = path.with_name(f"{base.name}-{index}")
+            index += 1
+        return candidate
+
+    def archive_previous_output(self) -> dict:
+        """Move a previous run's frames and raw stream aside; never delete.
+
+        Reusing a session directory is normal operator behaviour (the GUI
+        default is a stable path), but the capture tool writes dense frame ids
+        from 0.  Overwriting in place would silently mix two physical attempts:
+        the wizard would read the old frames as if they were live, and the old
+        ``frames_manifest.json`` would supply another run's timestamps and
+        device-group ids.  Measured on ``einstar-calibration-fresh-01``: 70 of
+        162 accepted views came from the previous attempt, in a second clock
+        domain, and the first ~3 minutes of the new attempt were spent
+        replaying them.
+
+        Renaming is O(1) on the same filesystem and preserves every byte for
+        inspection.  A failure refuses the start: mixing two sessions is worse
+        than not starting.
+        """
+        info: dict[str, Any] = {"archived": [], "reused": False}
+        session_dir = self.config.session_dir
+        frames = self.config.frames_dir
+        if frames.exists():
+            try:
+                non_empty = next(frames.iterdir(), None) is not None
+            except OSError:
+                non_empty = True
+            if non_empty:
+                dest = self._previous_path(frames)
+                try:
+                    os.replace(frames, dest)
+                except OSError as exc:
+                    raise CaptureError(
+                        f"cannot move the previous frame ring {frames} aside: "
+                        f"{exc}") from exc
+                info["archived"].append({"kind": "frames", "path": str(frames),
+                                         "moved_to": str(dest)})
+                info["reused"] = True
+        # A diagnostic session keeps raw.e1r in the session root; never let a
+        # new run truncate a previous (possibly huge) recording.
+        for raw in sorted(session_dir.glob("*.e1r")):
+            try:
+                size = raw.stat().st_size
+            except OSError:
+                size = 0
+            if size <= 0:
+                continue
+            dest = self._previous_path(raw)
+            try:
+                os.replace(raw, dest)
+            except OSError as exc:
+                raise CaptureError(
+                    f"cannot move the previous recording {raw} aside: {exc}"
+                ) from exc
+            info["archived"].append({"kind": "recording", "path": str(raw),
+                                     "moved_to": str(dest),
+                                     "bytes": int(size)})
+            info["reused"] = True
+        # The capture tool applies an existing exposure-control.txt at startup.
+        # Leaving the previous attempt's file behind seeds a new recording with
+        # its pinned values (fresh-01 started at 2325 us / 20000 us / gain 300
+        # instead of the configured baseline).  A stale control.txt can also
+        # contain "stop".  Move both with the frames.
+        for name in ("exposure-control.txt", "control.txt"):
+            path = session_dir / name
+            if not path.is_file():
+                continue
+            dest = self._previous_path(path)
+            try:
+                os.replace(path, dest)
+            except OSError:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            else:
+                info["archived"].append({"kind": name, "path": str(path),
+                                         "moved_to": str(dest)})
+                info["reused"] = True
+        # A stale status.json would describe the previous attempt (typically
+        # "stopped"); the reader would then believe the new capture had ended
+        # before its first status was written.  Move it with the frames.
+        status_path = self.config.status
+        if status_path is not None and Path(status_path).is_file():
+            dest = self._previous_path(Path(status_path))
+            try:
+                os.replace(status_path, dest)
+            except OSError:
+                try:
+                    Path(status_path).unlink()
+                except OSError:
+                    pass
+            else:
+                info["archived"].append({"kind": "status",
+                                         "path": str(status_path),
+                                         "moved_to": str(dest)})
+                info["reused"] = True
+        frames.mkdir(parents=True, exist_ok=True)
+        self.previous_output = info
+        return info
+
     def start(self) -> dict:
         """Start one capture process; refuse if any other is alive."""
         with self._lock:
@@ -1007,7 +1120,7 @@ class LiveCaptureProcess:
                     f"(pid {pids}); one capture process at a time")
             self._acquire_lock()
             self.config.session_dir.mkdir(parents=True, exist_ok=True)
-            self.config.frames_dir.mkdir(parents=True, exist_ok=True)
+            archived = self.archive_previous_output()
             if self.config.control is not None:
                 self._write_control("start")
             log_out = self._stdout_path.open("wb")
@@ -1046,6 +1159,7 @@ class LiveCaptureProcess:
                 "ok": True, "pid": self._proc.pid, "command": self.command,
                 "lock": str(self.lock_path),
                 "stale_lock_removed": self.stale_lock_removed,
+                "archived_output": archived,
                 "stdout": str(self._stdout_path),
                 "stderr": str(self._stderr_path),
             }
