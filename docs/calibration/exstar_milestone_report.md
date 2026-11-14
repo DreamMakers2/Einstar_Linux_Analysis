@@ -80,13 +80,14 @@ by 8 px).
 | IR relative rotation (°) | 22.0859 | 22.1383 | 22.1290 | 22.1300 |
 | colour↔left translation (mm) | 122.8774 | 125.3176 | 125.3362 | 122.8779 |
 | colour↔left rotation (°) | 16.9983 | 17.0049 | 17.0004 | 17.0836 |
-| IR `fx` L / R (px) | 1158.76 / 1157.27 | 1159.12 / 1158.09 | 1158.44 / 1157.88 | 1159.35 / 1158.55 |
+| IR `fx` L / R (px) | 1158.76 / 1157.27 | 1159.12 / 1158.09 | 1158.44 / 1156.98 | 1159.35 / 1158.55 |
 | distortion | kc₁ | **bit-identical to kc₁** | **bit-identical to kc₁** | kc₁ (held) |
 
 * The new EXStar run changed the baseline by **+0.035 %**, the IR rotation by
   **−0.0093°**, and `fx` by **−0.67 / −1.11 / −0.15 px**.
 * **Distortion was not re-estimated** — the five Brown–Conrady terms are
-  bit-identical to the 2026-02 CCF *and* to the device's factory records.  The
+  bit-identical to the 2026-02 CCF and equal to the device's factory records to
+  within 6.3e-16.  The
   manufacturer holds distortion across every recalibration; our model does the
   same, now on the manufacturer's authority rather than ours.
 * The scanner carries **two vendor calibrations that differ by 1 %**: the older
@@ -98,7 +99,7 @@ by 8 px).
 * Refitting the vendor's **own 25 fresh images** with our estimator gives
   baseline **160.210 mm** at **0.314 px** RMS and 0.033 px epipolar.  The
   vendor's new CCF explains those same images at **1.420 px**, and a rig scale
-  of **×1.0100** collapses it to 0.445 px.  The same +1 % reappears on data we
+  of **×1.0100** collapses it to **0.412 px** (0.445 px for the 2026-02 CCF).  The same +1 % reappears on data we
   did not capture.
 * Held-out model selection (293 views) prefers freeing the principal point and
   distortion (0.7512 vs 0.7567 px) — and that moves `fx` **down** and the
@@ -117,8 +118,9 @@ length.  No candidate was activated.
 ## 3. USB / hardware investigation
 
 * **Calibration is stored on the device, not only in host files.**  EXStar's own
-  log shows `writeCalibrateResultToDev` → `write data , offSet.923` at
-  00:13:11.941 and `writeWhiteBalanceResultToDev` → `offSet.4796` at 00:14:54.314,
+  log shows `writeCalibrateResultToDev` → `write data , offSet.923` (0x39B, the
+  CCF block; its records sit at 0x4A3 / 0x9AB / 0xEB3) at 00:13:11.941 and
+  `writeWhiteBalanceResultToDev` → `offSet.4796` (0x12BC) at 00:14:54.314,
   with device acknowledgements (`WriteData result.0`).
 * **Verified by readback.**  A single bounded, read-only 4 KiB page-read after
   the Windows run produced a dump with SHA-256 `256dd440…f9121148`; its CCF and
@@ -175,7 +177,7 @@ annulus *outside* the estimation window, i.e. held-out.
 
 **Two traps, both proven and both avoided:** EXStar's slot 0 is the Bayer phase
 at (odd, odd), which lands in slot 2 of a `COLOR_BayerRG2BGR` buffer — copying
-the stored matrix directly leaves a **10.3 % / 11.4 %** cast; and the gains must
+the stored matrix directly leaves an **11.3 % / 11.1 %** cast; and the gains must
 be applied to **dark-subtracted** data or they over-correct by 11–15 %.
 
 **Not claimed:** colorimetry.  The plate's reflectance is unknown, there is no
@@ -207,7 +209,14 @@ assessment and in the extension manifest.
 Measured with `tools/wizard/storage_bench.py` on the real session-03 frames
 (read-only) and on the replay harness:
 
-| quantity | production (new default) | lossless `.e1r` |
+**What is live today:** the production default stops the lossless `raw.e1r`
+stream (the 52 GB problem) and keeps a bounded ring plus the accepted frame
+triplets written as PGM per view — **40 views ≈ 157 MB**, 297 views ≈ 1.17 GB.
+The compressed `ViewStore` below is implemented, measured and tested, but the
+wizard controller still writes the legacy PGM layout; wiring it is a follow-up,
+not a claim of this milestone.
+
+| quantity | compressed store (implemented, benchmarked) | lossless `.e1r` |
 |---|---:|---:|
 | bytes per accepted view (3 cameras + observation) | **1.876 MB** | 175.0 MB |
 | 25-view calibration (EXStar's count) | **≈ 47 MB** | ≈ 4.4 GB |
@@ -234,6 +243,13 @@ not record a raw stream; ring ≤ budget; storage working set < 64 MB; encode
 
 ## 7. Numerical accuracy and independent validation
 
+The candidate's colour channel is validated **geometrically** (the colour
+extrinsic is free in the fit and its epipolar residual is 0.63 px against 31.3 px
+for the shipped CCF), while the solver's own validation record marks the colour
+*camera model* `not_applicable` because the accepted set contains no colour-only
+views.  Both statements are true and they are about different things: geometry
+is validated, colour photometry is not (§4).
+
 | result | value | source |
 |---|---|---|
 | recovered candidate, 293 of 297 views | RMS **0.6514 px**, held-out **0.770 ± 0.019 px** | `analysis/calibration/solver/final/validation.json` |
@@ -249,10 +265,10 @@ parameters, condition 1,804, split-half reproducibility 1.2–2.3× σ.  The
 candidate remains a **standard-target** result.  It is **not activated**, and
 `finish()` still refuses an activatable candidate while the plan is unsatisfied.
 
-Tests in this working tree: **578 Python passed, 8 skipped**; **12/12** driver
+Tests in this working tree: **579 Python passed, 8 skipped**; **12/12** driver
 C++ tests (`build/driver-ninja`).  Clean-clone verification of the published
-tree (fresh `git clone`, tests run from the clone): **440 passed, 79 skipped,
-0 failed** — the skips are the real-data and hardware tests that need fixtures
+tree (fresh `git clone`, tests run from the clone): **441 passed, 79 skipped,
+0 failed**; the published suite is a subset (519 collected vs 586 here) — the skips are the real-data and hardware tests that need fixtures
 which are not published.
 
 ---
@@ -284,8 +300,8 @@ which are not published.
 
 ## 9. The user's next physical action
 
-**A. Four short holds (≈ 1.6 min).**  This is the *only* capture needed; the
-52 GB recording is not repeated and the 297 views are not re-detected.
+**A. Four to six short poses (≈ 2–3 min).**  This is the *only* capture needed;
+the 52 GB recording is not repeated and the 297 views are not re-detected.
 
 ```
 tools/wizard/gui/app.py --source live \
@@ -295,16 +311,27 @@ tools/wizard/gui/app.py --source live \
 
 (the controller will verify the base digests before accepting anything)
 
-| # | distance | tilt | roll | image position | hold |
-|---|---|---|---|---|---|
-| 1 | ~340 mm | 20° left + 20° down | 90° anticlockwise | centre bottom | 1.0 s still |
-| 2 | ~420 mm | 20° left + 20° up | 180° | centre right | 1.0 s still |
-| 3 | ~510 mm | 20° right + 20° up | 90° clockwise | centre top-right | 1.0 s still |
-| 4 | ~420 mm | 20° right + 20° down | (as posed) | centre top-left | 1.0 s still |
+The tool plans **4 poses** for this session — two corners and two holds:
+
+| # | kind | what to do |
+|---|---|---|
+| 1 | still | plate centre in the **top-right** of the image at ~510 mm, one sharp still |
+| 2 | still | plate centre in the **bottom-right** of the image at ~510 mm, one sharp still |
+| 3 | hold | ~510 mm, tilt ~20° right + 20° up, roll 180°, centre **bottom-left**, hold still for 1 s |
+| 4 | hold | ~420 mm, tilt ~20° right + 20° down, roll 90°, centre **bottom-right**, hold still for 1 s |
 
 Each hold shows a progress ring; the pose is accepted only when the ring
 completes, so "keep it there until the ring fills" is the whole instruction.
 Plate = the original Einstar calibration plate, unchanged.
+
+**If the tool still reports stationarity after that**, do two more 1 s holds at
+~340 mm and ~420 mm at a tilt/roll the earlier poses did not use (e.g. 20° left
++ 20° down at 90°, then 20° left + 20° up at 180°).  The reason is a real
+measurement difference, not a bug: the planner falls back to the *live decision
+stream* for a session that predates the stored dwell stream, and that stream
+over-counts intervals (4) where the complete 10 Hz stream qualifies only 2.  The
+authoritative count is the stricter one, so plan for up to four holds and let
+the readiness gate — not the planner — decide when it is done.
 
 **B. One measurement (≈ 1 minute, no scanner).**  Measure the plate's marker
 pitch with a caliper or any instrument good to ±0.05 mm: the distance between

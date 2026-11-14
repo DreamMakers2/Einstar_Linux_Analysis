@@ -821,3 +821,117 @@ def test_begin_after_begin_extension_does_not_reset_the_extension(tmp_path):
     assert ctl.extension["tracker"] is tracker_before
     assert ctl.extension["plan"] == plan_before
     assert (tmp_path / "ext" / "session.json").read_bytes() == session_json_before
+
+
+def _still_for_target(ctl, entry, spec):
+    """A one-frame synthetic still whose *fitted* pose matches the plan target.
+
+    The synthetic renderer ignores ``lateral_mm`` when explicit poses are
+    supplied, so the image position comes from the board translation in the
+    pose tuple.  Candidates are evaluated exactly as the controller evaluates
+    them (``_detect`` + ``_extension_pose`` + the entry matcher), because
+    validating against a hand-made pose made an earlier version of this test
+    pass its own check and fail ingest.
+    """
+    from tools.wizard import sources
+
+    machine = entry["target"]
+    cell = tuple(int(v) for v in machine["image_cell"])   # (row, column)
+    base_distance = float(machine["distance_mm"])
+    dx_sign = 0.0 if cell[1] == 1 else (1.0 if cell[1] == 2 else -1.0)
+    dy_sign = 0.0 if cell[0] == 1 else (1.0 if cell[0] == 2 else -1.0)
+    tilts = [(machine["tilt_x_deg"], machine["tilt_y_deg"])]
+    tilts += [(sx * 16.0, sy * 16.0) for sx in (1.0, -1.0)
+              for sy in (1.0, -1.0)]
+    sizes = [(60.0, 50.0), (95.0, 72.0), (130.0, 95.0), (160.0, 110.0)]
+    for distance in (base_distance, base_distance - 40.0, base_distance + 40.0):
+        scale = distance / base_distance
+        for tilt_x, tilt_y in tilts:
+            for size_x, size_y in sizes:
+                for flip in ((1.0, 1.0), (-1.0, -1.0)):
+                    dx = dx_sign * size_x * scale * flip[0]
+                    dy = dy_sign * size_y * scale * flip[1]
+                    pose = (distance, tilt_x, tilt_y, machine["roll_deg"],
+                            dx, dy)
+                    source = sources.SyntheticSource(sources.SyntheticSpec(
+                        n_views=1, seed=11, poses=[pose]))
+                    group = next(iter(source))
+                    images = {key: np.asarray(value)
+                              for key, value in group.images.items()}
+                    grids, raw = ctl._detect(images)
+                    fitted = ctl._extension_pose(grids)
+                    if fitted is None:
+                        continue
+                    ctl._last_detections = ctl._detections(raw)
+                    signature = mv.pose_signature(
+                        fitted, spec, {"image_points": ctl._last_detections})
+                    if ctl._extension_view_matches(entry, signature):
+                        return group, pose
+    return None, None
+
+
+def controller_key(target):
+    """The plan target as the controller compares it (same key arithmetic)."""
+    from tools.wizard import controller as _controller
+    return _controller.WizardController._extension_target_key(target)
+
+
+def test_extension_fills_the_missing_image_corners_with_stills(tmp_path):
+    """The operator command must be able to fill a D4 deficit.
+
+    The real session needs image corners that a dwell view can never supply:
+    dwell views are excluded from D1-D6 by contract.  The plan therefore mixes
+    ``hold`` entries (D7) with ``view`` entries (D1-D6), and the extension has
+    to accept a sharp still for the latter.  Before this was implemented the
+    extension accepted only holds, so the plan could never be completed and the
+    operator dead-ended at 7/8 -- exactly what the audit reproduced.
+    """
+    import hashlib
+
+    from tools.wizard import controller, sources, types
+
+    base_spec = sources.SyntheticSpec(n_views=1, seed=3)
+    synthetic = sources.SyntheticSource(base_spec)
+    factory = tmp_path / "factory.json"
+    types.atomic_write_json(factory, synthetic.profile_dict())
+    factory_sha = hashlib.sha256(factory.read_bytes()).hexdigest()
+
+    # a base that satisfies everything except the two right-hand corners and D7
+    kept = []
+    for view in covering_views():
+        centre = np.asarray(view["image_points"]["left"], float).mean(axis=0)
+        col = int(centre[0] // (coverage.IMAGE_WIDTH / 3.0))
+        row = int(centre[1] // (coverage.IMAGE_HEIGHT / 3.0))
+        if col == 2 and row in (0, 2):
+            continue
+        kept.append(view)
+    base = write_session(tmp_path / "base", kept,
+                         stream=_stationary_rows(0.0) + _stationary_rows(10.0),
+                         factory_sha256=factory_sha)
+    before = (base / "session.json").read_bytes()
+
+    ctl = controller.WizardController(factory_profile=factory,
+                                      session_dir=tmp_path / "ext",
+                                      mode="quick", source=None, ring_keep=4)
+    assert ctl.begin_extension(base)["ok"] is True
+    plan = ctl.extension_status()["plan"]["poses"]
+    view_entries = [entry for entry in plan if not entry.get("hold_s")]
+    assert len(view_entries) == 2, plan          # the two missing corners
+    assert all(entry["dimension"] == "D4" for entry in view_entries)
+
+    for entry in view_entries:
+        group, _pose = _still_for_target(ctl, entry, ctl.coverage_spec)
+        assert group is not None, f"could not render a still for {entry['target']}"
+        decision = ctl.ingest(group)
+        assert decision.accepted, decision.reasons
+        assert ctl.extension_status()["accepted_views"][-1]["dimension"] == "D4"
+
+    status = ctl.extension_status()
+    assert status["n_accepted_views"] == 2
+    assert status["n_accepted_holds"] == 0
+    # D4 is now satisfied; only stationarity remains, and it still blocks.
+    assert status["satisfied"] == 7, (status["satisfied"], status["missing"])
+    assert status["ready"] is False
+    assert status["activation"]["activated"] is False
+    # the base session is evidence, not scratch space
+    assert (base / "session.json").read_bytes() == before

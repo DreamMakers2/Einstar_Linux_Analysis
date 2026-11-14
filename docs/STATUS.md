@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **578 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **579 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
 
@@ -28,7 +28,7 @@ milestone mined it, and the result changes one conclusion materially.
 | vendor corpus refit | our fit on the vendor's own 25 fresh images: baseline **160.210 mm**, RMS **0.314 px**; the vendor CCF explains its own images at **1.420 px** and a rig-scale x1.0100 collapses it to 0.445 px | `calibration/exstar_vendor_corpus_refit.md` |
 | model selection | held-out error prefers free PP+distortion (0.7512 vs 0.7567 px) and moves `fx` **down**/baseline **up**, i.e. **away** from the CCF and onto the device record; no model variant reaches 158.56 mm | same |
 | missing views | base session **6/8** → recovered overlay **7/8** (D7 only); plan = **4 holds, ~1.6 min** | `calibration/missing_views_workflow.md` |
-| production capture | default no longer records `raw.e1r`: **40 views 75.1 MB**, 60 views 112.8 MB (vs 7.0 / 10.5 GB lossless); 256 MiB ring = 6.94 s; crash-truncated journal recovers the intact prefix | `calibration/production_capture.md` |
+| production capture | the default no longer records `raw.e1r` (**40 views ≈ 157 MB** as PGM, 297 views ≈ 1.17 GB, vs 7.0 / 10.5 GB / 51.98 GB lossless).  A compressed `ViewStore` is implemented and benchmarked (**40 views 75.1 MB**, 60 views 112.8 MB) with a 256 MiB ring (6.94 s) and truncated-tail recovery, but the controller still writes the legacy PGM layout — wiring it is a follow-up | `calibration/production_capture.md` |
 
 The milestone report with the operator's next physical action is
 [`calibration/exstar_milestone_report.md`](calibration/exstar_milestone_report.md).

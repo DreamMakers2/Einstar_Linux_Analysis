@@ -1359,19 +1359,32 @@ def _hold_rows(hold: Mapping[str, Any], view_id: Any) -> list[dict]:
         raise ExtensionError(
             f"hold {hold.get('hold_id')} has neither samples nor a measured "
             "start/end duration")
+    # Without per-sample rows only the aggregate survives.  Do not claim
+    # "stationary" from an aggregate that is missing or above the D7 limit:
+    # a fabricated still would let an unmeasured hold count as evidence.
+    mean_speed = _finite(hold.get("mean_speed_mm_s"))
+    mean_rate = _finite(hold.get("mean_rate_deg_s"))
+    config = dict(hold.get("config") or {})
+    max_speed = float(config.get("max_speed_mm_s") or 3.0)
+    max_rate = float(config.get("max_rate_deg_s") or 1.5)
+    if mean_speed is None or mean_rate is None:
+        raise ExtensionError(
+            f"hold {hold.get('hold_id')} has no per-sample rows and no "
+            "measured mean motion; refusing to mark it stationary")
+    still = mean_speed <= max_speed and mean_rate <= max_rate
     return [{
         "timestamp": float(started), "group": hold.get("group"),
         "view_id": view_id, "accepted": True, "extension": True,
-        "hold_id": hold.get("hold_id"), "stationary": True,
-        "stationarity_speed_mm_s": _finite(hold.get("mean_speed_mm_s")),
-        "stationarity_rate_deg_s": _finite(hold.get("mean_rate_deg_s")),
+        "hold_id": hold.get("hold_id"), "stationary": bool(still),
+        "stationarity_speed_mm_s": mean_speed,
+        "stationarity_rate_deg_s": mean_rate,
         "stationarity_window_s": float(duration),
     }, {
         "timestamp": float(ended), "group": hold.get("group"),
         "view_id": view_id, "accepted": True, "extension": True,
-        "hold_id": hold.get("hold_id"), "stationary": True,
-        "stationarity_speed_mm_s": _finite(hold.get("mean_speed_mm_s")),
-        "stationarity_rate_deg_s": _finite(hold.get("mean_rate_deg_s")),
+        "hold_id": hold.get("hold_id"), "stationary": bool(still),
+        "stationarity_speed_mm_s": mean_speed,
+        "stationarity_rate_deg_s": mean_rate,
         "stationarity_window_s": float(duration),
     }]
 

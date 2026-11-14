@@ -22,7 +22,18 @@ Usage::
 
     .venv/bin/python -m tools.wizard.storage_bench --estimate-views 60
 """
+
 from __future__ import annotations
+
+# ``python tools/wizard/storage_bench.py`` puts this directory first on
+# sys.path, where the package's own ``types.py`` shadows the stdlib module that
+# argparse and others import.  Drop the script directory before importing them.
+if __name__ == "__main__":                      # pragma: no cover - CLI only
+    import os as _os
+    import sys as _sys
+    _here = _os.path.dirname(_os.path.abspath(__file__))
+    _sys.path[:] = [entry for entry in _sys.path
+                    if _os.path.abspath(entry or ".") != _here]
 
 import argparse
 import json

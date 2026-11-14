@@ -1,0 +1,334 @@
+{
+  "schema": "einstar.milestone-audit/1",
+  "audit_date": "2026-11-14",
+  "auditor": "independent audit-agent (not part of the milestone team)",
+  "working_tree_commit": "9c37cf4",
+  "published_tree_commit": "92cc629",
+  "published_repo": "https://github.com/DreamMakers2/Einstar_Linux_Analysis",
+  "protected_artefacts": {
+    "base_session": "~/einstar-calibration-03",
+    "base_session_full_tree_digest_before_after": "6db9b4c12fb3a0a58999332a11d76b74daaa4964c5dacf79514472619341ae7a",
+    "base_session_unchanged": true,
+    "base_session_files": 1455,
+    "factory_profile_sha256": "8259f97cc513eea6c25e23f0423be6c6067fabb2fc52bcbe3c01afa70ecda1c4",
+    "factory_snapshot_sha256": "<redacted>",
+    "factory_artefacts_unchanged": true,
+    "private_tree_written": false,
+    "device_commands_run": 0
+  },
+  "reproduced": {
+    "ccf": {
+      "ccf_2026_11_baseline_mm": 158.61278283134456,
+      "ccf_2026_11_ir_rotation_deg": 22.128959998086625,
+      "ccf_2026_02_baseline_mm": 158.55702724431998,
+      "ccf_2026_02_ir_rotation_deg": 22.138282490475355,
+      "device_factory_baseline_mm": 160.09156743467992,
+      "device_factory_ir_rotation_deg": 22.0859,
+      "linux_candidate_baseline_mm": 160.01370221913672,
+      "linux_candidate_ir_rotation_deg": 22.13002042347774,
+      "linux_minus_factory_baseline_mm": -0.0779,
+      "linux_minus_factory_colour_translation_mm": 0.0005,
+      "linux_minus_factory_direction_deg_ir": 0.0073,
+      "linux_minus_factory_direction_deg_colour": 0.0385,
+      "ccf_colour_direction_offset_deg": 8.0509,
+      "distortion_max_abs_delta_A_vs_N": 0.0,
+      "distortion_max_abs_delta_device_vs_CCF": 6.331740687315346e-16,
+      "validate_ccf": "40/40 checks passed"
+    },
+    "device_readback": {
+      "sha256": "256dd440554387da8fcd5b48baa0b2e8c314a1eb90a89b85b2987bb0f9121148",
+      "ccf_records_at": [
+        1191,
+        2479,
+        3767
+      ],
+      "wb_records_at": [
+        4800,
+        4872
+      ],
+      "date_string_2026_11_14_00_13_at": 3503,
+      "old_date_string_present": false,
+      "differing_bytes_vs_prerun": 366,
+      "identity_region_0x000_0x39A_differs": false,
+      "ccf_block_type_u32_at_0x39B": 4,
+      "wb_block_u32_at_0x12BC": 5
+    },
+    "white_balance": {
+      "estimate_exstar_order_slot0": 1.585386614,
+      "estimate_exstar_order_slot2": 1.766746061,
+      "stored_slot0": 1.603466,
+      "stored_slot2": 1.794047,
+      "error_slot0_pct": -1.127,
+      "error_slot2_pct": -1.522,
+      "cast_led_on_before": 0.349516,
+      "cast_led_on_after": 0.01927,
+      "cast_led_off_before": 0.373839,
+      "cast_led_off_after": 0.015901,
+      "no_dark_subtraction_cast_led_on_pct": 14.91,
+      "no_dark_subtraction_cast_led_off_pct": 11.44,
+      "frame_mean_dn": [
+        24.14,
+        29.09
+      ],
+      "phase_spread_pct": [
+        29.08,
+        35.15
+      ]
+    },
+    "missing_views": {
+      "base": "6/8 (D4, D7)",
+      "recovered": "7/8 (D7 only)",
+      "recovered_dwell_intervals": 2,
+      "base_decision_stream_dwell_intervals": 4,
+      "plan": "4 poses, all D7, hold 1.0 s, ~1.6 min",
+      "recovered_plus_4_genuine_holds": "8/8 ready, activation false"
+    },
+    "storage_bench": {
+      "views": 40,
+      "stored_bytes_per_view": 1873494.5,
+      "session_tree_bytes": 75141261,
+      "ratio_vs_pgm": 2.0989,
+      "ring_capacity_groups": 68,
+      "ring_capacity_seconds": 6.9387755,
+      "lossless_reference_bytes": 7000324520,
+      "verify_ok": true
+    },
+    "tests": {
+      "private": "578 passed, 8 skipped, 0 failed (461.60 s)",
+      "driver_ctest": "12/12 passed",
+      "recon_ctest": "1/1 passed",
+      "clean_clone": "441 passed, 79 skipped, 0 failed (343.40 s)",
+      "new_tests": 86,
+      "new_tests_skipping_without_private_fixtures": 6,
+      "collected_private": 586,
+      "collected_public": 519,
+      "published_test_modules_missing": [
+        "test_capture_acquisition_state.py",
+        "test_capture_safety.py",
+        "test_ccf.py",
+        "test_offline_features.py",
+        "test_orientation_witness.py",
+        "test_wizard_acquisition_ui.py",
+        "test_wizard_guidance_view.py",
+        "test_wizard_lifecycle_coverage_wiring.py",
+        "test_wizard_lifecycle_stop.py",
+        "test_wizard_progress.py",
+        "test_wizard_status.py"
+      ]
+    },
+    "publication_hygiene": {
+      "sensitive_grep_matches": 0,
+      "raw_recordings_tracked": false,
+      "factory_calibration_bytes_tracked": false,
+      "largest_blob_bytes": 2904681,
+      "tree_bytes": 51237808,
+      "note": "decoded numeric calibration values and vendor-corpus detections are published in analysis/exstar_reference/*.json"
+    }
+  },
+  "findings": [
+    {
+      "id": "AUD-001",
+      "severity": "high",
+      "category": "defect-functional",
+      "title": "The report's operator command dead-ends at 7/8: D4 can never be satisfied in extension mode",
+      "claim": "exstar_milestone_report.md \u00a79: `--complete-session ~/einstar-calibration-03` gives a plan of 4 holds (~1.6 min) that reaches 8/8",
+      "observed": "plan = 2x D4 (hold=None, 'capture one sharp still') + 2x D7 (hold 1.0 s); four genuine 2 s holds at exactly those poses give 7/8, D4 unsatisfied, ready=false, activation=false",
+      "why": "extension ingest accepts only a completed HoldTracker hold, so the D4 'sharp still' is rejected; and even a 1 s hold is a dwell=True view, which coverage._is_dwell excludes from D1-D6",
+      "locations": [
+        "docs/calibration/exstar_milestone_report.md:291-294",
+        "tools/wizard/gui/app.py:115",
+        "calib/missing_views.py:plan",
+        "tools/wizard/coverage.py:594 (_is_dwell)",
+        "tools/wizard/coverage.py:752 (pose_idx excludes dwell views)",
+        "tools/wizard/controller.py:4049 (_extension_ingest)"
+      ],
+      "fix": "expose --recovered to the launcher (and default to it when the overlay exists), or let a hold at an unmet D1-D6 target count for that dimension, or refuse D1-D6 entries in extension mode with an explanation",
+      "test_that_would_catch": "controller test with a base whose unsatisfied set includes D4: begin_extension then 4 accepted holds must reach 8/8 (existing test uses a 7/8 D7-only base)"
+    },
+    {
+      "id": "AUD-002",
+      "severity": "high",
+      "category": "defect-documentation",
+      "title": "Compressed views / 256 MiB RAM ring / CRC journal are presented as the live production default but are not wired into the controller",
+      "claim": "exstar_milestone_report.md:196 and \u00a76 table; docs/STATUS.md \u00a70b: 'compressed accepted views, CRC-framed append-only journal', 1.876 MB/view as the new default",
+      "observed": "ViewStore.add_view is called only by tools/wizard/storage_bench.py:209; ring_buffer.py only by the bench and tests. The controller's begin() calls session_io.create() WITHOUT storage=, i.e. the documented legacy layout (session_io.py:139-158: 'None ... creates only the legacy structure and is what the current controller calls'), and accepted views are still 3 x uncompressed PGM via _record_accept -> _move_to_groups (controller.py:1564, :998). A 297-view live session therefore retains ~1.17 GB, not 560 MB",
+      "why": "production_capture.md \u00a710 (line 288) states this explicitly ('controller not edited ... 112.8 MB instead of 236 MB ... Until it lands'); the summary contradicts its own specialist document",
+      "locations": [
+        "tools/wizard/session_io.py:139-158",
+        "docs/calibration/exstar_milestone_report.md:196",
+        "docs/calibration/exstar_milestone_report.md:208-216",
+        "docs/STATUS.md:31",
+        "docs/calibration/production_capture.md:288-317",
+        "tools/wizard/controller.py:998",
+        "tools/wizard/controller.py:1564",
+        "tools/wizard/session_io.py:1029",
+        "tools/wizard/storage_bench.py:209"
+      ],
+      "fix": "wire ViewStore.add_view + BoundedRingBuffer into the controller, or restate the claim as 'raw stream disabled by default; compressed views available via the offline store/compact_session'",
+      "test_that_would_catch": "end-to-end controller test: accept >=2 views, assert views/*.png + views.jsonl exist and groups/*.pgm do not"
+    },
+    {
+      "id": "AUD-003",
+      "severity": "medium",
+      "category": "defect-safety-guard",
+      "title": "white_balance.write_profile does not recognise the real factory profile path or the repo's factory-record directory",
+      "claim": "calib/white_balance.py 'refuses factory paths'",
+      "observed": "_FACTORY_MARKERS = ('res/einscan-e10','res/einscan-ea','einstar-calibration-03','/factory/','\\\\factory\\\\'); probe: False for ~/einstar-private/einstar-profiles/factory-e10.json, ~/einstar-private/factory-snapshot-20261111/calibration.bin, <repo>/sources/calibration/res_Einscan-E10_200x150/LeftCCF.txt",
+      "why": "only FileExistsError (overwrite=False) stands between a caller and replacing the factory profile; write_profile(..., overwrite=True) would write a photometric layer over factory-e10.json",
+      "locations": [
+        "calib/white_balance.py:94",
+        "calib/white_balance.py:591",
+        "tests/test_white_balance.py:317"
+      ],
+      "fix": "add 'einstar-profiles', 'factory-e10', 'factory-snapshot', 'res_einscan-e10' to the markers",
+      "test_that_would_catch": "extend test_write_refuses_factory_paths with Path.home()/'einstar-private/einstar-profiles/factory-e10.json' and the repo's sources/.../res_Einscan-E10_200x150/ path"
+    },
+    {
+      "id": "AUD-004",
+      "severity": "medium",
+      "category": "defect-documentation",
+      "title": "Two wrong absolute cells in the EXStar intrinsics table (propagated into the summary)",
+      "claim": "exstar_vs_factory_vs_linux.md \u00a73: N IR-right fx 1157.8806, N IR-left cx 617.0906",
+      "observed": "decode gives 1156.980609 and 623.090646; the table's own deltas (-1.1063, -0.8216) require those values. The fx typo appears again at exstar_milestone_report.md:83 ('1157.88')",
+      "why": "a reader comparing intrinsics sees two numbers that cannot come from the record; everything else in the table matches to the last digit",
+      "locations": [
+        "docs/calibration/exstar_vs_factory_vs_linux.md:121-122",
+        "docs/calibration/exstar_milestone_report.md:83"
+      ],
+      "fix": "1157.8806 -> 1156.9806; 617.0906 -> 623.0906; and '1157.88' -> '1156.98' in the report",
+      "test_that_would_catch": "a doc-vs-decode check that renders the N table from decode_ccf output"
+    },
+    {
+      "id": "AUD-005",
+      "severity": "medium",
+      "category": "not-reproduced",
+      "title": "The '10.3 % / 11.4 %' wrong-slot cast is not reproducible as stated",
+      "claim": "white_balance.md:280 / exstar_milestone_report.md:178: copying the stored matrix onto a COLOR_BayerRG2BGR buffer leaves a 10.3 %/11.4 % cast",
+      "observed": "with the module's own mask_means on the lit-plate mask: literal placement gives 11.28 % / 11.11 %; through from_exstar_matrix (documented reversal) 3.02 % / 2.08 %; on window means 23.0 % / 21.6 %. 10.3/11.4 is exactly the inter-channel gain ratio (1.585387/1.766746-1 and its reciprocal)",
+      "why": "the magnitude is an identity on the gains, not a measurement; the doc does not state the metric or mask, so the number cannot be checked",
+      "locations": [
+        "docs/calibration/white_balance.md:280",
+        "docs/calibration/exstar_milestone_report.md:178",
+        "analysis/exstar_reference/white_balance.json:197"
+      ],
+      "fix": "state the metric/mask and replace the number with the measured value (e.g. 11.3 %/11.1 % literal on the plate mask), or derive it explicitly from the gain ratio",
+      "test_that_would_catch": "unit test computing the cast after applying the stored matrix literally, asserting the documented value"
+    },
+    {
+      "id": "AUD-006",
+      "severity": "low",
+      "category": "defect-usability",
+      "title": "tools/wizard/storage_bench.py is not runnable as a script",
+      "claim": "the reproduction commands and the audit brief call tools/wizard/storage_bench.py",
+      "observed": "ImportError: cannot import name 'GenericAlias' from 'types' (tools/wizard/types.py shadows the stdlib); only `-m tools.wizard.storage_bench` works",
+      "why": "the same trap the missing_views CLI works around explicitly; the next script added there will hit it too",
+      "locations": [
+        "tools/wizard/storage_bench.py:27",
+        "tools/wizard/types.py",
+        "tools/wizard/missing_views.py:40-58"
+      ],
+      "fix": "same sys.path guard as missing_views.py, or a package __main__",
+      "test_that_would_catch": "subprocess test: run the script directly with --help"
+    },
+    {
+      "id": "AUD-007",
+      "severity": "low",
+      "category": "trust-boundary",
+      "title": "A hold record without per-sample rows contributes two unconditional stationary rows",
+      "claim": "extension evidence is measured, never filled",
+      "observed": "calib/missing_views.py:1353 fallback marks start/end rows stationary=True regardless of speed; ExtensionStore.append_hold validates base digests but not duration/samples/pose",
+      "why": "a hand-edited extension/holds.jsonl line counts as a D7 dwell interval; the controller never produces such a record",
+      "locations": [
+        "calib/missing_views.py:1326-1375",
+        "calib/missing_views.py:1214"
+      ],
+      "fix": "require samples (or validate mean_speed/rate against the config) before counting a hold's rows",
+      "test_that_would_catch": "append a hold with no samples and mean_speed 100 mm/s, assert it does not add a stationary interval"
+    },
+    {
+      "id": "AUD-008",
+      "severity": "low",
+      "category": "overstatement",
+      "title": "'distortion bit-identical across all sets' overstates the device-record comparison",
+      "claim": "exstar_milestone_report.md:84",
+      "observed": "A vs N kc max|delta| = 0.0 exactly; device 22-double vs CCF kc max|delta| = 5.24e-16 (left), 6.33e-16 (right), 0.0 (tex). The specialist doc says 'residual <= 6.3e-16'",
+      "why": "'bit-identical' should be reserved for the two CCFs",
+      "locations": [
+        "docs/calibration/exstar_milestone_report.md:84",
+        "docs/STATUS.md:24",
+        "docs/calibration/exstar_vs_factory_vs_linux.md:147-153"
+      ],
+      "fix": "say 'bit-identical between the 2026-02 and 2026-11 CCFs, and equal to the device records to 6e-16'",
+      "test_that_would_catch": "n/a (documentation); the JSON already carries both numbers"
+    },
+    {
+      "id": "AUD-009",
+      "severity": "low",
+      "category": "overstatement",
+      "title": "NEW-CCF 1.420 px paired with the 2026-02 scale-collapsed 0.445 px",
+      "claim": "exstar_milestone_report.md:100-101",
+      "observed": "summary.json rig_scale_scan: ccf_NEW best_s 1.01 -> 0.41225 px; ccf_A 1.01 -> 0.44477 px",
+      "why": "mixes two datasets in one sentence; the NEW corpus collapses to 0.412 px",
+      "locations": [
+        "docs/calibration/exstar_milestone_report.md:100-101",
+        "analysis/exstar_reference/summary.json"
+      ],
+      "fix": "use 0.412 px for the new CCF, or say 'the previous CCF collapses to 0.445 px'",
+      "test_that_would_catch": "n/a"
+    },
+    {
+      "id": "AUD-010",
+      "severity": "low",
+      "category": "stale-documentation",
+      "title": "Clean-clone numbers are stale and the published suite is smaller than the private one",
+      "claim": "exstar_milestone_report.md:252-256: 440 passed, 79 skipped; skips are the real-data and hardware tests",
+      "observed": "published HEAD 92cc629: 441 passed, 79 skipped, 0 failed; 10 test modules / 79 collected tests are not published at all (test_ccf.py, test_capture_acquisition_state.py, test_capture_safety.py, test_orientation_witness.py, test_offline_features.py, five wizard GUI/lifecycle modules); collect-only 586 private vs 519 public",
+      "why": "the two numbers are not comparable, and the capture-safety tests (two of the three modified files) are absent from the public tree",
+      "locations": [
+        "docs/calibration/exstar_milestone_report.md:252-256",
+        "scripts/export_public.sh:30-48"
+      ],
+      "fix": "update to 441/79 and state which modules are not published (and why), or publish them",
+      "test_that_would_catch": "n/a"
+    },
+    {
+      "id": "AUD-011",
+      "severity": "low",
+      "category": "inconsistency",
+      "title": "Colour extrinsic is quoted as validated while validation.json's gate says colour is not_applicable",
+      "claim": "exstar_milestone_report.md:245 and exstar_vs_factory_vs_linux.md \u00a75: colour extrinsic reproduces the factory record to 0.0005 mm / 0.039 deg",
+      "observed": "validation.json gate/colour: status not_applicable, note 'no colour views in the accepted set; colour stays unknown and must not be marked ok'; the profile nevertheless has tex.rx..tz free and the fitted value 122.8779 vs factory 122.8774",
+      "why": "one sentence should reconcile 'colour gate not applicable' with 'colour extrinsic constrained from the colour observations used for the epipolar check'",
+      "locations": [
+        "docs/calibration/exstar_milestone_report.md:245",
+        "analysis/calibration/solver/final/validation.json"
+      ],
+      "fix": "state that the colour extrinsic is estimated from the colour correspondences (n=11034 epipolar pairs) while the colour *coverage gate* remains not_applicable",
+      "test_that_would_catch": "n/a"
+    },
+    {
+      "id": "AUD-012",
+      "severity": "low",
+      "category": "coverage-gap",
+      "title": "No test exercises the 6/8 (D4-unsatisfied) base through begin_extension",
+      "claim": "the extension workflow is verified on the real session",
+      "observed": "test_controller_extension_accepts_a_hold_and_never_touches_the_base uses a synthetic base already at 7/8 with D7 only; the synthetic 4-hold 8/8 test fabricates holds via ExtensionStore.append_hold, bypassing HoldTracker",
+      "why": "this is exactly the gap that hides AUD-001, and the tracker->accept->READY path is never exercised end-to-end",
+      "locations": [
+        "tests/test_missing_views.py:501",
+        "tests/test_missing_views.py:640"
+      ],
+      "fix": "add a D4-unsatisfied base test and a tracker-driven 4-hold READY test",
+      "test_that_would_catch": "n/a (this is the missing test)"
+    }
+  ],
+  "verified_non_issues": {
+    "base_session_untouched": true,
+    "factory_profile_untouched": true,
+    "extension_manifest_activation_false": true,
+    "finish_refuses_unsatisfied_plan": true,
+    "wb_no_double_apply_path": true,
+    "no_device_access_in_new_code": true,
+    "modified_tests_pin_mode_legitimately": true
+  }
+}

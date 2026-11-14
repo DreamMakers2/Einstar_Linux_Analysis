@@ -3722,6 +3722,7 @@ class WizardController:
                 "base_keys": base_keys,
                 "dwell_keys": set(base_keys),
                 "accepted_holds": [],
+                "accepted_views": [],
                 "duplicate_holds": 0,
                 "rows": [],
                 "created_utc": datetime.now(timezone.utc).isoformat(
@@ -4007,6 +4008,146 @@ class WizardController:
         self._publish()
         return decision
 
+    def _extension_view_target(self, pose: Any,
+                               observed: Mapping[str, Any]) -> dict | None:
+        """The first unsatisfied plan entry that a *still view* can satisfy.
+
+        D1-D6 (e.g. an image corner) are pose-coverage dimensions: a dwell
+        view is excluded from them by contract, so a hold can never fill them.
+        The plan therefore contains two kinds of entry and the extension must
+        accept both: a ``hold`` entry (D7, needs a measured dwell) and a
+        ``view`` entry (D1-D6, one sharp accepted exposure at that pose).
+        """
+        from calib import missing_views as _missing
+        signature = _missing.pose_signature(pose, self.coverage_spec, observed)
+        key = _missing._signature_key(signature)
+        if key is None:
+            return None
+        done = set((self.extension or {}).get("satisfied_views") or ())
+        for entry in (self.extension or {}).get("plan", {}).get("poses") or []:
+            if entry.get("hold_s"):
+                continue                     # D7 entry: needs a real hold
+            if int(entry.get("index", -1)) in done:
+                continue
+            if not self._extension_view_matches(entry, signature):
+                continue
+            target = dict(entry.get("target") or {})
+            target["plan_index"] = entry.get("index")
+            target["dimension"] = entry.get("dimension")
+            target["instruction"] = entry.get("instruction")
+            target["reason"] = entry.get("reason")
+            return _jsonable(target)
+        return None
+
+    @staticmethod
+    def _extension_view_matches(entry: Mapping[str, Any],
+                                signature: Mapping[str, Any] | None) -> bool:
+        """Does an observed pose satisfy a D1-D6 plan entry?
+
+        A plan entry states the fields its dimension is *about*; the rest are
+        suggestions.  Requiring all four would reject a perfectly good corner
+        still because a flat plate's tilt sign is noise: the plan asks for
+        "top-right at ~420 mm", not for "tilted +x+y".
+        """
+        if not signature:
+            return False
+        target = entry.get("target") or {}
+        key = WizardController._extension_target_key(target)
+        if key is None:
+            return False
+        want_band, want_quadrant, want_roll, want_cell = key
+        got_cell = signature.get("cell")
+        if got_cell is None or tuple(int(v) for v in got_cell) != want_cell:
+            return False                     # the image position is the point
+        dimension = str(entry.get("dimension") or "")
+        checks = {
+            "D1": signature.get("band_index") == want_band,
+            "D2": tuple(signature.get("quadrant") or (0, 0)) == want_quadrant,
+            "D3": signature.get("roll_bin") == want_roll,
+        }
+        if dimension in checks:
+            return bool(checks[dimension])
+        if dimension == "D4":
+            return True      # the image position is the whole requirement
+        # an entry that targets several dimensions at once: require them all
+        return all(checks.values())
+
+    def _extension_accept_view(self, group, record, stage, pose, quality,
+                               info, timestamp: float, target: Mapping) -> Any:
+        """Accept one sharp still that satisfies a D1-D6 plan entry."""
+        from calib.session import Decision
+        ext = self.extension
+        view_id = int(self.session._next_view)
+        self.session._next_view = view_id + 1
+        summary = _pose_summary((np.asarray(pose[0], float),
+                                 np.asarray(pose[1], float))) or {}
+        view = {
+            "view_id": view_id,
+            "group": int(group.index),
+            "device_group": group.device_group,
+            "materialised": (stage.name if stage is not None else None),
+            "pose": {"R": [float(x) for x in np.asarray(pose[0], float).ravel()],
+                     "t": [float(x) for x in np.asarray(pose[1], float).ravel()]},
+            "image_points": _jsonable(self._last_detections),
+            "timestamp": float(timestamp),
+            "stationary": False,
+            "distance_mm": summary.get("distance_mm"),
+            "tilt_deg": summary.get("tilt_deg"),
+            "yaw_deg": summary.get("yaw_deg"),
+            "roll_deg": summary.get("roll_deg"),
+            "predicted_gain": 0.0,
+            "holdout_rms_px": None,
+            "n_markers": dict(info.get("markers") or {}),
+            "quality": quality,
+            "quality_passed": bool((quality or {}).get("passed")),
+            "shared_markers_ir": int(info.get("shared_markers_ir") or 0),
+            "assignment": _jsonable(info.get("assignment")),
+            "assignment_ok": bool(info.get("assignment_ok", True)),
+            "digest": record.get("digest"),
+            "solved": False,
+            "bootstrap_seed": False,
+            "extension": True,
+            "extension_kind": "view",
+            "extension_note": record.get("extension_note"),
+            "target": dict(target),
+        }
+        self._views.append(view)
+        ext["satisfied_views"] = sorted(set(
+            list(ext.get("satisfied_views") or ())
+            + [int((target or {}).get("plan_index", -1))]))
+        ext["accepted_views"].append({
+            "view_id": view_id,
+            "plan_index": int((target or {}).get("plan_index", -1)),
+            "dimension": (target or {}).get("dimension"),
+            "group": int(group.index),
+            "target": dict(target),
+            "n_markers": dict(info.get("markers") or {}),
+            "quality": quality,
+        })
+        self._accepted += 1
+        decision = Decision(True, [], quality, None, view_id, False,
+                            self._status_summary())
+        record.update({
+            "accepted": True, "reasons": [], "predicted_gain": None,
+            "view_id": view_id, "solved": False, "quality": quality,
+            "markers": dict(info.get("markers") or {}),
+            "shared_markers_ir": int(info.get("shared_markers_ir") or 0),
+            "assignment_ok": bool(info.get("assignment_ok", True)),
+            "status": decision.status, "extension": True,
+            "extension_kind": "view",
+            "plan_index": int((target or {}).get("plan_index", -1)),
+        })
+        self._append_decision(record)
+        self._last_quality = quality
+        self._last_decision = {
+            "accepted": True, "reasons": [], "predicted_gain": None,
+            "view_id": view_id, "quality": quality, "status": decision.status,
+        }
+        self._refresh_derived(force=True)
+        self._persist_progress(accepted=True)
+        self._publish()
+        return decision
+
     def _extension_reject(self, group, record, reason: str, quality,
                           status) -> Any:
         from calib.session import Decision
@@ -4115,6 +4256,17 @@ class WizardController:
                 record, Decision, FrameSet, obs_grids=grids, raw=raw,
                 extras={**info, "veto": "controller"})
         timestamp = float(group.timestamp_s)
+        # A D1-D6 plan entry (an image corner, a distance band, ...) is filled
+        # by one sharp still at that pose, not by a hold: dwell views are
+        # excluded from those dimensions by contract, so a hold could never
+        # satisfy them.  Take the still first, then fall through to the hold
+        # tracker for the D7 entries.
+        observed_view = {"image_points": self._last_detections}
+        view_target = self._extension_view_target(pose, observed_view)
+        if view_target is not None:
+            return self._extension_accept_view(group, record, stage, pose,
+                                               quality, info, timestamp,
+                                               view_target)
         status = self.extension["tracker"].update(timestamp, pose[0], pose[1])
         observation = self._extension_observation(group, quality, status,
                                                   timestamp=timestamp)
@@ -4169,8 +4321,11 @@ class WizardController:
         required = int(_spec_get(self.coverage_spec, "min_stationary_views", 6))
         plan = ext.get("plan") or {"poses": []}
         accepted = list(ext.get("accepted_holds") or [])
+        accepted_views = list(ext.get("accepted_views") or [])
         matched = {self._extension_target_key(hold.get("target"))
                    for hold in accepted}
+        matched |= {self._extension_target_key(view.get("target"))
+                    for view in accepted_views}
         current = None
         for entry in plan.get("poses") or []:
             if self._extension_target_key(entry.get("target")) not in matched:
@@ -4198,6 +4353,13 @@ class WizardController:
                  "target": hold.get("target"),
                  "observed_cell": hold.get("observed_cell")}
                 for hold in accepted],
+            "accepted_views": [
+                {"view_id": view.get("view_id"),
+                 "plan_index": view.get("plan_index"),
+                 "dimension": view.get("dimension"),
+                 "target": view.get("target")}
+                for view in accepted_views],
+            "n_accepted_views": len(accepted_views),
             "n_accepted_holds": len(accepted),
             "n_duplicate_holds": int(ext.get("duplicate_holds", 0)),
             "required_dwell": required,

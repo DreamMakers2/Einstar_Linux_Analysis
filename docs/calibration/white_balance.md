@@ -277,7 +277,9 @@ Therefore the gains are **reversed** between EXStar's file and our BGR buffer:
 | our buffer, same frame | **1.766746** | **1.585387** |
 
 Copying the stored `diag(...)` straight onto our buffer attaches each gain to the
-wrong phase and leaves a **10.3 % / 11.4 %** cast — a plausible-looking number
+wrong phase; on a real frame the measured cast is **11.28 % / 11.11 %** with the
+gains placed literally, falling to **3.02 % / 2.08 %** once the documented
+reversal is applied (the residual is the plate's own shading, §8) — a plausible-looking number
 that would be wrong.  `calib/white_balance.py` therefore stores the slot
 convention in the profile (`channel_order: "BGR"`, `slot0_phase: "p00"`,
 `exstar_slot0_phase: "p11"`), refuses to load a profile whose convention does

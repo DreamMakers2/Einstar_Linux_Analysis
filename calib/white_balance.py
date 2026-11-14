@@ -91,8 +91,15 @@ EXSTAR_SLOT0_PHASE = "p11"
 ESTIMATOR_ID = "exstar-central-window-greyworld"
 
 #: directory fragments that hold factory / device calibration; never written here
-_FACTORY_MARKERS = ("res/einscan-e10", "res/einscan-ea", "einstar-calibration-03",
-                    "/factory/", "\\factory\\")
+_FACTORY_MARKERS = (
+    "res/einscan-e10", "res/einscan-ea", "einstar-calibration-03",
+    "/factory/", "\\factory\\",
+    # the paths this repository actually keeps the factory calibration in:
+    # the extracted profile, the read-only device snapshot, and the vendor
+    # record set that the profile is derived from
+    "einstar-profiles/factory", "factory-e10.json", "factory-snapshot",
+    "sources/calibration", "backup/bak", "/200x150/",
+)
 
 
 class RefusedCalibration(RuntimeError):

@@ -117,11 +117,11 @@ quality measure.
 |---|---|---:|---:|---:|---:|---:|
 | IR left | fx | 1159.1154 | 1158.4407 | **−0.6747** | 1159.3463 | **+0.2309** |
 | | fy | 1159.0213 | 1158.9799 | −0.0414 | 1158.0798 | −0.9415 |
-| | cx | 623.9122 | 617.0906 | −0.8216 | 623.9122 | 0 (held) |
+| | cx | 623.9122 | 623.0906 | −0.8216 | 623.9122 | 0 (held) |
 | | cy | 534.5629 | 533.4196 | −0.1433 | 534.5629 | 0 (held) |
-| IR right | fx | 1158.0869 | 1157.8806 | **−1.1063** | 1158.5513 | **+0.4644** |
+| IR right | fx | 1158.0869 | 1156.9806 | **−1.1063** | 1158.5513 | **+0.4644** |
 | | fy | 1157.7186 | 1157.4722 | −0.2464 | 1157.0961 | −0.6225 |
-| | cx | 635.5014 | 629.2741 | −0.2273 | 635.5014 | 0 (held) |
+| | cx | 635.5014 | 635.2741 | −0.2273 | 635.5014 | 0 (held) |
 | | cy | 494.5091 | 493.1237 | −0.3853 | 494.5091 | 0 (held) |
 | colour | fx | 1141.0776 | 1140.9293 | −0.1483 | 1141.3168 | +0.2392 |
 | | fy | 1141.0873 | 1141.3785 | +0.2912 | 1139.9735 | −1.1138 |
@@ -145,12 +145,12 @@ Two behaviours remain worth noting:
 ## 4. Distortion: held by the vendor, inherited from the device
 
 All five Brown–Conrady terms in `N` are **bit-identical** to `A`, for all three
-cameras.  Stronger: decoding the device's unkeyed factory records and removing
+cameras (the same five values, to the last bit).  Stronger: decoding the device's unkeyed factory records and removing
 the integer key reproduces the CCF `kc` **exactly** (`tools/ccf/validate_ccf.py`
 checks this, residual ≤ 6.3e-16).  The chain is
 
 ```
-device 22-double factory record  --(same kc, exactly)-->  CCF 2026-02  --(bit-identical)-->  CCF 2026-11
+device 22-double factory record  --(kc equal to <= 6.3e-16)-->  CCF 2026-02  --(bit-identical)-->  CCF 2026-11
 ```
 
 so **distortion has not been re-estimated on this unit since it was manufactured**;
