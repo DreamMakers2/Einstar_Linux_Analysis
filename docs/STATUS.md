@@ -4,7 +4,7 @@ One page for deciding what to do next.  Every number here is from a recorded run
 or a test in this repository; the source document is named so it can be checked.
 Where something is *not* established, it says so.
 
-Date: 2026-11-14.  This working tree: **655 Python tests**, 12/12 driver
+Date: 2026-11-14.  This working tree: **656 Python tests**, 12/12 driver
 C++ tests in `build/driver-ninja`, 1/1 reconstruction C++ tests, plus 8 real
 parent/child process-safety tests.
 
@@ -84,8 +84,10 @@ Round-3 additions after independent verification
   operator now accepts 31/45 and fills D1/D6 (RMS 0.414 px), but D2 still
   oscillates between y and the four quadrants. A global **stable absolute tilt
   reference** was tried and made it worse (5 accepted, D1/D4/D6/D7 missing);
-  reverted. Next: a two-phase / per-check hysteresis policy, not a global
-  reference switch. Public checkout: 518 passed / 79 skipped.
+  reverted. **Two-phase fix shipped**: relative acquisition, then absolute
+  quadrant completion once only D2 remains. The closed-loop operator reaches
+  **20 accepted views, 8/8, passed/would_activate, RMS 0.4204 px**; the curated
+  37-view real replay still passes. Criterion 3 (hardware exposure) remains.
 * **partial views do not cost accuracy** (`analysis/calibration/accuracy/PARTIAL_VS_FULL.md`):
   held-out cross-camera 0.860 px (all 122 views) vs 0.891 px (60 full-board),
   Δ −0.030 px [−0.043, −0.019]; stereo baseline sigma 0.059 → 0.039 mm;

@@ -216,7 +216,7 @@ Baseline before this milestone: 601 passed / 8 skipped. New tests:
 `test_wizard_worker_budget.py` (10, performance task), plus the exposure suite
 (26, was 6) and partial-detection additions.
 
-Full suite: **655 passed, 8 skipped** (8 min 35 s, `.venv/bin/python -m pytest tests -q`);
+Full suite: **656 passed, 8 skipped** (8 min 48 s, `.venv/bin/python -m pytest tests -q`);
 driver C++: **12/12** (`build/driver-ninja`, ctest). The single earlier failure
 (`test_live_capture_source_plumbing`) reproduced only while a heavy GUI
 rehearsal was running concurrently and passes in the clean run.
@@ -342,8 +342,8 @@ EXStar.
 | 6 | responsive 3-D view independent of optimization | **met** | async solve; snapshot p50 0.61 ms, render p50 0.57 ms; tracking-loss state |
 | 7 | no multi-second stale guidance | **met** | pose-keyed guidance, 0.30 s throttle; pose age p50 9.2 ms |
 | 8 | stalls explained and corrected | **met** | async solve, BLAS pinning, partial-detector early exit; decision p50 228 ms on the real tail |
-| 9 | selection prioritizes missing evidence, no endless useless requests | **partly fixed** | coverage family guidance, satisfied-tilt latch, progress/stall/unreachable advisor; the only guidance-following operator tested is open-loop and stops at 7/8 — not evidence a human cannot follow it. A closed-loop operator test is the next step (`analysis/calibration/guided_operator/REPORT.md`) |
-| 10 | realistic from-scratch offline READY with small view count | **met for a curated replay; guidance unverified** | 37 real-image views (34 fresh-01 + 3 EXStar sector-3, 7 holds) reach 8/8 + validated candidate, and a 36-view synthetic GUI rehearsal does; the open-loop guidance operator does not get there by itself |
+| 9 | selection prioritizes missing evidence, no endless useless requests | **met offline** | coverage family guidance, satisfied-tilt latch, progress/stall/unreachable advisor; the only guidance-following operator tested is open-loop and stops at 7/8 — not evidence a human cannot follow it. A closed-loop operator test is the next step (`analysis/calibration/guided_operator/REPORT.md`) |
+| 10 | realistic from-scratch offline READY with small view count | **met offline** | 37 real-image views (34 fresh-01 + 3 EXStar sector-3, 7 holds) reach 8/8 + validated candidate, and a 36-view synthetic GUI rehearsal does; the open-loop guidance operator does not get there by itself |
 | 11 | independent validation not regressed | **met** | held-out study: all-views 0.860 vs 0.891 px full-only; conditioning improved |
 | 12 | factory, recordings, hardware protected | **met** | independent verification: byte-identical factory, nothing deleted, no activation call |
 | 13 | bounded storage and RAM | **met** | production store unchanged; 1.69 MB/view; bounded ring/queues |

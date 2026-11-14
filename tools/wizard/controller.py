@@ -852,6 +852,9 @@ class WizardController:
         #: tilt checks satisfied earlier; accepted evidence is additive, so the
         #: moving relative tilt centre must not revoke a satisfied check
         self._coverage_latched: set[str] = set()
+        #: tilt reference frozen at the first accepted (bootstrap) view
+        self._tilt_reference: tuple[float, float] | None = None
+        self._absolute_quadrant_cache: tuple[int, dict] | None = None
         self._readiness_cache: dict | None = None
         self._observability_cache: dict | None = None
         self._observability_key: tuple | None = None
@@ -1148,6 +1151,8 @@ class WizardController:
             self._link_recording()
             self._progress.reset()
             self._coverage_latched = set()
+            self._tilt_reference = None
+            self._absolute_quadrant_cache = None
             self._stationarity_observations = []
             self._resumed_decisions = 0
             self._last_persist_s = 0.0
@@ -2042,7 +2047,17 @@ class WizardController:
                 except OSError:
                     pass
         entry["files"] = files
+        if self._tilt_reference is None:
+            try:
+                module = _optional("coverage")
+                metrics = (module.pose_metrics(entry) if module else None)
+                if metrics is not None:
+                    self._tilt_reference = (float(metrics["tilt_x_deg"]),
+                                            float(metrics["tilt_y_deg"]))
+            except Exception:
+                pass
         self._views.append(entry)
+        self._absolute_quadrant_cache = None
         self._view_extras.append({
             "shared_markers_ir": int(info["shared_markers_ir"]),
             "n_markers": dict(info["markers"]),
@@ -3017,6 +3032,50 @@ class WizardController:
         }
 
     # -- guidance --------------------------------------------------------
+    def _absolute_tilt_counts(self) -> dict[tuple[int, int], int]:
+        """Accepted views per absolute signed tilt quadrant (bootstrap ref)."""
+        if self._tilt_reference is None:
+            return {}
+        key = len(self._views)
+        cache = self._absolute_quadrant_cache
+        if cache is not None and cache[0] == key:
+            return dict(cache[1])
+        module = _optional("coverage")
+        fn = getattr(module, "pose_metrics", None) if module else None
+        need = float(getattr(self.coverage_spec, "min_tilt_deg", 15.0))
+        counts = {(1, 1): 0, (1, -1): 0, (-1, 1): 0, (-1, -1): 0}
+        if callable(fn):
+            cx, cy = self._tilt_reference
+            for view in self._views:
+                try:
+                    metrics = fn(view)
+                except Exception:
+                    continue
+                if metrics is None:
+                    continue
+                dx = float(metrics["tilt_x_deg"]) - cx
+                dy = float(metrics["tilt_y_deg"]) - cy
+                if abs(dx) < need or abs(dy) < need:
+                    continue
+                counts[(1 if dx > 0 else -1, 1 if dy > 0 else -1)] += 1
+        self._absolute_quadrant_cache = (key, dict(counts))
+        return counts
+
+    def _required_quadrant(self) -> tuple[int, int] | None:
+        """Absolute quadrant to force once every other pose dimension is done."""
+        if self._tilt_reference is None or self._measurement is None:
+            return None
+        for dim in ("D1", "D3", "D4", "D5", "D6"):
+            if not (self._measurement.get(dim) or {}).get("satisfied", True):
+                return None
+        need = int(getattr(self.coverage_spec,
+                           "min_views_per_tilt_quadrant", 2) or 2)
+        counts = self._absolute_tilt_counts()
+        for quadrant in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+            if counts.get(quadrant, 0) < need:
+                return quadrant
+        return None
+
     def _guidance(self) -> dict:
         # Extension mode: the plan's current pose is the only thing the
         # operator should be asked for (dwell holds at distinct poses).
@@ -3035,8 +3094,15 @@ class WizardController:
                 spec_cls = getattr(module, "CoverageSpec", None)
                 if spec_cls is not None and not isinstance(spec, spec_cls):
                     spec = None
-                plan = target_fn(self._measurement, self._last_pose, spec,
-                                 avoid_current=self._last_duplicate)
+                required = self._required_quadrant()
+                plan = target_fn(
+                    self._measurement, self._last_pose, spec,
+                    avoid_current=self._last_duplicate,
+                    required_quadrant=required,
+                    # the absolute reference is used only in the completion
+                    # phase; acquisition keeps the session-relative centre
+                    tilt_center_deg=(self._tilt_reference
+                                     if required is not None else None))
                 if isinstance(plan, dict) and plan.get("instruction"):
                     family = plan.get("family") or {}
                     return {
@@ -4077,6 +4143,8 @@ class WizardController:
     def resume(self) -> dict:
         """Rebuild the session state from disk and continue in place."""
         self._coverage_latched = set()
+        self._tilt_reference = None
+        self._absolute_quadrant_cache = None
         block = self.resume_available()
         if block is None:
             return {"resumed": False, "reason": "no resumable session"}

@@ -183,6 +183,28 @@ hysteresis** policy — relative for acquisition, absolute (or latched with
 quadrant-specific targets) for completion — not a global reference switch. That
 is the next design; the experiment was reverted, not shipped.
 
+## Two-phase fix: 18 views, 8/8, validated
+
+The two-phase design works. Acquisition keeps the session-relative tilt centre;
+once D1 and D3–D6 are satisfied and only D2 remains, the controller counts the
+four **absolute** signed tilt quadrants from the bootstrap view and forces the
+least-covered one until it has the required evidence. The synthetic operator
+adds a small pose variation when a view is refused (what a human does), and the
+run completes:
+
+| | result |
+|---|---:|
+| target views / accepted | **20 / 20** |
+| coverage | **8/8** |
+| finish | `passed=true`, `would_activate=true` |
+| fit RMS | **0.4204 px** |
+
+This is the offline from-scratch proof (cooperative closed-loop operator, same
+rig, real region verification). The curated 37-view real-image replay still
+reaches 8/8 with the same code. The phase gate matters: applying the absolute
+reference from the start accepted only 5 views; applying it only for completion
+costs a handful of views after the relative phase.
+
 ## Evidence
 
 `run_latched.json`, `run_stable_reference.json`, `run_deficit_ranked.json`,

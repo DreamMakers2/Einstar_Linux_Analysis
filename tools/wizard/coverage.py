@@ -1758,7 +1758,9 @@ def _image_targets(measurement: Mapping[str, Any],
 
 
 def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
-              current: dict | None, *, avoid_current: bool = False
+              current: dict | None, *, avoid_current: bool = False,
+              required_quadrant: tuple[int, int] | None = None,
+              tilt_center_deg: tuple[float, float] | None = None
               ) -> list[dict]:
     """Rank candidate pose families for the genuinely unsatisfied checks.
 
@@ -1811,18 +1813,28 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
     tilt_required = bool(tilt_x_missing or tilt_y_missing or quad_missing)
     image_targets = _image_targets(measurement, spec)
     image_choices: list[dict | None] = list(image_targets) or [None]
-    if not (distance_required or tilt_required or roll_missing or image_targets):
+    colour_missing = not (checks.get("colour") or {}).get("satisfied", True)
+    forced_quadrant = required_quadrant is not None
+    if not (distance_required or tilt_required or roll_missing or image_targets
+            or colour_missing or forced_quadrant):
         return []
 
     stats = measurement.get("pose_stats") or {}
-    med_x = float(stats.get("tilt_x_centre_deg") or 0.0)
-    med_y = float(stats.get("tilt_y_centre_deg") or 0.0)
+    if tilt_center_deg is not None:
+        med_x, med_y = (float(tilt_center_deg[0]), float(tilt_center_deg[1]))
+    else:
+        med_x = float(stats.get("tilt_x_centre_deg") or 0.0)
+        med_y = float(stats.get("tilt_y_centre_deg") or 0.0)
     exc = float(spec.min_tilt_deg) + 5.0
-    colour_missing = not (checks.get("colour") or {}).get("satisfied", True)
     colour_only = bool(colour_missing and not (
         distance_required or tilt_x_missing or tilt_y_missing or quad_missing
         or roll_missing or image_targets))
-    if colour_only:
+    if forced_quadrant:
+        sx, sy = int(required_quadrant[0]), int(required_quadrant[1])
+        tx_choices = [med_x + sx * exc]
+        ty_choices = [med_y + sy * exc]
+        tilt_required = True
+    elif colour_only:
         ctx = float((current or {}).get("tilt_x_deg", med_x))
         cty = float((current or {}).get("tilt_y_deg", med_y))
         tx_choices = [ctx + 6.0, ctx - 6.0]
@@ -1831,13 +1843,15 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
         tx_choices = [med_x - exc, med_x + exc]
     else:
         tx_choices = [float((current or {}).get("tilt_x_deg", med_x))]
-    if not colour_only:
+    if not colour_only and not forced_quadrant:
         if tilt_y_missing or quad_missing or distance_required:
             ty_choices = [med_y - exc, med_y + exc]
         else:
             ty_choices = [float((current or {}).get("tilt_y_deg", med_y))]
 
-    if colour_only:
+    if forced_quadrant:
+        roll_choices = [float((current or {}).get("roll_deg", 0.0))]
+    elif colour_only:
         croll = float((current or {}).get("roll_deg", 0.0))
         roll_choices = [(croll + 12.0) % 360.0, (croll - 12.0) % 360.0]
     elif roll_missing:
@@ -1885,6 +1899,12 @@ def _families(measurement: Mapping[str, Any], spec: CoverageSpec,
                         if colour_missing:
                             unlocks.append("colour participation")
                             weight += 1
+                        if forced_quadrant:
+                            unlocks.append(
+                                "signed tilt quadrant "
+                                f"({'+' if tx >= 0 else '-'}x,"
+                                f"{'+' if ty >= 0 else '-'}y)")
+                            weight += 100
                         if target is not None:
                             if target["kind"] == "corner":
                                 unlocks.append(
@@ -2057,7 +2077,10 @@ def _dwell_hold_result(measurement: Mapping[str, Any],
 def guidance_target(measurement: Mapping[str, Any],
                     current_pose: Any = None,
                     spec: CoverageSpec | None = None,
-                    *, avoid_current: bool = False) -> dict:
+                    *, avoid_current: bool = False,
+                    required_quadrant: tuple[int, int] | None = None,
+                    tilt_center_deg: tuple[float, float] | None = None
+                    ) -> dict:
     """The single most valuable next pose *family*.
 
     Returns ``{"mode", "instruction", "target_pose", "target_R", "target_t",
@@ -2114,7 +2137,9 @@ def guidance_target(measurement: Mapping[str, Any],
         return dwell
 
     families = _families(measurement, spec, cur,
-                         avoid_current=avoid_current)
+                         avoid_current=avoid_current,
+                         required_quadrant=required_quadrant,
+                         tilt_center_deg=tilt_center_deg)
     if not families:
         hold = _dwell_hold_result(measurement, ready, spec)
         if hold is not None:

@@ -843,3 +843,17 @@ def test_latched_tilt_checks_survive_a_moving_centre():
     assert forced["D2"]["satisfied"] is True
     assert forced["D2"].get("latched") is True
     assert "additive" in forced["D2"]["hint"]
+
+
+def test_guidance_forces_the_requested_absolute_quadrant():
+    """The completion phase can request one absolute signed quadrant."""
+    views = [_view(i, 400, 20, 10, 0, (640, 512), i * 0.5)
+             for i in range(4)]
+    measurement = measure(views)
+    plan = coverage.guidance_target(
+        measurement, None, CoverageSpec(),
+        required_quadrant=(-1, 1), tilt_center_deg=(0.0, 0.0))
+    family = plan["family"]
+    assert family["tilt_x_deg"] == pytest.approx(-20.0)
+    assert family["tilt_y_deg"] == pytest.approx(20.0)
+    assert any("signed tilt quadrant" in u for u in plan["unlocks"])
