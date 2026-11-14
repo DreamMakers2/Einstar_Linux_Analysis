@@ -12,7 +12,52 @@ calibration records or user data (see [Scope and exclusions](#scope-and-exclusio
 
 ---
 
-## Current milestone — calibration performance (2026-11-12)
+## Current milestone — the Windows EXStar reference (2026-11-14)
+
+A fresh manufacturer calibration on the same scanner gave the first direct
+comparison with our recovered Linux rig. The recording is **66.400 s** (edited;
+≈85–90 s of the session are missing), with **25 automatic poses in 46.867 s**
+(1.87 s/view), a 1.733 s solve and **7.666 s of white balance** — EXStar is only
+~2.4× faster per accepted view than our wizard, but asks for **11.9× fewer
+views** (25 vs 297). It ticks marks during motion and never rejects a stationary
+frame as redundant, the exact rejection that lost our dwell evidence.
+
+EXStar's new CCF is baseline **158.6128 mm** against the device's factory record
+**160.0916 mm**; our recovered rig is **160.0137 mm**, i.e. 0.08 mm from the
+factory branch, while the CCF's colour extrinsic is 8° off. Distortion is
+bit-identical across every vendor calibration, so the manufacturer never
+re-estimates it either. Refitting the vendor's own 25 fresh images with our
+estimator gives 160.210 mm at 0.314 px RMS; their CCF explains the same images
+at 1.420 px. The remaining 1 % is a disagreement *between two vendor datasets*,
+not between us and the vendor; only a measured plate pitch or a certified
+artefact can decide it.
+
+The calibration is stored **on the device**: a read-only 4 KiB page read after
+the Windows run is byte-identical to the new CCF/WB files in the two documented
+regions (0x39B, 0x12BC), with 366 bytes changed and the identity/factory records
+untouched. White balance was recovered from `Sn3DColorCorrect.dll` (centred
+grey-world window, dark-subtracted, green pinned, diagonal gains only) and
+implemented as a separate reversible photometric layer; the held-out cast drops
+from 34.96 % to 1.93 %. Colour *accuracy* remains unclaimed.
+
+The wizard now captures a normal calibration without a raw stream or
+uncompressed view dump: accepted views go through a compact production store
+(lossless PNG triplet + refined observations + append-only journal), measured at
+**1.689 MB per accepted view vs 3.948 MB as PGM (2.34×)** on 24 real recovered
+views, with `verify`/`resume` passing on the same data. The missing-view workflow
+(base session opened read-only, planned holds in a separate extension session)
+is reachable from the modern window's **Complete calibration…** button, and a
+profile is never activated automatically.
+
+* [Final report](docs/calibration/exstar_linux_final_report.md)
+* [Video analysis](docs/calibration/exstar_reference_video_analysis.md)
+* [EXStar vs factory vs Linux](docs/calibration/exstar_vs_factory_vs_linux.md)
+* [Device state and readback](docs/calibration/exstar_hardware_state.md)
+* [White balance](docs/calibration/white_balance.md)
+* [Missing views](docs/calibration/missing_views_workflow.md)
+* [Production storage](docs/calibration/production_capture.md)
+
+## Previous milestone — calibration performance (2026-11-12)
 
 The calibration application was rebuilt around four independent workloads
 (acquisition, preview, detection, optimisation). On the preserved 35-view
