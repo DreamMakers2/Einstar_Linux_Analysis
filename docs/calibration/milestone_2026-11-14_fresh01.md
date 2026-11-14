@@ -328,3 +328,29 @@ the 3 px finish prune. Limitations: one session, mostly mild clipping
 (median 36/40), reconstructed partial labels, and only four heavily-clipped
 probes; it says nothing about boards clipped to a third of the field or about
 EXStar.
+
+
+## 10. Acceptance criteria status
+
+| # | criterion | status | evidence |
+|---:|---|---|---|
+| 1 | partial-board tracking with unambiguous identity | **met** | chiral witness; 240 real cameras 95.1 % identity, 0 mirrored; `tests/test_detect_partial.py` |
+| 2 | valid partial views accepted when geometrically justified | **met** | real partial acceptance; held-out study §9 |
+| 3 | automatic exposure operational and effective near/far | **partly proven** | control path proven on hardware 2026-11-12; policy/ROI fixes verified by tests, real-frame audit and a closed-loop 420→550→320 mm simulation; **no post-fix hardware run** |
+| 4 | all four roll sectors via normal acceptance | **met** | real hybrid 4/4 (44–277°); synthetic roll tests |
+| 5 | stationary holds recognized | **met** | 7 qualified intervals from 7 real holds; `tests/test_dwell.py` |
+| 6 | responsive 3-D view independent of optimization | **met** | async solve; snapshot p50 0.61 ms, render p50 0.57 ms; tracking-loss state |
+| 7 | no multi-second stale guidance | **met** | pose-keyed guidance, 0.30 s throttle; pose age p50 9.2 ms |
+| 8 | stalls explained and corrected | **met** | async solve, BLAS pinning, partial-detector early exit; decision p50 228 ms on the real tail |
+| 9 | selection prioritizes missing evidence, no endless useless requests | **met during recording** | coverage family guidance, satisfied-tilt latch, progress/stall/unreachable advisor; a guidance-driven 25–40-view *physical* session is still to be observed |
+| 10 | realistic from-scratch offline READY with small view count | **met offline** | 37 real-image views (34 fresh-01 + 3 EXStar sector-3, 7 holds) 8/8 validated; 36-view synthetic GUI rehearsal |
+| 11 | independent validation not regressed | **met** | held-out study: all-views 0.860 vs 0.891 px full-only; conditioning improved |
+| 12 | factory, recordings, hardware protected | **met** | independent verification: byte-identical factory, nothing deleted, no activation call |
+| 13 | bounded storage and RAM | **met** | production store unchanged; 1.69 MB/view; bounded ring/queues |
+| 14 | complete suite + clean clone | **met** | 655 passed / 8 skipped private; 518 passed / 79 skipped public (final latch commit); driver 12/12 |
+
+**Remaining before a physical claim:** a short real session that (a) exercises
+auto exposure across the distance range with the fixed ROI ageing, and (b) shows
+the guidance-driven workflow reaching READY in 25–40 held views on the device.
+The offline rehearsal that the milestone required before asking for that session
+is complete.
