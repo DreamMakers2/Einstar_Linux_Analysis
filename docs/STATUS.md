@@ -30,6 +30,9 @@ milestone mined it, and the result changes one conclusion materially.
 | missing views | base session **6/8** → recovered overlay **7/8** (D7 only); plan = **4 holds, ~1.6 min** | `calibration/missing_views_workflow.md` |
 | production capture | default no longer records `raw.e1r`: **40 views 75.1 MB**, 60 views 112.8 MB (vs 7.0 / 10.5 GB lossless); 256 MiB ring = 6.94 s; crash-truncated journal recovers the intact prefix | `calibration/production_capture.md` |
 
+The milestone report with the operator's next physical action is
+[`calibration/exstar_milestone_report.md`](calibration/exstar_milestone_report.md).
+
 **Not achieved:** an absolute length reference.  The 1 % branch question is now
 *localised* (two vendor datasets, not our fit), but only a measured plate pitch
 or a certified artefact can decide it.
