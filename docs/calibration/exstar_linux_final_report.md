@@ -203,8 +203,11 @@ of ≈236 MB, with **no** raw stream (the 52 GB problem).  `verify` re-hashed 14
 files (48/view ×3? — 6 check files/view) in the benchmark and `resume` returned
 the correct next index in a separate real 8-view run.
 
-**RAM:** the bounded rolling buffer is 256 MiB (68 groups, 6.94 s at 9.8 Hz);
-the storage path's working set measured 16–21 MB.  **Runtime:** live acquisition
+**RAM:** the live controller holds one 3.93 MB camera group plus the compact
+stationarity stream — decisions need no multi-frame image history, so the tested
+256 MiB rolling buffer (68 groups, 6.94 s at 9.8 Hz) is available but not
+allocated on the production path.  The storage path's working set measured
+16–21 MB and does not grow with session length.  **Runtime:** live acquisition
 and preview stay on the existing ≈10 Hz path (9.96 groups/s, 39.2 MB/s on a
 120 s soak); 35-view finalisation is 3.47 s (was 38.94 s); a 60-view solve is
 2.53 s; the full 297-view replay takes 98.9 s.
