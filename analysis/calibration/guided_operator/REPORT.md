@@ -168,6 +168,21 @@ against the bootstrap reference, and make guidance request the least-covered
 absolute quadrant until it has the required evidence. That is the next change;
 the duplicate-stall fix is a real improvement and is shipped.
 
+## Stable-reference experiment (negative)
+
+The proposed next fix — pass the bootstrap tilt as the **measurement** centre as
+well as the guidance reference, making D2 absolute and monotonic — was tried.
+It made the workflow worse: the closed-loop operator accepted only **5 views in
+45** targets, D1/D4/D6/D7 also failed, and finish refused. Absolute ±20°
+targets consume the whole budget and the extreme poses lose image-region and
+colour evidence.
+
+So the relative gate plus the partial fix (31 accepted, D1/D6 filled) remains
+the better state. The remaining D2 oscillation needs a **two-phase / per-check
+hysteresis** policy — relative for acquisition, absolute (or latched with
+quadrant-specific targets) for completion — not a global reference switch. That
+is the next design; the experiment was reverted, not shipped.
+
 ## Evidence
 
 `run_latched.json`, `run_stable_reference.json`, `run_deficit_ranked.json`,

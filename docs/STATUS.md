@@ -82,8 +82,10 @@ Round-3 additions after independent verification
   **Partial fix shipped**: guidance refreshes after a duplicate, avoids the
   refused pose, uses distinct depths and a colour family; the closed-loop
   operator now accepts 31/45 and fills D1/D6 (RMS 0.414 px), but D2 still
-  oscillates between y and the four quadrants. Next: stable absolute tilt
-  reference and absolute-quadrant requests.
+  oscillates between y and the four quadrants. A global **stable absolute tilt
+  reference** was tried and made it worse (5 accepted, D1/D4/D6/D7 missing);
+  reverted. Next: a two-phase / per-check hysteresis policy, not a global
+  reference switch. Public checkout: 518 passed / 79 skipped.
 * **partial views do not cost accuracy** (`analysis/calibration/accuracy/PARTIAL_VS_FULL.md`):
   held-out cross-camera 0.860 px (all 122 views) vs 0.891 px (60 full-board),
   Δ −0.030 px [−0.043, −0.019]; stereo baseline sigma 0.059 → 0.039 mm;
